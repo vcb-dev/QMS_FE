@@ -41,7 +41,7 @@ export interface QuoteRequest {
   code: string;
   status: QuoteStatus;
   productName: string;
-  requestNote?: string;
+  desiredLeadTime?: string;
   desiredDate?: string;
   customerMeasurements?: string;
   closeRatePct?: number;

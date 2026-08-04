@@ -1,6 +1,6 @@
 import React from 'react';
 import type { QuoteRequest, Role, User } from '../types';
-import { Edit, Zap, DollarSign, XCircle, CheckCircle } from 'lucide-react';
+import { Edit, Zap, DollarSign, XCircle, CheckCircle, UserCheck, Package, Receipt } from 'lucide-react';
 
 interface InspectorProps {
   selectedReq: QuoteRequest | null;
@@ -24,9 +24,9 @@ export const Inspector: React.FC<InspectorProps> = ({
   if (!selectedReq) {
     return (
       <aside className="inspector">
-        <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>
-          Chọn một bản ghi để xem chi tiết
-        </p>
+        <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', marginTop: '60px' }}>
+          📌 Chọn một bản ghi trên bảng để xem chi tiết
+        </div>
       </aside>
     );
   }
@@ -51,66 +51,124 @@ export const Inspector: React.FC<InspectorProps> = ({
     ? selectedReq.images[0].imageUrl
     : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36';
 
+  const renderStatusBadge = () => {
+    switch (selectedReq.status) {
+      case 'YC_MOI':
+        return <span className="status-pill new">🔵 YC MỚI</span>;
+      case 'DANG_XLY':
+        return <span className="status-pill process">🟡 ĐANG XỬ LÝ</span>;
+      case 'XONG':
+        return <span className="status-pill done">🟢 ĐÃ BÁO GIÁ</span>;
+      case 'TU_CHOI':
+        return <span className="status-pill reject">🔴 TỪ CHỐI</span>;
+      default:
+        return <span className="status-pill new">{selectedReq.status}</span>;
+    }
+  };
+
   return (
-    <aside className="inspector">
+    <aside className="inspector" style={{ overflowY: 'auto', paddingRight: '12px' }}>
+      {/* Product Image & Title Header */}
       <img src={imageUrl} className="inspector-media" alt="Ảnh Sản Phẩm" />
-      <div className="inspector-title">
-        <span className="eyebrow">{selectedReq.code || selectedReq.id}</span>
-        <h2>{selectedReq.productName}</h2>
-        <span className="status-pill process">{selectedReq.status}</span>
+
+      <div className="inspector-title" style={{ marginBottom: '16px' }}>
+        <span className="eyebrow" style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+          {selectedReq.code || selectedReq.id}
+        </span>
+        <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '4px 0 8px 0' }}>
+          {selectedReq.productName}
+        </h2>
+        {renderStatusBadge()}
       </div>
 
-      <dl className="summary-list">
-        <div className="summary-row">
-          <dt>Khách Hàng:</dt>
-          <dd>{selectedReq.customer?.name || selectedReq.requester?.name || '---'}</dd>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* GROUP 1: Customer & Requester Information */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#1e293b', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+            <UserCheck size={14} color="#2563eb" /> THÔNG TIN KHÁCH HÀNG & NGUỒN TẠO
+          </div>
+          <dl className="summary-list" style={{ margin: 0 }}>
+            <div className="summary-row">
+              <dt>Khách Hàng:</dt>
+              <dd><strong style={{ color: '#0f172a' }}>{selectedReq.customer?.name || selectedReq.requester?.name || '---'}</strong></dd>
+            </div>
+            <div className="summary-row">
+              <dt>Tài Khoản Tạo:</dt>
+              <dd>
+                {selectedReq.requester?.name || '---'}
+                {isMyReq && (
+                  <span style={{ marginLeft: '6px', fontSize: '10px', background: '#e0e7ff', color: '#3730a3', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                    Tôi
+                  </span>
+                )}
+              </dd>
+            </div>
+            <div className="summary-row">
+              <dt>Phòng Ban:</dt>
+              <dd><span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>{selectedReq.requester?.department?.name || '---'}</span></dd>
+            </div>
+          </dl>
         </div>
-        <div className="summary-row">
-          <dt>Người Tạo YC:</dt>
-          <dd>
-            {selectedReq.requester?.name || '---'}
-            {isMyReq && <span style={{ marginLeft: '4px', fontSize: '10px', background: '#e0e7ff', color: '#3730a3', padding: '1px 4px', borderRadius: '4px' }}>Tôi</span>}
-          </dd>
-        </div>
-        <div className="summary-row">
-          <dt>Bộ Phận:</dt>
-          <dd>{selectedReq.requester?.department?.name || '---'}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Danh Mục:</dt>
-          <dd>{selectedReq.category?.name || '---'}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Chất Liệu:</dt>
-          <dd>{materialsList}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Số Đo:</dt>
-          <dd>{selectedReq.customerMeasurements || '---'}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Yêu Cầu / Nhận:</dt>
-          <dd>{selectedReq.requestNote || '---'}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Giá SP (Chưa VAT):</dt>
-          <dd style={{ color: '#15803d', fontWeight: 800 }}>{formattedBeforeVat}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Cộng Thuế VAT:</dt>
-          <dd>{selectedReq.vat ? `${selectedReq.vat}%` : '---'}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Tổng Báo Khách (Có VAT):</dt>
-          <dd style={{ color: '#0f766e', fontWeight: 800 }}>{formattedPrice}</dd>
-        </div>
-        <div className="summary-row">
-          <dt>Pricing:</dt>
-          <dd>{selectedReq.pricer?.name || 'Chưa phân công'}</dd>
-        </div>
-      </dl>
 
-      <div id="inspActionBox">
+        {/* GROUP 2: Product Specifications & Requirement Details */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#1e293b', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+            <Package size={14} color="#d97706" /> QUY CÁCH SẢN PHẨM & YÊU CẦU
+          </div>
+          <dl className="summary-list" style={{ margin: 0 }}>
+            <div className="summary-row">
+              <dt>Tên SP & Yêu Cầu:</dt>
+              <dd style={{ color: '#0f172a', fontWeight: 700 }}>{selectedReq.productName || '---'}</dd>
+            </div>
+            <div className="summary-row">
+              <dt>Chất Liệu:</dt>
+              <dd><strong style={{ color: '#334155' }}>{materialsList}</strong></dd>
+            </div>
+            <div className="summary-row">
+              <dt>Danh Mục:</dt>
+              <dd>{selectedReq.category?.name || '---'}</dd>
+            </div>
+            <div className="summary-row">
+              <dt>Số Đo / Kích Thước:</dt>
+              <dd style={{ fontWeight: 700 }}>{selectedReq.customerMeasurements || '---'}</dd>
+            </div>
+            <div className="summary-row">
+              <dt>Thời Gian Khách Muốn Nhận:</dt>
+              <dd style={{ color: '#d97706', fontWeight: 700 }}>
+                {selectedReq.desiredLeadTime || (selectedReq.desiredDate ? new Date(selectedReq.desiredDate).toLocaleDateString('vi-VN') : '---')}
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        {/* GROUP 3: Pricing & Financial Information */}
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: '#166534', marginBottom: '8px', borderBottom: '1px solid #bbf7d0', paddingBottom: '6px' }}>
+            <Receipt size={14} color="#16a34a" /> CHI TIẾT BÁO GIÁ & TÍNH THUẾ
+          </div>
+          <dl className="summary-list" style={{ margin: 0 }}>
+            <div className="summary-row">
+              <dt>Giá SP (Chưa VAT):</dt>
+              <dd style={{ color: '#15803d', fontWeight: 800 }}>{formattedBeforeVat}</dd>
+            </div>
+            <div className="summary-row">
+              <dt>Cộng Thuế VAT:</dt>
+              <dd style={{ fontWeight: 700 }}>{selectedReq.vat ? `${selectedReq.vat}%` : '---'}</dd>
+            </div>
+            <div className="summary-row" style={{ paddingTop: '4px', borderTop: '1px stroke #bbf7d0' }}>
+              <dt style={{ color: '#0f766e', fontWeight: 800 }}>Tổng Báo Khách:</dt>
+              <dd style={{ color: '#0f766e', fontWeight: 900, fontSize: '14px' }}>{formattedPrice}</dd>
+            </div>
+            <div className="summary-row">
+              <dt>Người Báo Giá:</dt>
+              <dd><strong>{selectedReq.pricer?.name || 'Chưa phân công'}</strong></dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      {/* Action Buttons Box */}
+      <div id="inspActionBox" style={{ marginTop: '16px' }}>
         {selectedReq.status === 'XONG' && (
           <div style={{ background: '#f0fdf4', border: '1px solid #86efac', padding: '10px', borderRadius: '8px', textAlign: 'center', color: '#15803d', fontWeight: 700, fontSize: '12.5px' }}>
             <CheckCircle size={16} /> Báo giá hoàn tất ({formattedPrice})
@@ -158,10 +216,10 @@ export const Inspector: React.FC<InspectorProps> = ({
         {(currentRole === 'PRICING' || currentRole === 'ADMIN') && selectedReq.status === 'YC_MOI' && (
           <>
             <button className="btn-insp btn-insp-primary" style={{ background: '#f59e0b' }} onClick={() => onAccept(selectedReq.id, selectedReq.version)}>
-              <Zap size={14} /> ⚡ Tiếp Nhận Yêu Cầu
+              ⚡ Tiếp Nhận Yêu Cầu
             </button>
             <button className="btn-insp btn-insp-danger" style={{ marginTop: '6px' }} onClick={() => onReject(selectedReq.id)}>
-              <XCircle size={14} /> ❌ Từ Chối Ngay
+              ❌ Từ Chối Ngay
             </button>
           </>
         )}

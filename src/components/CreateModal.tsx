@@ -139,7 +139,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         return;
       }
 
-      const noteFull = `[Bộ phận: ${department}] | [Hạn: ${leadTime}] | [Tỷ lệ chốt: ${closeRateText}]`;
 
       await onSubmit({
         customerId: finalCustomerId,
@@ -147,7 +146,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         categoryId: selectedCategoryId,
         materialIds: selectedMaterialIds,
         customerMeasurements,
-        requestNote: noteFull,
+        desiredLeadTime: leadTime,
         imageUrls: imageUrl ? [imageUrl] : undefined,
       });
 

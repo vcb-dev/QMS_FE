@@ -230,7 +230,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
             const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
-            const displayNote = r.requestNote || '---';
+            const displayNote = r.desiredLeadTime || '---';
 
             return (
               <tr
