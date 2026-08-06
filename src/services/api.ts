@@ -1,6 +1,6 @@
 import type { FilterOptions, User } from '../types';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://localhost:8000/api';
 
 export function getStoredToken(): string | null {
   return localStorage.getItem('vcb_qms_token');
@@ -144,19 +144,36 @@ export async function acceptQuoteRequest(id: string, version: number) {
   return res.json();
 }
 
-export async function completeQuoteRequest(id: string, quotedPrice: number, vat?: number) {
+export async function completeQuoteRequest(id: string, quotedPrice: number, vat?: number, options?: any[]) {
   const res = await fetch(`${API_BASE}/quote-requests/${id}/quote`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({ quotedPrice, vat }),
+    body: JSON.stringify({ quotedPrice, vat, options }),
   });
 
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.message || 'Lỗi khi nhập báo giá');
+  }
+  return res.json();
+}
+
+export async function selectQuoteOption(id: string, optionId: string) {
+  const res = await fetch(`${API_BASE}/quote-requests/${id}/select-option`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ optionId }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Lỗi khi chốt phương án báo giá');
   }
   return res.json();
 }
@@ -177,3 +194,62 @@ export async function rejectQuoteRequest(id: string, rejectReason: string) {
   }
   return res.json();
 }
+
+export async function returnQuoteRequest(id: string, returnReason: string) {
+  const res = await fetch(`${API_BASE}/quote-requests/${id}/return`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ returnReason }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Lỗi khi trả lại yêu cầu bổ sung thông tin');
+  }
+  return res.json();
+}
+
+export async function resubmitQuoteRequest(id: string) {
+  const res = await fetch(`${API_BASE}/quote-requests/${id}/resubmit`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Lỗi khi gửi lại yêu cầu cho Pricing');
+  }
+  return res.json();
+}
+
+
+export async function fetchPricingConfig() {
+  const headers = getAuthHeaders();
+  const res = await fetch(`${API_BASE}/pricing-config`, { headers });
+  if (!res.ok) throw new Error('Không thể tải cấu hình tính giá');
+  return res.json();
+}
+
+export async function updatePricingConfig(payload: any) {
+  const res = await fetch(`${API_BASE}/pricing-config`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Lỗi khi cập nhật cấu hình tính giá');
+  }
+  return res.json();
+}
+

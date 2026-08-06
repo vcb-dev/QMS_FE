@@ -302,9 +302,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               <div className="form-group">
                 <label className="form-label">2. Bộ phận làm việc <span className="req">*</span></label>
                 <select className="form-control" value={department} onChange={(e) => setDepartment(e.target.value)}>
-                  <option value="CSKH-Văn Phòng">🏢 CSKH-Văn Phòng</option>
-                  <option value="Cửa Hàng">🏪 Cửa Hàng</option>
-                  <option value="Global">🌐 Global</option>
+                  <option value="CSKH-Văn Phòng">CSKH-Văn Phòng</option>
+                  <option value="Cửa Hàng">Cửa Hàng</option>
+                  <option value="Global">Global</option>
                 </select>
               </div>
             </div>
@@ -372,20 +372,20 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               <div className="form-group">
                 <label className="form-label">7. Thời gian muốn nhận <span className="req">*</span></label>
                 <select className="form-control" value={leadTime} onChange={(e) => setLeadTime(e.target.value)}>
-                  <option value="<3 NGÀY (RẤT GẤP)">🔴 &lt;3 NGÀY (RẤT GẤP)</option>
-                  <option value="3-7 NGÀY (GẤP)">🟠 3-7 NGÀY (GẤP)</option>
-                  <option value="7-15 NGÀY (Tiêu chuẩn)">🟢 7-15 NGÀY (Tiêu chuẩn)</option>
-                  <option value="15-30 NGÀY (Đặt hàng)">🔵 15-30 NGÀY (Đặt hàng)</option>
-                  <option value=">30 NGÀY (Thong thả)">⚪ &gt;30 NGÀY (Thong thả)</option>
+                  <option value="<3 NGÀY (RẤT GẤP)">&lt;3 NGÀY (RẤT GẤP)</option>
+                  <option value="3-7 NGÀY (GẤP)">3-7 NGÀY (GẤP)</option>
+                  <option value="7-15 NGÀY (Tiêu chuẩn)">7-15 NGÀY (Tiêu chuẩn)</option>
+                  <option value="15-30 NGÀY (Đặt hàng)">15-30 NGÀY (Đặt hàng)</option>
+                  <option value=">30 NGÀY (Thong thả)">&gt;30 NGÀY (Thong thả)</option>
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">8. Khách tỷ lệ chốt <span className="req">*</span></label>
                 <select className="form-control" value={closeRateText} onChange={(e) => setCloseRateText(e.target.value)}>
-                  <option value="Khách chưa chốt báo giá">❓ Khách chưa chốt báo giá</option>
-                  <option value="Chắc chắn 100% lấy hàng">⚡ Chắc chắn 100% lấy hàng</option>
-                  <option value="Khách đã đặt cọc">💳 Khách đã đặt cọc</option>
-                  <option value="Không thực hiện báo giá">🚫 Không thực hiện báo giá</option>
+                  <option value="Khách chưa chốt báo giá">Khách chưa chốt báo giá</option>
+                  <option value="Chắc chắn 100% lấy hàng">Chắc chắn 100% lấy hàng</option>
+                  <option value="Khách đã đặt cọc">Khách đã đặt cọc</option>
+                  <option value="Không thực hiện báo giá">Không thực hiện báo giá</option>
                 </select>
               </div>
             </div>

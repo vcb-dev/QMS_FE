@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { QuoteRequest, Role, User } from '../types';
-import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, Sparkles, Clock } from 'lucide-react';
+import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown } from 'lucide-react';
 
 interface QuoteTableProps {
   requests: QuoteRequest[];
@@ -12,6 +12,7 @@ interface QuoteTableProps {
   onAccept: (id: string, version: number) => void;
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
+  onReturn?: (id: string) => void;
 }
 
 export const QuoteTable: React.FC<QuoteTableProps> = ({
@@ -24,6 +25,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onAccept,
   onPricing,
   onReject,
+  onReturn,
 }) => {
   // Calculate elapsed days without icons
   const renderQuotedDateCell = (r: QuoteRequest) => {
@@ -89,13 +91,98 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     );
   };
 
+  // ── Custom Status Dropdown (shows icon on trigger) ──
+  type StatusOption = {
+    value: string;
+    label: string;
+    icon: React.ReactNode;
+    color: string;
+    bg: string;
+    border: string;
+  };
+
+  const STATUS_META: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
+    YC_MOI:        { label: 'Yêu cầu mới',  icon: <FilePlus size={13} />,  color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+    DANG_XLY:      { label: 'Đang xử lý',   icon: <Clock size={13} />,     color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+    XONG:          { label: 'Đã báo giá',   icon: <CheckCircle size={13} />,color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+    TU_CHOI:       { label: 'Từ chối',       icon: <XCircle size={13} />,   color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+    NEED_MORE_INFO:{ label: 'Cần bổ sung',  icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
+  };
+
+  const StatusDropdown: React.FC<{
+    current: string;
+    options: StatusOption[];
+    onChange: (val: string) => void;
+  }> = ({ current, options, onChange }) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const meta = STATUS_META[current] || { label: current, icon: null, color: '#334155', bg: '#f8fafc', border: '#e2e8f0' };
+
+    useEffect(() => {
+      if (!open) return;
+      const handler = (e: MouseEvent) => {
+        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      };
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    return (
+      <div ref={ref} style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
+        {/* Trigger */}
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            padding: '3px 8px 3px 7px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
+            cursor: 'pointer', border: `1px solid ${meta.border}`,
+            background: meta.bg, color: meta.color, whiteSpace: 'nowrap',
+            transition: 'all 0.12s',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', color: meta.color }}>{meta.icon}</span>
+          {meta.label}
+          <ChevronDown size={11} style={{ marginLeft: '1px', opacity: 0.7, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+        </button>
+
+        {/* Dropdown Panel */}
+        {open && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 9999,
+            background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px',
+            boxShadow: '0 8px 24px -4px rgba(0,0,0,0.12)', padding: '4px', minWidth: '180px',
+          }}>
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  width: '100%', padding: '7px 10px', border: 'none', borderRadius: '7px',
+                  background: opt.value === current ? opt.bg : 'transparent',
+                  color: opt.color, fontSize: '12.5px', fontWeight: opt.value === current ? 700 : 500,
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ color: opt.color }}>{opt.icon}</span>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderStatusCell = (r: QuoteRequest) => {
     if (currentRole === 'SALE') {
       switch (r.status) {
         case 'YC_MOI':
           return (
             <span className="status-pill new">
-              <Sparkles size={13} color="#1d4ed8" /> YC Mới
+              <FilePlus size={13} color="#1d4ed8" /> Yêu cầu mới
             </span>
           );
         case 'DANG_XLY':
@@ -116,48 +203,70 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               <XCircle size={13} color="#be123c" /> Từ chối
             </span>
           );
+        case 'NEED_MORE_INFO':
+          return (
+            <span className="status-pill process" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }}>
+              <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
+            </span>
+          );
         default:
           return <span className="status-pill new">{r.status}</span>;
       }
     }
 
-    // PRICING / ADMIN Role: Clean Interactive Dropdown
+    // PRICING / ADMIN Role: Custom Icon Dropdown
     if (r.status === 'YC_MOI') {
       return (
-        <select
-          className="status-select new"
-          value="YC_MOI"
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => {
-            if (e.target.value === 'DANG_XLY') {
-              onAccept(r.id, r.version);
-            }
+        <StatusDropdown
+          current="YC_MOI"
+          options={[
+            { value: 'YC_MOI',        label: 'Yêu cầu mới',          icon: <FilePlus size={13} />,  color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+            { value: 'DANG_XLY',      label: 'Tiếp nhận (Đang xử lý)', icon: <Clock size={13} />,    color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+            { value: 'NEED_MORE_INFO',label: 'Trả lại Sale (Cần bổ sung)', icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
+            { value: 'TU_CHOI',       label: 'Từ chối hẳn',           icon: <XCircle size={13} />,  color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+          ]}
+          onChange={(val) => {
+            if (val === 'DANG_XLY') onAccept(r.id, r.version);
+            else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
+            else if (val === 'TU_CHOI') onReject(r.id);
           }}
-        >
-          <option value="YC_MOI">✨ Yêu cầu mới</option>
-          <option value="DANG_XLY">⚡ Tiếp nhận (Đang xử lý)</option>
-        </select>
+        />
       );
     }
 
     if (r.status === 'DANG_XLY') {
       return (
-        <select
-          className="status-select process"
-          value="DANG_XLY"
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => {
-            if (e.target.value === 'XONG') {
-              onPricing(r.id);
-            } else if (e.target.value === 'TU_CHOI') {
-              onReject(r.id);
-            }
+        <StatusDropdown
+          current="DANG_XLY"
+          options={[
+            { value: 'DANG_XLY',      label: 'Đang xử lý',             icon: <Clock size={13} />,       color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+            { value: 'XONG',          label: 'Chốt giá (Đã báo giá)',   icon: <CheckCircle size={13} />, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+            { value: 'NEED_MORE_INFO',label: 'Trả lại Sale (Cần bổ sung)', icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
+            { value: 'TU_CHOI',       label: 'Từ chối hẳn',             icon: <XCircle size={13} />,    color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+          ]}
+          onChange={(val) => {
+            if (val === 'XONG') onPricing(r.id);
+            else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
+            else if (val === 'TU_CHOI') onReject(r.id);
           }}
-        >
-          <option value="DANG_XLY">⏳ Đang xử lý</option>
-          <option value="XONG">✅ Chốt giá (Đã báo giá)</option>
-          <option value="TU_CHOI">❌ Từ chối</option>
-        </select>
+        />
+      );
+    }
+
+    if (r.status === 'NEED_MORE_INFO') {
+      return (
+        <StatusDropdown
+          current="NEED_MORE_INFO"
+          options={[
+            { value: 'NEED_MORE_INFO',label: 'Cần bổ sung',            icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
+            { value: 'DANG_XLY',      label: 'Tiếp nhận lại',          icon: <Clock size={13} />,     color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+            { value: 'TU_CHOI',       label: 'Từ chối hẳn',            icon: <XCircle size={13} />,   color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+          ]}
+          onChange={(val) => {
+            if (val === 'DANG_XLY') onAccept(r.id, r.version);
+            else if (val === 'TU_CHOI') onReject(r.id);
+          }}
+        />
       );
     }
 
@@ -172,7 +281,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     if (r.status === 'TU_CHOI') {
       return (
         <span className="status-pill reject" title="Trạng thái từ chối">
-          <XCircle size={13} color="#be123c" /> Từ chối
+          <XCircle size={13} color="#be123c" /> Từ chối hẳn
         </span>
       );
     }
@@ -331,7 +440,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   {/* SALE Role Permissions */}
                   {currentRole === 'SALE' && (
                     <>
-                      {r.status === 'YC_MOI' && isMyReq ? (
+                      {(r.status === 'YC_MOI' || r.status === 'NEED_MORE_INFO') && isMyReq ? (
                         <button
                           className="tool-btn"
                           style={{
@@ -344,9 +453,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                             cursor: 'pointer',
                             fontSize: '11.5px',
                             fontWeight: 700,
-                            background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                            background: r.status === 'NEED_MORE_INFO' ? 'linear-gradient(135deg, #ea580c, #c2410c)' : 'linear-gradient(135deg, #2563eb, #4f46e5)',
                             color: 'white',
-                            boxShadow: '0 3px 8px rgba(79, 70, 229, 0.35)',
+                            boxShadow: '0 3px 8px rgba(234, 88, 12, 0.35)',
                             transition: 'all 0.15s ease',
                           }}
                           onClick={(e) => {
@@ -354,11 +463,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                             onEdit(r);
                           }}
                         >
-                          <Edit size={12} /> Sửa YC
+                          <Edit size={12} /> {r.status === 'NEED_MORE_INFO' ? 'Sửa / Bổ Sung' : 'Sửa YC'}
                         </button>
                       ) : r.status === 'YC_MOI' ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
-                          ⏳ Chờ tiếp nhận
+                          Chờ tiếp nhận
                         </span>
                       ) : (
                         <span style={{ fontSize: '11px', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>

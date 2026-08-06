@@ -1,6 +1,6 @@
 export type Role = 'SALE' | 'PRICING' | 'ADMIN';
 
-export type QuoteStatus = 'YC_MOI' | 'DANG_XLY' | 'XONG' | 'TU_CHOI';
+export type QuoteStatus = 'YC_MOI' | 'DANG_XLY' | 'XONG' | 'TU_CHOI' | 'NEED_MORE_INFO';
 
 export interface User {
   id: string;
@@ -36,6 +36,21 @@ export interface QuoteRequestImage {
   imageUrl: string;
 }
 
+export interface QuoteOption {
+  id?: string;
+  quoteRequestId?: string;
+  optionName: string;
+  materialName?: string;
+  weightChi?: number;
+  laborCost?: number;
+  stoneCost?: number;
+  stoneDescription?: string;
+  vat?: number;
+  quotedPrice: number;
+  isSelected?: boolean;
+  note?: string;
+}
+
 export interface QuoteRequest {
   id: string;
   code: string;
@@ -49,6 +64,9 @@ export interface QuoteRequest {
   quotedPrice?: number;
   quotedDate?: string;
   rejectReason?: string;
+  returnReason?: string;
+  selectedOptionId?: string;
+  options?: QuoteOption[];
   version: number;
   createdAt: string;
   updatedAt: string;

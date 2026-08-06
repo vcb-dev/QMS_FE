@@ -42,6 +42,36 @@
   100% { transform: rotate(360deg); }
 }
 
+@keyframes pageFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.page-transition {
+  animation: pageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.inspector-transition {
+  animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 body {
   background-color: #f1f5f9;
   color: var(--text-main);
@@ -173,12 +203,18 @@ body {
   transform: translateY(-1px);
 }
 
+.dropdown-item-hover:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
 .workspace {
-  display: grid;
-  grid-template-columns: 210px 1fr 340px;
+  display: flex;
   flex: 1;
   overflow: hidden;
   background: #f8fafc;
+  width: 100%;
+  position: relative;
 }
 
 .sidebar {
@@ -188,6 +224,36 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  width: 240px;
+  min-width: 240px;
+  flex-shrink: 0;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s ease, opacity 0.2s ease;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.sidebar:not(.open) {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  opacity: 0;
+  border-right: none;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.status-submenu {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.25s ease;
+  margin-top: 0;
+}
+
+.status-submenu.expanded {
+  max-height: 220px;
+  opacity: 1;
+  margin-top: 4px;
 }
 
 .sidebar-nav {
@@ -270,11 +336,14 @@ body {
 }
 
 .content {
+  flex: 1;
+  min-width: 0;
   padding: 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  box-sizing: border-box;
 }
 
 .view-heading {
@@ -557,6 +626,9 @@ body {
 .tool-btn:hover { background: #f1f5f9; }
 
 .inspector {
+  width: 340px;
+  min-width: 340px;
+  flex-shrink: 0;
   background: white;
   border-left: 1px solid var(--border-color);
   padding: 20px;
@@ -564,6 +636,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  box-sizing: border-box;
 }
 
 .inspector-media {
