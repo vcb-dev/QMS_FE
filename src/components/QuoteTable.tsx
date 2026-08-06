@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { QuoteRequest, Role, User } from '../types';
 import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown } from 'lucide-react';
 
@@ -116,23 +117,42 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   }> = ({ current, options, onChange }) => {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
     const meta = STATUS_META[current] || { label: current, icon: null, color: '#334155', bg: '#f8fafc', border: '#e2e8f0' };
+
+    const updateMenuPosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (rect) setMenuPosition({ top: rect.bottom + 4, left: rect.left });
+    };
 
     useEffect(() => {
       if (!open) return;
       const handler = (e: MouseEvent) => {
-        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        const target = e.target as Node;
+        if (!ref.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
       };
       document.addEventListener('mousedown', handler);
-      return () => document.removeEventListener('mousedown', handler);
+      window.addEventListener('resize', updateMenuPosition);
+      document.addEventListener('scroll', updateMenuPosition, true);
+      return () => {
+        document.removeEventListener('mousedown', handler);
+        window.removeEventListener('resize', updateMenuPosition);
+        document.removeEventListener('scroll', updateMenuPosition, true);
+      };
     }, [open]);
 
     return (
       <div ref={ref} style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
         {/* Trigger */}
         <button
+          ref={triggerRef}
           type="button"
-          onClick={() => setOpen(!open)}
+          onClick={() => {
+            if (!open) updateMenuPosition();
+            setOpen(!open);
+          }}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '5px',
             padding: '3px 8px 3px 7px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
@@ -147,9 +167,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
         </button>
 
         {/* Dropdown Panel */}
-        {open && (
-          <div style={{
-            position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 9999,
+        {open && createPortal(
+          <div ref={menuRef} style={{
+            position: 'fixed', top: menuPosition.top, left: menuPosition.left, zIndex: 9999,
             background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px',
             boxShadow: '0 8px 24px -4px rgba(0,0,0,0.12)', padding: '4px', minWidth: '180px',
           }}>
@@ -170,7 +190,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 {opt.label}
               </button>
             ))}
-          </div>
+          </div>,
+          document.body,
         )}
       </div>
     );
@@ -222,19 +243,26 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           options={[
             { value: 'YC_MOI',        label: 'Yêu cầu mới',          icon: <FilePlus size={13} />,  color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
             { value: 'DANG_XLY',      label: 'Tiếp nhận (Đang xử lý)', icon: <Clock size={13} />,    color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-            { value: 'NEED_MORE_INFO',label: 'Trả lại Sale (Cần bổ sung)', icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
-            { value: 'TU_CHOI',       label: 'Từ chối hẳn',           icon: <XCircle size={13} />,  color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
           ]}
           onChange={(val) => {
             if (val === 'DANG_XLY') onAccept(r.id, r.version);
-            else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
-            else if (val === 'TU_CHOI') onReject(r.id);
           }}
         />
       );
     }
 
     if (r.status === 'DANG_XLY') {
+      const isAssignedToCurrentPricing =
+        r.pricer?.id === currentUser.id || r.pricer?.email === currentUser.email;
+
+      if (currentRole === 'PRICING' && !isAssignedToCurrentPricing) {
+        return (
+          <span className="status-pill process" title="Yêu cầu đang do nhân sự Pricing khác xử lý">
+            <Clock size={13} color="#b45309" /> Đang xử lý
+          </span>
+        );
+      }
+
       return (
         <StatusDropdown
           current="DANG_XLY"
@@ -255,18 +283,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'NEED_MORE_INFO') {
       return (
-        <StatusDropdown
-          current="NEED_MORE_INFO"
-          options={[
-            { value: 'NEED_MORE_INFO',label: 'Cần bổ sung',            icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
-            { value: 'DANG_XLY',      label: 'Tiếp nhận lại',          icon: <Clock size={13} />,     color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-            { value: 'TU_CHOI',       label: 'Từ chối hẳn',            icon: <XCircle size={13} />,   color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
-          ]}
-          onChange={(val) => {
-            if (val === 'DANG_XLY') onAccept(r.id, r.version);
-            else if (val === 'TU_CHOI') onReject(r.id);
-          }}
-        />
+        <span className="status-pill process" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }}>
+          <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
+        </span>
       );
     }
 

@@ -127,105 +127,54 @@ export async function updateQuoteRequest(id: string, payload: any) {
   return res.json();
 }
 
-export async function acceptQuoteRequest(id: string, version: number) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}/accept`, {
+export async function changeQuoteStatus(id: string, payload: {
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION';
+  version?: number;
+  quotedPrice?: number;
+  vat?: number;
+  options?: any[];
+  rejectReason?: string;
+  returnReason?: string;
+  optionId?: string;
+}) {
+  const res = await fetch(`${API_BASE}/quote-requests/${id}/status`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({ version }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.message || 'Yêu cầu này đã được tiếp nhận bởi người khác');
+    throw new Error(error.message || 'Lỗi khi cập nhật trạng thái yêu cầu');
   }
   return res.json();
+}
+
+export async function acceptQuoteRequest(id: string, version: number) {
+  return changeQuoteStatus(id, { action: 'ACCEPT', version });
 }
 
 export async function completeQuoteRequest(id: string, quotedPrice: number, vat?: number, options?: any[]) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}/quote`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify({ quotedPrice, vat, options }),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi nhập báo giá');
-  }
-  return res.json();
+  return changeQuoteStatus(id, { action: 'QUOTE', quotedPrice, vat, options });
 }
 
 export async function selectQuoteOption(id: string, optionId: string) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}/select-option`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify({ optionId }),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi chốt phương án báo giá');
-  }
-  return res.json();
+  return changeQuoteStatus(id, { action: 'SELECT_OPTION', optionId });
 }
 
 export async function rejectQuoteRequest(id: string, rejectReason: string) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}/reject`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify({ rejectReason }),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi từ chối yêu cầu');
-  }
-  return res.json();
+  return changeQuoteStatus(id, { action: 'REJECT', rejectReason });
 }
 
 export async function returnQuoteRequest(id: string, returnReason: string) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}/return`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify({ returnReason }),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi trả lại yêu cầu bổ sung thông tin');
-  }
-  return res.json();
+  return changeQuoteStatus(id, { action: 'RETURN', returnReason });
 }
 
 export async function resubmitQuoteRequest(id: string) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}/resubmit`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi gửi lại yêu cầu cho Pricing');
-  }
-  return res.json();
+  return changeQuoteStatus(id, { action: 'RESUBMIT' });
 }
 
 
