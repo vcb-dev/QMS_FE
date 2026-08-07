@@ -1,13 +1,14 @@
 import type { FilterOptions, User } from '../types';
+import { STORAGE_KEYS } from '../constants';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem('vcb_qms_token');
+  return localStorage.getItem(STORAGE_KEYS.TOKEN);
 }
 
 export function getStoredUser(): User | null {
-  const data = localStorage.getItem('vcb_qms_user');
+  const data = localStorage.getItem(STORAGE_KEYS.USER);
   if (!data) return null;
   try {
     return JSON.parse(data);
@@ -17,8 +18,8 @@ export function getStoredUser(): User | null {
 }
 
 export function clearSession() {
-  localStorage.removeItem('vcb_qms_token');
-  localStorage.removeItem('vcb_qms_user');
+  localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER);
 }
 
 export async function loginApi(email: string, password: string): Promise<{ accessToken: string; user: User }> {
@@ -34,8 +35,8 @@ export async function loginApi(email: string, password: string): Promise<{ acces
   }
 
   const data = await res.json();
-  localStorage.setItem('vcb_qms_token', data.accessToken);
-  localStorage.setItem('vcb_qms_user', JSON.stringify(data.user));
+  localStorage.setItem(STORAGE_KEYS.TOKEN, data.accessToken);
+  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
   return data;
 }
 
@@ -44,12 +45,17 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean }) {
   const headers = getAuthHeaders();
   const query = new URLSearchParams();
-  if (filter?.status) query.append('status', filter.status);
+  if (filter?.status && filter.status !== 'ALL') query.append('status', filter.status);
   if (filter?.search) query.append('search', filter.search);
-  query.append('limit', '100');
+  if (filter?.categoryId && filter.categoryId !== 'ALL') query.append('categoryId', filter.categoryId);
+  if (filter?.materialId && filter.materialId !== 'ALL') query.append('materialId', filter.materialId);
+  if (filter?.ownerId && filter.ownerId !== 'ALL') query.append('ownerId', filter.ownerId);
+  if (filter?.page) query.append('page', String(filter.page));
+  if (filter?.limit) query.append('limit', String(filter.limit));
+  if (filter?.includeCounts) query.append('includeCounts', 'true');
 
   const res = await fetch(`${API_BASE}/quote-requests?${query.toString()}`, { headers });
   if (res.status === 401) {
@@ -63,17 +69,24 @@ export async function fetchQuoteRequests(filter?: FilterOptions) {
 
 export async function fetchMasterData() {
   const headers = getAuthHeaders();
-  const [categoriesRes, materialsRes, customersRes] = await Promise.all([
+  const [categoriesRes, materialsRes] = await Promise.all([
     fetch(`${API_BASE}/product-categories`, { headers }),
     fetch(`${API_BASE}/materials`, { headers }),
-    fetch(`${API_BASE}/customers`, { headers }),
   ]);
 
   const categories = categoriesRes.ok ? await categoriesRes.json() : [];
   const materials = materialsRes.ok ? await materialsRes.json() : [];
-  const customers = customersRes.ok ? await customersRes.json() : [];
 
-  return { categories, materials, customers };
+  return { categories, materials, customers: [] };
+}
+
+export async function searchCustomers(search?: string) {
+  const headers = getAuthHeaders();
+  const query = new URLSearchParams();
+  if (search) query.append('search', search);
+  const res = await fetch(`${API_BASE}/customers?${query.toString()}`, { headers });
+  if (!res.ok) throw new Error('Không thể tìm kiếm khách hàng');
+  return res.json();
 }
 
 export async function createCustomer(payload: { name: string; phone?: string; address?: string; note?: string }) {
@@ -177,11 +190,17 @@ export async function resubmitQuoteRequest(id: string) {
   return changeQuoteStatus(id, { action: 'RESUBMIT' });
 }
 
-
 export async function fetchPricingConfig() {
   const headers = getAuthHeaders();
   const res = await fetch(`${API_BASE}/pricing-config`, { headers });
   if (!res.ok) throw new Error('Không thể tải cấu hình tính giá');
+  return res.json();
+}
+
+export async function fetchMetalPrices() {
+  const headers = getAuthHeaders();
+  const res = await fetch(`${API_BASE}/metal-prices`, { headers });
+  if (!res.ok) throw new Error('Không thể tải giá vàng & bạc trực tuyến');
   return res.json();
 }
 
@@ -201,4 +220,3 @@ export async function updatePricingConfig(payload: any) {
   }
   return res.json();
 }
-

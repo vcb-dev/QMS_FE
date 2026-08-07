@@ -3,6 +3,7 @@ import { X, Calculator, Plus, Trash2, Sparkles, CheckCircle } from 'lucide-react
 import type { QuoteOption, QuoteRequest } from '../types';
 import { useMetalPrices } from '../hooks/useMetalPrices';
 import { fetchPricingConfig } from '../services/api';
+import { PRICING_DEFAULTS } from '../constants';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -20,43 +21,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   selectedReq,
 }) => {
   const { formatted, prices } = useMetalPrices();
-  const [vat, setVat] = useState('10');
+  const [vat, setVat] = useState(String(PRICING_DEFAULTS.VAT_PCT));
   const [includeVat, setIncludeVat] = useState(false);
-  const [manualBasePrice, setManualBasePrice] = useState<string>('1200000');
+  const [manualBasePrice, setManualBasePrice] = useState<string>(String(PRICING_DEFAULTS.MANUAL_BASE_PRICE));
   const [submitting, setSubmitting] = useState(false);
 
   // 1. Basic calculation inputs for Gold / Silver auto generator
-  const [weightChi, setWeightChi] = useState<string>('1.2');
-  const [laborCost, setLaborCost] = useState<string>('500000');
-  const [stoneCost, setStoneCost] = useState<string>('300000');
-  const [stoneDesc, setStoneDesc] = useState<string>('Đá CZ cao cấp');
+  const [weightChi, setWeightChi] = useState<string>(PRICING_DEFAULTS.WEIGHT_CHI);
+  const [laborCost, setLaborCost] = useState<string>(String(PRICING_DEFAULTS.LABOR_COST));
+  const [stoneCost, setStoneCost] = useState<string>(String(PRICING_DEFAULTS.STONE_COST));
+  const [stoneDesc, setStoneDesc] = useState<string>(PRICING_DEFAULTS.STONE_DESC);
 
-  // 2. Options List
+  // 2. Options List & Dynamic DB Config
   const [options, setOptions] = useState<QuoteOption[]>([]);
-  const [goldRatios, setGoldRatios] = useState<any[]>([
-    { key: 'GOLD_10K', applied: 0.47, label: 'Vàng 10K' },
-    { key: 'GOLD_14K', applied: 0.64, label: 'Vàng 14K' },
-    { key: 'GOLD_18K', applied: 0.80, label: 'Vàng 18K' },
-    { key: 'GOLD_24K', applied: 1.05, label: 'Vàng 24K' },
-    { key: 'GOLD_610', applied: 0.66, label: 'Vàng 610' },
-  ]);
-  const [profitMargins, setProfitMargins] = useState<any[]>([
-    { maxCost: 10_000_000, divisor: 0.65 },
-    { maxCost: 50_000_000, divisor: 0.70 },
-    { maxCost: 999_999_999_999, divisor: 0.75 },
-  ]);
-
-  // Load dynamic DB pricing config
-  useEffect(() => {
-    if (isOpen) {
-      fetchPricingConfig()
-        .then((cfg) => {
-          if (cfg.goldRatios && cfg.goldRatios.length > 0) setGoldRatios(cfg.goldRatios);
-          if (cfg.profitMargins && cfg.profitMargins.length > 0) setProfitMargins(cfg.profitMargins);
-        })
-        .catch(() => {});
-    }
-  }, [isOpen]);
+  const [goldRatios, setGoldRatios] = useState<any[]>([]);
+  const [profitMargins, setProfitMargins] = useState<any[]>([]);
+  const [silverMultiplier, setSilverMultiplier] = useState(PRICING_DEFAULTS.SILVER_MULTIPLIER);
 
   // Extract Sale's requested material name
   const requestedMatName = selectedReq?.materials?.[0]?.name || selectedReq?.material?.name || '';
@@ -65,13 +45,33 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const isGoldReq =
     reqLower.includes('vàng') ||
     reqLower.includes('gold') ||
-    reqLower.includes('10k') ||
-    reqLower.includes('14k') ||
-    reqLower.includes('18k') ||
-    reqLower.includes('24k') ||
-    reqLower.includes('610');
+    goldRatios.some(
+      (r) =>
+        reqLower.includes(r.label?.toLowerCase() || '') ||
+        reqLower.includes(r.key?.toLowerCase().replace('gold_', '') || '')
+    );
   const isSilverReq = reqLower.includes('bạc') || reqLower.includes('silver');
   const isNonPrecious = requestedMatName ? (!isGoldReq && !isSilverReq) : false;
+
+  // Load dynamic DB pricing config
+  useEffect(() => {
+    if (isOpen) {
+      fetchPricingConfig()
+        .then((cfg) => {
+          const rList = cfg.goldRatios && cfg.goldRatios.length > 0 ? cfg.goldRatios : [];
+          const mList = cfg.profitMargins && cfg.profitMargins.length > 0 ? cfg.profitMargins : [];
+          setGoldRatios(rList);
+          setProfitMargins(mList);
+          const configuredSilverMultiplier = Number(cfg.silverMultiplier) || PRICING_DEFAULTS.SILVER_MULTIPLIER;
+          setSilverMultiplier(configuredSilverMultiplier);
+
+          if (!isNonPrecious && rList.length > 0) {
+            generateKaratOptions(rList, mList, configuredSilverMultiplier);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, requestedMatName, isNonPrecious]);
 
   // Sync non-precious manual price mode
   useEffect(() => {
@@ -99,17 +99,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   }, [manualBasePrice, includeVat, vat, requestedMatName, isNonPrecious]);
 
-  // Auto-generate options for Gold & Silver
-  const generateKaratOptions = () => {
-    if (isNonPrecious) return;
+  // Auto-generate options for Gold & Silver using DB config
+  const generateKaratOptions = (
+    ratiosList = goldRatios,
+    marginsList = profitMargins,
+    configuredSilverMultiplier = silverMultiplier,
+  ) => {
+    if (isNonPrecious || ratiosList.length === 0) return;
 
     const w = parseFloat(weightChi) || 0;
     const l = parseFloat(laborCost) || 0;
     const s = parseFloat(stoneCost) || 0;
     const vatVal = parseFloat(vat) || 10;
 
-    const gold24kRate = parseFloat(formatted.gold24k.replace(/\D/g, '')) || prices.gold24kVnd || 13900000;
-    const silverRate = parseFloat(formatted.silver.replace(/\D/g, '')) || prices.silverVnd || 1200000;
+    const gold24kRate = parseFloat(formatted.gold24k.replace(/\D/g, '')) || prices.gold24kVnd || PRICING_DEFAULTS.FALLBACK_GOLD_24K;
+    const silverRate = parseFloat(formatted.silver.replace(/\D/g, '')) || prices.silverVnd || PRICING_DEFAULTS.FALLBACK_SILVER;
 
     // IF SALE REQUESTED SILVER (BẠC)
     if (isSilverReq) {
@@ -117,7 +121,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const rawCost = matCost + l + s;
       const vatCost = rawCost * (vatVal / 100);
       const totalCostWithVat = rawCost + vatCost;
-      const suggestedPrice = Math.round(totalCostWithVat * 3);
+      const suggestedPrice = Math.round(totalCostWithVat * configuredSilverMultiplier);
 
       const silverOptions: QuoteOption[] = [
         {
@@ -136,13 +140,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           optionName: `Phương án 2 (Bạc Xi Kim / Vàng Trắng - So sánh thêm)`,
           materialName: 'Bạc Xi Kim',
           weightChi: w,
-          laborCost: l + 150000,
+          laborCost: l + PRICING_DEFAULTS.SILVER_PLATING_EXTRA,
           stoneCost: s,
           stoneDescription: stoneDesc,
           vat: vatVal,
-          quotedPrice: Math.round((totalCostWithVat + 150000) * 3),
+          quotedPrice: Math.round((totalCostWithVat + PRICING_DEFAULTS.SILVER_PLATING_EXTRA) * configuredSilverMultiplier),
           isSelected: false,
-          note: `Phương án xi cao cấp | Công ${(l + 150000).toLocaleString('vi-VN')}₫`,
+          note: `Phương án xi cao cấp | Công ${(l + PRICING_DEFAULTS.SILVER_PLATING_EXTRA).toLocaleString('vi-VN')}₫`,
         },
       ];
       setOptions(silverOptions);
@@ -152,7 +156,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     // IF SALE REQUESTED GOLD (VÀNG) OR DEFAULT
     let requestedKey = 'GOLD_10K';
     if (requestedMatName) {
-      const found = goldRatios.find(
+      const found = ratiosList.find(
         (r) =>
           reqLower.includes(r.label.toLowerCase()) ||
           reqLower.includes(r.key.toLowerCase().replace('gold_', ''))
@@ -160,7 +164,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       if (found) requestedKey = found.key;
     }
 
-    const allGenerated = goldRatios.map((ratioObj) => {
+    const allGenerated = ratiosList.map((ratioObj) => {
       const matName = ratioObj.label || ratioObj.key;
       const isSaleTarget = ratioObj.key === requestedKey;
       const matCost = gold24kRate * ratioObj.applied * w;
@@ -168,8 +172,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const vatCost = rawCost * (vatVal / 100);
       const totalCostWithVat = rawCost + vatCost;
 
-      const tier = profitMargins.find((m) => totalCostWithVat <= m.maxCost) || profitMargins[profitMargins.length - 1];
-      const divisor = tier ? tier.divisor : 0.7;
+      const tier = marginsList.find((m) => totalCostWithVat <= m.maxCost) || marginsList[marginsList.length - 1];
+      const divisor = tier ? tier.divisor : PRICING_DEFAULTS.PROFIT_DIVISOR;
       const suggestedPrice = Math.round(totalCostWithVat / divisor);
 
       return {
@@ -397,7 +401,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={generateKaratOptions}
+                  onClick={() => generateKaratOptions()}
                   style={{ marginTop: '10px', width: '100%', background: '#334155', color: '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer' }}
                 >
                   Tính & Tạo Lại Tất Cả Phương Án

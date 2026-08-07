@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Customer, Material, ProductCategory, QuoteRequest } from '../types';
-import { createCustomer } from '../services/api';
-import { X, Sparkles, UserPlus, Users, Upload } from 'lucide-react';
+import { createCustomer, searchCustomers } from '../services/api';
+import { X, Sparkles, UserPlus, Users, Upload, Search } from 'lucide-react';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -35,6 +35,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerAddress, setNewCustomerAddress] = useState('');
+
+  // Lazy Customer Search
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerList, setCustomerList] = useState<Customer[]>(customers);
 
   // 10 Operational Fields
   const [department, setDepartment] = useState('CSKH-Văn Phòng');
@@ -74,6 +78,22 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setImageUrl('');
     }
   }, [editingReq, categories, customers, isOpen]);
+
+  // Debounced Lazy Customer Search
+  useEffect(() => {
+    if (!isOpen || isNewCustomerMode) return;
+    const timer = setTimeout(() => {
+      searchCustomers(customerSearch)
+        .then((res) => {
+          setCustomerList(res);
+          if (res.length > 0 && !selectedCustomerId) {
+            setSelectedCustomerId(res[0].id);
+          }
+        })
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerSearch, isOpen, isNewCustomerMode]);
 
   if (!isOpen) return null;
 
@@ -236,17 +256,31 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {!isNewCustomerMode ? (
-                <select
-                  className="form-control"
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                >
-                  {customers.map((cust) => (
-                    <option key={cust.id} value={cust.id}>
-                      {cust.name} {cust.phone ? `(${cust.phone})` : ''} {cust.address ? `- ${cust.address}` : ''}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Gõ tìm tên hoặc SĐT khách hàng..."
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      style={{ paddingLeft: '30px', fontSize: '12px' }}
+                    />
+                  </div>
+                  <select
+                    className="form-control"
+                    value={selectedCustomerId}
+                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  >
+                    {customerList.map((cust) => (
+                      <option key={cust.id} value={cust.id}>
+                        {cust.name} {cust.phone ? `(${cust.phone})` : ''} {cust.address ? `- ${cust.address}` : ''}
+                      </option>
+                    ))}
+                    {customerList.length === 0 && <option value="">Không tìm thấy khách hàng nào</option>}
+                  </select>
+                </div>
               ) : (
                 <div style={{
                   background: '#f8fafc',

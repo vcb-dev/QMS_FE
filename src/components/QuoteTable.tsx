@@ -373,11 +373,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 <td>{renderStatusCell(r)}</td>
                 <td>
                   <strong style={{ color: '#0f172a' }}>{displayCustomerName}</strong>
-                  {isMyReq && (
-                    <span style={{ marginLeft: '5px', fontSize: '10px', background: '#e0e7ff', color: '#3730a3', padding: '2px 6px', borderRadius: '6px', fontWeight: 700 }}>
-                      Tôi
-                    </span>
-                  )}
+                  
                 </td>
                 <td>
                   <span style={{ background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600 }}>

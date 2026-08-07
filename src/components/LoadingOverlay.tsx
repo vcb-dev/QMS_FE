@@ -2,15 +2,15 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 
 interface LoadingOverlayProps {
-  isLoading: boolean;
+  show: boolean;
   message?: string;
 }
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
-  isLoading,
+  show,
   message = 'Đang tải dữ liệu từ hệ thống VCB...',
 }) => {
-  if (!isLoading) return null;
+  if (!show) return null;
 
   return (
     <div className="modal-backdrop show" style={{ zIndex: 9999, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)' }}>

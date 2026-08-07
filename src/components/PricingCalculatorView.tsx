@@ -11,6 +11,7 @@ import {
   Settings,
   Coins,
 } from 'lucide-react';
+import { PRICING_DEFAULTS } from '../constants';
 
 interface PricingCalculatorViewProps {
   currentRole: Role;
@@ -24,14 +25,15 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
   // Master Data & DB Config
   const [dbConfig, setDbConfig] = useState<any>(null);
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string }[]>([]);
+  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string }[]>([]);
 
   // Product Inputs
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
   const [materialType, setMaterialType] = useState('');
-  const [weightChi, setWeightChi] = useState<string>('1');
-  const [laborCost, setLaborCost] = useState<number>(500000);
-  const [vatPct, setVatPct] = useState<number>(10);
+  const [weightChi, setWeightChi] = useState<string>(PRICING_DEFAULTS.WEIGHT_CHI);
+  const [laborCost, setLaborCost] = useState<number>(PRICING_DEFAULTS.LABOR_COST);
+  const [vatPct, setVatPct] = useState<number>(PRICING_DEFAULTS.VAT_PCT);
 
   // Stone Calculator
   type StoneUnit = 'vien' | 'carat';
@@ -43,30 +45,13 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
     pricePerUnit: number;
     unit: StoneUnit;
   };
-  const STONE_TYPES = [
-    'Kim cương Lab',
-    'Moissanite',
-    'CZ (Cubic Zirconia)',
-    'Đá Ruby',
-    'Đá Sapphire',
-    'Đá Emerald',
-    'Đá Topaz',
-    'Đá Peridot',
-    'Đá Aquamarine',
-    'Đá Garnet',
-    'Đá Tanzanite',
-    'Đá Amethyst',
-    'Đá Citrine',
-    'Ngọc trai',
-    'Cẩm thạch (Jade)',
-    'Đá khác',
-  ];
   const [stoneRows, setStoneRows] = useState<StoneRow[]>([]);
 
   const addStoneRow = () => {
+    const defaultType = dbMaterials.length > 0 ? dbMaterials[0].name : 'Kim Cương';
     setStoneRows((prev) => [
       ...prev,
-      { id: Date.now().toString(), type: 'Moissanite', sizeDesc: '', qty: 1, pricePerUnit: 0, unit: 'vien' },
+      { id: Date.now().toString(), type: defaultType, sizeDesc: '', qty: 1, pricePerUnit: 0, unit: 'vien' },
     ]);
   };
 
@@ -104,6 +89,9 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
           setDbCategories(master.categories);
           setCategory(master.categories[0].id || master.categories[0].name);
         }
+        if (master?.materials && master.materials.length > 0) {
+          setDbMaterials(master.materials);
+        }
       })
       .catch((err) => console.error('Lỗi nạp cấu hình:', err));
   }, []);
@@ -116,8 +104,8 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
   // Unified Price Calculation (Gold & Silver)
   const calculationResult = useMemo(() => {
     const weightNum = parseFloat(weightChi) || 0;
-    const gold24kRate = parseFloat(goldPrice24K.replace(/\D/g, '')) || prices.gold24kVnd || 13900000;
-    const silverRate = parseFloat(silverPrice.replace(/\D/g, '')) || prices.silverVnd || 1200000;
+    const gold24kRate = parseFloat(goldPrice24K.replace(/\D/g, '')) || prices.gold24kVnd || PRICING_DEFAULTS.FALLBACK_GOLD_24K;
+    const silverRate = parseFloat(silverPrice.replace(/\D/g, '')) || prices.silverVnd || PRICING_DEFAULTS.FALLBACK_SILVER;
     const laborNum = laborCost || 0;
     const stoneNum = stoneCost || 0;
     const vatVal = vatPct || 0;
@@ -132,17 +120,11 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
       const rawCost = materialCost + laborNum + stoneNum;
       const vatAmount = Math.round(rawCost * (vatVal / 100));
       const totalCostWithVat = rawCost + vatAmount;
-      const silverMultiplier = dbConfig?.silverMultiplier ? Number(dbConfig.silverMultiplier) : 3;
+      const silverMultiplier = dbConfig?.silverMultiplier ? Number(dbConfig.silverMultiplier) : PRICING_DEFAULTS.SILVER_MULTIPLIER;
       suggestedPrice = Math.round(totalCostWithVat * silverMultiplier);
     } else {
-      let ratio = 0.80;
-      const goldRatiosList = dbConfig?.goldRatios || [
-        { key: 'GOLD_10K', applied: 0.47, label: 'Vàng 10K' },
-        { key: 'GOLD_14K', applied: 0.64, label: 'Vàng 14K' },
-        { key: 'GOLD_18K', applied: 0.80, label: 'Vàng 18K' },
-        { key: 'GOLD_24K', applied: 1.05, label: 'Vàng 24K' },
-        { key: 'GOLD_610', applied: 0.66, label: 'Vàng 610' },
-      ];
+      let ratio = PRICING_DEFAULTS.GOLD_APPLIED_RATIO;
+      const goldRatiosList = dbConfig?.goldRatios || [];
 
       const matchedRatioObj = goldRatiosList.find((r: any) => r.key === materialType);
       if (matchedRatioObj) {
@@ -155,14 +137,10 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
       const vatAmount = Math.round(rawCost * (vatVal / 100));
       const totalCostWithVat = rawCost + vatAmount;
 
-      const profitMarginsList = dbConfig?.profitMargins || [
-        { maxCost: 10_000_000, divisor: 0.65 },
-        { maxCost: 50_000_000, divisor: 0.70 },
-        { maxCost: 999_999_999_999, divisor: 0.75 },
-      ];
+      const profitMarginsList = dbConfig?.profitMargins || [];
 
       const tier = profitMarginsList.find((m: any) => totalCostWithVat <= m.maxCost) || profitMarginsList[profitMarginsList.length - 1];
-      const divisor = tier ? Number(tier.divisor) : 0.70;
+      const divisor = tier ? Number(tier.divisor) : PRICING_DEFAULTS.PROFIT_DIVISOR;
 
       suggestedPrice = Math.round(totalCostWithVat / divisor);
 
@@ -325,11 +303,12 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
                 onChange={(e) => setMaterialType(e.target.value)}
                 style={{ borderRadius: '10px', height: '42px', fontWeight: 800 }}
               >
-                <option value="GOLD_10K">Vàng 10K</option>
-                <option value="GOLD_14K">Vàng 14K</option>
-                <option value="GOLD_18K">Vàng 18K</option>
-                <option value="GOLD_24K">Vàng 24K</option>
-                <option value="GOLD_610">Vàng 610</option>
+                <option value="">-- Chọn chất liệu --</option>
+                {dbConfig?.goldRatios?.map((ratioObj: any) => (
+                  <option key={ratioObj.key} value={ratioObj.key}>
+                    {ratioObj.label || ratioObj.key}
+                  </option>
+                ))}
                 <option value="SILVER">Bạc (Silver)</option>
               </select>
             </div>
@@ -447,7 +426,12 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
                             onChange={(e) => updateStoneRow(row.id, { type: e.target.value })}
                             style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12.5px', fontWeight: 600, background: '#fff', color: '#334155' }}
                           >
-                            {STONE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            {dbMaterials.map((m) => (
+                              <option key={m.id || m.name} value={m.name}>
+                                {m.name}
+                              </option>
+                            ))}
+                            {dbMaterials.length === 0 && <option value="Kim Cương">Kim Cương</option>}
                           </select>
                         </div>
                         <div>

@@ -1,6 +1,6 @@
-import React from 'react';
 import type { QuoteRequest, Role, User } from '../types';
 import { Edit, DollarSign, XCircle, CheckCircle, FilePlus, Clock, RotateCcw } from 'lucide-react';
+import { UI_CONSTANTS } from '../constants';
 
 interface InspectorProps {
   selectedReq: QuoteRequest | null;
@@ -55,7 +55,7 @@ export const Inspector: React.FC<InspectorProps> = ({
 
   const imageUrl = selectedReq.images && selectedReq.images.length > 0
     ? selectedReq.images[0].imageUrl
-    : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36';
+    : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
 
   const renderStatusBadge = () => {
     switch (selectedReq.status) {
@@ -297,8 +297,8 @@ export const Inspector: React.FC<InspectorProps> = ({
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '10px', borderRadius: '8px', color: '#1e40af', fontSize: '12px' }}>
             <strong>🟡 Đang xử lý bởi người báo giá</strong>
             <div style={{ marginTop: '4px' }}>
-              <a href={`mailto:${selectedReq.pricer?.email || 'pricing@vcb.vn'}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline' }}>
-                📧 {selectedReq.pricer?.email || 'pricing@vcb.vn'}
+              <a href={`mailto:${selectedReq.pricer?.email || UI_CONSTANTS.DEFAULT_PRICER_EMAIL}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'underline' }}>
+                📧 {selectedReq.pricer?.email || UI_CONSTANTS.DEFAULT_PRICER_EMAIL}
               </a>
             </div>
           </div>

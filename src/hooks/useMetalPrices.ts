@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { fetchMetalPrices } from '../services/api';
 
 export interface MetalPrices {
   gold24kVnd: number;
@@ -88,12 +89,7 @@ export function useMetalPrices() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/metal-prices', { credentials: 'include' });
-      const contentType = res.headers.get('content-type') || '';
-      if (!res.ok || !contentType.includes('application/json')) {
-        throw new Error(`Backend không phản hồi (${res.status}) — dùng giá mặc định/lưu trữ`);
-      }
-      const data: MetalPrices = await res.json();
+      const data: MetalPrices = await fetchMetalPrices();
       if (data && typeof data.gold24kVnd === 'number') {
         setPrices(data);
         writeCache(data);
