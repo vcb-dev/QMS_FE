@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Role, User } from './types';
-import { getStoredUser, clearSession, logoutApi } from './services/api';
+import { getStoredUser, logoutApi } from './services/api';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
 
 import { PlusCircle } from 'lucide-react';
@@ -74,7 +74,7 @@ export function App() {
     handleRejectSubmit,
     handleReturnSubmit,
     handleResubmitDirect,
-  } = useQuoteRequests(currentUser, currentRole);
+  } = useQuoteRequests(currentUser);
 
   if (!currentUser) {
     return (
@@ -121,7 +121,6 @@ export function App() {
         user={currentUser}
         currentRole={currentRole}
         onRoleChange={setCurrentRole}
-        onOpenCreateModal={handleOpenCreate}
         onLogout={handleLogout}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
       />

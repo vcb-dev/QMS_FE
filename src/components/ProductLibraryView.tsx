@@ -44,14 +44,13 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
       const searchOk = !query || codeMatch || nameMatch || custMatch;
 
       // Category filter
-      const catOk = selectedCat === 'ALL' || r.categoryId === selectedCat || r.category?.id === selectedCat;
+      const catOk = selectedCat === 'ALL' || r.category?.id === selectedCat;
 
       // Material filter
       const matOk =
         selectedMat === 'ALL' ||
-        r.materialId === selectedMat ||
         r.material?.id === selectedMat ||
-        (r.materials && r.materials.some((m) => m.id === selectedMat || m.materialId === selectedMat));
+        (r.materials && r.materials.some((m) => m.id === selectedMat));
 
       return searchOk && catOk && matOk;
     });

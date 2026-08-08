@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Role, User } from '../types';
-import { Sparkles, LogOut, User as UserIcon, Menu, ChevronDown, ShieldCheck } from 'lucide-react';
+import { LogOut, User as UserIcon, Menu, ChevronDown, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
   user: User;
   currentRole: Role;
   onRoleChange: (role: Role) => void;
-  onOpenCreateModal: () => void;
   onLogout: () => void;
   onToggleSidebar: () => void;
 }
@@ -15,7 +14,6 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   currentRole,
   onRoleChange,
-  onOpenCreateModal,
   onLogout,
   onToggleSidebar,
 }) => {

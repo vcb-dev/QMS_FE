@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Customer, Material, ProductCategory, QuoteRequest, Role, User } from '../types';
+import type { Customer, Material, ProductCategory, QuoteRequest, QuoteStatus, Role, User } from '../types';
 import {
   fetchQuoteRequests,
   fetchMasterData,
@@ -13,7 +13,7 @@ import {
   resubmitQuoteRequest,
 } from '../services/api';
 
-export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
+export function useQuoteRequests(currentUser: User | null, _currentRole?: Role) {
   // Multi-Filter State
   const [currentFilter, setCurrentFilter] = useState<string>('ALL');
   const [statusSubFilter, setStatusSubFilter] = useState<string>('ALL');
@@ -40,7 +40,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers] = useState<Customer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Modals & UI States
@@ -79,13 +79,13 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       setLoading(true);
     }
     try {
-      let targetStatus: string | undefined = undefined;
+      let targetStatus: QuoteStatus | undefined = undefined;
       if (currentFilter === 'YC_MOI') targetStatus = 'YC_MOI';
       else if (currentFilter === 'DANG_XLY') targetStatus = 'DANG_XLY';
       else if (currentFilter === 'NEED_MORE_INFO') targetStatus = 'NEED_MORE_INFO';
       else if (currentFilter === 'XONG' || currentFilter === 'LIBRARY') targetStatus = 'XONG';
       else if (currentFilter === 'TU_CHOI') targetStatus = 'TU_CHOI';
-      else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter;
+      else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter as QuoteStatus;
 
       const ownerId = (currentFilter === 'MY_REQ' || ownerFilter === 'MY_REQ') ? currentUser.id : undefined;
 

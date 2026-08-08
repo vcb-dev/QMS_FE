@@ -347,7 +347,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               : r.material ? [r.material.name] : ['---'];
 
             const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
-            const vatVal = r.vat ? Number(r.vat) : 0;
 
             const formattedPrice = priceVal > 0 ? priceVal.toLocaleString('vi-VN') + ' ₫' : 'Chưa có';
 

@@ -47,11 +47,8 @@ export const Inspector: React.FC<InspectorProps> = ({
     : selectedReq.material ? selectedReq.material.name : '---';
 
   const priceVal = selectedReq.quotedPrice ? Number(selectedReq.quotedPrice) : 0;
-  const vatVal = selectedReq.vat ? Number(selectedReq.vat) : 0;
-  const priceBeforeVat = priceVal > 0 ? (vatVal > 0 ? priceVal / (1 + vatVal / 100) : priceVal) : 0;
 
   const formattedPrice = priceVal > 0 ? priceVal.toLocaleString('vi-VN') + ' ₫' : 'Chưa có';
-  const formattedBeforeVat = priceBeforeVat > 0 ? Math.round(priceBeforeVat).toLocaleString('vi-VN') + ' ₫' : 'Chưa có';
 
   const imageUrl = selectedReq.images && selectedReq.images.length > 0
     ? selectedReq.images[0].imageUrl
