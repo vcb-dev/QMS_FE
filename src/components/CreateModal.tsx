@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Customer, Material, ProductCategory, QuoteRequest } from '../types';
 import { createCustomer, searchCustomers } from '../services/api';
-import { X, Sparkles, UserPlus, Users, Upload, Search } from 'lucide-react';
+import { X, UserPlus, Users, Upload, Search, PlusCircle } from 'lucide-react';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -40,10 +40,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerList, setCustomerList] = useState<Customer[]>(customers);
 
-  // 10 Operational Fields
+  // Operational Fields
   const [department, setDepartment] = useState('CSKH-Văn Phòng');
-  const [productName, setProductName] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
   const [customerMeasurements, setCustomerMeasurements] = useState('');
   const [leadTime, setLeadTime] = useState('7-15 NGÀY (Tiêu chuẩn)');
@@ -56,9 +56,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   useEffect(() => {
     if (editingReq) {
       setIsNewCustomerMode(false);
-      setProductName(editingReq.productName || '');
       setSelectedCustomerId(editingReq.customer?.id || (customers[0]?.id || ''));
       setSelectedCategoryId(editingReq.category?.id || (categories[0]?.id || ''));
+      setNewCategoryName('');
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
       setSelectedMaterialIds(matIds);
       setCustomerMeasurements(editingReq.customerMeasurements || '');
@@ -70,7 +70,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setNewCustomerName('');
       setNewCustomerPhone('');
       setNewCustomerAddress('');
-      setProductName('');
+      setNewCategoryName('');
       if (customers.length > 0) setSelectedCustomerId(customers[0].id);
       if (categories.length > 0) setSelectedCategoryId(categories[0].id);
       setSelectedMaterialIds([]);
@@ -90,7 +90,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             setSelectedCustomerId(res[0].id);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }, 300);
     return () => clearTimeout(timer);
   }, [customerSearch, isOpen, isNewCustomerMode]);
@@ -122,8 +122,13 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productName.trim() || selectedMaterialIds.length === 0 || !customerMeasurements.trim()) {
-      alert('Vui lòng điền đủ tên sản phẩm, chất liệu và số đo/kích thước!');
+    if (selectedMaterialIds.length === 0 || !customerMeasurements.trim()) {
+      alert('Vui lòng chọn chất liệu và số đo/kích thước!');
+      return;
+    }
+
+    if (selectedCategoryId === 'OTHER' && !newCategoryName.trim()) {
+      alert('Vui lòng nhập tên danh mục sản phẩm mới!');
       return;
     }
 
@@ -159,11 +164,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         return;
       }
 
-
       await onSubmit({
         customerId: finalCustomerId,
-        productName,
-        categoryId: selectedCategoryId,
+        categoryId: selectedCategoryId === 'OTHER' ? (categories[0]?.id || '') : selectedCategoryId,
+        newCategoryName: selectedCategoryId === 'OTHER' ? newCategoryName.trim() : undefined,
         materialIds: selectedMaterialIds,
         customerMeasurements,
         desiredLeadTime: leadTime,
@@ -183,9 +187,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       <div className="modal-card">
         <div className="modal-header">
           <div>
-            <h2 id="modalCreateTitle">✨ Tạo Yêu Cầu Báo Giá Chế Tác Mới</h2>
+            <h2 id="modalCreateTitle">Tạo Yêu Cầu Báo Giá Chế Tác Mới</h2>
             <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-              Điền đầy đủ 10 trường thông tin chuẩn nghiệp vụ VCB để chuyển bộ phận Định Giá
+              Điền đầy đủ các trường thông tin chuẩn nghiệp vụ VCB để chuyển bộ phận Định Giá
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' }}>
@@ -195,20 +199,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            {/* Operational Notice Banner */}
-            <div style={{ background: '#f0f9ff', borderLeft: '4px solid #0284c7', padding: '10px 14px', borderRadius: '8px', fontSize: '12.5px', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>💡 Lưu ý nghiệp vụ: Yêu cầu BÁO GIÁ phải có đầy đủ mô tả, ảnh mẫu và chất liệu. Thời gian xử lý từ 1-4 giờ.</span>
-              <label style={{ fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#0284c7', whiteSpace: 'nowrap' }}>
-                <input
-                  type="checkbox"
-                  checked={understandProcess}
-                  onChange={(e) => setUnderstandProcess(e.target.checked)}
-                  style={{ accentColor: '#0284c7', cursor: 'pointer' }}
-                />
-                Tôi đã nắm rõ quy trình
-              </label>
-            </div>
-
             {/* Customer Section */}
             <div className="form-group">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -330,11 +320,11 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             {/* Field 1 & 2: Sale Name & Department */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div className="form-group">
-                <label className="form-label">1. Người hỏi giá (Sale) <span className="req">*</span></label>
+                <label className="form-label">Người hỏi giá (Sale) <span className="req">*</span></label>
                 <input type="text" className="form-control" value={saleName} readOnly />
               </div>
               <div className="form-group">
-                <label className="form-label">2. Bộ phận làm việc <span className="req">*</span></label>
+                <label className="form-label">Bộ phận làm việc <span className="req">*</span></label>
                 <select className="form-control" value={department} onChange={(e) => setDepartment(e.target.value)}>
                   <option value="CSKH-Văn Phòng">CSKH-Văn Phòng</option>
                   <option value="Cửa Hàng">Cửa Hàng</option>
@@ -343,40 +333,46 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
             </div>
 
-            {/* Field 3: Category */}
+            {/* Danh Mục Sản Phẩm */}
             <div className="form-group">
-              <label className="form-label">3. Danh mục sản phẩm <span className="req">*</span></label>
-              <div className="chip-grid">
-                {categories.map((c) => (
-                  <label key={c.id} className="chip-option">
-                    <input
-                      type="radio"
-                      name="category"
-                      value={c.id}
-                      checked={selectedCategoryId === c.id}
-                      onChange={() => setSelectedCategoryId(c.id)}
-                    />
-                    <span>{c.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label className="form-label">Danh mục sản phẩm <span className="req">*</span></label>
+                  <select
+                    className="form-control"
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                    <option value="OTHER">Khác (Tạo danh mục mới)</option>
+                  </select>
+                </div>
 
-            {/* Field 4: Product Name */}
-            <div className="form-group">
-              <label className="form-label">4. Tên sản phẩm + Yêu cầu chi tiết của khách <span className="req">*</span></label>
-              <textarea
-                className="form-control"
-                rows={3}
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                placeholder="Nhập tên sản phẩm và các chi tiết yêu cầu cụ thể (VD: Bông tai đính đá Moissanite 6.5mm, viền hoa vàng trắng 14k...)"
-              />
+                {selectedCategoryId === 'OTHER' && (
+                  <div>
+                    <label className="form-label">Tên danh mục mới <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Tên danh mục mới..."
+                      value={newCategoryName}
+                      maxLength={30}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Field 5: Materials */}
             <div className="form-group">
-              <label className="form-label">5. Chất liệu Khách muốn chế tác <span className="req">*</span> (Chọn 1 hoặc nhiều)</label>
+              <label className="form-label">Chất liệu Khách muốn chế tác <span className="req">*</span> (Chọn 1 hoặc nhiều)</label>
               <div className="chip-grid">
                 {materials.map((m) => (
                   <label key={m.id} className="chip-option">
@@ -394,7 +390,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             {/* Field 6, 7 & 8: Size, Urgency & Close Rate */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
               <div className="form-group">
-                <label className="form-label">6. Số đo / Kích thước <span className="req">*</span></label>
+                <label className="form-label">Số đo / Kích thước <span className="req">*</span></label>
                 <input
                   type="text"
                   className="form-control"
@@ -404,7 +400,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">7. Thời gian muốn nhận <span className="req">*</span></label>
+                <label className="form-label">Thời gian muốn nhận <span className="req">*</span></label>
                 <select className="form-control" value={leadTime} onChange={(e) => setLeadTime(e.target.value)}>
                   <option value="<3 NGÀY (RẤT GẤP)">&lt;3 NGÀY (RẤT GẤP)</option>
                   <option value="3-7 NGÀY (GẤP)">3-7 NGÀY (GẤP)</option>
@@ -414,7 +410,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">8. Khách tỷ lệ chốt <span className="req">*</span></label>
+                <label className="form-label">Khách tỷ lệ chốt <span className="req">*</span></label>
                 <select className="form-control" value={closeRateText} onChange={(e) => setCloseRateText(e.target.value)}>
                   <option value="Khách chưa chốt báo giá">Khách chưa chốt báo giá</option>
                   <option value="Chắc chắn 100% lấy hàng">Chắc chắn 100% lấy hàng</option>
@@ -426,7 +422,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
             {/* Field 9: Real File Upload */}
             <div className="form-group">
-              <label className="form-label">9. Ảnh sản phẩm mẫu / Ảnh tham khảo (Tải file thực)</label>
+              <label className="form-label">Ảnh sản phẩm mẫu / Ảnh tham khảo (Tải file thực)</label>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -454,12 +450,26 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Operational Notice Banner */}
+            <div style={{ background: '#f0f9ff', borderLeft: '4px solid #0284c7', padding: '10px 14px', borderRadius: '8px', fontSize: '12.5px', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '14px' }}>
+              <span>Lưu ý nghiệp vụ: Yêu cầu BÁO GIÁ phải có đầy đủ mô tả, ảnh mẫu và chất liệThời gian xử lý từ 1-4 giờ.</span>
+              <label style={{ fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#0284c7', whiteSpace: 'nowrap' }}>
+                <input
+                  type="checkbox"
+                  checked={understandProcess}
+                  onChange={(e) => setUnderstandProcess(e.target.checked)}
+                  style={{ accentColor: '#0284c7', cursor: 'pointer' }}
+                />
+                Tôi đã nắm rõ quy trình
+              </label>
+            </div>
           </div>
 
           <div className="modal-footer">
             <button type="button" className="tool-btn" onClick={onClose}>Hủy bỏ</button>
             <button type="submit" className="primary-action" disabled={submitting}>
-              <Sparkles size={16} /> {editingReq ? '💾 Cập Nhật Yêu Cầu' : '🚀 Gửi Yêu Cầu Báo Giá'}
+              <PlusCircle size={17} /> {editingReq ? '💾 Cập Nhật Yêu Cầu' : '🚀 Gửi Yêu Cầu Báo Giá'}
             </button>
           </div>
         </form>

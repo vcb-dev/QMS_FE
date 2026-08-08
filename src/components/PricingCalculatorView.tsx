@@ -5,7 +5,7 @@ import { MetalPricesSettingsModal } from './MetalPricesSettingsModal';
 import { fetchPricingConfig, fetchMasterData } from '../services/api';
 import {
   Calculator,
-  CheckCircle2,
+  PlusCircle,
   TrendingUp,
   RefreshCw,
   Settings,
@@ -586,7 +586,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
               })}
               style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', padding: '14px 18px', fontSize: '14px', fontWeight: 800, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginTop: '10px' }}
             >
-              <CheckCircle2 size={18} color="#15803d" /> Tạo Yêu Cầu Báo Giá Với Số Tiền Này
+              <PlusCircle size={18} color="#166534" /> Tạo Yêu Cầu Báo Giá Với Số Tiền Này
             </button>
           )}
         </div>

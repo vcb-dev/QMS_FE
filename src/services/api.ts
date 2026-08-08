@@ -1,7 +1,41 @@
+import axios from 'axios';
 import type { FilterOptions, User } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
+
+// Configured Axios Client with default withCredentials: true
+export const api = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true, // Gửi cookie HTTP-Only tự động
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request Interceptor: đính kèm Bearer Token nếu có (chỉ khi dùng Bearer legacy)
+api.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (token && token !== 'undefined' && token !== 'null' && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response Interceptor: Tự động xử lý hết hạn phiên đăng nhập (401) ngoại trừ API login
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
+      clearSession();
+      if (!window.location.pathname.includes('/login')) {
+        window.location.reload();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(STORAGE_KEYS.TOKEN);
@@ -22,126 +56,133 @@ export function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.USER);
 }
 
-export async function loginApi(email: string, password: string): Promise<{ accessToken: string; user: User }> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Email hoặc mật khẩu không chính xác');
+export async function logoutApi(): Promise<void> {
+  try {
+    await api.post('/auth/logout');
+  } catch (err) {
+    console.error('Error calling logout API:', err);
+  } finally {
+    clearSession();
   }
-
-  const data = await res.json();
-  localStorage.setItem(STORAGE_KEYS.TOKEN, data.accessToken);
-  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
-  return data;
 }
 
-function getAuthHeaders(): Record<string, string> {
-  const token = getStoredToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+export async function loginApi(email: string, password: string): Promise<{ accessToken: string; user: User }> {
+  try {
+    const res = await api.post('/auth/login', { email, password });
+    const data = res.data;
+    if (data.accessToken) {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, data.accessToken);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    }
+    if (data.user) {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
+    }
+    return data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Email hoặc mật khẩu không chính xác');
+  }
+}
+
+export async function uploadImageToBackend(file: File): Promise<{ url: string; publicId: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await api.post('/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải ảnh lên hệ thống');
+  }
 }
 
 export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean }) {
-  const headers = getAuthHeaders();
-  const query = new URLSearchParams();
-  if (filter?.status && filter.status !== 'ALL') query.append('status', filter.status);
-  if (filter?.search) query.append('search', filter.search);
-  if (filter?.categoryId && filter.categoryId !== 'ALL') query.append('categoryId', filter.categoryId);
-  if (filter?.materialId && filter.materialId !== 'ALL') query.append('materialId', filter.materialId);
-  if (filter?.ownerId && filter.ownerId !== 'ALL') query.append('ownerId', filter.ownerId);
-  if (filter?.page) query.append('page', String(filter.page));
-  if (filter?.limit) query.append('limit', String(filter.limit));
-  if (filter?.includeCounts) query.append('includeCounts', 'true');
+  const params: Record<string, any> = {};
+  if (filter?.status) params.status = filter.status;
+  if (filter?.search) params.search = filter.search;
+  if (filter?.categoryId && filter.categoryId !== 'ALL') params.categoryId = filter.categoryId;
+  if (filter?.materialId && filter.materialId !== 'ALL') params.materialId = filter.materialId;
+  if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
+  if (filter?.page) params.page = filter.page;
+  if (filter?.limit) params.limit = filter.limit;
+  if (filter?.includeCounts) params.includeCounts = true;
 
-  const res = await fetch(`${API_BASE}/quote-requests?${query.toString()}`, { headers });
-  if (res.status === 401) {
-    clearSession();
-    window.location.reload();
-    throw new Error('Phiên đăng nhập đã hết hạn');
+  try {
+    const res = await api.get('/quote-requests', { params });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải danh sách báo giá');
   }
-  if (!res.ok) throw new Error('Không thể tải danh sách báo giá');
-  return res.json();
 }
 
+let masterDataCachePromise: Promise<{ categories: any[]; materials: any[]; customers: any[] }> | null = null;
+
 export async function fetchMasterData() {
-  const headers = getAuthHeaders();
-  const [categoriesRes, materialsRes] = await Promise.all([
-    fetch(`${API_BASE}/product-categories`, { headers }),
-    fetch(`${API_BASE}/materials`, { headers }),
-  ]);
+  if (masterDataCachePromise) {
+    return masterDataCachePromise;
+  }
+  masterDataCachePromise = (async () => {
+    try {
+      const [categoriesRes, materialsRes] = await Promise.all([
+        api.get('/product-categories'),
+        api.get('/materials'),
+      ]);
 
-  const categories = categoriesRes.ok ? await categoriesRes.json() : [];
-  const materials = materialsRes.ok ? await materialsRes.json() : [];
+      return {
+        categories: categoriesRes.data || [],
+        materials: materialsRes.data || [],
+        customers: [],
+      };
+    } catch {
+      return { categories: [], materials: [], customers: [] };
+    }
+  })();
 
-  return { categories, materials, customers: [] };
+  return masterDataCachePromise;
 }
 
 export async function searchCustomers(search?: string) {
-  const headers = getAuthHeaders();
-  const query = new URLSearchParams();
-  if (search) query.append('search', search);
-  const res = await fetch(`${API_BASE}/customers?${query.toString()}`, { headers });
-  if (!res.ok) throw new Error('Không thể tìm kiếm khách hàng');
-  return res.json();
+  try {
+    const res = await api.get('/customers', {
+      params: search ? { search } : undefined,
+    });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tìm kiếm khách hàng');
+  }
 }
 
-export async function createCustomer(payload: { name: string; phone?: string; address?: string; note?: string }) {
-  const res = await fetch(`${API_BASE}/customers`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi tạo thông tin khách hàng mới');
+export async function createCustomer(payload: { name: string; phone?: string; address?: string; province?: string; ward?: string; note?: string }) {
+  try {
+    const res = await api.post('/customers', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi tạo thông tin khách hàng mới');
   }
-  return res.json();
 }
 
 export async function createQuoteRequest(payload: any) {
-  const res = await fetch(`${API_BASE}/quote-requests`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi tạo yêu cầu báo giá');
+  try {
+    const res = await api.post('/quote-requests', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi tạo yêu cầu báo giá');
   }
-  return res.json();
 }
 
 export async function updateQuoteRequest(id: string, payload: any) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi cập nhật yêu cầu báo giá');
+  try {
+    const res = await api.patch(`/quote-requests/${id}`, payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật yêu cầu báo giá');
   }
-  return res.json();
 }
 
 export async function changeQuoteStatus(id: string, payload: {
-  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION';
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT';
   version?: number;
   quotedPrice?: number;
   vat?: number;
@@ -150,20 +191,12 @@ export async function changeQuoteStatus(id: string, payload: {
   returnReason?: string;
   optionId?: string;
 }) {
-  const res = await fetch(`${API_BASE}/quote-requests/${id}/status`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi cập nhật trạng thái yêu cầu');
+  try {
+    const res = await api.patch(`/quote-requests/${id}/status`, payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái yêu cầu');
   }
-  return res.json();
 }
 
 export async function acceptQuoteRequest(id: string, version: number) {
@@ -191,32 +224,37 @@ export async function resubmitQuoteRequest(id: string) {
 }
 
 export async function fetchPricingConfig() {
-  const headers = getAuthHeaders();
-  const res = await fetch(`${API_BASE}/pricing-config`, { headers });
-  if (!res.ok) throw new Error('Không thể tải cấu hình tính giá');
-  return res.json();
+  try {
+    const res = await api.get('/pricing-config');
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải cấu hình tính giá');
+  }
 }
 
 export async function fetchMetalPrices() {
-  const headers = getAuthHeaders();
-  const res = await fetch(`${API_BASE}/metal-prices`, { headers });
-  if (!res.ok) throw new Error('Không thể tải giá vàng & bạc trực tuyến');
-  return res.json();
+  try {
+    const res = await api.get('/metal-prices');
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải giá vàng & bạc trực tuyến');
+  }
 }
 
 export async function updatePricingConfig(payload: any) {
-  const res = await fetch(`${API_BASE}/pricing-config`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || 'Lỗi khi cập nhật cấu hình tính giá');
+  try {
+    const res = await api.put('/pricing-config', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật cấu hình tính giá');
   }
-  return res.json();
+}
+
+export async function submitQuickQuote(payload: any) {
+  try {
+    const res = await api.post('/quote-requests/quick-submit', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi gửi yêu cầu báo giá nhanh');
+  }
 }

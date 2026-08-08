@@ -8,15 +8,15 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('sale1@qms.com');
+  const [email, setEmail] = useState('sale@vcb.vn');
   const [password, setPassword] = useState('123456');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const testAccounts = [
-    { label: '👤 Sale 1 (Nguyễn Văn Sale)', email: 'sale1@qms.com' },
-    { label: '💎 Pricing 1 (Trần Văn Pricing)', email: 'pricing1@qms.com' },
-    { label: '⚙️ Admin (Ban Giám Đốc)', email: 'admin@qms.com' },
+    { label: '👤 Sale 1 (Nguyễn Văn Sale)', email: 'sale@vcb.vn' },
+    { label: '💎 Pricing 1 (Trần Văn Pricing)', email: 'pricing1@vcb.vn' },
+    { label: '⚙️ Admin (Ban Giám Đốc)', email: 'admin@vcb.vn' },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {

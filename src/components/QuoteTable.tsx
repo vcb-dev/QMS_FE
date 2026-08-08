@@ -326,11 +326,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th>Số Đo Kích Thước</th>
             <th>Tỷ Lệ Chốt</th>
             <th style={{ background: '#e0e7ff', color: '#3730a3' }}>VAT (%)</th>
-            <th style={{ background: '#f0fdf4', color: '#166534' }}>Giá SP (Chưa VAT)</th>
-            <th style={{ background: '#ccfbf1', color: '#0f766e' }}>Tổng Báo Khách (Có VAT)</th>
-            <th style={{ background: '#fef3c7', color: '#92400e' }}>Thời Gian Báo Giá</th>
+            <th style={{ background: '#ccfbf1', color: '#0f766e' }}>Báo Giá Khách (Có VAT)</th>
             <th>Người Báo Giá</th>
-            <th>Tài Khoản Tạo</th>
             <th style={{ textAlign: 'center' }}>Thao Tác</th>
           </tr>
         </thead>
@@ -351,10 +348,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
             const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
             const vatVal = r.vat ? Number(r.vat) : 0;
-            const priceBeforeVat = priceVal > 0 ? (vatVal > 0 ? priceVal / (1 + vatVal / 100) : priceVal) : 0;
 
             const formattedPrice = priceVal > 0 ? priceVal.toLocaleString('vi-VN') + ' ₫' : 'Chưa có';
-            const formattedBeforeVat = priceBeforeVat > 0 ? Math.round(priceBeforeVat).toLocaleString('vi-VN') + ' ₫' : 'Chưa có';
 
             const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
@@ -415,18 +410,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   {r.vat ? `${r.vat}%` : '---'}
                 </td>
                 {isRejected ? (
-                  <td style={{ background: '#fff1f2', fontWeight: 800, color: '#be123c', borderRadius: '6px' }}>
-                    Bị từ chối
-                  </td>
-                ) : (
-                  <td style={{ background: '#f0fdf4', fontWeight: 800, color: '#15803d', borderRadius: '6px' }}>
-                    {formattedBeforeVat}
-                  </td>
-                )}
-
-                {isRejected ? (
                   <td
-                    style={{ background: '#fff1f2', fontWeight: 800, color: '#be123c', borderRadius: '6px' }}
+                    style={{ background: '#fff1f2', fontWeight: 800, color: '#be123c', borderRadius: '6px', padding: '6px 8px' }}
                     title={r.rejectReason ? `Lý do từ chối: ${r.rejectReason}` : 'Bị từ chối'}
                   >
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
@@ -438,19 +423,17 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       )}
                     </div>
                   </td>
-                ) : (
-                  <td style={{ background: '#ccfbf1', fontWeight: 800, color: '#0f766e', borderRadius: '6px' }}>
+                ) : priceVal > 0 ? (
+                  <td style={{ background: '#ccfbf1', color: '#0f766e', borderRadius: '6px', padding: '6px 8px', fontWeight: 800, fontSize: '13px' }}>
                     {formattedPrice}
+                  </td>
+                ) : (
+                  <td style={{ background: '#f8fafc', borderRadius: '6px', padding: '6px 8px', fontWeight: 700, fontSize: '12px' }}>
+                    {renderQuotedDateCell(r)}
                   </td>
                 )}
 
-                {/* Thời Gian Báo Giá (Tính số ngày kể từ ngày tạo - Không dùng icon) */}
-                <td style={{ background: '#fffbeb', borderRadius: '6px' }}>
-                  {renderQuotedDateCell(r)}
-                </td>
-
                 <td><strong style={{ color: '#334155' }}>{r.pricer?.name || 'Chưa phân công'}</strong></td>
-                <td style={{ fontSize: '11px', color: '#475569' }}><strong>{r.createdBy?.name || r.requester?.name || '---'}</strong></td>
                 <td style={{ textAlign: 'center' }}>
                   {/* SALE Role Permissions */}
                   {currentRole === 'SALE' && (

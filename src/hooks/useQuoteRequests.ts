@@ -56,10 +56,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
   const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, currentPage, pageSize, currentUser });
+  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, currentPage, pageSize, currentUser };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
-  useEffect(() => {
-    filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, currentPage, pageSize, currentUser };
-  });
 
   // 1. Load Master Data ONCE on user login
   const loadMasterDataOnce = async () => {
@@ -93,10 +91,11 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
       const includeCounts = needCountsRef.current;
       needCountsRef.current = false; // Reset sau lần đầu
+      const effectiveLimit = currentFilter === 'LIBRARY' ? 100 : pageSize;
 
       const quoteRes = await fetchQuoteRequests({
-        page: currentPage,
-        limit: pageSize,
+        page: currentFilter === 'LIBRARY' ? 1 : currentPage,
+        limit: effectiveLimit,
         status: targetStatus,
         search: searchTerm,
         categoryId: categoryFilter !== 'ALL' ? categoryFilter : undefined,
@@ -113,6 +112,21 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       setServerTotalPages(meta.totalPages || 1);
       if (meta.counts) {
         setCounts(meta.counts);
+      } else if (items) {
+        const ycMoi = items.filter((r) => r.status === 'YC_MOI').length;
+        const dangXly = items.filter((r) => r.status === 'DANG_XLY').length;
+        const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
+        const xong = items.filter((r) => r.status === 'XONG').length;
+        const tuChoi = items.filter((r) => r.status === 'TU_CHOI').length;
+        setCounts({
+          total: meta.total || items.length,
+          myReq: items.filter((r) => r.requester?.id === currentUser.id || r.pricer?.id === currentUser.id).length,
+          ycMoi,
+          dangXly,
+          needMoreInfo,
+          xong,
+          tuChoi,
+        });
       }
 
       if (items.length > 0) {

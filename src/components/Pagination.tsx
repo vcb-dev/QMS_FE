@@ -73,10 +73,11 @@ export const Pagination: React.FC<PaginationProps> = ({
               cursor: 'pointer',
             }}
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
+            <option value={8}>8</option>
+            <option value={12}>12</option>
+            <option value={16}>16</option>
+            <option value={24}>24</option>
+            <option value={48}>48</option>
           </select>
         </div>
       </div>

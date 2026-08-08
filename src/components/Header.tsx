@@ -69,9 +69,6 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="brand-mark">VCB QMS</span>
           <div>
             <strong style={{ color: '#0f172a' }}>Hệ Thống Báo Giá Chế Tác Kim Hoàn</strong>
-            <small style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-              Authenticated ({user.email})
-            </small>
           </div>
         </div>
       </div>
@@ -101,13 +98,6 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         )}
-
-        {(user.role === 'SALE' || user.role === 'ADMIN') && (
-          <button className="primary-action" onClick={onOpenCreateModal}>
-            <Sparkles size={16} /> Tạo YC Báo Giá
-          </button>
-        )}
-
         {/* Circular Avatar Dropdown Trigger */}
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button

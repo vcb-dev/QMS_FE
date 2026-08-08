@@ -6,6 +6,18 @@ export const STORAGE_KEYS = {
 export const UI_CONSTANTS = {
   FALLBACK_PRODUCT_IMAGE: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36',
   DEFAULT_PRICER_EMAIL: import.meta.env.VITE_DEFAULT_PRICER_EMAIL || '',
+
+  PRODUCT_LIBRARY: {
+    DEFAULT_PAGE_SIZE: 8,
+    PAGE_SIZE_OPTIONS: [8, 12, 16, 24, 48],
+    GRID_COLUMNS_DESKTOP: 4,
+  },
+
+  DASHBOARD: {
+    RECENT_REQUESTS_LIMIT: 5,
+    RECENT_PRODUCTS_LIMIT: 4,
+    GRID_COLUMNS_DESKTOP: 4,
+  },
 };
 
 function requiredNumberSetting(name: string, value: string | undefined): number {

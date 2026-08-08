@@ -76,25 +76,51 @@ export const Inspector: React.FC<InspectorProps> = ({
 
   return (
     <aside className="inspector" style={{ overflowY: 'auto' }}>
-      {/* Product Image */}
-      <img src={imageUrl} className="inspector-media" alt="Ảnh Sản Phẩm" style={{ borderRadius: '12px', width: '100%', height: '220px', objectFit: 'cover', marginBottom: '14px' }} />
+      {/* Product Image - Compact & Click to Enlarge */}
+      <div style={{ position: 'relative', width: '100%', marginBottom: '10px' }}>
+        <img
+          src={imageUrl}
+          className="inspector-media"
+          alt="Ảnh Sản Phẩm"
+          onClick={() => window.open(imageUrl, '_blank')}
+          title="Bấm để xem ảnh phóng to"
+          style={{ borderRadius: '8px', width: '100%', height: '130px', objectFit: 'cover' }}
+        />
+        <span
+          style={{
+            position: 'absolute',
+            bottom: '6px',
+            right: '6px',
+            background: 'rgba(15, 23, 42, 0.65)',
+            color: '#ffffff',
+            fontSize: '10px',
+            fontWeight: 700,
+            padding: '2px 6px',
+            borderRadius: '4px',
+            pointerEvents: 'none',
+            backdropFilter: 'blur(3px)',
+          }}
+        >
+          📷 1 ảnh
+        </span>
+      </div>
       
       {/* Header Info */}
-      <div className="inspector-title" style={{ marginBottom: '16px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.5px' }}>
+      <div className="inspector-title" style={{ marginBottom: '10px' }}>
+        <span style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.5px' }}>
           ĐANG CHỌN
         </span>
-        <div style={{ fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', color: '#334155', marginTop: '2px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 800, fontFamily: "'Roboto Mono', monospace", color: '#334155', marginTop: '1px' }}>
           {selectedReq.code || selectedReq.id}
         </div>
-        <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '4px 0 8px 0', lineHeight: 1.3 }}>
+        <h2 style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a', margin: '3px 0 6px 0', lineHeight: 1.25 }}>
           {selectedReq.productName}
         </h2>
         <div>{renderStatusBadge()}</div>
       </div>
 
       {/* Clean Key-Value List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px', marginBottom: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', fontSize: '12px', marginBottom: '14px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: '#64748b' }}>Khách:</span>
           <span style={{ fontWeight: 700, color: '#0f172a' }}>{selectedReq.customer?.name || selectedReq.requester?.name || '---'}</span>
@@ -142,17 +168,10 @@ export const Inspector: React.FC<InspectorProps> = ({
         <div style={{ borderTop: '1px dashed #e2e8f0', margin: '4px 0' }} />
 
         {(currentRole === 'PRICING' || currentRole === 'ADMIN') && (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#64748b' }}>Giá SP (Chưa VAT):</span>
-              <span style={{ fontWeight: 700, color: '#16a34a' }}>{formattedBeforeVat}</span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#64748b' }}>Thuế VAT:</span>
-              <span style={{ fontWeight: 600, color: '#475569' }}>{selectedReq.vat ? `${selectedReq.vat}%` : '---'}</span>
-            </div>
-          </>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: '#64748b' }}>Thuế VAT:</span>
+            <span style={{ fontWeight: 600, color: '#475569' }}>{selectedReq.vat ? `${selectedReq.vat}%` : '---'}</span>
+          </div>
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0fdf4', padding: '8px 10px', borderRadius: '8px' }}>

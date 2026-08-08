@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { Role, User } from './types';
-import { getStoredUser, clearSession } from './services/api';
+import { getStoredUser, clearSession, logoutApi } from './services/api';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
 
+import { PlusCircle } from 'lucide-react';
 import { LoginPage } from './components/LoginPage';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -17,6 +18,7 @@ import { ReturnModal } from './components/ReturnModal';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { Pagination } from './components/Pagination';
 import { PricingCalculatorView } from './components/PricingCalculatorView';
+import { ProductLibraryView } from './components/ProductLibraryView';
 import './index.css';
 
 export function App() {
@@ -85,8 +87,8 @@ export function App() {
     );
   }
 
-  const handleLogout = () => {
-    clearSession();
+  const handleLogout = async () => {
+    await logoutApi();
     setCurrentUser(null);
   };
 
@@ -141,6 +143,15 @@ export function App() {
               currentRole={currentRole}
               onApplyToNewRequest={handleOpenCreate}
             />
+          ) : currentFilter === 'LIBRARY' ? (
+            <ProductLibraryView
+              requests={requests}
+              categories={categories}
+              materials={materials}
+              onSelectReq={(id) => setSelectedId(id)}
+              selectedId={selectedReq?.id || selectedId}
+              totalCount={counts.xong}
+            />
           ) : currentFilter === 'ALL' &&
             searchTerm === '' &&
             categoryFilter === 'ALL' &&
@@ -153,14 +164,21 @@ export function App() {
               onSelectReq={(id) => setSelectedId(id)}
               onViewAll={() => handleTabChange('ALL_LIST')}
               onOpenLibrary={() => handleTabChange('LIBRARY')}
+              onOpenCreateModal={handleOpenCreate}
+              onFilterChange={handleTabChange}
             />
           ) : (
             <>
-              <div className="view-heading">
+              <div className="view-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <span className="eyebrow">Quản Lý Hỏi Giá & Báo Giá</span>
                   <h1>Danh Sách Yêu Cầu Báo Giá</h1>
                 </div>
+                {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
+                  <button className="primary-action" onClick={handleOpenCreate} style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá
+                  </button>
+                )}
               </div>
 
               <FilterBar
