@@ -348,7 +348,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
             const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
 
-            const formattedPrice = priceVal > 0 ? priceVal.toLocaleString('vi-VN') + ' ₫' : 'Chưa có';
+            const formattedPrice = priceVal > 0 ? priceVal.toLocaleString('en-US') + ' ₫' : 'Chưa có';
 
             const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';

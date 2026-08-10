@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Material, ProductCategory } from '../types';
-import { Search, RotateCcw, Filter } from 'lucide-react';
+import { Calendar, RotateCcw } from 'lucide-react';
+import { QUOTE_STATUS_OPTIONS } from '../constants';
 
 interface FilterBarProps {
   currentTab: string;
@@ -15,6 +16,10 @@ interface FilterBarProps {
   onMaterialFilterChange: (matId: string) => void;
   ownerFilter: string;
   onOwnerFilterChange: (owner: string) => void;
+  timeRangeFilter?: string;
+  onTimeRangeFilterChange?: (range: string) => void;
+  startDateFilter?: string;
+  onStartDateChange?: (dateStr: string) => void;
   categories: ProductCategory[];
   materials: Material[];
   onResetFilters: () => void;
@@ -23,145 +28,221 @@ interface FilterBarProps {
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
-  currentTab,
-  tabLabel,
-  searchTerm,
-  onSearchChange,
+  currentTab: _currentTab,
   statusSubFilter,
   onStatusSubFilterChange,
   categoryFilter,
   onCategoryFilterChange,
   materialFilter,
   onMaterialFilterChange,
-  ownerFilter,
-  onOwnerFilterChange,
+  timeRangeFilter = 'ALL',
+  onTimeRangeFilterChange,
+  startDateFilter = '',
+  onStartDateChange,
   categories,
   materials,
   onResetFilters,
-  totalFiltered,
-  totalTabItems,
 }) => {
-  const hasActiveSecondaryFilters =
-    searchTerm !== '' ||
+  const isFiltered =
     statusSubFilter !== 'ALL' ||
     categoryFilter !== 'ALL' ||
     materialFilter !== 'ALL' ||
-    ownerFilter !== 'ALL';
-
-  const isStatusTabLocked =
-    currentTab === 'YC_MOI' ||
-    currentTab === 'DANG_XLY' ||
-    currentTab === 'XONG' ||
-    currentTab === 'TU_CHOI' ||
-    currentTab === 'LIBRARY';
+    timeRangeFilter !== 'ALL' ||
+    Boolean(startDateFilter);
 
   return (
-    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
-          <Filter size={15} color="#2563eb" /> LỌC TRONG: <span style={{ color: '#2563eb', textTransform: 'uppercase' }}>{tabLabel}</span>
+    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        {/* Dropdowns Group */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Status Select */}
+          <select
+            value={statusSubFilter}
+            onChange={(e) => onStatusSubFilterChange(e.target.value)}
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '7px 12px',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              color: '#334155',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {QUOTE_STATUS_OPTIONS.map((st) => (
+              <option key={st.value} value={st.value}>
+                {st.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Category Select */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => onCategoryFilterChange(e.target.value)}
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '7px 12px',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              color: '#334155',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="ALL">Tất cả danh mục</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Material Select */}
+          <select
+            value={materialFilter}
+            onChange={(e) => onMaterialFilterChange(e.target.value)}
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '7px 12px',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              color: '#334155',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="ALL">Tất cả chất liệu</option>
+            {materials.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+
+          {isFiltered && (
+            <button
+              type="button"
+              onClick={onResetFilters}
+              style={{
+                background: '#fee2e2',
+                color: '#b91c1c',
+                border: '1px solid #fca5a5',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+              title="Xóa tất cả bộ lọc"
+            >
+              <RotateCcw size={13} /> Xóa bộ lọc
+            </button>
+          )}
         </div>
-        <div style={{ fontSize: '12px', color: '#64748b' }}>
-          Hiển thị <strong style={{ color: '#2563eb' }}>{totalFiltered}</strong> / {totalTabItems} trong tab này
+
+        {/* Date Picker & Quick Filter Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          {/* Date Picker Input */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => onStartDateChange?.(e.target.value)}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 12px 6px 34px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#334155',
+                outline: 'none',
+              }}
+            />
+            <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#64748b', pointerEvents: 'none' }} />
+          </div>
+
+          {/* Quick Range Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.4px', marginRight: '4px' }}>
+              LỌC NHANH:
+            </span>
+            <button
+              type="button"
+              onClick={() => onTimeRangeFilterChange?.('TODAY')}
+              style={{
+                background: timeRangeFilter === 'TODAY' ? '#0f172a' : '#f1f5f9',
+                color: timeRangeFilter === 'TODAY' ? '#ffffff' : '#64748b',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '5px 10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Hôm nay
+            </button>
+            <button
+              type="button"
+              onClick={() => onTimeRangeFilterChange?.('THIS_WEEK')}
+              style={{
+                background: timeRangeFilter === 'THIS_WEEK' ? '#0f172a' : '#f1f5f9',
+                color: timeRangeFilter === 'THIS_WEEK' ? '#ffffff' : '#64748b',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '5px 10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Tuần này
+            </button>
+            <button
+              type="button"
+              onClick={() => onTimeRangeFilterChange?.('THIS_MONTH')}
+              style={{
+                background: timeRangeFilter === 'THIS_MONTH' ? '#0f172a' : '#f1f5f9',
+                color: timeRangeFilter === 'THIS_MONTH' ? '#ffffff' : '#64748b',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '5px 10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Tháng này
+            </button>
+            <button
+              type="button"
+              onClick={() => onTimeRangeFilterChange?.('ALL')}
+              style={{
+                background: timeRangeFilter === 'ALL' ? '#0f172a' : '#f1f5f9',
+                color: timeRangeFilter === 'ALL' ? '#ffffff' : '#64748b',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '5px 10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Tất cả
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Row of Filter Controls */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
-        {/* 1. Search Box */}
-        <div style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-          <input
-            type="text"
-            className="form-control"
-            style={{ paddingLeft: '32px', fontSize: '12px', height: '36px' }}
-            placeholder={`Tìm trong ${tabLabel}...`}
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-
-        {/* 2. Status Sub-Filter (Disabled/Locked if tab is already status-specific) */}
-        <select
-          className="form-control"
-          style={{ fontSize: '12px', height: '36px', opacity: isStatusTabLocked ? 0.7 : 1 }}
-          value={isStatusTabLocked ? 'ALL' : statusSubFilter}
-          onChange={(e) => onStatusSubFilterChange(e.target.value)}
-          disabled={isStatusTabLocked}
-        >
-          <option value="ALL">{isStatusTabLocked ? 'Theo Trạng Thái Tab' : 'Tất Cả Trạng Thái'}</option>
-          <option value="YC_MOI">Yêu cầu mới</option>
-          <option value="DANG_XLY">Đang xử lý</option>
-          <option value="XONG">Đã báo giá</option>
-          <option value="TU_CHOI">Bị từ chối</option>
-        </select>
-
-        {/* 3. Category Filter */}
-        <select
-          className="form-control"
-          style={{ fontSize: '12px', height: '36px' }}
-          value={categoryFilter}
-          onChange={(e) => onCategoryFilterChange(e.target.value)}
-        >
-          <option value="ALL">Tất cả Danh Mục</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        {/* 4. Material Filter */}
-        <select
-          className="form-control"
-          style={{ fontSize: '12px', height: '36px' }}
-          value={materialFilter}
-          onChange={(e) => onMaterialFilterChange(e.target.value)}
-        >
-          <option value="ALL">Tất cả Chất Liệu</option>
-          {materials.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </select>
-
-        {/* 5. Owner Filter (Disabled if currentTab is MY_REQ) */}
-        <select
-          className="form-control"
-          style={{ fontSize: '12px', height: '36px', opacity: currentTab === 'MY_REQ' ? 0.7 : 1 }}
-          value={currentTab === 'MY_REQ' ? 'MY_REQ' : ownerFilter}
-          onChange={(e) => onOwnerFilterChange(e.target.value)}
-          disabled={currentTab === 'MY_REQ'}
-        >
-          <option value="ALL">Tất cả Người Tạo</option>
-          <option value="MY_REQ">Chỉ Đơn Của Tôi</option>
-        </select>
-
-        {/* 6. Reset Filters Button */}
-        <button
-          type="button"
-          onClick={onResetFilters}
-          disabled={!hasActiveSecondaryFilters}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            height: '36px',
-            padding: '0 12px',
-            fontSize: '12px',
-            fontWeight: 700,
-            color: hasActiveSecondaryFilters ? '#dc2626' : '#94a3b8',
-            background: hasActiveSecondaryFilters ? '#fef2f2' : '#f8fafc',
-            border: hasActiveSecondaryFilters ? '1px solid #fecdd3' : '1px solid #e2e8f0',
-            borderRadius: '8px',
-            cursor: hasActiveSecondaryFilters ? 'pointer' : 'default',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <RotateCcw size={13} /> Đặt Lại
-        </button>
       </div>
     </div>
   );

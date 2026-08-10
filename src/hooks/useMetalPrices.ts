@@ -72,7 +72,7 @@ export function clearOverrides() {
 
 function fmt(num: number | undefined | null): string {
   if (num === undefined || num === null || isNaN(num)) return '0';
-  return num.toLocaleString('vi-VN');
+  return num.toLocaleString('en-US');
 }
 
 export function useMetalPrices() {

@@ -20,23 +20,24 @@ export const UI_CONSTANTS = {
   },
 };
 
-function requiredNumberSetting(name: string, value: string | undefined): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) throw new Error(`Missing or invalid frontend setting: ${name}`);
-  return parsed;
-}
-
 export const PRICING_DEFAULTS = {
-  WEIGHT_CHI: import.meta.env.VITE_PRICING_DEFAULT_WEIGHT_CHI,
-  LABOR_COST: requiredNumberSetting('VITE_PRICING_DEFAULT_LABOR_COST', import.meta.env.VITE_PRICING_DEFAULT_LABOR_COST),
-  STONE_COST: requiredNumberSetting('VITE_PRICING_DEFAULT_STONE_COST', import.meta.env.VITE_PRICING_DEFAULT_STONE_COST),
-  MANUAL_BASE_PRICE: requiredNumberSetting('VITE_PRICING_DEFAULT_MANUAL_BASE_PRICE', import.meta.env.VITE_PRICING_DEFAULT_MANUAL_BASE_PRICE),
-  VAT_PCT: requiredNumberSetting('VITE_PRICING_DEFAULT_VAT_PCT', import.meta.env.VITE_PRICING_DEFAULT_VAT_PCT),
-  STONE_DESC: import.meta.env.VITE_PRICING_DEFAULT_STONE_DESC,
-  SILVER_PLATING_EXTRA: requiredNumberSetting('VITE_PRICING_SILVER_PLATING_EXTRA', import.meta.env.VITE_PRICING_SILVER_PLATING_EXTRA),
-  FALLBACK_GOLD_24K: requiredNumberSetting('VITE_PRICING_FALLBACK_GOLD_24K', import.meta.env.VITE_PRICING_FALLBACK_GOLD_24K),
-  FALLBACK_SILVER: requiredNumberSetting('VITE_PRICING_FALLBACK_SILVER', import.meta.env.VITE_PRICING_FALLBACK_SILVER),
-  SILVER_MULTIPLIER: requiredNumberSetting('VITE_PRICING_SILVER_MULTIPLIER', import.meta.env.VITE_PRICING_SILVER_MULTIPLIER),
-  GOLD_APPLIED_RATIO: requiredNumberSetting('VITE_PRICING_GOLD_APPLIED_RATIO', import.meta.env.VITE_PRICING_GOLD_APPLIED_RATIO),
-  PROFIT_DIVISOR: requiredNumberSetting('VITE_PRICING_PROFIT_DIVISOR', import.meta.env.VITE_PRICING_PROFIT_DIVISOR),
+  WEIGHT_CHI: '1.2',
+  LABOR_COST: 500000,
+  STONE_COST: 300000,
+  MANUAL_BASE_PRICE: 1200000,
+  VAT_PCT: 10,
+  STONE_DESC: 'Đá CZ cao cấp',
+  SILVER_PLATING_EXTRA: 150000,
+  FALLBACK_GOLD_24K: 13900000,
+  FALLBACK_SILVER: 1200000,
+  SILVER_MULTIPLIER: 3,
+  PROFIT_DIVISOR: 0.7,
 };
+export const QUOTE_STATUS_OPTIONS = [
+  { value: 'ALL', label: 'Tất cả trạng thái' },
+  { value: 'YC_MOI', label: 'Yêu cầu mới' },
+  { value: 'DANG_XLY', label: 'Đang xử lý' },
+  { value: 'NEED_MORE_INFO', label: 'Cần bổ sung thông tin' },
+  { value: 'XONG', label: 'Hoàn thành / Đã báo giá' },
+  { value: 'TU_CHOI', label: 'Bị từ chối' },
+] as const;
