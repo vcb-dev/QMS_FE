@@ -71,6 +71,8 @@ export interface QuoteRequest {
   createdAt: string;
   updatedAt: string;
 
+  customerName?: string;
+  categoryId?: string;
   customer?: Customer;
   material?: Material;
   materials?: Material[];

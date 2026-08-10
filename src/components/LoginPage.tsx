@@ -14,9 +14,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [errorMsg, setErrorMsg] = useState('');
 
   const testAccounts = [
-    { label: '👤 Sale 1 (Nguyễn Văn Sale)', email: 'sale@vcb.vn' },
-    { label: '💎 Pricing 1 (Trần Văn Pricing)', email: 'pricing1@vcb.vn' },
-    { label: '⚙️ Admin (Ban Giám Đốc)', email: 'admin@vcb.vn' },
+    { label: 'Sale (Nguyễn Văn Sale)', email: 'sale@vcb.vn' },
+    { label: 'Pricing (Trần Văn Pricing)', email: 'pricing@vcb.vn' },
+    { label: 'Admin (Ban Giám Đốc)', email: 'admin@vcb.vn' },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,7 +140,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@qms.com"
+                placeholder="email@vcb.com"
                 style={{
                   width: '100%',
                   background: '#0f172a',

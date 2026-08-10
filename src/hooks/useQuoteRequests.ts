@@ -13,7 +13,7 @@ import {
   resubmitQuoteRequest,
 } from '../services/api';
 
-export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
+export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
   // Multi-Filter State
   const [currentFilter, setCurrentFilter] = useState<string>('ALL');
   const [statusSubFilter, setStatusSubFilter] = useState<string>('ALL');
@@ -21,6 +21,9 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [materialFilter, setMaterialFilter] = useState<string>('ALL');
   const [ownerFilter, setOwnerFilter] = useState<string>('ALL');
+  const [timeRangeFilter, setTimeRangeFilter] = useState<string>('ALL');
+  const [startDateFilter, setStartDateFilter] = useState<string>('');
+  const [endDateFilter, setEndDateFilter] = useState<string>('');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -40,7 +43,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers] = useState<Customer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Modals & UI States
@@ -55,8 +58,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [loadingMessage, setLoadingMessage] = useState('Đang tải dữ liệu từ hệ thống VCB...');
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
-  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, currentPage, pageSize, currentUser });
-  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, currentPage, pageSize, currentUser };
+  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser });
+  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
 
   // 1. Load Master Data ONCE on user login
@@ -72,20 +75,20 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
   // 2. Load Quote Requests dùng ref để đọc state mới nhất
   const loadData = async (showLoading = true) => {
-    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, currentPage, pageSize, currentUser } = filterRef.current;
+    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser } = filterRef.current;
     if (!currentUser) return;
 
     if (showLoading) {
       setLoading(true);
     }
     try {
-      let targetStatus: string | undefined = undefined;
+      let targetStatus: import('../types').QuoteStatus | undefined = undefined;
       if (currentFilter === 'YC_MOI') targetStatus = 'YC_MOI';
       else if (currentFilter === 'DANG_XLY') targetStatus = 'DANG_XLY';
       else if (currentFilter === 'NEED_MORE_INFO') targetStatus = 'NEED_MORE_INFO';
       else if (currentFilter === 'XONG' || currentFilter === 'LIBRARY') targetStatus = 'XONG';
       else if (currentFilter === 'TU_CHOI') targetStatus = 'TU_CHOI';
-      else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter;
+      else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter as import('../types').QuoteStatus;
 
       const ownerId = (currentFilter === 'MY_REQ' || ownerFilter === 'MY_REQ') ? currentUser.id : undefined;
 
@@ -101,6 +104,9 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
         categoryId: categoryFilter !== 'ALL' ? categoryFilter : undefined,
         materialId: materialFilter !== 'ALL' ? materialFilter : undefined,
         ownerId: ownerId,
+        timeRange: timeRangeFilter !== 'ALL' ? timeRangeFilter : undefined,
+        startDate: startDateFilter || undefined,
+        endDate: endDateFilter || undefined,
         includeCounts,
       });
 
@@ -169,6 +175,9 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     categoryFilter,
     materialFilter,
     ownerFilter,
+    timeRangeFilter,
+    startDateFilter,
+    endDateFilter,
   ]);
 
   useEffect(() => {
@@ -202,6 +211,9 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     setCategoryFilter('ALL');
     setMaterialFilter('ALL');
     setOwnerFilter('ALL');
+    setTimeRangeFilter('ALL');
+    setStartDateFilter('');
+    setEndDateFilter('');
     setCurrentPage(1);
   };
 
@@ -214,11 +226,17 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     setCategoryFilter('ALL');
     setMaterialFilter('ALL');
     setOwnerFilter('ALL');
+    setTimeRangeFilter('ALL');
+    setStartDateFilter('');
+    setEndDateFilter('');
     setCurrentPage(1);
   };
 
-  const handleOpenCreate = () => {
+  const [calculatorData, setCalculatorData] = useState<any>(null);
+
+  const handleOpenCreate = (calcData?: any) => {
     setEditingReq(null);
+    setCalculatorData(calcData || null);
     setIsCreateOpen(true);
   };
 
@@ -277,6 +295,21 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       await loadData();
     } catch (err: any) {
       alert(`⚠️ Không thể báo giá: ${err.message || 'Lỗi hệ thống'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmDirectQuote = async (id: string, price: number) => {
+    setLoadingMessage('Đang xác nhận báo giá...');
+    setLoading(true);
+    try {
+      const updated = await completeQuoteRequest(id, price, 10);
+      setSelectedId(updated.id);
+      needCountsRef.current = true;
+      await loadData();
+    } catch (err: any) {
+      alert(`⚠️ Không thể xác nhận báo giá: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -372,6 +405,12 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     setMaterialFilter,
     ownerFilter,
     setOwnerFilter,
+    timeRangeFilter,
+    setTimeRangeFilter,
+    startDateFilter,
+    setStartDateFilter,
+    endDateFilter,
+    setEndDateFilter,
     currentPage,
     setCurrentPage,
     pageSize,
@@ -384,6 +423,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     isCreateOpen,
     setIsCreateOpen,
     editingReq,
+    calculatorData,
     pricingReqId,
     setPricingReqId,
     rejectReqId,
@@ -397,6 +437,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     handleCreateOrUpdateSubmit,
     handleAccept,
     handlePricingSubmit,
+    handleConfirmDirectQuote,
     handleSelectOption,
     handleRejectSubmit,
     handleReturnSubmit,

@@ -98,7 +98,7 @@ export async function uploadImageToBackend(file: File): Promise<{ url: string; p
   }
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -108,6 +108,9 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.page) params.page = filter.page;
   if (filter?.limit) params.limit = filter.limit;
   if (filter?.includeCounts) params.includeCounts = true;
+  if (filter?.timeRange) params.timeRange = filter.timeRange;
+  if (filter?.startDate) params.startDate = filter.startDate;
+  if (filter?.endDate) params.endDate = filter.endDate;
 
   try {
     const res = await api.get('/quote-requests', { params });
@@ -256,5 +259,20 @@ export async function submitQuickQuote(payload: any) {
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi gửi yêu cầu báo giá nhanh');
+  }
+}
+
+export async function calculatePriceApi(payload: {
+  materialNameOrKey: string;
+  weightChi: number;
+  laborCost?: number;
+  stoneCost?: number;
+  vatRate?: number;
+}) {
+  try {
+    const res = await api.post('/pricing-config/calculate', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi tính giá từ hệ thống');
   }
 }

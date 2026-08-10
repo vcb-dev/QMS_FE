@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Role, User } from './types';
-import { getStoredUser, clearSession, logoutApi } from './services/api';
+import { getStoredUser, logoutApi } from './services/api';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
 
 import { PlusCircle } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Sidebar } from './components/Sidebar';
 import { FilterBar } from './components/FilterBar';
 import { DashboardView } from './components/DashboardView';
 import { QuoteTable } from './components/QuoteTable';
-import { Inspector } from './components/Inspector';
+import { QuoteDetailView } from './components/QuoteDetailView';
 import { CreateModal } from './components/CreateModal';
 import { PricingModal } from './components/PricingModal';
 import { RejectModal } from './components/RejectModal';
@@ -25,6 +25,7 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(getStoredUser());
   const [currentRole, setCurrentRole] = useState<Role>(getStoredUser()?.role || 'SALE');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [previousFilter, setPreviousFilter] = useState<string>('ALL');
 
   const {
     requests,
@@ -45,6 +46,10 @@ export function App() {
     setMaterialFilter,
     ownerFilter,
     setOwnerFilter,
+    timeRangeFilter,
+    setTimeRangeFilter,
+    startDateFilter,
+    setStartDateFilter,
     currentPage,
     setCurrentPage,
     pageSize,
@@ -57,6 +62,7 @@ export function App() {
     isCreateOpen,
     setIsCreateOpen,
     editingReq,
+    calculatorData,
     pricingReqId,
     setPricingReqId,
     rejectReqId,
@@ -70,11 +76,20 @@ export function App() {
     handleCreateOrUpdateSubmit,
     handleAccept,
     handlePricingSubmit,
+    handleConfirmDirectQuote,
     handleSelectOption,
     handleRejectSubmit,
     handleReturnSubmit,
     handleResubmitDirect,
   } = useQuoteRequests(currentUser, currentRole);
+
+  const handleOpenDetail = (id: string) => {
+    if (currentFilter !== 'DETAIL') {
+      setPreviousFilter(currentFilter);
+    }
+    setSelectedId(id);
+    handleTabChange('DETAIL');
+  };
 
   if (!currentUser) {
     return (
@@ -110,35 +125,52 @@ export function App() {
         return 'Thư Viện Sản Phẩm';
       case 'CALCULATOR':
         return 'Máy Tính Giá';
+      case 'DETAIL':
+        return 'Chi Tiết Báo Giá';
       default:
         return 'Tất Cả Yêu Cầu';
     }
   };
 
   return (
-    <div className={`mac-window ${currentRole === 'PRICING' ? 'pricing-mode-active' : ''}`}>
-      <Header
+    <div className={`mac-window ${currentRole === 'PRICING' ? 'pricing-mode-active' : ''}`} style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <Sidebar
+        currentFilter={currentFilter}
+        onFilterChange={handleTabChange}
+        counts={counts}
         user={currentUser}
         currentRole={currentRole}
-        onRoleChange={setCurrentRole}
-        onOpenCreateModal={handleOpenCreate}
-        onLogout={handleLogout}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        onOpenCreate={handleOpenCreate}
+        isOpen={isSidebarOpen}
       />
 
-      <div className="workspace">
-        <Sidebar
-          currentFilter={currentFilter}
-          onFilterChange={handleTabChange}
-          counts={counts}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0 }}>
+        <Header
           user={currentUser}
           currentRole={currentRole}
-          onOpenCreate={handleOpenCreate}
-          isOpen={isSidebarOpen}
+          onRoleChange={setCurrentRole}
+          onOpenCreateModal={handleOpenCreate}
+          onLogout={handleLogout}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        <main className="content page-transition" key={`${currentFilter}-${searchTerm}-${categoryFilter}`}>
-          {currentFilter === 'CALCULATOR' ? (
+        <main className="content page-transition" key={`${currentFilter}-${searchTerm}-${categoryFilter}`} style={{ flex: 1, overflowY: 'auto' }}>
+          {currentFilter === 'DETAIL' ? (
+            <QuoteDetailView
+              selectedReq={selectedReq}
+              currentRole={currentRole}
+              currentUser={currentUser}
+              onBack={() => handleTabChange(previousFilter || 'ALL')}
+              onEdit={handleOpenEdit}
+              onAccept={handleAccept}
+              onPricing={(id) => setPricingReqId(id)}
+              onReject={(id) => setRejectReqId(id)}
+              onReturn={(id) => setReturnReqId(id)}
+              onResubmit={handleResubmitDirect}
+              onSelectOption={handleSelectOption}
+              onConfirmDirectPrice={handleConfirmDirectQuote}
+            />
+          ) : currentFilter === 'CALCULATOR' ? (
             <PricingCalculatorView
               currentRole={currentRole}
               onApplyToNewRequest={handleOpenCreate}
@@ -148,7 +180,7 @@ export function App() {
               requests={requests}
               categories={categories}
               materials={materials}
-              onSelectReq={(id) => setSelectedId(id)}
+              onSelectReq={handleOpenDetail}
               selectedId={selectedReq?.id || selectedId}
               totalCount={counts.xong}
             />
@@ -161,7 +193,7 @@ export function App() {
               requests={requests}
               counts={counts}
               currentRole={currentRole}
-              onSelectReq={(id) => setSelectedId(id)}
+              onSelectReq={handleOpenDetail}
               onViewAll={() => handleTabChange('ALL_LIST')}
               onOpenLibrary={() => handleTabChange('LIBRARY')}
               onOpenCreateModal={handleOpenCreate}
@@ -206,6 +238,16 @@ export function App() {
                   setOwnerFilter(own);
                   setCurrentPage(1);
                 }}
+                timeRangeFilter={timeRangeFilter}
+                onTimeRangeFilterChange={(tr) => {
+                  setTimeRangeFilter(tr);
+                  setCurrentPage(1);
+                }}
+                startDateFilter={startDateFilter}
+                onStartDateChange={(sd) => {
+                  setStartDateFilter(sd);
+                  setCurrentPage(1);
+                }}
                 categories={categories}
                 materials={materials}
                 onResetFilters={handleResetFilters}
@@ -219,7 +261,7 @@ export function App() {
                   selectedId={selectedReq?.id || selectedId}
                   currentRole={currentRole}
                   currentUser={currentUser}
-                  onSelect={(id) => setSelectedId(id)}
+                  onSelect={handleOpenDetail}
                   onEdit={handleOpenEdit}
                   onAccept={handleAccept}
                   onPricing={(id) => setPricingReqId(id)}
@@ -242,21 +284,6 @@ export function App() {
             </>
           )}
         </main>
-
-        {currentFilter !== 'CALCULATOR' && (
-          <Inspector
-            selectedReq={selectedReq}
-            currentRole={currentRole}
-            currentUser={currentUser}
-            onAccept={handleAccept}
-            onPricing={(id) => setPricingReqId(id)}
-            onReject={(id) => setRejectReqId(id)}
-            onReturn={(id) => setReturnReqId(id)}
-            onResubmit={handleResubmitDirect}
-            onSelectOption={handleSelectOption}
-            onEdit={handleOpenEdit}
-          />
-        )}
       </div>
 
       <CreateModal
@@ -269,6 +296,7 @@ export function App() {
         onRefreshCustomers={async () => {}}
         editingReq={editingReq}
         saleName={currentUser.name}
+        calculatorData={calculatorData}
       />
 
       <PricingModal

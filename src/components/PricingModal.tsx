@@ -53,6 +53,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const isSilverReq = reqLower.includes('bạc') || reqLower.includes('silver');
   const isNonPrecious = requestedMatName ? (!isGoldReq && !isSilverReq) : false;
 
+  // Sync prefilled quotedPrice if available
+  useEffect(() => {
+    if (isOpen && selectedReq?.quotedPrice) {
+      setManualBasePrice(String(selectedReq.quotedPrice));
+    }
+  }, [isOpen, selectedReq?.quotedPrice]);
+
   // Load dynamic DB pricing config
   useEffect(() => {
     if (isOpen) {
@@ -494,7 +501,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
           <div className="modal-footer" style={{ marginTop: '14px' }}>
             <button type="button" className="tool-btn" onClick={onClose}>Hủy</button>
-            <button type="submit" className="btn-insp btn-insp-primary" style={{ background: '#0f172a', color: '#ffffff' }} disabled={submitting}>
+            <button type="submit" className="btn-insp btn-insp-primary" style={{ background: '#111927', color: '#ffffff' }} disabled={submitting}>
               Xác Nhận Gửi Báo Giá Cho Sale
             </button>
           </div>

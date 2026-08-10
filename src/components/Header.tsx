@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Role, User } from '../types';
-import { Sparkles, LogOut, User as UserIcon, Menu, ChevronDown, ShieldCheck } from 'lucide-react';
+import { LogOut, User as UserIcon, Menu, ShieldCheck, Search, Bell } from 'lucide-react';
 
 interface HeaderProps {
   user: User;
@@ -15,7 +15,6 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   currentRole,
   onRoleChange,
-  onOpenCreateModal,
   onLogout,
   onToggleSidebar,
 }) => {
@@ -23,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get user initials for circular avatar (e.g. "Trần Văn Pricing" -> "TV")
+  // Get user initials for circular avatar (e.g. "Nguyen Van A" -> "NA")
   const getInitials = (name: string) => {
     if (!name) return 'U';
     const parts = name.trim().split(' ');
@@ -43,39 +42,55 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="titlebar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+    <header className="titlebar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', height: '64px', padding: '0 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* Hamburger Menu Toggle Button */}
         <button
           type="button"
           onClick={onToggleSidebar}
           style={{
-            background: '#f1f5f9',
+            background: '#f8fafc',
             border: '1px solid #cbd5e1',
             borderRadius: '8px',
-            padding: '8px',
+            padding: '6px 10px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            gap: '6px',
             cursor: 'pointer',
-            color: '#1e293b',
+            color: '#334155',
+            fontSize: '12px',
+            fontWeight: 700,
           }}
-          title="Toggle Navigation Menu"
+          title="Thu gọn / Mở rộng Menu"
         >
-          <Menu size={18} />
+          <Menu size={16} />
+          <span style={{ fontSize: '12px', color: '#475569' }}>Menu</span>
         </button>
+      </div>
 
-        <div className="brand">
-          <span className="brand-mark">VCB QMS</span>
-          <div>
-            <strong style={{ color: '#0f172a' }}>Hệ Thống Báo Giá Chế Tác Kim Hoàn</strong>
-          </div>
-        </div>
+      {/* Center Search Bar */}
+      <div style={{ flex: 1, maxWidth: '380px', position: 'relative', margin: '0 16px' }}>
+        <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+        <input
+          type="text"
+          placeholder="Search quotes, products..."
+          style={{
+            width: '100%',
+            background: '#f1f5f9',
+            border: '1px solid #e2e8f0',
+            borderRadius: '20px',
+            padding: '8px 14px 8px 38px',
+            fontSize: '12.5px',
+            color: '#0f172a',
+            outline: 'none',
+            transition: 'all 0.2s ease',
+          }}
+        />
       </div>
 
       {/* Right Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Allow switching views ONLY if user.role === 'ADMIN' */}
+        {/* Role switcher for Admin */}
         {user.role === 'ADMIN' && (
           <div className="role-switch">
             <button
@@ -98,7 +113,30 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         )}
-        {/* Circular Avatar Dropdown Trigger */}
+
+        {/* Bell notification button */}
+        <button
+          type="button"
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            position: 'relative',
+            color: '#475569',
+          }}
+          title="Notifications"
+        >
+          <Bell size={17} />
+          <span style={{ position: 'absolute', top: '7px', right: '7px', width: '7px', height: '7px', background: '#ef4444', borderRadius: '50%', border: '1.5px solid #ffffff' }} />
+        </button>
+
+        {/* Profile Avatar Dropdown Trigger */}
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button
             type="button"
@@ -106,45 +144,39 @@ export const Header: React.FC<HeaderProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '24px',
-              padding: '4px 12px 4px 4px',
+              gap: '9px',
+              background: 'transparent',
+              border: 'none',
+              padding: '2px 4px',
               cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-              transition: 'all 0.15s ease',
             }}
           >
+            <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'block' }}>
+                {user.name || 'Nguyen Van A'}
+              </span>
+              <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>
+                {currentRole === 'SALE' ? 'Store Associate' : currentRole === 'PRICING' ? 'Pricing Specialist' : 'System Admin'}
+              </span>
+            </div>
+
             {/* Circular Avatar */}
             <div
               style={{
-                width: '32px',
-                height: '32px',
+                width: '34px',
+                height: '34px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)',
+                background: '#0f172a',
                 color: '#ffffff',
                 fontWeight: 800,
-                fontSize: '12px',
+                fontSize: '13px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
               }}
             >
               {getInitials(user.name)}
             </div>
-
-            <div style={{ textAlign: 'left', lineHeight: '1.2' }}>
-              <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', display: 'block' }}>
-                {user.name}
-              </span>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: '#2563eb' }}>
-                {currentRole} {user.department ? `• ${user.department.name}` : ''}
-              </span>
-            </div>
-
-            <ChevronDown size={14} color="#64748b" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
           </button>
 
           {/* Popup Dropdown Menu */}
