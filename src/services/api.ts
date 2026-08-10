@@ -13,12 +13,26 @@ export const api = axios.create({
   },
 });
 
-// Request Interceptor: đính kèm Bearer Token nếu có (chỉ khi dùng Bearer legacy)
+export function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return decodeURIComponent(match[2]);
+  return null;
+}
+
+// Request Interceptor: đính kèm Bearer Token & X-CSRF-Token
 api.interceptors.request.use((config) => {
   const token = getStoredToken();
   if (token && token !== 'undefined' && token !== 'null' && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Tự động đọc cookie crmspd_csrf và gửi kèm Header X-CSRF-Token
+  const csrfToken = getCookie('crmspd_csrf');
+  if (csrfToken && config.headers) {
+    config.headers['X-CSRF-Token'] = csrfToken;
+  }
+
   return config;
 });
 
@@ -81,6 +95,60 @@ export async function loginApi(email: string, password: string): Promise<{ acces
     return data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Email hoặc mật khẩu không chính xác');
+  }
+}
+
+export async function registerApi(payload: { name: string; email: string; password: string; role?: string }): Promise<{ user: User; message: string }> {
+  try {
+    const res = await api.post('/auth/register', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại');
+  }
+}
+
+export async function getPendingUsersApi(): Promise<User[]> {
+  try {
+    const res = await api.get('/users/pending');
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể lấy danh sách tài khoản chờ duyệt');
+  }
+}
+
+export async function approveUserApi(userId: string, role?: string): Promise<User> {
+  try {
+    const res = await api.patch(`/users/${userId}/approve`, { role });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể phê duyệt tài khoản');
+  }
+}
+
+export async function rejectUserApi(userId: string): Promise<{ message: string }> {
+  try {
+    const res = await api.delete(`/users/${userId}/reject`);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể từ chối tài khoản');
+  }
+}
+
+export async function forgotPasswordApi(email: string): Promise<{ message: string; otp?: string }> {
+  try {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể gửi yêu cầu đặt lại mật khẩu');
+  }
+}
+
+export async function resetPasswordApi(payload: { email: string; otp: string; newPassword: string }): Promise<{ message: string }> {
+  try {
+    const res = await api.post('/auth/reset-password', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
   }
 }
 

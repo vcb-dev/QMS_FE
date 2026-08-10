@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Customer, Material, ProductCategory, QuoteRequest } from '../types';
 import { createCustomer, searchCustomers } from '../services/api';
-import { X, UserPlus, Users, Upload, Search, PlusCircle, Gem } from 'lucide-react';
+import { X, UserPlus, Users, Upload, Search, PlusCircle } from 'lucide-react';
 
 interface CreateModalProps {
   isOpen: boolean;

@@ -80,8 +80,6 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
 
   // Price calculations
   const priceVal = selectedReq.quotedPrice ? Number(selectedReq.quotedPrice) : 0;
-  const vatVal = selectedReq.vat ? Number(selectedReq.vat) : 8;
-  const priceBeforeVat = priceVal > 0 ? (vatVal > 0 ? priceVal / (1 + vatVal / 100) : priceVal) : 0;
 
   const imagesList = selectedReq.images && selectedReq.images.length > 0
     ? selectedReq.images.map((img) => img.imageUrl)
