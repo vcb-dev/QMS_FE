@@ -166,7 +166,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
       </div>
 
       {/* Main Grid Layout: 2 Columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
+      <div className="modal-grid-2col">
         {/* Left Side: 3 Form Sections */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
@@ -176,7 +176,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
               Thông số Sản phẩm & Kim loại
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
               {/* Danh mục sản phẩm */}
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calculator, Plus, Trash2, Sparkles, CheckCircle } from 'lucide-react';
+import { X, Calculator, Plus, Trash2, CheckCircle } from 'lucide-react';
 import type { QuoteOption, QuoteRequest } from '../types';
-import { useMetalPrices } from '../hooks/useMetalPrices';
-import { fetchPricingConfig } from '../services/api';
+import { generatePricingOptionsApi } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 
 interface PricingModalProps {
@@ -20,7 +19,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   onOpenCalculator,
   selectedReq,
 }) => {
-  const { formatted, prices } = useMetalPrices();
   const [vat, setVat] = useState(String(PRICING_DEFAULTS.VAT_PCT));
   const [includeVat, setIncludeVat] = useState(false);
   const [manualBasePrice, setManualBasePrice] = useState<string>(String(PRICING_DEFAULTS.MANUAL_BASE_PRICE));
@@ -32,24 +30,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const [stoneCost, setStoneCost] = useState<string>(String(PRICING_DEFAULTS.STONE_COST));
   const [stoneDesc, setStoneDesc] = useState<string>(PRICING_DEFAULTS.STONE_DESC);
 
-  // 2. Options List & Dynamic DB Config
+  // 2. Options List & Material Detection
   const [options, setOptions] = useState<QuoteOption[]>([]);
-  const [goldRatios, setGoldRatios] = useState<any[]>([]);
-  const [profitMargins, setProfitMargins] = useState<any[]>([]);
-  const [silverMultiplier, setSilverMultiplier] = useState(PRICING_DEFAULTS.SILVER_MULTIPLIER);
 
   // Extract Sale's requested material name
   const requestedMatName = selectedReq?.materials?.[0]?.name || selectedReq?.material?.name || '';
   const reqLower = requestedMatName.toLowerCase();
 
-  const isGoldReq =
-    reqLower.includes('vàng') ||
-    reqLower.includes('gold') ||
-    goldRatios.some(
-      (r) =>
-        reqLower.includes(r.label?.toLowerCase() || '') ||
-        reqLower.includes(r.key?.toLowerCase().replace('gold_', '') || '')
-    );
+  const isGoldReq = reqLower.includes('vàng') || reqLower.includes('gold');
   const isSilverReq = reqLower.includes('bạc') || reqLower.includes('silver');
   const isNonPrecious = requestedMatName ? (!isGoldReq && !isSilverReq) : false;
 
@@ -59,26 +47,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       setManualBasePrice(String(selectedReq.quotedPrice));
     }
   }, [isOpen, selectedReq?.quotedPrice]);
-
-  // Load dynamic DB pricing config
-  useEffect(() => {
-    if (isOpen) {
-      fetchPricingConfig()
-        .then((cfg) => {
-          const rList = cfg.goldRatios && cfg.goldRatios.length > 0 ? cfg.goldRatios : [];
-          const mList = cfg.profitMargins && cfg.profitMargins.length > 0 ? cfg.profitMargins : [];
-          setGoldRatios(rList);
-          setProfitMargins(mList);
-          const configuredSilverMultiplier = Number(cfg.silverMultiplier) || PRICING_DEFAULTS.SILVER_MULTIPLIER;
-          setSilverMultiplier(configuredSilverMultiplier);
-
-          if (!isNonPrecious && rList.length > 0) {
-            generateKaratOptions(rList, mList, configuredSilverMultiplier);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isOpen, requestedMatName, isNonPrecious]);
 
   // Sync non-precious manual price mode
   useEffect(() => {
@@ -106,118 +74,35 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   }, [manualBasePrice, includeVat, vat, requestedMatName, isNonPrecious]);
 
-  // Auto-generate options for Gold & Silver using DB config
-  const generateKaratOptions = (
-    ratiosList = goldRatios,
-    marginsList = profitMargins,
-    configuredSilverMultiplier = silverMultiplier,
-  ) => {
-    if (isNonPrecious || ratiosList.length === 0) return;
+  // Delegate option generation 100% to Backend API (No FE calculation formulas)
+  const generateKaratOptions = async () => {
+    if (isNonPrecious) return;
 
-    const w = parseFloat(weightChi) || 0;
-    const l = parseFloat(laborCost) || 0;
-    const s = parseFloat(stoneCost) || 0;
-    const vatVal = parseFloat(vat) || 10;
+    try {
+      const generated = await generatePricingOptionsApi({
+        requestedMatName,
+        weightChi: parseFloat(weightChi) || 0,
+        laborCost: parseFloat(laborCost) || 0,
+        stoneCost: parseFloat(stoneCost) || 0,
+        stoneDesc,
+        vatRate: parseFloat(vat) || 10,
+        includeVat,
+        manualBasePrice: parseFloat(manualBasePrice) || 0,
+      });
 
-    const gold24kRate = parseFloat(formatted.gold24k.replace(/\D/g, '')) || prices.gold24kVnd || PRICING_DEFAULTS.FALLBACK_GOLD_24K;
-    const silverRate = parseFloat(formatted.silver.replace(/\D/g, '')) || prices.silverVnd || PRICING_DEFAULTS.FALLBACK_SILVER;
-
-    // IF SALE REQUESTED SILVER (BẠC)
-    if (isSilverReq) {
-      const matCost = silverRate * w;
-      const rawCost = matCost + l + s;
-      const vatCost = rawCost * (vatVal / 100);
-      const totalCostWithVat = rawCost + vatCost;
-      const suggestedPrice = Math.round(totalCostWithVat * configuredSilverMultiplier);
-
-      const silverOptions: QuoteOption[] = [
-        {
-          optionName: `Phương án 1 (Bạc 925 - SALE YÊU CẦU)`,
-          materialName: 'Bạc 925',
-          weightChi: w,
-          laborCost: l,
-          stoneCost: s,
-          stoneDescription: stoneDesc,
-          vat: vatVal,
-          quotedPrice: suggestedPrice,
-          isSelected: true,
-          note: `Chất liệu Sale yêu cầu | Công ${l.toLocaleString('vi-VN')}₫ | ${stoneDesc}`,
-        },
-        {
-          optionName: `Phương án 2 (Bạc Xi Kim / Vàng Trắng - So sánh thêm)`,
-          materialName: 'Bạc Xi Kim',
-          weightChi: w,
-          laborCost: l + PRICING_DEFAULTS.SILVER_PLATING_EXTRA,
-          stoneCost: s,
-          stoneDescription: stoneDesc,
-          vat: vatVal,
-          quotedPrice: Math.round((totalCostWithVat + PRICING_DEFAULTS.SILVER_PLATING_EXTRA) * configuredSilverMultiplier),
-          isSelected: false,
-          note: `Phương án xi cao cấp | Công ${(l + PRICING_DEFAULTS.SILVER_PLATING_EXTRA).toLocaleString('vi-VN')}₫`,
-        },
-      ];
-      setOptions(silverOptions);
-      return;
+      if (Array.isArray(generated) && generated.length > 0) {
+        setOptions(generated);
+      }
+    } catch (err) {
+      console.error('Lỗi khi gọi API tính giá từ Backend:', err);
     }
-
-    // IF SALE REQUESTED GOLD (VÀNG) OR DEFAULT
-    let requestedKey = 'GOLD_10K';
-    if (requestedMatName) {
-      const found = ratiosList.find(
-        (r) =>
-          reqLower.includes(r.label.toLowerCase()) ||
-          reqLower.includes(r.key.toLowerCase().replace('gold_', ''))
-      );
-      if (found) requestedKey = found.key;
-    }
-
-    const allGenerated = ratiosList.map((ratioObj) => {
-      const matName = ratioObj.label || ratioObj.key;
-      const isSaleTarget = ratioObj.key === requestedKey;
-      const matCost = gold24kRate * ratioObj.applied * w;
-      const rawCost = matCost + l + s;
-      const vatCost = rawCost * (vatVal / 100);
-      const totalCostWithVat = rawCost + vatCost;
-
-      const tier = marginsList.find((m) => totalCostWithVat <= m.maxCost) || marginsList[marginsList.length - 1];
-      const divisor = tier ? tier.divisor : PRICING_DEFAULTS.PROFIT_DIVISOR;
-      const suggestedPrice = Math.round(totalCostWithVat / divisor);
-
-      return {
-        isSaleTarget,
-        option: {
-          optionName: isSaleTarget ? `Phương án chính (${matName} - SALE YÊU CẦU)` : `Phương án phụ (${matName} - So sánh thêm)`,
-          materialName: matName,
-          weightChi: w,
-          laborCost: l,
-          stoneCost: s,
-          stoneDescription: stoneDesc,
-          vat: vatVal,
-          quotedPrice: suggestedPrice,
-          isSelected: isSaleTarget,
-          note: isSaleTarget ? `Đúng chất liệu Sale yêu cầu` : `Phương án phụ để Sale tư vấn so sánh`,
-        } as QuoteOption,
-      };
-    });
-
-    allGenerated.sort((a, b) => (b.isSaleTarget ? 1 : 0) - (a.isSaleTarget ? 1 : 0));
-
-    const finalOptions = allGenerated.map((item, idx) => ({
-      ...item.option,
-      isSelected: idx === 0,
-      optionName: item.isSaleTarget
-        ? `Phương án ${idx + 1} (${item.option.materialName} - SALE YÊU CẦU)`
-        : `Phương án ${idx + 1} (${item.option.materialName} - So sánh thêm)`,
-    }));
-
-    setOptions(finalOptions);
   };
 
   useEffect(() => {
     if (isOpen && !isNonPrecious) {
       generateKaratOptions();
     }
-  }, [isOpen, requestedMatName, isNonPrecious]);
+  }, [isOpen, requestedMatName, isNonPrecious, weightChi, laborCost, stoneCost, vat, stoneDesc]);
 
   if (!isOpen) return null;
 
@@ -313,7 +198,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   Báo Giá Trực Tiếp — Chất Liệu: {requestedMatName}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px', alignItems: 'center' }}>
+                <div className="modal-grid-2col" style={{ alignItems: 'center' }}>
                   <div>
                     <label style={{ fontWeight: 700, fontSize: '12px', color: '#334155', display: 'block', marginBottom: '4px' }}>
                       Giá Sản Phẩm Gốc (₫):
@@ -370,7 +255,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={15} color="#475569" /> Tính & Tạo Phương Án Báo Giá: {isGoldReq ? 'Tất cả tuổi Vàng' : 'Các loại Bạc'}
+                    <Calculator size={15} color="#475569" /> Tính & Tạo Phương Án Báo Giá: {isGoldReq ? 'Tất cả tuổi Vàng' : 'Các loại Bạc'}
                   </span>
                   {onOpenCalculator && (
                     <button

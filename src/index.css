@@ -783,3 +783,62 @@ body {
 
 .chip-option:hover { background: #f8fafc; }
 .chip-option input:checked + span { color: var(--primary); font-weight: 700; }
+
+/* Responsive Popups & Modals Design System */
+.modal-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .modal-card {
+    max-width: 95vw !important;
+    max-height: 92vh !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-backdrop {
+    padding: 10px !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-card {
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+
+  .modal-grid-2col {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .modal-header {
+    padding: 14px 16px !important;
+  }
+
+  .modal-body, form {
+    padding: 14px !important;
+  }
+
+  .modal-footer {
+    padding: 12px 16px !important;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+
+  .modal-footer button {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .chip-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+  }
+}
+

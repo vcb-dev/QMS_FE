@@ -225,6 +225,29 @@ export async function searchCustomers(search?: string) {
   }
 }
 
+export async function fetchProvinces() {
+  try {
+    const res = await api.get('/locations/provinces');
+    return res.data;
+  } catch (err: any) {
+    console.error('Không thể lấy danh sách Tỉnh/TP:', err);
+    return [];
+  }
+}
+
+export async function fetchWards(provinceIdOrName?: string) {
+  if (!provinceIdOrName) return [];
+  try {
+    const res = await api.get('/locations/wards', {
+      params: { provinceId: provinceIdOrName },
+    });
+    return res.data;
+  } catch (err: any) {
+    console.error('Không thể lấy danh sách Xã/Phường:', err);
+    return [];
+  }
+}
+
 export async function createCustomer(payload: { name: string; phone?: string; address?: string; province?: string; ward?: string; note?: string }) {
   try {
     const res = await api.post('/customers', payload);
@@ -342,5 +365,23 @@ export async function calculatePriceApi(payload: {
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi tính giá từ hệ thống');
+  }
+}
+
+export async function generatePricingOptionsApi(payload: {
+  requestedMatName?: string;
+  weightChi?: number;
+  laborCost?: number;
+  stoneCost?: number;
+  stoneDesc?: string;
+  vatRate?: number;
+  includeVat?: boolean;
+  manualBasePrice?: number;
+}) {
+  try {
+    const res = await api.post('/pricing-config/generate-options', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi tính danh sách phương án báo giá từ Backend');
   }
 }

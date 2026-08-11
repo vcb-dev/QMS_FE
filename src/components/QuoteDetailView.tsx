@@ -523,12 +523,22 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
               <div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>KHÁCH HÀNG</span>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>THÔNG TIN KHÁCH HÀNG</span>
                 <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px', marginTop: '2px' }}>
-                  {selectedReq.customerName || selectedReq.customer?.name || 'Khách hàng lẻ'}
+                  👤 {selectedReq.customerName || selectedReq.customer?.name || 'Khách hàng lẻ'}
                 </div>
                 {selectedReq.customer?.phone && (
-                  <div style={{ fontSize: '12px', color: '#475569' }}>📞 {selectedReq.customer.phone}</div>
+                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>📞 SĐT: {selectedReq.customer.phone}</div>
+                )}
+                {selectedReq.customer?.province && (
+                  <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, marginTop: '2px' }}>
+                    🏙️ Tỉnh/TP: {selectedReq.customer.province}
+                  </div>
+                )}
+                {(selectedReq.customer?.address || selectedReq.customer?.ward) && (
+                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
+                    📍 Địa chỉ: {[selectedReq.customer?.address, selectedReq.customer?.ward].filter(Boolean).join(', ')}
+                  </div>
                 )}
               </div>
 
