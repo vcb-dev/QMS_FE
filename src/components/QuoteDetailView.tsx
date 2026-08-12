@@ -14,10 +14,17 @@ import {
   Building2,
   Calendar,
   Sparkles,
-  Coins,
-  Hammer,
+  User as UserIcon,
+  Phone,
+  MapPin,
+  BarChart3,
+  Gem,
+  Tag,
+  Ruler,
+  Target,
 } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
+import { formatCurrency } from '../utils/currency';
 
 interface QuoteDetailViewProps {
   selectedReq: QuoteRequest | null;
@@ -72,7 +79,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
             gap: '8px',
           }}
         >
-          <ArrowLeft size={16} /> Quay lại danh sách
+          <ArrowLeft size={16} /> 
         </button>
       </div>
     );
@@ -159,7 +166,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
               transition: 'all 0.15s ease',
             }}
           >
-            <ArrowLeft size={16} /> Quay lại danh sách
+            <ArrowLeft size={16} /> 
           </button>
 
           <div>
@@ -420,7 +427,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
                     <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Coins size={14} color="#d97706" /> CHẤT LIỆU
+                      <Gem size={14} color="#d97706" /> CHẤT LIỆU
                     </span>
                     <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
                       {materialsList.join(', ')}
@@ -429,7 +436,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
 
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
                     <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Building2 size={14} color="#2563eb" /> DANH MỤC
+                      <Tag size={14} color="#2563eb" /> DANH MỤC
                     </span>
                     <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
                       {selectedReq.category?.name || 'Chưa phân loại'}
@@ -438,7 +445,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
 
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
                     <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Hammer size={14} color="#16a34a" /> SỐ ĐO KÍCH THƯỚC
+                      <Ruler size={14} color="#16a34a" /> SỐ ĐO KÍCH THƯỚC
                     </span>
                     <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
                       {selectedReq.customerMeasurements || 'Theo yêu cầu tiêu chuẩn'}
@@ -447,7 +454,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
 
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
                     <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Sparkles size={14} color="#ea580c" /> TỶ LỆ CHỐT DỰ KIẾN
+                      <Target size={14} color="#ea580c" /> TỶ LỆ CHỐT DỰ KIẾN
                     </span>
                     <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
                       {selectedReq.closeRatePct !== undefined && selectedReq.closeRatePct !== null ? `${selectedReq.closeRatePct}%` : '---'}
@@ -480,7 +487,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
                 {selectedReq.options.map((opt, idx) => {
                   const isSelected = opt.id === selectedReq.selectedOptionId || opt.isSelected;
-                  const price = opt.quotedPrice ? Number(opt.quotedPrice).toLocaleString('en-US') + ' đ' : '---';
+                  const price = opt.quotedPrice ? formatCurrency(Number(opt.quotedPrice)) : '---';
 
                   return (
                     <div
@@ -524,20 +531,22 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
               <div>
                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>THÔNG TIN KHÁCH HÀNG</span>
-                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px', marginTop: '2px' }}>
-                  👤 {selectedReq.customerName || selectedReq.customer?.name || 'Khách hàng lẻ'}
+                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <UserIcon size={15} color="#2563eb" /> {selectedReq.customerName || selectedReq.customer?.name || 'Khách hàng lẻ'}
                 </div>
                 {selectedReq.customer?.phone && (
-                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>📞 SĐT: {selectedReq.customer.phone}</div>
+                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Phone size={13} color="#64748b" /> SĐT: {selectedReq.customer.phone}
+                  </div>
                 )}
                 {selectedReq.customer?.province && (
-                  <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, marginTop: '2px' }}>
-                    🏙️ Tỉnh/TP: {selectedReq.customer.province}
+                  <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Building2 size={13} color="#1d4ed8" /> Tỉnh/TP: {selectedReq.customer.province}
                   </div>
                 )}
                 {(selectedReq.customer?.address || selectedReq.customer?.ward) && (
-                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
-                    📍 Địa chỉ: {[selectedReq.customer?.address, selectedReq.customer?.ward].filter(Boolean).join(', ')}
+                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={13} color="#ea580c" /> Địa chỉ: {[selectedReq.customer?.address, selectedReq.customer?.ward].filter(Boolean).join(', ')}
                   </div>
                 )}
               </div>
@@ -549,8 +558,8 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                 <div style={{ fontWeight: 800, color: '#334155', marginTop: '2px' }}>
                   {selectedReq.requester?.name || selectedReq.createdBy?.name || 'Kinh Doanh'}
                 </div>
-                <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                  🏢 {selectedReq.requester?.department?.name || 'Store VCB'}
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Building2 size={13} color="#64748b" /> {selectedReq.requester?.department?.name || 'Store VCB'}
                 </div>
               </div>
 
@@ -590,7 +599,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
               <span style={{ fontSize: '14px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                📊 Bảng Kê Giá & VAT
+                <BarChart3 size={16} color="#4b5563" /> Bảng Kê Giá & VAT
               </span>
               <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#4b5563', background: '#ffffff', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
                 {selectedReq.code || `#${selectedReq.id}`}
@@ -602,7 +611,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                 TỔNG BÁO GIÁ CHỐT
               </span>
               <div style={{ fontSize: '26px', fontWeight: 900, color: priceVal > 0 ? '#16a34a' : '#d97706', marginTop: '4px' }}>
-                {priceVal > 0 ? priceVal.toLocaleString('en-US') + ' đ' : 'Chưa có giá chốt'}
+                {priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có giá chốt'}
               </div>
 
               {(currentRole === 'PRICING' || currentRole === 'ADMIN') &&

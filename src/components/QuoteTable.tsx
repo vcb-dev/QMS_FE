@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, Role, User } from '../types';
 import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown } from 'lucide-react';
+import { formatCurrency } from '../utils/currency';
 
 interface QuoteTableProps {
   requests: QuoteRequest[];
@@ -325,8 +326,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th>Danh Mục</th>
             <th>Số Đo Kích Thước</th>
             <th>Tỷ Lệ Chốt</th>
-            <th style={{ background: '#e0e7ff', color: '#3730a3' }}>VAT (%)</th>
-            <th style={{ background: '#ccfbf1', color: '#0f766e' }}>Báo Giá Khách (Có VAT)</th>
+            <th style={{ color: '#3730a3' }}>VAT (%)</th>
+            <th style={{ color: '#0f766e' }}>Báo Giá Khách (Có VAT)</th>
             <th>Người Báo Giá</th>
             <th style={{ textAlign: 'center' }}>Thao Tác</th>
           </tr>
@@ -348,7 +349,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
             const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
 
-            const formattedPrice = priceVal > 0 ? priceVal.toLocaleString('en-US') + ' ₫' : 'Chưa có';
+            const formattedPrice = priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có';
 
             const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
@@ -405,7 +406,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 <td style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>
                   {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}
                 </td>
-                <td style={{ background: '#f5f3ff', color: '#4338ca', fontWeight: 700, borderRadius: '6px', textAlign: 'center' }}>
+                <td style={{ color: '#4338ca', fontWeight: 700, textAlign: 'center' }}>
                   {r.vat ? `${r.vat}%` : '---'}
                 </td>
                 {isRejected ? (
@@ -423,7 +424,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     </div>
                   </td>
                 ) : priceVal > 0 ? (
-                  <td style={{ background: '#ccfbf1', color: '#0f766e', borderRadius: '6px', padding: '6px 8px', fontWeight: 800, fontSize: '13px' }}>
+                  <td style={{color: '#0f766e', borderRadius: '6px', padding: '6px 8px', fontWeight: 800, fontSize: '13px' }}>
                     {formattedPrice}
                   </td>
                 ) : (

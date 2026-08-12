@@ -15,7 +15,7 @@ import {
 
 export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
   // Multi-Filter State
-  const [currentFilter, setCurrentFilter] = useState<string>('ALL');
+  const [currentFilter, setCurrentFilter] = useState<string>('OVERVIEW');
   const [statusSubFilter, setStatusSubFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
@@ -53,14 +53,18 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [returnReqId, setReturnReqId] = useState<string | null>(null);
 
-  // Khởi tạo loading = true nếu đã đăng nhập để hiện LoadingOverlay ngay lập tức
-  const [loading, setLoading] = useState<boolean>(Boolean(currentUser));
+  // `loading`: chỉ dùng cho các thao tác ghi dữ liệu (blocking overlay che toàn màn hình)
+  // `listLoading`: dùng cho việc load/refresh danh sách khi chuyển tab, đổi bộ lọc (thanh tiến trình mỏng, không chặn UI)
+  const [loading, setLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState('Đang tải dữ liệu từ hệ thống VCB...');
+  const [listLoading, setListLoading] = useState<boolean>(Boolean(currentUser));
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
   const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser });
   filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
+  // Đếm request để bỏ qua response trả về trễ (race condition khi chuyển tab/lọc liên tục)
+  const requestIdRef = useRef(0);
 
   // 1. Load Master Data ONCE on user login
   const loadMasterDataOnce = async () => {
@@ -78,8 +82,10 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
     const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser } = filterRef.current;
     if (!currentUser) return;
 
+    const myRequestId = ++requestIdRef.current;
+
     if (showLoading) {
-      setLoading(true);
+      setListLoading(true);
     }
     try {
       let targetStatus: import('../types').QuoteStatus | undefined = undefined;
@@ -109,6 +115,9 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
         endDate: endDateFilter || undefined,
         includeCounts,
       });
+
+      // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)
+      if (myRequestId !== requestIdRef.current) return;
 
       const items: QuoteRequest[] = quoteRes.data || [];
       const meta = quoteRes.meta || {};
@@ -144,9 +153,13 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
         });
       }
     } catch (err) {
-      console.error('Error loading data from API:', err);
+      if (myRequestId === requestIdRef.current) {
+        console.error('Error loading data from API:', err);
+      }
     } finally {
-      setLoading(false);
+      if (myRequestId === requestIdRef.current) {
+        setListLoading(false);
+      }
     }
   };
 
@@ -203,8 +216,6 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
 
   const handleTabChange = (filter: string) => {
     needCountsRef.current = true; // Đổi tab -> cần refresh counts
-    setLoadingMessage('Đang tải dữ liệu...');
-    setLoading(true);
     setCurrentFilter(filter);
     setSearchTerm('');
     setStatusSubFilter('ALL');
@@ -219,8 +230,6 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
 
   const handleResetFilters = () => {
     needCountsRef.current = true; // Reset filter -> cần refresh counts
-    setLoadingMessage('Đang làm mới bộ lọc...');
-    setLoading(true);
     setSearchTerm('');
     setStatusSubFilter('ALL');
     setCategoryFilter('ALL');
@@ -260,7 +269,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
         setSelectedId(created.id);
       }
       needCountsRef.current = true;
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Không thể lưu yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -275,7 +284,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
       const updated = await acceptQuoteRequest(id, version);
       setSelectedId(updated.id);
       needCountsRef.current = true;
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Không thể tiếp nhận: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -292,7 +301,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
       setSelectedId(updated.id);
       setPricingReqId(null);
       needCountsRef.current = true;
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Không thể báo giá: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -307,7 +316,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
       const updated = await completeQuoteRequest(id, price, 10);
       setSelectedId(updated.id);
       needCountsRef.current = true;
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Không thể xác nhận báo giá: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -321,7 +330,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
     try {
       const updated = await selectQuoteOption(quoteId, optionId);
       setSelectedId(updated.id);
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Lỗi chọn phương án: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -338,7 +347,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
       setSelectedId(updated.id);
       setRejectReqId(null);
       needCountsRef.current = true;
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Không thể từ chối: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -355,7 +364,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
       setSelectedId(updated.id);
       setReturnReqId(null);
       needCountsRef.current = true;
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Không thể trả lại: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -372,7 +381,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
       const updated = await resubmitQuoteRequest(id);
       setSelectedId(updated.id);
       needCountsRef.current = true;
-      await loadData();
+      await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Lỗi gửi lại yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
@@ -420,6 +429,7 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
     counts,
     loading,
     loadingMessage,
+    listLoading,
     isCreateOpen,
     setIsCreateOpen,
     editingReq,

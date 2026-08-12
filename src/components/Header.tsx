@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Role, User } from '../types';
-import { LogOut, User as UserIcon, Menu, ShieldCheck, Search, Bell } from 'lucide-react';
+import { LogOut, User as UserIcon, Menu, ShieldCheck, Bell, X } from 'lucide-react';
 
 interface HeaderProps {
   user: User;
@@ -66,26 +66,6 @@ export const Header: React.FC<HeaderProps> = ({
           <Menu size={16} />
           <span style={{ fontSize: '12px', color: '#475569' }}>Menu</span>
         </button>
-      </div>
-
-      {/* Center Search Bar */}
-      <div style={{ flex: 1, maxWidth: '380px', position: 'relative', margin: '0 16px' }}>
-        <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-        <input
-          type="text"
-          placeholder="Search quotes, products..."
-          style={{
-            width: '100%',
-            background: '#f1f5f9',
-            border: '1px solid #e2e8f0',
-            borderRadius: '20px',
-            padding: '8px 14px 8px 38px',
-            fontSize: '12.5px',
-            color: '#0f172a',
-            outline: 'none',
-            transition: 'all 0.2s ease',
-          }}
-        />
       </div>
 
       {/* Right Action Bar */}
@@ -272,7 +252,7 @@ export const Header: React.FC<HeaderProps> = ({
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <UserIcon size={18} color="#2563eb" /> Thông Tin Tài Khoản
               </h3>
-              <button className="icon-btn" onClick={() => setShowProfileModal(false)}>✕</button>
+              <button className="icon-btn" onClick={() => setShowProfileModal(false)}><X size={18} /></button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
               <div style={{ textAlign: 'center', padding: '14px 0' }}>

@@ -51,12 +51,14 @@ api.interceptors.response.use(
   }
 );
 
+// "Ghi nhớ đăng nhập" = lưu localStorage (còn sau khi đóng trình duyệt).
+// Bỏ chọn = lưu sessionStorage (mất khi đóng tab). Đọc: ưu tiên sessionStorage trước.
 export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.TOKEN);
+  return sessionStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem(STORAGE_KEYS.TOKEN);
 }
 
 export function getStoredUser(): User | null {
-  const data = localStorage.getItem(STORAGE_KEYS.USER);
+  const data = sessionStorage.getItem(STORAGE_KEYS.USER) || localStorage.getItem(STORAGE_KEYS.USER);
   if (!data) return null;
   try {
     return JSON.parse(data);
@@ -68,6 +70,8 @@ export function getStoredUser(): User | null {
 export function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.TOKEN);
   localStorage.removeItem(STORAGE_KEYS.USER);
+  sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+  sessionStorage.removeItem(STORAGE_KEYS.USER);
 }
 
 export async function logoutApi(): Promise<void> {
@@ -80,17 +84,17 @@ export async function logoutApi(): Promise<void> {
   }
 }
 
-export async function loginApi(email: string, password: string): Promise<{ accessToken: string; user: User }> {
+export async function loginApi(email: string, password: string, remember: boolean = true): Promise<{ accessToken: string; user: User }> {
   try {
     const res = await api.post('/auth/login', { email, password });
     const data = res.data;
+    clearSession();
+    const store = remember ? localStorage : sessionStorage;
     if (data.accessToken) {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.accessToken);
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      store.setItem(STORAGE_KEYS.TOKEN, data.accessToken);
     }
     if (data.user) {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
+      store.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
     }
     return data;
   } catch (err: any) {
@@ -359,6 +363,8 @@ export async function calculatePriceApi(payload: {
   laborCost?: number;
   stoneCost?: number;
   vatRate?: number;
+  goldPriceOverride?: number;
+  silverPriceOverride?: number;
 }) {
   try {
     const res = await api.post('/pricing-config/calculate', payload);

@@ -29,7 +29,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   currentFilter,
   onFilterChange,
-  counts,
+  counts: _counts,
   user: _user,
   currentRole,
   isOpen,
@@ -82,9 +82,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <nav className="sidebar-nav">
         {/* 1. Tổng Quan */}
         <button
-          className={currentFilter === 'ALL' ? 'active' : ''}
+          className={currentFilter === 'OVERVIEW' ? 'active' : ''}
           onClick={() => {
-            onFilterChange('ALL');
+            onFilterChange('OVERVIEW');
             onCloseMobile?.();
           }}
         >
@@ -93,18 +93,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
-        {/* 2. Yêu Cầu Của Tôi */}
+        {/* 2. Danh Sách Yêu Cầu Báo Giá */}
         <button
-          className={currentFilter === 'MY_REQ' ? 'active' : ''}
+          className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' ? 'active' : ''}
           onClick={() => {
-            onFilterChange('MY_REQ');
+            onFilterChange('ALL');
             onCloseMobile?.();
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FileText size={18} /> Yêu Cầu Của Tôi
+            <FileText size={18} /> Danh Sách Yêu Cầu Báo Giá
           </span>
-          {counts.myReq > 0 && <span className="nav-badge">{counts.myReq}</span>}
         </button>
 
         {/* 3. Thư Viện Sản Phẩm */}

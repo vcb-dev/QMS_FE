@@ -47,6 +47,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   // Lazy Customer Search
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerList, setCustomerList] = useState<Customer[]>(customers);
+  const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
 
   // Operational Fields
   const [department, setDepartment] = useState('CSKH-Văn Phòng');
@@ -56,7 +57,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [customerMeasurements, setCustomerMeasurements] = useState('');
   const [leadTime, setLeadTime] = useState('7-15 NGÀY (Tiêu chuẩn)');
   const [closeRateText, setCloseRateText] = useState('Khách chưa chốt báo giá');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [understandProcess, setUnderstandProcess] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
@@ -71,7 +72,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setSelectedMaterialIds(matIds);
       setCustomerMeasurements(editingReq.customerMeasurements || '');
       if (editingReq.images && editingReq.images.length > 0) {
-        setImageUrl(editingReq.images[0].imageUrl);
+        setImageUrls(editingReq.images.map((img) => img.imageUrl));
+      } else {
+        setImageUrls([]);
       }
     } else {
       setIsNewCustomerMode(false);
@@ -109,7 +112,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       }
 
       setCustomerMeasurements('');
-      setImageUrl('');
+      setImageUrls([]);
     }
   }, [editingReq, categories, customers, isOpen, calculatorData]);
 
@@ -144,6 +147,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   // Debounced Lazy Customer Search
   useEffect(() => {
     if (!isOpen || isNewCustomerMode) return;
+    setCustomerSearchLoading(true);
     const timer = setTimeout(() => {
       searchCustomers(customerSearch)
         .then((res) => {
@@ -152,24 +156,54 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             setSelectedCustomerId(res[0].id);
           }
         })
-        .catch(() => { });
+        .catch(() => { })
+        .finally(() => setCustomerSearchLoading(false));
     }, 300);
     return () => clearTimeout(timer);
   }, [customerSearch, isOpen, isNewCustomerMode]);
 
+  // Bấm "Tạo khách hàng mới" từ ô tìm kiếm sẽ chuyển sang form nhập, giữ nguyên tên vừa gõ
+  const handleStartNewCustomerFromSearch = () => {
+    setNewCustomerName(customerSearch.trim());
+    setIsNewCustomerMode(true);
+  };
+
   if (!isOpen) return null;
 
+  const MAX_IMAGES = 5;
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      if (imageUrls.length >= MAX_IMAGES) {
+        alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
+        e.target.value = '';
+        return;
+      }
+
+      const availableSlots = MAX_IMAGES - imageUrls.length;
+      const filesToProcess = Array.from(files).slice(0, availableSlots);
+
+      if (files.length > availableSlots) {
+        alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
+      }
+
+      filesToProcess.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            const urlStr = event.target.result as string;
+            setImageUrls((prev) => (prev.length < MAX_IMAGES ? [...prev, urlStr] : prev));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
+    e.target.value = '';
+  };
+
+  const removeImage = (indexToRemove: number) => {
+    setImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const triggerFileInput = () => {
@@ -213,7 +247,12 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         });
 
         finalCustomerId = createdCust.id;
-        await onRefreshCustomers();
+        // Chuyển ngay về trạng thái "đã chọn khách hàng này" — nếu bước gửi yêu cầu
+        // báo giá bên dưới thất bại và người dùng bấm gửi lại, sẽ KHÔNG tạo trùng khách hàng nữa.
+        setCustomerList((prev) => [createdCust, ...prev]);
+        setSelectedCustomerId(createdCust.id);
+        setIsNewCustomerMode(false);
+        onRefreshCustomers().catch(() => {});
       }
 
       if (!finalCustomerId) {
@@ -229,7 +268,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         materialIds: selectedMaterialIds,
         customerMeasurements,
         desiredLeadTime: leadTime,
-        imageUrls: imageUrl ? [imageUrl] : undefined,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         quotedPrice: calculatorData?.suggestedPrice,
       });
 
@@ -262,7 +301,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             </div>
           </div>
 
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             <X size={20} />
           </button>
         </div>
@@ -282,8 +321,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               {/* Customer Section */}
               <div className="form-group">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label className="form-label">Thông Tin Khách Hàng <span className="req">*</span></label>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <label className="form-label">
+                    {isNewCustomerMode ? 'Thông Tin Khách Hàng Mới' : 'Thông Tin Khách Hàng'} <span className="req">*</span>
+                  </label>
+                  {isNewCustomerMode && (
                     <button
                       type="button"
                       onClick={() => setIsNewCustomerMode(false)}
@@ -293,36 +334,17 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         fontWeight: 700,
                         borderRadius: '6px',
                         border: '1px solid #cbd5e1',
-                        background: !isNewCustomerMode ? '#b45309' : '#ffffff',
-                        color: !isNewCustomerMode ? '#ffffff' : '#64748b',
+                        background: '#ffffff',
+                        color: '#64748b',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
                       }}
                     >
-                      <Users size={12} /> Chọn KH Có Sẵn
+                      <Users size={12} /> ← Chọn khách hàng có sẵn
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsNewCustomerMode(true)}
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: isNewCustomerMode ? '#10b981' : '#ffffff',
-                        color: isNewCustomerMode ? '#ffffff' : '#64748b',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <UserPlus size={12} /> + Thêm KH Mới
-                    </button>
-                  </div>
+                  )}
                 </div>
 
                 {!isNewCustomerMode ? (
@@ -353,6 +375,32 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       })}
                       {customerList.length === 0 && <option value="">Không tìm thấy khách hàng nào</option>}
                     </select>
+
+                    {!customerSearchLoading && customerList.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={handleStartNewCustomerFromSearch}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: '1.5px dashed #10b981',
+                          background: '#f0fdf4',
+                          color: '#15803d',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <UserPlus size={13} />
+                        {customerSearch.trim()
+                          ? `Không tìm thấy — Tạo khách hàng mới "${customerSearch.trim()}"`
+                          : 'Chưa có trong hệ thống? Tạo khách hàng mới'}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div style={{
@@ -622,51 +670,135 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 </div>
               </div>
 
-              {/* Large Image Upload Zone */}
+              {/* Multiple Images Upload Zone */}
               <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">
+                  Ảnh sản phẩm / mẫu thực tế ({imageUrls.length}/{MAX_IMAGES} ảnh)
+                </label>
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept="image/*"
+                  multiple
                   style={{ display: 'none' }}
                 />
                 <div
                   className="upload-dropzone"
-                  onClick={triggerFileInput}
+                  onClick={() => {
+                    if (imageUrls.length >= MAX_IMAGES) {
+                      alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh/yêu cầu!`);
+                      return;
+                    }
+                    triggerFileInput();
+                  }}
                   style={{
-                    minHeight: '220px',
+                    minHeight: '130px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     border: '2px dashed #cbd5e1',
                     borderRadius: '12px',
-                    background: '#f8fafc',
-                    cursor: 'pointer',
-                    padding: '20px',
+                    background: imageUrls.length >= MAX_IMAGES ? '#f1f5f9' : '#f8fafc',
+                    cursor: imageUrls.length >= MAX_IMAGES ? 'not-allowed' : 'pointer',
+                    padding: '16px',
                     textAlign: 'center',
                     transition: 'border-color 0.2s',
+                    opacity: imageUrls.length >= MAX_IMAGES ? 0.7 : 1,
                   }}
                 >
-                  <div style={{ marginBottom: '10px' }}>
-                    <Upload size={36} color="#b45309" />
+                  <div style={{ marginBottom: '6px' }}>
+                    <Upload size={30} color="#b45309" />
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>
-                    {imageUrl ? '✓ Đã tải ảnh lên thành công (Bấm để thay đổi)' : 'Kéo thả hoặc bấm để tải ảnh sản phẩm/tham khảo'}
+                  <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', marginBottom: '2px' }}>
+                    {imageUrls.length >= MAX_IMAGES
+                      ? `✓ Đã đạt tối đa ${MAX_IMAGES} ảnh mẫu`
+                      : imageUrls.length > 0
+                      ? `✓ Đã chọn ${imageUrls.length}/${MAX_IMAGES} ảnh (Bấm để chọn thêm)`
+                      : 'Kéo thả hoặc bấm để chọn 1 hoặc nhiều ảnh'}
                   </div>
-                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>(PNG, JPG, WEBP, GIF)</span>
-
-                  {imageUrl && (
-                    <div style={{ marginTop: '14px' }}>
-                      <img
-                        src={imageUrl}
-                        alt="Ảnh mẫu thực tế"
-                        style={{ maxWidth: '160px', maxHeight: '160px', borderRadius: '10px', objectFit: 'cover', border: '2px solid #b45309', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                      />
-                    </div>
-                  )}
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>
+                    (Giới hạn tối đa {MAX_IMAGES} ảnh mẫu/yêu cầu | Hỗ trợ PNG, JPG, WEBP)
+                  </span>
                 </div>
+
+                {/* Uploaded Images Thumbnail Grid */}
+                {imageUrls.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
+                    {imageUrls.map((url, idx) => (
+                      <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={url}
+                          alt={`Ảnh mẫu ${idx + 1}`}
+                          style={{
+                            width: '76px',
+                            height: '76px',
+                            borderRadius: '10px',
+                            objectFit: 'cover',
+                            border: '2px solid #b45309',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeImage(idx);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            right: '-6px',
+                            background: '#ef4444',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '20px',
+                            height: '20px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          }}
+                          title="Xóa ảnh này"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Add More Photos Button Square */}
+                    {imageUrls.length < MAX_IMAGES && (
+                      <div
+                        onClick={triggerFileInput}
+                        style={{
+                          width: '76px',
+                          height: '76px',
+                          borderRadius: '10px',
+                          border: '2px dashed #b45309',
+                          background: '#fffbeb',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: '#b45309',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          gap: '2px',
+                        }}
+                        title="Bấm để chọn thêm ảnh"
+                      >
+                        <Upload size={18} color="#b45309" />
+                        <span>+ Thêm</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Operational Notice Banner */}

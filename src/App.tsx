@@ -1,144 +1,95 @@
 import { useState } from 'react';
-import type { Role, User } from './types';
-import { getStoredUser, logoutApi } from './services/api';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useAuth } from './auth/AuthGate';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
+import type { Role, User } from './types';
 
-import { PlusCircle } from 'lucide-react';
-import { LoginPage } from './components/LoginPage';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
-import { FilterBar } from './components/FilterBar';
-import { DashboardView } from './components/DashboardView';
-import { QuoteTable } from './components/QuoteTable';
-import { QuoteDetailView } from './components/QuoteDetailView';
 import { CreateModal } from './components/CreateModal';
 import { PricingModal } from './components/PricingModal';
 import { RejectModal } from './components/RejectModal';
 import { ReturnModal } from './components/ReturnModal';
 import { LoadingOverlay } from './components/LoadingOverlay';
-import { Pagination } from './components/Pagination';
-import { PricingCalculatorView } from './components/PricingCalculatorView';
-import { ProductLibraryView } from './components/ProductLibraryView';
+import { NavProgressBar } from './components/NavProgressBar';
+
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { RequestsPage } from './pages/RequestsPage';
+import { LibraryPage } from './pages/LibraryPage';
+import { CalculatorPage } from './pages/CalculatorPage';
+import { DetailPage } from './pages/DetailPage';
+
 import './index.css';
 
-export function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(getStoredUser());
-  const [currentRole, setCurrentRole] = useState<Role>(getStoredUser()?.role || 'SALE');
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
-  const [previousFilter, setPreviousFilter] = useState<string>('ALL');
+// ─── Layout Shell (chỉ render khi đã đăng nhập) ─────────────────────────────
+interface AppShellProps {
+  currentUser: User;
+  currentRole: Role;
+  handleLogout: () => Promise<void>;
+  setCurrentRole: (role: Role) => void;
+}
+
+function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: AppShellProps) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [scopeFilter, setScopeFilter] = useState('ALL');
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const {
-    requests,
-    categories,
-    materials,
-    customers,
-    selectedId,
-    setSelectedId,
-    selectedReq,
-    currentFilter,
-    statusSubFilter,
-    setStatusSubFilter,
-    searchTerm,
-    setSearchTerm,
-    categoryFilter,
-    setCategoryFilter,
-    materialFilter,
-    setMaterialFilter,
-    ownerFilter,
-    setOwnerFilter,
-    timeRangeFilter,
-    setTimeRangeFilter,
-    startDateFilter,
-    setStartDateFilter,
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    totalRecords,
-    totalPages,
-    counts,
-    loading,
-    loadingMessage,
-    isCreateOpen,
-    setIsCreateOpen,
-    editingReq,
-    calculatorData,
-    pricingReqId,
-    setPricingReqId,
-    rejectReqId,
-    setRejectReqId,
-    returnReqId,
-    setReturnReqId,
-    handleTabChange,
-    handleResetFilters,
-    handleOpenCreate,
-    handleOpenEdit,
-    handleCreateOrUpdateSubmit,
-    handleAccept,
-    handlePricingSubmit,
-    handleConfirmDirectQuote,
-    handleSelectOption,
-    handleRejectSubmit,
-    handleReturnSubmit,
-    handleResubmitDirect,
+    requests, categories, materials, customers, selectedId, setSelectedId,
+    selectedReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
+    categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
+    ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
+    startDateFilter, setStartDateFilter, currentPage, setCurrentPage,
+    pageSize, setPageSize, totalRecords, totalPages, counts,
+    loading, loadingMessage, listLoading, isCreateOpen, setIsCreateOpen, editingReq,
+    calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
+    returnReqId, setReturnReqId, handleTabChange, handleResetFilters,
+    handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleAccept,
+    handlePricingSubmit, handleConfirmDirectQuote, handleSelectOption,
+    handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
   } = useQuoteRequests(currentUser, currentRole);
 
+  const getSidebarKey = () => {
+    const p = location.pathname;
+    if (p === '/') return 'OVERVIEW';
+    if (p.startsWith('/requests')) return 'ALL';
+    if (p.startsWith('/library')) return 'LIBRARY';
+    if (p.startsWith('/calculator')) return 'CALCULATOR';
+    return 'OVERVIEW';
+  };
+
+  const handleSidebarChange = (filter: string) => {
+    const map: Record<string, string> = {
+      OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator',
+    };
+    navigate(map[filter] ?? '/requests');
+    handleTabChange(filter);
+  };
+
   const handleOpenDetail = (id: string) => {
-    if (currentFilter !== 'DETAIL') {
-      setPreviousFilter(currentFilter);
-    }
     setSelectedId(id);
-    handleTabChange('DETAIL');
-  };
-
-  if (!currentUser) {
-    return (
-      <LoginPage
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          setCurrentRole(user.role);
-        }}
-      />
-    );
-  }
-
-  const handleLogout = async () => {
-    await logoutApi();
-    setCurrentUser(null);
-  };
-
-  const getTabLabel = (filter: string) => {
-    switch (filter) {
-      case 'MY_REQ':
-        return 'Yêu Cầu Của Tôi';
-      case 'YC_MOI':
-        return 'Yêu Cầu Mới';
-      case 'DANG_XLY':
-        return 'Đang Xử Lý';
-      case 'NEED_MORE_INFO':
-        return 'Cần Bổ Sung Thông Tin';
-      case 'XONG':
-        return 'Đã Báo Giá';
-      case 'TU_CHOI':
-        return 'Bị Từ Chối';
-      case 'LIBRARY':
-        return 'Thư Viện Sản Phẩm';
-      case 'CALCULATOR':
-        return 'Máy Tính Giá';
-      case 'DETAIL':
-        return 'Chi Tiết Báo Giá';
-      default:
-        return 'Tất Cả Yêu Cầu';
+    // Nếu item đã có sẵn trong danh sách đang tải (trường hợp phổ biến nhất khi bấm
+    // từ 1 dòng trong bảng), chỉ cần điều hướng — không cần load lại toàn bộ danh sách.
+    const alreadyLoaded = requests.some((r) => r.id === id || r.code === id);
+    if (!alreadyLoaded) {
+      handleTabChange('DETAIL');
     }
+    navigate(`/requests/${id}`);
   };
 
   return (
-    <div className={`mac-window ${currentRole === 'PRICING' ? 'pricing-mode-active' : ''}`} style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+    <div
+      className={`mac-window ${currentRole === 'PRICING' ? 'pricing-mode-active' : ''}`}
+      style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}
+    >
       <Sidebar
-        currentFilter={currentFilter}
-        onFilterChange={handleTabChange}
+        currentFilter={getSidebarKey()}
+        onFilterChange={handleSidebarChange}
         counts={counts}
-        user={currentUser}
+        user={currentUser!}
         currentRole={currentRole}
         onOpenCreate={handleOpenCreate}
         isOpen={isSidebarOpen}
@@ -146,7 +97,7 @@ export function App() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0 }}>
         <Header
-          user={currentUser}
+          user={currentUser!}
           currentRole={currentRole}
           onRoleChange={setCurrentRole}
           onOpenCreateModal={handleOpenCreate}
@@ -154,172 +105,120 @@ export function App() {
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        <main className="content page-transition" key={`${currentFilter}-${searchTerm}-${categoryFilter}`} style={{ flex: 1, overflowY: 'auto' }}>
-          {currentFilter === 'DETAIL' ? (
-            <QuoteDetailView
-              selectedReq={selectedReq}
-              currentRole={currentRole}
-              currentUser={currentUser}
-              onBack={() => handleTabChange(previousFilter || 'ALL')}
-              onEdit={handleOpenEdit}
-              onAccept={handleAccept}
-              onPricing={(id) => setPricingReqId(id)}
-              onReject={(id) => setRejectReqId(id)}
-              onReturn={(id) => setReturnReqId(id)}
-              onResubmit={handleResubmitDirect}
-              onSelectOption={handleSelectOption}
-              onConfirmDirectPrice={handleConfirmDirectQuote}
-            />
-          ) : currentFilter === 'CALCULATOR' ? (
-            <PricingCalculatorView
-              currentRole={currentRole}
-              onApplyToNewRequest={handleOpenCreate}
-            />
-          ) : currentFilter === 'LIBRARY' ? (
-            <ProductLibraryView
-              requests={requests}
-              categories={categories}
-              materials={materials}
-              onSelectReq={handleOpenDetail}
-              selectedId={selectedReq?.id || selectedId}
-              totalCount={counts.xong}
-            />
-          ) : currentFilter === 'ALL' &&
-            searchTerm === '' &&
-            categoryFilter === 'ALL' &&
-            materialFilter === 'ALL' &&
-            ownerFilter === 'ALL' ? (
-            <DashboardView
-              requests={requests}
-              counts={counts}
-              currentRole={currentRole}
-              onSelectReq={handleOpenDetail}
-              onViewAll={() => handleTabChange('ALL_LIST')}
-              onOpenLibrary={() => handleTabChange('LIBRARY')}
-              onOpenCreateModal={handleOpenCreate}
-              onFilterChange={handleTabChange}
-            />
-          ) : (
-            <>
-              <div className="view-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span className="eyebrow">Quản Lý Hỏi Giá & Báo Giá</span>
-                  <h1>Danh Sách Yêu Cầu Báo Giá</h1>
-                </div>
-                {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
-                  <button className="primary-action" onClick={handleOpenCreate} style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá
-                  </button>
-                )}
-              </div>
+        <main className="content page-transition" key={location.pathname} style={{ flex: 1, overflowY: 'auto' }}>
+          <Routes>
+            <Route path="/" element={
+              <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
+                onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate} />
+            } />
 
-              <FilterBar
-                currentTab={currentFilter}
-                tabLabel={getTabLabel(currentFilter)}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                statusSubFilter={statusSubFilter}
-                onStatusSubFilterChange={(st) => {
-                  setStatusSubFilter(st);
+            <Route path="/requests" element={
+              <RequestsPage
+                requests={requests} categories={categories} materials={materials}
+                currentRole={currentRole} currentUser={currentUser!}
+                statusSubFilter={statusSubFilter} setStatusSubFilter={setStatusSubFilter}
+                searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+                categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+                materialFilter={materialFilter} setMaterialFilter={setMaterialFilter}
+                ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
+                timeRangeFilter={timeRangeFilter} setTimeRangeFilter={setTimeRangeFilter}
+                startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
+                currentPage={currentPage} setCurrentPage={setCurrentPage}
+                pageSize={pageSize} setPageSize={setPageSize}
+                totalRecords={totalRecords} totalPages={totalPages}
+                scopeFilter={scopeFilter}
+                setScopeFilter={(sc) => {
+                  setScopeFilter(sc);
+                  setOwnerFilter(sc === 'MY_REQ' ? 'MY_REQ' : 'ALL');
                   setCurrentPage(1);
                 }}
-                categoryFilter={categoryFilter}
-                onCategoryFilterChange={(cat) => {
-                  setCategoryFilter(cat);
-                  setCurrentPage(1);
-                }}
-                materialFilter={materialFilter}
-                onMaterialFilterChange={(mat) => {
-                  setMaterialFilter(mat);
-                  setCurrentPage(1);
-                }}
-                ownerFilter={ownerFilter}
-                onOwnerFilterChange={(own) => {
-                  setOwnerFilter(own);
-                  setCurrentPage(1);
-                }}
-                timeRangeFilter={timeRangeFilter}
-                onTimeRangeFilterChange={(tr) => {
-                  setTimeRangeFilter(tr);
-                  setCurrentPage(1);
-                }}
-                startDateFilter={startDateFilter}
-                onStartDateChange={(sd) => {
-                  setStartDateFilter(sd);
-                  setCurrentPage(1);
-                }}
-                categories={categories}
-                materials={materials}
-                onResetFilters={handleResetFilters}
-                totalFiltered={totalRecords}
-                totalTabItems={totalRecords}
+                onSelectReq={handleOpenDetail} onEdit={handleOpenEdit}
+                onAccept={handleAccept}
+                onPricing={(id) => setPricingReqId(id)}
+                onReject={(id) => setRejectReqId(id)}
+                onReturn={(id) => setReturnReqId(id)}
+                onOpenCreate={handleOpenCreate}
+                onResetFilters={() => { handleResetFilters(); setScopeFilter('ALL'); }}
+                selectedId={selectedReq?.id || selectedId || null}
               />
+            } />
 
-              <div className="surface">
-                <QuoteTable
-                  requests={requests}
-                  selectedId={selectedReq?.id || selectedId}
-                  currentRole={currentRole}
-                  currentUser={currentUser}
-                  onSelect={handleOpenDetail}
-                  onEdit={handleOpenEdit}
-                  onAccept={handleAccept}
-                  onPricing={(id) => setPricingReqId(id)}
-                  onReject={(id) => setRejectReqId(id)}
-                  onReturn={(id) => setReturnReqId(id)}
-                />
+            <Route path="/requests/:id" element={
+              <DetailPage
+                selectedReq={selectedReq} currentRole={currentRole} currentUser={currentUser!}
+                onEdit={handleOpenEdit} onAccept={handleAccept}
+                onPricing={(id) => setPricingReqId(id)}
+                onReject={(id) => setRejectReqId(id)}
+                onReturn={(id) => setReturnReqId(id)}
+                onResubmit={handleResubmitDirect}
+                onSelectOption={handleSelectOption}
+                onConfirmDirectPrice={handleConfirmDirectQuote}
+              />
+            } />
 
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={totalRecords}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={(newSize) => {
-                    setPageSize(newSize);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-            </>
-          )}
+            <Route path="/library" element={
+              <LibraryPage requests={requests} categories={categories} materials={materials}
+                onSelectReq={handleOpenDetail} selectedId={selectedReq?.id || selectedId}
+                totalCount={counts.xong} />
+            } />
+
+            <Route path="/calculator" element={
+              <CalculatorPage currentRole={currentRole} onApplyToNewRequest={handleOpenCreate} />
+            } />
+
+            <Route path="*" element={
+              <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
+                onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate} />
+            } />
+          </Routes>
         </main>
       </div>
 
-      <CreateModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSubmit={handleCreateOrUpdateSubmit}
-        categories={categories}
-        materials={materials}
-        customers={customers}
-        onRefreshCustomers={async () => {}}
-        editingReq={editingReq}
-        saleName={currentUser.name}
-        calculatorData={calculatorData}
-      />
+      {/* Global Modals */}
+      <CreateModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)}
+        onSubmit={handleCreateOrUpdateSubmit} categories={categories} materials={materials}
+        customers={customers} onRefreshCustomers={async () => {}} editingReq={editingReq}
+        saleName={currentUser!.name} calculatorData={calculatorData} />
 
-      <PricingModal
-        isOpen={pricingReqId !== null}
-        onClose={() => setPricingReqId(null)}
-        onSubmit={handlePricingSubmit}
-        selectedReq={selectedReq}
-      />
+      <PricingModal isOpen={pricingReqId !== null} onClose={() => setPricingReqId(null)}
+        onSubmit={handlePricingSubmit} selectedReq={selectedReq} />
 
-      <RejectModal
-        isOpen={rejectReqId !== null}
-        onClose={() => setRejectReqId(null)}
-        onSubmit={handleRejectSubmit}
-      />
+      <RejectModal isOpen={rejectReqId !== null} onClose={() => setRejectReqId(null)}
+        onSubmit={handleRejectSubmit} />
 
-      <ReturnModal
-        isOpen={returnReqId !== null}
-        onClose={() => setReturnReqId(null)}
-        onSubmit={handleReturnSubmit}
-      />
+      <ReturnModal isOpen={returnReqId !== null} onClose={() => setReturnReqId(null)}
+        onSubmit={handleReturnSubmit} />
 
       <LoadingOverlay show={loading} message={loadingMessage} />
+      <NavProgressBar show={listLoading} />
     </div>
+  );
+}
+
+// ─── App Root: Điều hướng chính với Route /login độc lập ─────────────────
+export function App() {
+  const { currentUser, currentRole, handleLoginSuccess, handleLogout, setCurrentRole } = useAuth();
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={<LoginPage currentUser={currentUser} onLoginSuccess={handleLoginSuccess} />}
+      />
+      <Route
+        path="/*"
+        element={
+          currentUser ? (
+            <AppShell
+              currentUser={currentUser}
+              currentRole={currentRole}
+              handleLogout={handleLogout}
+              setCurrentRole={setCurrentRole}
+            />
+          ) : <Navigate to="/login" replace />
+        }
+      />
+    </Routes>
   );
 }
 

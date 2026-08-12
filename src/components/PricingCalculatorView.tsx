@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Calculator } from 'lucide-react';
 import type { Role } from '../types';
 import { fetchMasterData, calculatePriceApi } from '../services/api';
 import { useMetalPrices } from '../hooks/useMetalPrices';
 import { MetalPricesSettingsModal } from './MetalPricesSettingsModal';
 import { PRICING_DEFAULTS } from '../constants';
+import { formatCurrency, formatNumberVN } from '../utils/currency';
 
 interface PricingCalculatorViewProps {
   currentRole?: Role;
@@ -36,9 +38,9 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
   // Form Input States
   const [categoryId, setCategoryId] = useState('');
   const [materialType, setMaterialType] = useState('Vàng Trắng 18K (75%)');
-  const [weightChi, setWeightChi] = useState<string>('1.25');
-  const [laborCost, setLaborCost] = useState<number>(PRICING_DEFAULTS.LABOR_COST || 500000);
-  const [vatPct, setVatPct] = useState<number>(10);
+  const [weightChi, setWeightChi] = useState<string>(PRICING_DEFAULTS.WEIGHT_CHI);
+  const [laborCost, setLaborCost] = useState<number>(PRICING_DEFAULTS.LABOR_COST);
+  const [vatPct, setVatPct] = useState<number>(PRICING_DEFAULTS.VAT_PCT);
 
   // Stone Rows State - Starts empty
   const [stoneRows, setStoneRows] = useState<StoneRow[]>([]);
@@ -88,6 +90,14 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
 
   const totalStoneCost = stoneRows.reduce((sum, r) => sum + r.qty * r.pricePerUnit, 0);
 
+  // Giá vừa tính chỉ còn đúng với đúng bộ thông số lúc tính — nếu người dùng sửa lại
+  // bất kỳ thông số nào sau đó, phải xoá kết quả cũ để tránh áp giá sai vào đơn hàng.
+  useEffect(() => {
+    setQuotedPrice(null);
+    setErrorMessage(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [materialType, weightChi, laborCost, vatPct, stoneRows, priceOverrides.gold, priceOverrides.silver]);
+
   // Function to call BE calculate endpoint
   const handleCalculate = async () => {
     if (!materialType) {
@@ -98,18 +108,30 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
     setLoading(true);
     setErrorMessage(null);
     try {
+      // Ghi đè giá vàng/bạc (nếu người dùng đã tùy chỉnh) — nếu không gửi kèm,
+      // Backend sẽ luôn tính theo giá thị trường mặc định và bỏ qua tùy chỉnh của người dùng.
+      const goldPriceOverride = priceOverrides.gold
+        ? parseFloat(priceOverrides.gold.replace(/\D/g, '')) || undefined
+        : undefined;
+      const silverPriceOverride = priceOverrides.silver
+        ? parseFloat(priceOverrides.silver.replace(/\D/g, '')) || undefined
+        : undefined;
+
       const res = await calculatePriceApi({
         materialNameOrKey: materialType,
         weightChi: parseFloat(weightChi) || 0,
         laborCost: laborCost || 0,
         stoneCost: totalStoneCost || 0,
         vatRate: vatPct || 0,
+        goldPriceOverride,
+        silverPriceOverride,
       });
 
-      if (res && res.quotedPrice) {
+      if (res && typeof res.quotedPrice === 'number' && Number.isFinite(res.quotedPrice)) {
         setQuotedPrice(res.quotedPrice);
       } else {
         setQuotedPrice(null);
+        setErrorMessage('Không nhận được giá hợp lệ từ hệ thống');
       }
     } catch (err: any) {
       console.error('Lỗi tính giá BE:', err);
@@ -119,34 +141,51 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
     }
   };
 
-  const formatVND = (num: number) => (num || 0).toLocaleString('vi-VN') + ' đ';
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '30px' }}>
-      {/* Realtime Metal Prices Bar (Kept intact) */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+      {/* Realtime Metal Prices Bar */}
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+          
+          {/* Giá Vàng 24K */}
           <div>
-            <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-              GIÁ VÀNG 24K (GOLD)
-            </span>
-            <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block', marginTop: '2px' }}>
-              {formatted.gold24k} đ/chỉ
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                GIÁ VÀNG 24K (GOLD)
+              </span>
+              {priceOverrides.gold !== null && (
+                <span style={{ fontSize: '9.5px', fontWeight: 800, background: '#b45309', color: '#fff', padding: '1px 5px', borderRadius: '4px' }}>
+                  TÙY CHỈNH
+                </span>
+              )}
+            </div>
+            <strong style={{ fontSize: '18px', fontWeight: 900, color: '#b45309', display: 'block', marginTop: '2px', letterSpacing: '-0.2px' }}>
+              {formatted.gold24k} <span style={{ fontSize: '13px', fontWeight: 700 }}>đ/chỉ</span>
             </strong>
           </div>
 
-          <div style={{ width: '1px', height: '28px', background: '#e2e8f0' }} />
+          <div style={{ width: '1px', height: '32px', background: '#e2e8f0' }} />
 
+          {/* Giá Bạc */}
           <div>
-            <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-              GIÁ BẠC (SILVER)
-            </span>
-            <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block', marginTop: '2px' }}>
-              {formatted.silver} đ/chỉ
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                GIÁ BẠC (SILVER)
+              </span>
+              {priceOverrides.silver !== null && (
+                <span style={{ fontSize: '9.5px', fontWeight: 800, background: '#475569', color: '#fff', padding: '1px 5px', borderRadius: '4px' }}>
+                  TÙY CHỈNH
+                </span>
+              )}
+            </div>
+            <strong style={{ fontSize: '18px', fontWeight: 900, color: '#334155', display: 'block', marginTop: '2px', letterSpacing: '-0.2px' }}>
+              {formatted.silver} <span style={{ fontSize: '13px', fontWeight: 700 }}>đ/chỉ</span>
             </strong>
           </div>
+
         </div>
 
+        {/* Nút Tùy chỉnh ở ngoài (giữ nguyên kiểu dáng như cũ) */}
         <button
           type="button"
           onClick={() => setShowPriceSettings(true)}
@@ -331,9 +370,10 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
                           Đơn giá (VNĐ)
                         </label>
                         <input
-                          type="number"
-                          value={row.pricePerUnit}
-                          onChange={(e) => updateStoneRow(row.id, { pricePerUnit: parseFloat(e.target.value) || 0 })}
+                          type="text"
+                          inputMode="numeric"
+                          value={formatNumberVN(row.pricePerUnit)}
+                          onChange={(e) => updateStoneRow(row.id, { pricePerUnit: parseFloat(e.target.value.replace(/\D/g, '')) || 0 })}
                           style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 700, background: '#ffffff', textAlign: 'right' }}
                         />
                       </div>
@@ -361,7 +401,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={laborCost.toLocaleString('vi-VN')}
+                  value={formatNumberVN(laborCost)}
                   onChange={(e) => setLaborCost(parseFloat(e.target.value.replace(/\D/g, '')) || 0)}
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none' }}
                 />
@@ -418,7 +458,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
                   marginBottom: '4px',
                 }}
               >
-                🧮
+                <Calculator size={28} color="#b45309" />
               </div>
 
               <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#111827', margin: 0 }}>
@@ -447,7 +487,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
                   opacity: loading ? 0.7 : 1,
                 }}
               >
-                {loading ? 'Đang tính giá...' : 'Tính giá ngay '}
+                {loading ? 'Đang tính giá...' : 'Tính giá ngay'}
               </button>
 
               <span style={{ fontSize: '11px', color: '#6b7280', marginTop: '6px' }}>
@@ -462,7 +502,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
                   TỔNG BÁO GIÁ ĐỀ XUẤT
                 </span>
                 <div style={{ fontSize: '32px', fontWeight: 900, color: '#16a34a', marginTop: '6px' }}>
-                  {formatVND(quotedPrice)}
+                  {formatCurrency(quotedPrice)}
                 </div>
               </div>
 
@@ -506,7 +546,7 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
           )}
 
           {errorMessage && (
-            <div style={{ color: '#fecdd3', fontSize: '12px', background: '#881337', padding: '10px', borderRadius: '8px', width: '100%' }}>
+            <div style={{ color: '#b91c1c', fontSize: '12px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '10px', borderRadius: '8px', width: '100%' }}>
               ⚠️ {errorMessage}
             </div>
           )}

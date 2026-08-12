@@ -1,20 +1,14 @@
 import React from 'react';
 import type { QuoteRequest, Role } from '../types';
+import { ArrowRight, Calendar, FilePlus, Clock, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import {
-  ArrowRight,
-  FilePlus,
-  Clock,
-  CheckCircle,
-  XCircle,
-  RotateCcw,
-  Plus,
-  FileText,
-  Hourglass,
-  AlertTriangle,
-  Calendar,
-} from 'lucide-react';
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
+} from 'recharts';
 import { UI_CONSTANTS } from '../constants';
 import { fetchQuoteRequests } from '../services/api';
+import { formatCurrency } from '../utils/currency';
+
 
 interface DashboardViewProps {
   requests: QuoteRequest[];
@@ -38,25 +32,18 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   requests: initialRequests,
   counts: initialCounts,
-  currentRole,
+  currentRole: _currentRole,
   onSelectReq,
   onViewAll,
   onOpenLibrary,
-  onOpenCreateModal,
-  onFilterChange,
+  onOpenCreateModal: _onOpenCreateModal,
+  onFilterChange: _onFilterChange,
 }) => {
   const [timeRange, setTimeRange] = React.useState<string>('THIS_MONTH');
+  const [chartStatusFilter, setChartStatusFilter] = React.useState<string>('ALL');
   const [counts, setCounts] = React.useState(initialCounts);
   const [apiRequests, setApiRequests] = React.useState<QuoteRequest[]>(initialRequests);
   const [loadingStats, setLoadingStats] = React.useState<boolean>(false);
-
-  // Sync initial props if they update from parent
-  React.useEffect(() => {
-    if (timeRange === 'THIS_MONTH' && !loadingStats) {
-      setCounts(initialCounts);
-      setApiRequests(initialRequests);
-    }
-  }, [initialCounts, initialRequests]);
 
   // Fetch real counts & request items from backend API when timeRange changes
   const handleTimeRangeChange = async (newRange: string) => {
@@ -66,7 +53,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       const res = await fetchQuoteRequests({
         timeRange: newRange,
         includeCounts: true,
-        limit: 100,
+        limit: 500,
       });
       if (res.meta?.counts) {
         setCounts(res.meta.counts);
@@ -81,9 +68,200 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
-  const overdueCount = React.useMemo(() => {
-    return apiRequests.filter((r) => r.status === 'YC_MOI' || r.status === 'DANG_XLY').length;
-  }, [apiRequests]);
+  // On mount, self-fetch THIS_MONTH stats — initialCounts/initialRequests from
+  // the parent are unfiltered (all-time) data and must not be shown as "Tháng này"
+  React.useEffect(() => {
+    handleTimeRangeChange('THIS_MONTH');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Helper calculation for daily / monthly timeline chart data
+  const timelineChartData = React.useMemo(() => {
+    const now = new Date();
+    const map = new Map<string, {
+      key: string;
+      label: string;
+      ycMoi: number;
+      dangXly: number;
+      needMoreInfo: number;
+      xong: number;
+      tuChoi: number;
+      total: number;
+      value: number;
+    }>();
+    const buckets: any[] = [];
+
+    const increment = (b: any, status: string) => {
+      b.total += 1;
+      if (status === 'YC_MOI') b.ycMoi += 1;
+      else if (status === 'DANG_XLY') b.dangXly += 1;
+      else if (status === 'NEED_MORE_INFO') b.needMoreInfo += 1;
+      else if (status === 'XONG') b.xong += 1;
+      else if (status === 'TU_CHOI') b.tuChoi += 1;
+    };
+
+    if (timeRange === 'TODAY') {
+      const slots = [
+        { label: '00-03h' },
+        { label: '03-06h' },
+        { label: '06-09h' },
+        { label: '09-12h' },
+        { label: '12-15h' },
+        { label: '15-18h' },
+        { label: '18-21h' },
+        { label: '21-24h' },
+      ];
+      slots.forEach((s) => {
+        const b = { key: s.label, label: s.label, ycMoi: 0, dangXly: 0, needMoreInfo: 0, xong: 0, tuChoi: 0, total: 0, value: 0 };
+        map.set(s.label, b);
+        buckets.push(b);
+      });
+
+      apiRequests.forEach((r) => {
+        if (!r.createdAt) return;
+        const d = new Date(r.createdAt);
+        const hour = d.getHours();
+        const slotIdx = Math.min(Math.floor(hour / 3), 7);
+        const b = buckets[slotIdx];
+        if (b) increment(b, r.status);
+      });
+    } else if (timeRange === 'THIS_WEEK') {
+      const dayNames = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+      const currentDay = now.getDay();
+      const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        const label = `${dayNames[i]} (${dd}/${mm})`;
+        const b = { key, label, ycMoi: 0, dangXly: 0, needMoreInfo: 0, xong: 0, tuChoi: 0, total: 0, value: 0 };
+        map.set(key, b);
+        buckets.push(b);
+      }
+
+      apiRequests.forEach((r) => {
+        if (!r.createdAt) return;
+        const d = new Date(r.createdAt);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        const b = map.get(key);
+        if (b) increment(b, r.status);
+      });
+    } else if (timeRange === 'THIS_MONTH' || timeRange === 'LAST_MONTH') {
+      const targetMonthDate = timeRange === 'LAST_MONTH'
+        ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        : new Date(now.getFullYear(), now.getMonth(), 1);
+      const year = targetMonthDate.getFullYear();
+      const month = targetMonthDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let i = 1; i <= daysInMonth; i++) {
+        const mm = String(month + 1).padStart(2, '0');
+        const dd = String(i).padStart(2, '0');
+        const key = `${year}-${mm}-${dd}`;
+        const label = `${dd}/${mm}`;
+        const b = { key, label, ycMoi: 0, dangXly: 0, needMoreInfo: 0, xong: 0, tuChoi: 0, total: 0, value: 0 };
+        map.set(key, b);
+        buckets.push(b);
+      }
+
+      apiRequests.forEach((r) => {
+        if (!r.createdAt) return;
+        const d = new Date(r.createdAt);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        const b = map.get(key);
+        if (b) increment(b, r.status);
+      });
+    } else if (timeRange === 'THIS_YEAR') {
+      const year = now.getFullYear();
+      for (let i = 0; i < 12; i++) {
+        const mm = String(i + 1).padStart(2, '0');
+        const key = `${year}-${mm}`;
+        const label = `Thg ${i + 1}`;
+        const b = { key, label, ycMoi: 0, dangXly: 0, needMoreInfo: 0, xong: 0, tuChoi: 0, total: 0, value: 0 };
+        map.set(key, b);
+        buckets.push(b);
+      }
+
+      apiRequests.forEach((r) => {
+        if (!r.createdAt) return;
+        const d = new Date(r.createdAt);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const key = `${yyyy}-${mm}`;
+        const b = map.get(key);
+        if (b) increment(b, r.status);
+      });
+    } else {
+      // ALL: Last 12 months
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const key = `${yyyy}-${mm}`;
+        const label = `Thg ${d.getMonth() + 1}/${yyyy.toString().slice(-2)}`;
+        const b = { key, label, ycMoi: 0, dangXly: 0, needMoreInfo: 0, xong: 0, tuChoi: 0, total: 0, value: 0 };
+        map.set(key, b);
+        buckets.push(b);
+      }
+
+      apiRequests.forEach((r) => {
+        if (!r.createdAt) return;
+        const d = new Date(r.createdAt);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const key = `${yyyy}-${mm}`;
+        const b = map.get(key);
+        if (b) increment(b, r.status);
+      });
+    }
+
+    return buckets.map((b) => {
+      let val = b.total;
+      if (chartStatusFilter === 'YC_MOI') val = b.ycMoi;
+      else if (chartStatusFilter === 'DANG_XLY') val = b.dangXly;
+      else if (chartStatusFilter === 'NEED_MORE_INFO') val = b.needMoreInfo;
+      else if (chartStatusFilter === 'XONG') val = b.xong;
+      else if (chartStatusFilter === 'TU_CHOI') val = b.tuChoi;
+
+      return {
+        ...b,
+        value: val,
+      };
+    });
+  }, [apiRequests, timeRange, chartStatusFilter]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'YC_MOI': return '#3b82f6';
+      case 'DANG_XLY': return '#f59e0b';
+      case 'NEED_MORE_INFO': return '#f97316';
+      case 'XONG': return '#22c55e';
+      case 'TU_CHOI': return '#ef4444';
+      default: return '#2563eb';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'YC_MOI': return 'Mới tạo';
+      case 'DANG_XLY': return 'Đang xử lý';
+      case 'NEED_MORE_INFO': return 'Cần bổ sung';
+      case 'XONG': return 'Hoàn thành';
+      case 'TU_CHOI': return 'Từ chối';
+      default: return 'Tất cả trạng thái';
+    }
+  };
+
 
   const recentRequests = React.useMemo(() => {
     return apiRequests.slice(0, 5);
@@ -172,171 +350,213 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <option value="ALL">Tất cả thời gian</option>
             </select>
           </div>
-
-          {(currentRole === 'SALE' || currentRole === 'ADMIN') && onOpenCreateModal && (
-            <button
-              type="button"
-              onClick={onOpenCreateModal}
-              style={{
-                background: '#0f172a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '9px 18px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)',
-              }}
-            >
-              <Plus size={16} /> Tạo báo giá
-            </button>
-          )}
         </div>
       </div>
 
-      {/* 2. 5 Metric KPI Summary Cards (Pure Numbers from REAL DATA, NO BADGES) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-        {/* TỔNG YÊU CẦU */}
-        <div
-          onClick={() => onFilterChange ? onFilterChange('ALL') : onViewAll()}
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '16px 18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          className="metric-card-hover"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
-              <FileText size={17} />
-            </div>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-            TỔNG YÊU CẦU
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
-            {counts.total.toLocaleString('vi-VN')}
-          </div>
-        </div>
+      {/* 3. Charts Row */}
+      {(() => {
+        const chartData = [
+          { name: 'Mới tạo',     value: counts.ycMoi,        fill: '#3b82f6' },
+          { name: 'Đang xử lý',  value: counts.dangXly,      fill: '#f59e0b' },
+          { name: 'Cần bổ sung', value: counts.needMoreInfo,  fill: '#f97316' },
+          { name: 'Hoàn thành',  value: counts.xong,         fill: '#22c55e' },
+          { name: 'Từ chối',     value: counts.tuChoi,        fill: '#ef4444' },
+        ];
 
-        {/* MỚI TẠO */}
-        <div
-          onClick={() => onFilterChange ? onFilterChange('YC_MOI') : onViewAll()}
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '16px 18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          className="metric-card-hover"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
-              <FilePlus size={17} />
-            </div>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-            MỚI TẠO
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
-            {counts.ycMoi.toLocaleString('vi-VN')}
-          </div>
-        </div>
+        const CustomDonutLabel = ({ cx, cy }: any) => (
+          <>
+            <text x={cx} y={cy - 8} textAnchor="middle" dominantBaseline="middle"
+              style={{ fontSize: 26, fontWeight: 900, fill: '#0f172a' }}>
+              {counts.total}
+            </text>
+            <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle"
+              style={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8', letterSpacing: 1 }}>
+              YÊU CẦU
+            </text>
+          </>
+        );
 
-        {/* ĐANG XỬ LÝ */}
-        <div
-          onClick={() => onFilterChange ? onFilterChange('DANG_XLY') : onViewAll()}
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '16px 18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          className="metric-card-hover"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
-              <Hourglass size={17} />
+        const DonutTooltipContent = ({ active, payload }: any) => {
+          if (!active || !payload?.length) return null;
+          const d = payload[0];
+          const pct = counts.total > 0 ? ((d.value / counts.total) * 100).toFixed(1) : '0';
+          return (
+            <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+              <div style={{ color: d.payload.fill, marginBottom: 2 }}>● {d.name}</div>
+              <div>{d.value} yêu cầu <span style={{ color: '#94a3b8' }}>({pct}%)</span></div>
             </div>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-            ĐANG XỬ LÝ
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
-            {counts.dangXly.toLocaleString('vi-VN')}
-          </div>
-        </div>
+          );
+        };
 
-        {/* QUÁ HẠN */}
-        <div
-          onClick={() => onViewAll()}
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '16px 18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          className="metric-card-hover"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#ffe4e6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48' }}>
-              <AlertTriangle size={17} />
+        const TimelineTooltipContent = ({ active, payload, label }: any) => {
+          if (!active || !payload?.length) return null;
+          const dataItem = payload[0].payload;
+
+          if (chartStatusFilter === 'ALL') {
+            return (
+              <div style={{ background: '#0f172a', color: '#fff', padding: '10px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.25)', minWidth: '150px' }}>
+                <div style={{ fontSize: 12, color: '#94a3b8', borderBottom: '1px solid #334155', paddingBottom: 4, marginBottom: 6 }}>
+                  {label}
+                </div>
+                <div style={{ fontWeight: 900, marginBottom: 6, color: '#38bdf8' }}>
+                  Tổng số: {dataItem.total} yêu cầu
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11.5 }}>
+                  <div style={{ color: '#60a5fa' }}>● Mới tạo: {dataItem.ycMoi}</div>
+                  <div style={{ color: '#fbbf24' }}>● Đang xử lý: {dataItem.dangXly}</div>
+                  <div style={{ color: '#fb923c' }}>● Cần bổ sung: {dataItem.needMoreInfo}</div>
+                  <div style={{ color: '#4ade80' }}>● Hoàn thành: {dataItem.xong}</div>
+                  <div style={{ color: '#f87171' }}>● Từ chối: {dataItem.tuChoi}</div>
+                </div>
+              </div>
+            );
+          }
+
+          const selectedVal = dataItem.value;
+          return (
+            <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+              <div style={{ color: '#94a3b8', marginBottom: 2 }}>{label}</div>
+              <div style={{ color: getStatusColor(chartStatusFilter) }}>
+                ● {getStatusLabel(chartStatusFilter)}: {selectedVal} yêu cầu
+              </div>
             </div>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-            QUÁ HẠN
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
-            {overdueCount.toLocaleString('vi-VN')}
-          </div>
-        </div>
+          );
+        };
 
-        {/* HOÀN THÀNH */}
-        <div
-          onClick={() => onFilterChange ? onFilterChange('XONG') : onViewAll()}
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '14px',
-            padding: '16px 18px',
-            cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          className="metric-card-hover"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a' }}>
-              <CheckCircle size={17} />
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', opacity: loadingStats ? 0.5 : 1, transition: 'opacity 0.15s ease', pointerEvents: loadingStats ? 'none' : 'auto' }}>
+
+            {/* Donut Chart */}
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0' }}>
+                Phân bố trạng thái yêu cầu
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div style={{ width: 180, height: 180, flexShrink: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={52}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                        labelLine={false}
+                        label={<CustomDonutLabel />}
+                        isAnimationActive={true}
+                        animationBegin={0}
+                        animationDuration={700}
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={index} fill={entry.fill} stroke="none" />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<DonutTooltipContent />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Legend */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                  {chartData.map((d, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 3, background: d.fill, flexShrink: 0 }} />
+                        <span style={{ fontSize: '12px', color: '#475569', fontWeight: 600 }}>{d.name}</span>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: 900, color: '#0f172a' }}>{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-            HOÀN THÀNH
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
-            {counts.xong.toLocaleString('vi-VN')}
-          </div>
-        </div>
-      </div>
 
-      {/* 3. Split Content Layout */}
+            {/* Bar Chart - Timeline Comparison */}
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    {timeRange === 'THIS_YEAR' || timeRange === 'ALL' ? 'So sánh số lượng hàng tháng' : 'So sánh số lượng hàng ngày'}
+                  </h2>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>
+                    {timeRange === 'TODAY' && 'Theo khung giờ trong ngày'}
+                    {timeRange === 'THIS_WEEK' && 'Theo các ngày trong tuần'}
+                    {timeRange === 'THIS_MONTH' && 'Theo ngày trong tháng này'}
+                    {timeRange === 'LAST_MONTH' && 'Theo ngày trong tháng trước'}
+                    {timeRange === 'THIS_YEAR' && 'Theo các tháng trong năm'}
+                    {timeRange === 'ALL' && 'Theo 12 tháng gần nhất'}
+                  </span>
+                </div>
+
+                {/* Status Filter Dropdown inside Chart Header */}
+                <select
+                  value={chartStatusFilter}
+                  onChange={(e) => setChartStatusFilter(e.target.value)}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    padding: '5px 10px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    color: '#334155',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="YC_MOI">Mới tạo</option>
+                  <option value="DANG_XLY">Đang xử lý</option>
+                  <option value="NEED_MORE_INFO">Cần bổ sung</option>
+                  <option value="XONG">Hoàn thành</option>
+                  <option value="TU_CHOI">Từ chối</option>
+                </select>
+              </div>
+
+              <ResponsiveContainer width="100%" height={190}>
+                <BarChart data={timelineChartData} margin={{ top: 18, right: 10, left: -20, bottom: 4 }} barCategoryGap="20%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={timeRange === 'THIS_MONTH' || timeRange === 'LAST_MONTH' ? 2 : 0}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 10.5, fill: '#cbd5e1' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<TimelineTooltipContent />} cursor={{ fill: '#f8fafc', radius: 6 }} />
+
+                  {chartStatusFilter === 'ALL' ? (
+                    <>
+                      <Bar dataKey="ycMoi" stackId="a" fill="#3b82f6" name="Mới tạo" />
+                      <Bar dataKey="dangXly" stackId="a" fill="#f59e0b" name="Đang xử lý" />
+                      <Bar dataKey="needMoreInfo" stackId="a" fill="#f97316" name="Cần bổ sung" />
+                      <Bar dataKey="xong" stackId="a" fill="#22c55e" name="Hoàn thành" />
+                      <Bar dataKey="tuChoi" stackId="a" fill="#ef4444" name="Từ chối" radius={[4, 4, 0, 0]} />
+                    </>
+                  ) : (
+                    <Bar dataKey="value" fill={getStatusColor(chartStatusFilter)} radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={600}>
+                      <LabelList dataKey="value" position="top" style={{ fontSize: 10.5, fontWeight: 900, fill: '#0f172a' }} formatter={(v: any) => (v > 0 ? v : '')} />
+                    </Bar>
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+          </div>
+        );
+      })()}
+
+      {/* 4. Split Content Layout */}
+
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '18px' }}>
         {/* Left 2/3: Yêu cầu gần đây */}
         <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
@@ -462,7 +682,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 const rawImg = r.images && r.images.length > 0 ? r.images[0].imageUrl : null;
                 const imgUrl = rawImg || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                 const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
-                const formattedPrice = priceVal > 0 ? priceVal.toLocaleString('vi-VN') + ' đ' : '---';
+                const formattedPrice = priceVal > 0 ? formatCurrency(priceVal) : '---';
 
                 return (
                   <div

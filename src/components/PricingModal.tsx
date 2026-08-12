@@ -3,6 +3,7 @@ import { X, Calculator, Plus, Trash2, CheckCircle } from 'lucide-react';
 import type { QuoteOption, QuoteRequest } from '../types';
 import { generatePricingOptionsApi } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
+import { formatCurrency, formatNumberVN } from '../utils/currency';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -67,8 +68,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           quotedPrice: finalPrice,
           isSelected: true,
           note: includeVat
-            ? `Giá gốc ${baseP.toLocaleString('vi-VN')}₫ + VAT ${vatPercent}%`
-            : `Giá gốc ${baseP.toLocaleString('vi-VN')}₫ (Không VAT)`,
+            ? `Giá gốc ${formatCurrency(baseP)} + VAT ${vatPercent}%`
+            : `Giá gốc ${formatCurrency(baseP)} (Không VAT)`,
         },
       ]);
     }
@@ -175,7 +176,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '820px', width: '94%' }}>
         <div className="modal-header" style={{ background: '#1e293b' }}>
-          <h2>Báo Giá Sản Phẩm — {requestedMatName ? `Đơn Yêu Cầu: ${requestedMatName}` : 'Phương Án Giá Multi-Options'}</h2>
+          <h2>Báo Giá Sản Phẩm </h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
             <X size={20} />
           </button>
@@ -204,10 +205,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       Giá Sản Phẩm Gốc (₫):
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       className="form-control"
-                      value={manualBasePrice}
-                      onChange={(e) => setManualBasePrice(e.target.value)}
+                      value={formatNumberVN(manualBasePrice)}
+                      onChange={(e) => setManualBasePrice(e.target.value.replace(/\D/g, ''))}
                       placeholder="Nhập giá gốc sản phẩm (VD: 1.200.000)"
                       style={{ padding: '8px 12px', fontSize: '13.5px', fontWeight: 700 }}
                     />
@@ -242,11 +244,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <div style={{ marginTop: '14px', padding: '10px 14px', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', color: '#475569' }}>
                     {includeVat
-                      ? `Giá Gốc (${baseP.toLocaleString('vi-VN')}₫) + VAT ${vatVal}% (${(calculatedFinalPrice - baseP).toLocaleString('vi-VN')}₫)`
+                      ? `Giá Gốc (${formatCurrency(baseP)}) + VAT ${vatVal}% (${formatCurrency(calculatedFinalPrice - baseP)})`
                       : 'Giá Gốc Trực Tiếp (Khách Không Lấy VAT)'}
                   </span>
                   <span style={{ fontSize: '15px', fontWeight: 800, color: '#15803d' }}>
-                    Tổng Báo Khách: {calculatedFinalPrice.toLocaleString('vi-VN')} ₫
+                    Tổng Báo Khách: {formatCurrency(calculatedFinalPrice)}
                   </span>
                 </div>
               </div>
@@ -275,11 +277,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </div>
                   <div>
                     <label style={{ fontWeight: 700, color: '#334155' }}>Tiền công (₫):</label>
-                    <input type="number" className="form-control" value={laborCost} onChange={(e) => setLaborCost(e.target.value)} style={{ padding: '6px 8px', fontSize: '12.5px' }} />
+                    <input type="text" inputMode="numeric" className="form-control" value={formatNumberVN(laborCost)} onChange={(e) => setLaborCost(e.target.value.replace(/\D/g, ''))} style={{ padding: '6px 8px', fontSize: '12.5px' }} />
                   </div>
                   <div>
                     <label style={{ fontWeight: 700, color: '#334155' }}>Tiền đá (₫):</label>
-                    <input type="number" className="form-control" value={stoneCost} onChange={(e) => setStoneCost(e.target.value)} style={{ padding: '6px 8px', fontSize: '12.5px' }} />
+                    <input type="text" inputMode="numeric" className="form-control" value={formatNumberVN(stoneCost)} onChange={(e) => setStoneCost(e.target.value.replace(/\D/g, ''))} style={{ padding: '6px 8px', fontSize: '12.5px' }} />
                   </div>
                   <div>
                     <label style={{ fontWeight: 700, color: '#334155' }}>Loại đá đính:</label>
@@ -291,13 +293,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => generateKaratOptions()}
-                  style={{ marginTop: '10px', width: '100%', background: '#334155', color: '#ffffff', border: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer' }}
-                >
-                  Tính & Tạo Lại Tất Cả Phương Án
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => generateKaratOptions()}
+                    style={{ background: 'var(--primary)', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Tính & Tạo Lại Tất Cả Phương Án
+                  </button>
+                </div>
               </div>
             )}
 
@@ -363,10 +367,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                     <div style={{ flex: 1.5, minWidth: '130px' }}>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="form-control"
-                        value={opt.quotedPrice}
-                        onChange={(e) => handleOptionChange(idx, 'quotedPrice', parseFloat(e.target.value) || 0)}
+                        value={formatNumberVN(opt.quotedPrice)}
+                        onChange={(e) => handleOptionChange(idx, 'quotedPrice', parseFloat(e.target.value.replace(/\D/g, '')) || 0)}
                         style={{ fontWeight: 900, color: '#16a34a', fontSize: '13.5px', padding: '4px 8px' }}
                       />
                     </div>
@@ -386,8 +391,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
           <div className="modal-footer" style={{ marginTop: '14px' }}>
             <button type="button" className="tool-btn" onClick={onClose}>Hủy</button>
-            <button type="submit" className="btn-insp btn-insp-primary" style={{ background: '#111927', color: '#ffffff' }} disabled={submitting}>
-              Xác Nhận Gửi Báo Giá Cho Sale
+            <button
+              type="submit"
+              className="btn-insp-primary"
+              style={{ width: 'auto', padding: '9px 18px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, border: 'none', cursor: 'pointer', background: 'var(--primary)', color: '#ffffff' }}
+              disabled={submitting}
+            >
+              {submitting ? 'Đang gửi...' : 'Xác Nhận Gửi Báo Giá'}
             </button>
           </div>
         </form>

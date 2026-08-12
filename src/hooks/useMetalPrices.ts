@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchMetalPrices } from '../services/api';
+import { formatNumberVN } from '../utils/currency';
 
 export interface MetalPrices {
   gold24kVnd: number;
@@ -72,7 +73,7 @@ export function clearOverrides() {
 
 function fmt(num: number | undefined | null): string {
   if (num === undefined || num === null || isNaN(num)) return '0';
-  return num.toLocaleString('en-US');
+  return formatNumberVN(num);
 }
 
 export function useMetalPrices() {
