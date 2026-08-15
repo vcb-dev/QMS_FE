@@ -14,13 +14,20 @@ interface ProductLibraryViewProps {
   totalCount?: number;
 }
 
+type SortMode = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT';
+type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
+
 export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
   requests,
   categories,
+  materials,
   selectedId,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCat, setSelectedCat] = useState('ALL');
+  const [selectedMat, setSelectedMat] = useState('ALL');
+  const [sortMode, setSortMode] = useState<SortMode>('PRICE_DESC');
+  const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(UI_CONSTANTS.PRODUCT_LIBRARY.DEFAULT_PAGE_SIZE);
 
@@ -30,7 +37,15 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
-    return quotedRequests.filter((r) => {
+    const now = new Date();
+    let rangeCutoff: Date | null = null;
+    if (timeRange === 'TODAY') rangeCutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    else if (timeRange === 'THIS_WEEK') {
+      const day = now.getDay() || 7;
+      rangeCutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
+    } else if (timeRange === 'THIS_MONTH') rangeCutoff = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const list = quotedRequests.filter((r) => {
       const query = searchTerm.trim().toLowerCase();
       const codeMatch = (r.code || r.id).toLowerCase().includes(query);
       const nameMatch = (r.productName || '').toLowerCase().includes(query);
@@ -38,13 +53,28 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
 
       const catOk = selectedCat === 'ALL' || r.categoryId === selectedCat || r.category?.id === selectedCat;
 
-      return searchOk && catOk;
+      const matOk = selectedMat === 'ALL'
+        || r.material?.id === selectedMat
+        || (r.materials || []).some((m) => m.id === selectedMat);
+
+      const refDate = r.quotedDate || r.createdAt;
+      const timeOk = !rangeCutoff || (refDate ? new Date(refDate) >= rangeCutoff : false);
+
+      return searchOk && catOk && matOk && timeOk;
     });
-  }, [quotedRequests, searchTerm, selectedCat]);
+
+    return list.sort((a, b) => {
+      if (sortMode === 'PRICE_DESC') return (Number(b.quotedPrice) || 0) - (Number(a.quotedPrice) || 0);
+      if (sortMode === 'PRICE_ASC') return (Number(a.quotedPrice) || 0) - (Number(b.quotedPrice) || 0);
+      const dateA = new Date(a.quotedDate || a.createdAt || 0).getTime();
+      const dateB = new Date(b.quotedDate || b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [quotedRequests, searchTerm, selectedCat, selectedMat, sortMode, timeRange]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCat]);
+  }, [searchTerm, selectedCat, selectedMat, sortMode, timeRange]);
 
   const totalItems = filteredRequests.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -64,14 +94,16 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
       {/* Header Title */}
       <div>
         <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
-          Thư viện sản phẩm chế tác
+          Quản Lý Sản Phẩm
         </h1>
-       
+        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+          Xếp hạng sản phẩm đã báo giá cho khách theo giá, mốc thời gian và phân loại
+        </p>
       </div>
 
       {/* Filter Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '10px', flexWrap: 'wrap' }}>
-        {/* Category Dropdown (left) */}
+        {/* Category Dropdown */}
         <select
           value={selectedCat}
           onChange={(e) => setSelectedCat(e.target.value)}
@@ -85,7 +117,7 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
             color: '#0f172a',
             outline: 'none',
             cursor: 'pointer',
-            minWidth: '180px',
+            minWidth: '160px',
           }}
         >
           <option value="ALL">Tất cả danh mục</option>
@@ -94,8 +126,76 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
           ))}
         </select>
 
-        {/* Search Input (right) */}
-        <div style={{ position: 'relative', width: '280px' }}>
+        {/* Material Dropdown */}
+        <select
+          value={selectedMat}
+          onChange={(e) => setSelectedMat(e.target.value)}
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            padding: '7px 12px',
+            fontSize: '12.5px',
+            fontWeight: 700,
+            color: '#0f172a',
+            outline: 'none',
+            cursor: 'pointer',
+            minWidth: '160px',
+          }}
+        >
+          <option value="ALL">Tất cả chất liệu</option>
+          {materials.map((m) => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
+
+        {/* Time Range Dropdown */}
+        <select
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            padding: '7px 12px',
+            fontSize: '12.5px',
+            fontWeight: 700,
+            color: '#0f172a',
+            outline: 'none',
+            cursor: 'pointer',
+            minWidth: '140px',
+          }}
+        >
+          <option value="ALL">Mọi thời gian</option>
+          <option value="TODAY">Hôm nay</option>
+          <option value="THIS_WEEK">Tuần này</option>
+          <option value="THIS_MONTH">Tháng này</option>
+        </select>
+
+        {/* Sort Dropdown */}
+        <select
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as SortMode)}
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            padding: '7px 12px',
+            fontSize: '12.5px',
+            fontWeight: 700,
+            color: '#0f172a',
+            outline: 'none',
+            cursor: 'pointer',
+            minWidth: '150px',
+          }}
+        >
+          <option value="PRICE_DESC">Giá cao nhất</option>
+          <option value="PRICE_ASC">Giá thấp nhất</option>
+          <option value="RECENT">Mới nhất</option>
+        </select>
+
+        {/* Search Input */}
+        <div style={{ position: 'relative', width: '260px' }}>
           <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
           <input
             type="text"
@@ -151,7 +251,7 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                  {idx % 3 === 0 && (
+                  {sortMode === 'PRICE_DESC' && (
                     <span
                       style={{
                         position: 'absolute',
@@ -165,7 +265,7 @@ export const ProductLibraryView: React.FC<ProductLibraryViewProps> = ({
                         borderRadius: '10px',
                       }}
                     >
-                      MỚI
+                      #{(currentPage - 1) * pageSize + idx + 1}
                     </span>
                   )}
                 </div>

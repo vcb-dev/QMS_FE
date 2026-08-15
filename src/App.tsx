@@ -19,6 +19,8 @@ import { RequestsPage } from './pages/RequestsPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { DetailPage } from './pages/DetailPage';
+import { StaffPage } from './pages/StaffPage';
+import { CustomersPage } from './pages/CustomersPage';
 
 import './index.css';
 
@@ -48,7 +50,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     loading, loadingMessage, listLoading, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
     returnReqId, setReturnReqId, handleTabChange, handleResetFilters,
-    handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleAccept,
+    handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handlePricingSubmit, handleConfirmDirectQuote,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect, handleMarkClosed,
   } = useQuoteRequests(currentUser, currentRole);
@@ -59,12 +61,14 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     if (p.startsWith('/requests')) return 'ALL';
     if (p.startsWith('/library')) return 'LIBRARY';
     if (p.startsWith('/calculator')) return 'CALCULATOR';
+    if (p.startsWith('/staff')) return 'STAFF';
+    if (p.startsWith('/customers')) return 'CUSTOMERS';
     return 'OVERVIEW';
   };
 
   const handleSidebarChange = (filter: string) => {
     const map: Record<string, string> = {
-      OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator',
+      OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator', STAFF: '/staff', CUSTOMERS: '/customers',
     };
     navigate(map[filter] ?? '/requests');
     handleTabChange(filter);
@@ -138,6 +142,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onPricing={(id) => setPricingReqId(id)}
                 onReject={(id) => setRejectReqId(id)}
                 onReturn={(id) => setReturnReqId(id)}
+                onDelete={handleDeleteRequest}
                 onOpenCreate={handleOpenCreate}
                 onResetFilters={() => { handleResetFilters(); setScopeFilter('ALL'); }}
                 selectedId={selectedReq?.id || selectedId || null}
@@ -154,6 +159,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onResubmit={handleResubmitDirect}
                 onConfirmDirectPrice={handleConfirmDirectQuote}
                 onMarkClosed={handleMarkClosed}
+                onDelete={handleDeleteRequest}
               />
             } />
 
@@ -165,6 +171,14 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
             <Route path="/calculator" element={
               <CalculatorPage currentRole={currentRole} onApplyToNewRequest={handleOpenCreate} />
+            } />
+
+            <Route path="/staff" element={
+              currentRole === 'ADMIN' ? <StaffPage /> : <Navigate to="/" replace />
+            } />
+
+            <Route path="/customers" element={
+              currentRole === 'ADMIN' ? <CustomersPage /> : <Navigate to="/" replace />
             } />
 
             <Route path="*" element={

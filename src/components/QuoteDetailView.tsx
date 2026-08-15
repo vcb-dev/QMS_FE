@@ -26,6 +26,7 @@ import {
   Copy,
   Check,
   HelpCircle,
+  Trash2,
 } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
@@ -43,6 +44,7 @@ interface QuoteDetailViewProps {
   onResubmit?: (id: string) => void;
   onConfirmDirectPrice?: (id: string, price: number) => Promise<void>;
   onMarkClosed?: (id: string, optionId?: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
@@ -58,6 +60,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
   onResubmit,
   onConfirmDirectPrice,
   onMarkClosed,
+  onDelete,
 }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [copiedOptIdx, setCopiedOptIdx] = useState<number | null>(null);
@@ -434,6 +437,56 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                   </button>
                 </>
               )}
+            </>
+          )}
+
+          {/* ADMIN — toàn quyền: luôn có Sửa + Xóa bất kể trạng thái */}
+          {currentRole === 'ADMIN' && (
+            <>
+              <button
+                type="button"
+                onClick={() => onEdit(selectedReq)}
+                style={{
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '9px 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
+                }}
+              >
+                <Edit size={15} /> Sửa Yêu Cầu
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Xóa hẳn yêu cầu ${selectedReq.code || selectedReq.id}? Không thể hoàn tác.`)) {
+                    onDelete?.(selectedReq.id);
+                    onBack();
+                  }
+                }}
+                style={{
+                  background: '#fff1f2',
+                  color: '#be123c',
+                  border: '1px solid #fecdd3',
+                  borderRadius: '8px',
+                  padding: '9px 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Trash2 size={15} /> Xóa Yêu Cầu
+              </button>
             </>
           )}
         </div>

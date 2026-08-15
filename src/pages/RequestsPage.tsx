@@ -40,6 +40,7 @@ interface RequestsPageProps {
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
   onReturn: (id: string) => void;
+  onDelete?: (id: string) => void;
   onOpenCreate: () => void;
   onResetFilters: () => void;
   selectedId?: string | null;
@@ -79,6 +80,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onPricing,
   onReject,
   onReturn,
+  onDelete,
   onOpenCreate,
   onResetFilters,
   selectedId,
@@ -147,6 +149,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onPricing={onPricing}
           onReject={onReject}
           onReturn={onReturn}
+          onDelete={onDelete}
         />
         <Pagination
           currentPage={currentPage}

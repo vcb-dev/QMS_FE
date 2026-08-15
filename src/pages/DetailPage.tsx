@@ -15,6 +15,7 @@ interface DetailPageProps {
   onResubmit?: (id: string) => void;
   onConfirmDirectPrice?: (id: string, price: number) => Promise<void>;
   onMarkClosed?: (id: string, optionId?: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const DetailPage: React.FC<DetailPageProps> = ({
@@ -29,6 +30,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   onResubmit,
   onConfirmDirectPrice,
   onMarkClosed,
+  onDelete,
 }) => {
   const navigate = useNavigate();
 
@@ -46,6 +48,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       onResubmit={onResubmit}
       onConfirmDirectPrice={onConfirmDirectPrice}
       onMarkClosed={onMarkClosed}
+      onDelete={onDelete}
     />
   );
 };

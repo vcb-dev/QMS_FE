@@ -111,6 +111,24 @@ export async function registerApi(payload: { name: string; email: string; passwo
   }
 }
 
+export async function getAuditStatsApi(): Promise<Record<string, { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] }[]>> {
+  try {
+    const res = await api.get('/audit-log/stats');
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể lấy thống kê hành động');
+  }
+}
+
+export async function getAllUsersApi(): Promise<any[]> {
+  try {
+    const res = await api.get('/users');
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể lấy danh sách người dùng');
+  }
+}
+
 export async function getPendingUsersApi(): Promise<User[]> {
   try {
     const res = await api.get('/users/pending');
@@ -126,6 +144,15 @@ export async function approveUserApi(userId: string, role?: string): Promise<Use
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể phê duyệt tài khoản');
+  }
+}
+
+export async function setUserActiveApi(userId: string, isActive: boolean): Promise<User> {
+  try {
+    const res = await api.patch(`/users/${userId}/active`, { isActive });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật trạng thái tài khoản');
   }
 }
 
@@ -267,6 +294,15 @@ export async function createQuoteRequest(payload: any) {
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi tạo yêu cầu báo giá');
+  }
+}
+
+export async function deleteQuoteRequest(id: string) {
+  try {
+    const res = await api.delete(`/quote-requests/${id}`);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Lỗi khi xóa yêu cầu báo giá');
   }
 }
 

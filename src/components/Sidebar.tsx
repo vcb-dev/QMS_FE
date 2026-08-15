@@ -5,6 +5,8 @@ import {
   FileText,
   Package,
   Calculator,
+  Users,
+  Contact,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -95,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 2. Danh Sách Yêu Cầu Báo Giá */}
         <button
-          className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' ? 'active' : ''}
+          className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' && currentFilter !== 'STAFF' && currentFilter !== 'CUSTOMERS' ? 'active' : ''}
           onClick={() => {
             onFilterChange('ALL');
             onCloseMobile?.();
@@ -106,7 +108,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
-        {/* 3. Thư Viện Sản Phẩm */}
+        {/* 2b. Quản Lý Nhân Viên — chỉ Admin */}
+        {currentRole === 'ADMIN' && (
+          <button
+            className={currentFilter === 'STAFF' ? 'active' : ''}
+            onClick={() => {
+              onFilterChange('STAFF');
+              onCloseMobile?.();
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Users size={18} /> Quản Lý Nhân Viên
+            </span>
+          </button>
+        )}
+
+        {/* 2c. Quản Lý Khách Hàng — chỉ Admin */}
+        {currentRole === 'ADMIN' && (
+          <button
+            className={currentFilter === 'CUSTOMERS' ? 'active' : ''}
+            onClick={() => {
+              onFilterChange('CUSTOMERS');
+              onCloseMobile?.();
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Contact size={18} /> Quản Lý Khách Hàng
+            </span>
+          </button>
+        )}
+
+        {/* 3. Quản Lý Sản Phẩm */}
         <button
           className={currentFilter === 'LIBRARY' ? 'active' : ''}
           onClick={() => {
@@ -115,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Package size={18} /> Thư Viện Sản Phẩm
+            <Package size={18} /> Quản Lý Sản Phẩm
           </span>
         </button>
 
@@ -131,6 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Calculator size={18} /> Máy Tính Giá
           </span>
         </button>
+
       </nav>
 
       {/* Bottom Role Card matching screenshot */}

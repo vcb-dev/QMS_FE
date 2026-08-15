@@ -5,6 +5,7 @@ import {
   fetchMasterData,
   createQuoteRequest,
   updateQuoteRequest,
+  deleteQuoteRequest,
   acceptQuoteRequest,
   completeQuoteRequest,
   selectQuoteOption,
@@ -40,6 +41,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     needMoreInfo: 0,
     xong: 0,
     tuChoi: 0,
+    daChot: 0,
   });
 
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
@@ -135,6 +137,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
         const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
         const xong = items.filter((r) => r.status === 'XONG').length;
         const tuChoi = items.filter((r) => r.status === 'TU_CHOI').length;
+        const daChot = items.filter((r) => r.status === 'DA_CHOT').length;
         setCounts({
           total: meta.total || items.length,
           myReq: items.filter((r) => r.requester?.id === currentUser.id || r.pricer?.id === currentUser.id).length,
@@ -143,6 +146,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
           needMoreInfo,
           xong,
           tuChoi,
+          daChot,
         });
       }
 
@@ -274,6 +278,21 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       await loadData(false);
     } catch (err: any) {
       alert(`⚠️ Không thể lưu yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteRequest = async (id: string) => {
+    setLoadingMessage('Đang xóa yêu cầu...');
+    setLoading(true);
+    try {
+      await deleteQuoteRequest(id);
+      if (selectedId === id) setSelectedId(null);
+      needCountsRef.current = true;
+      await loadData(false);
+    } catch (err: any) {
+      alert(`⚠️ Không thể xóa yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -462,6 +481,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     handleOpenCreate,
     handleOpenEdit,
     handleCreateOrUpdateSubmit,
+    handleDeleteRequest,
     handleAccept,
     handlePricingSubmit,
     handleConfirmDirectQuote,

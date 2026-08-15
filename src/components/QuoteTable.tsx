@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, Role, User } from '../types';
-import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle } from 'lucide-react';
+import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 
 interface QuoteTableProps {
@@ -15,6 +15,7 @@ interface QuoteTableProps {
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
   onReturn?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const QuoteTable: React.FC<QuoteTableProps> = ({
@@ -28,6 +29,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onPricing,
   onReject,
   onReturn,
+  onDelete,
 }) => {
   // Mốc thời gian xử lý (nhận xử lý / báo giá / trả lại) — dựa trên acceptedAt/returnedAt
   // Dưới 1 phút hiện giây, dưới 1 giờ hiện phút, dưới 1 ngày hiện giờ, từ 1 ngày trở lên hiện ngày tròn
@@ -483,7 +485,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   )}
 
                   {/* PRICING Role Permissions — cùng kiểu tối giản như bên SALE: chỉ nút thao tác được, còn lại "Đã khóa" */}
-                  {(currentRole === 'PRICING' || currentRole === 'ADMIN') && (
+                  {currentRole === 'PRICING' && (
                     <>
                       {r.status === 'YC_MOI' ? (
                         <button
@@ -513,6 +515,47 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                         </span>
                       )}
                     </>
+                  )}
+
+                  {/* ADMIN — toàn quyền: luôn có Sửa + Xóa bất kể trạng thái, cộng thêm thao tác nghiệp vụ theo trạng thái hiện tại */}
+                  {currentRole === 'ADMIN' && (
+                    <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {r.status === 'YC_MOI' && (
+                        <button
+                          className="tool-btn"
+                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px' }}
+                          onClick={(e) => { e.stopPropagation(); onAccept(r.id, r.version); }}
+                        >
+                          <Zap size={12} /> Tiếp nhận
+                        </button>
+                      )}
+                      {r.status === 'DANG_XLY' && (
+                        <button
+                          className="tool-btn"
+                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#10b981', color: 'white', border: 'none', borderRadius: '8px' }}
+                          onClick={(e) => { e.stopPropagation(); onPricing(r.id); }}
+                        >
+                          <DollarSign size={12} /> Báo Giá
+                        </button>
+                      )}
+                      <button
+                        className="tool-btn"
+                        style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px' }}
+                        onClick={(e) => { e.stopPropagation(); onEdit(r); }}
+                      >
+                        <Edit size={12} /> Sửa
+                      </button>
+                      <button
+                        className="tool-btn"
+                        style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', borderRadius: '8px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Xóa hẳn yêu cầu ${r.code || r.id}? Không thể hoàn tác.`)) onDelete?.(r.id);
+                        }}
+                      >
+                        <Trash2 size={12} /> Xóa
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
