@@ -39,5 +39,6 @@ export const QUOTE_STATUS_OPTIONS = [
   { value: 'DANG_XLY', label: 'Đang xử lý' },
   { value: 'NEED_MORE_INFO', label: 'Cần bổ sung thông tin' },
   { value: 'XONG', label: 'Hoàn thành / Đã báo giá' },
+  { value: 'DA_CHOT', label: 'Đã chốt' },
   { value: 'TU_CHOI', label: 'Bị từ chối' },
 ] as const;

@@ -9,14 +9,8 @@ export interface MetalPrices {
   source: string;
 }
 
-export interface ManualOverrides {
-  gold: string | null;
-  silver: string | null;
-}
-
-const CACHE_KEY     = 'metalPrices_cache';
-const OVERRIDES_KEY = 'metalPrices_overrides';
-const CACHE_TTL_MS  = 12 * 60 * 60 * 1000; // 12 hours
+const CACHE_KEY    = 'metalPrices_cache';
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 const DEFAULTS: MetalPrices = {
   gold24kVnd: 13_900_000,
@@ -49,28 +43,6 @@ function writeCache(data: MetalPrices) {
   } catch {}
 }
 
-export function readOverrides(): ManualOverrides {
-  try {
-    const raw = localStorage.getItem(OVERRIDES_KEY);
-    if (!raw) return { gold: null, silver: null };
-    return JSON.parse(raw);
-  } catch {
-    return { gold: null, silver: null };
-  }
-}
-
-export function writeOverrides(overrides: ManualOverrides) {
-  try {
-    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
-  } catch {}
-}
-
-export function clearOverrides() {
-  try {
-    localStorage.removeItem(OVERRIDES_KEY);
-  } catch {}
-}
-
 function fmt(num: number | undefined | null): string {
   if (num === undefined || num === null || isNaN(num)) return '0';
   return formatNumberVN(num);
@@ -79,11 +51,8 @@ function fmt(num: number | undefined | null): string {
 export function useMetalPrices() {
   const cached = readCache();
   const [prices, setPrices] = useState<MetalPrices>(cached ?? DEFAULTS);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
-
-  // Persistent manual overrides (survive page refresh)
-  const [overrides, setOverridesState] = useState<ManualOverrides>(readOverrides);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchPrices = async () => {
@@ -103,18 +72,6 @@ export function useMetalPrices() {
     }
   };
 
-  /** Save overrides and persist to localStorage */
-  const saveOverrides = (next: ManualOverrides) => {
-    writeOverrides(next);
-    setOverridesState(next);
-  };
-
-  /** Clear all overrides → revert to API prices */
-  const resetOverrides = () => {
-    clearOverrides();
-    setOverridesState({ gold: null, silver: null });
-  };
-
   useEffect(() => {
     if (!cached) fetchPrices();
     timerRef.current = setInterval(fetchPrices, CACHE_TTL_MS);
@@ -122,25 +79,13 @@ export function useMetalPrices() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Effective prices: override wins over API
-  const effectiveGold   = overrides.gold   ?? fmt(prices.gold24kVnd);
-  const effectiveSilver = overrides.silver ?? fmt(prices.silverVnd);
-
   return {
     prices,
     loading,
     error,
+    /** Tải lại giá mới nhất từ DB (BE) */
     refresh: fetchPrices,
-    overrides,
-    saveOverrides,
-    resetOverrides,
-    /** Effective formatted prices (override > API > defaults) */
     formatted: {
-      gold24k: effectiveGold,
-      silver:  effectiveSilver,
-    },
-    /** Raw API formatted (without override) */
-    apiFormatted: {
       gold24k: fmt(prices.gold24kVnd),
       silver:  fmt(prices.silverVnd),
     },

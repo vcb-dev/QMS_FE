@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, Role, User } from '../types';
-import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown } from 'lucide-react';
+import { Edit, Zap, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 
 interface QuoteTableProps {
@@ -29,67 +29,46 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onReject,
   onReturn,
 }) => {
-  // Calculate elapsed days without icons
-  const renderQuotedDateCell = (r: QuoteRequest) => {
-    if (!r.createdAt) return <span style={{ color: '#94a3b8' }}>---</span>;
+  // Mốc thời gian xử lý (nhận xử lý / báo giá / trả lại) — dựa trên acceptedAt/returnedAt
+  // Dưới 1 phút hiện giây, dưới 1 giờ hiện phút, dưới 1 ngày hiện giờ, từ 1 ngày trở lên hiện ngày tròn
+  // Trả về null nếu mốc sau đứng trước mốc trước (data lỗi) — không che giấu bằng cách làm tròn về 1
+  const formatDuration = (fromMs: number, toMs: number): string | null => {
+    if (toMs < fromMs) return null;
+    const seconds = (toMs - fromMs) / 1000;
+    if (seconds < 60) return `${Math.max(1, Math.round(seconds))} giây`;
+    const minutes = seconds / 60;
+    if (minutes < 60) return `${Math.max(1, Math.round(minutes))} phút`;
+    const hours = minutes / 60;
+    if (hours < 24) return `${Math.max(1, Math.round(hours))} giờ`;
+    return `${Math.round(hours / 24)} ngày`;
+  };
 
-    const createdTime = new Date(r.createdAt).getTime();
-
-    // Completed / Quoted
-    if (r.quotedDate) {
-      const quotedTime = new Date(r.quotedDate).getTime();
-      const diffMs = quotedTime - createdTime;
-      const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-      const diffHours = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
-
-      if (diffDays === 0) {
-        return (
-          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '11.5px' }} title={`Báo giá ngày ${new Date(r.quotedDate).toLocaleDateString('vi-VN')}`}>
-            Trong ngày ({diffHours}h)
-          </span>
-        );
-      }
-      return (
-        <span style={{ color: '#0f766e', fontWeight: 700, fontSize: '11.5px' }} title={`Báo giá ngày ${new Date(r.quotedDate).toLocaleDateString('vi-VN')}`}>
-          {diffDays} ngày sau
-        </span>
-      );
+  const renderProcessingTimeCell = (r: QuoteRequest) => {
+    if (!r.acceptedAt) {
+      return <span style={{ color: '#94a3b8', fontSize: '11px' }}>Chưa tiếp nhận</span>;
     }
 
-    // Rejected - calculate days until rejection (updatedAt) or now
-    if (r.status === 'TU_CHOI') {
-      const rejectTime = r.updatedAt ? new Date(r.updatedAt).getTime() : Date.now();
-      const diffMs = rejectTime - createdTime;
-      const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-      const diffHours = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+    const acceptedTime = new Date(r.acceptedAt).getTime();
+    const createdTime = r.createdAt ? new Date(r.createdAt).getTime() : acceptedTime;
+    const toAccept = formatDuration(createdTime, acceptedTime);
 
-      if (diffDays === 0) {
-        return (
-          <span style={{ color: '#be123c', fontWeight: 700, fontSize: '11.5px' }}>
-            Từ chối trong ngày ({diffHours}h)
-          </span>
-        );
-      }
-      return (
-        <span style={{ color: '#be123c', fontWeight: 700, fontSize: '11.5px' }}>
-          Từ chối sau {diffDays} ngày
-        </span>
-      );
-    }
-
-    // Still pending (YC_MOI or DANG_XLY)
-    const nowMs = Date.now();
-    const elapsedDays = Math.max(0, Math.floor((nowMs - createdTime) / (1000 * 60 * 60 * 24)));
-    const elapsedHours = Math.max(0, Math.floor((nowMs - createdTime) / (1000 * 60 * 60)));
-
-    if (elapsedDays === 0) {
-      return <span style={{ color: '#2563eb', fontWeight: 600, fontSize: '11.5px' }}>Đã chờ {elapsedHours}h</span>;
+    let secondLine: React.ReactNode = null;
+    if (r.status === 'TU_CHOI' && r.updatedAt) {
+      const dur = formatDuration(acceptedTime, new Date(r.updatedAt).getTime());
+      if (dur) secondLine = <div style={{ color: '#be123c' }}>Từ chối sau {dur}</div>;
+    } else if (r.returnedAt) {
+      const dur = formatDuration(acceptedTime, new Date(r.returnedAt).getTime());
+      if (dur) secondLine = <div style={{ color: '#c2410c' }}>Trả lại sau {dur}</div>;
+    } else if (r.quotedDate) {
+      const dur = formatDuration(acceptedTime, new Date(r.quotedDate).getTime());
+      if (dur) secondLine = <div style={{ color: '#0f766e' }}>Báo giá sau {dur}</div>;
     }
 
     return (
-      <span style={{ color: '#d97706', fontWeight: 700, fontSize: '11.5px' }}>
-        Đã chờ {elapsedDays} ngày
-      </span>
+      <div style={{ fontSize: '11px', lineHeight: '1.5' }}>
+        <div style={{ color: '#475569' }}>{toAccept ? `Nhận xử lý sau ${toAccept}` : '—'}</div>
+        {secondLine}
+      </div>
     );
   };
 
@@ -231,6 +210,12 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
             </span>
           );
+        case 'DA_CHOT':
+          return (
+            <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }}>
+              <Award size={13} color="#6d28d9" /> Đã chốt
+            </span>
+          );
         default:
           return <span className="status-pill new">{r.status}</span>;
       }
@@ -298,6 +283,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       );
     }
 
+    if (r.status === 'DA_CHOT') {
+      return (
+        <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }} title="Khách đã chốt mua">
+          <Award size={13} color="#6d28d9" /> Đã chốt
+        </span>
+      );
+    }
+
     if (r.status === 'TU_CHOI') {
       return (
         <span className="status-pill reject" title="Trạng thái từ chối">
@@ -329,6 +322,21 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th style={{ color: '#3730a3' }}>VAT (%)</th>
             <th style={{ color: '#0f766e' }}>Báo Giá Khách (Có VAT)</th>
             <th>Người Báo Giá</th>
+            <th>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                Mốc Xử Lý
+                <span
+                  title={
+                    'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc PRICING tiếp nhận.\n' +
+                    'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
+                    'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.'
+                  }
+                  style={{ display: 'inline-flex', cursor: 'help', color: '#94a3b8' }}
+                >
+                  <HelpCircle size={13} />
+                </span>
+              </span>
+            </th>
             <th style={{ textAlign: 'center' }}>Thao Tác</th>
           </tr>
         </thead>
@@ -428,12 +436,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     {formattedPrice}
                   </td>
                 ) : (
-                  <td style={{ background: '#f8fafc', borderRadius: '6px', padding: '6px 8px', fontWeight: 700, fontSize: '12px' }}>
-                    {renderQuotedDateCell(r)}
-                  </td>
+                  <td style={{ color: '#94a3b8', textAlign: 'center' }}>---</td>
                 )}
 
                 <td><strong style={{ color: '#334155' }}>{r.pricer?.name || 'Chưa phân công'}</strong></td>
+                <td>{renderProcessingTimeCell(r)}</td>
                 <td style={{ textAlign: 'center' }}>
                   {/* SALE Role Permissions */}
                   {currentRole === 'SALE' && (
@@ -475,10 +482,10 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     </>
                   )}
 
-                  {/* PRICING Role Permissions */}
+                  {/* PRICING Role Permissions — cùng kiểu tối giản như bên SALE: chỉ nút thao tác được, còn lại "Đã khóa" */}
                   {(currentRole === 'PRICING' || currentRole === 'ADMIN') && (
                     <>
-                      {r.status === 'YC_MOI' && (
+                      {r.status === 'YC_MOI' ? (
                         <button
                           className="tool-btn"
                           style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px' }}
@@ -489,9 +496,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                         >
                           <Zap size={12} /> Tiếp nhận
                         </button>
-                      )}
-
-                      {r.status === 'DANG_XLY' && (
+                      ) : r.status === 'DANG_XLY' ? (
                         <button
                           className="tool-btn"
                           style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#10b981', color: 'white', border: 'none', borderRadius: '8px' }}
@@ -502,17 +507,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                         >
                           <DollarSign size={12} /> Báo Giá
                         </button>
-                      )}
-
-                      {r.status === 'XONG' && (
-                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <CheckCircle size={12} /> Đã Báo Giá
-                        </span>
-                      )}
-
-                      {r.status === 'TU_CHOI' && (
-                        <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <XCircle size={12} /> Từ Chối
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Lock size={12} /> Đã khóa
                         </span>
                       )}
                     </>

@@ -46,6 +46,11 @@ button, input, select, textarea {
   100% { transform: rotate(360deg); }
 }
 
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
 .nav-progress-bar {
   position: fixed;
   top: 0;
@@ -868,6 +873,36 @@ body {
 
   .chip-grid {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+  }
+}
+
+/* Máy Tính Giá — layout 2 cột: trái nhập liệu, phải bảng kết quả sticky */
+.pricing-calc-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.pricing-calc-subgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.pricing-calc-scrollrow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+@media (max-width: 960px) {
+  .pricing-calc-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .pricing-calc-subgrid {
+    grid-template-columns: 1fr !important;
   }
 }
 

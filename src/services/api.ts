@@ -280,7 +280,7 @@ export async function updateQuoteRequest(id: string, payload: any) {
 }
 
 export async function changeQuoteStatus(id: string, payload: {
-  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT';
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'MARK_CLOSED';
   version?: number;
   quotedPrice?: number;
   vat?: number;
@@ -321,6 +321,10 @@ export async function resubmitQuoteRequest(id: string) {
   return changeQuoteStatus(id, { action: 'RESUBMIT' });
 }
 
+export async function markQuoteClosed(id: string, optionId?: string) {
+  return changeQuoteStatus(id, { action: 'MARK_CLOSED', optionId });
+}
+
 export async function fetchPricingConfig() {
   try {
     const res = await api.get('/pricing-config');
@@ -330,12 +334,30 @@ export async function fetchPricingConfig() {
   }
 }
 
+export async function fetchVnGoldPrice() {
+  try {
+    const res = await api.get('/vn-gold-price');
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải giá vàng thị trường tham khảo');
+  }
+}
+
 export async function fetchMetalPrices() {
   try {
     const res = await api.get('/metal-prices');
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải giá vàng & bạc trực tuyến');
+  }
+}
+
+export async function updateMetalPrices(payload: { gold24kVnd?: number; silverVnd?: number }) {
+  try {
+    const res = await api.post('/metal-prices', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật giá vàng & bạc');
   }
 }
 
@@ -363,8 +385,6 @@ export async function calculatePriceApi(payload: {
   laborCost?: number;
   stoneCost?: number;
   vatRate?: number;
-  goldPriceOverride?: number;
-  silverPriceOverride?: number;
 }) {
   try {
     const res = await api.post('/pricing-config/calculate', payload);

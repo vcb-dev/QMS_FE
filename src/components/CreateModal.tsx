@@ -13,7 +13,13 @@ interface CreateModalProps {
   onRefreshCustomers: () => Promise<void>;
   editingReq: QuoteRequest | null;
   saleName: string;
-  calculatorData?: { categoryId?: string; materialType?: string; suggestedPrice?: number } | null;
+  calculatorData?: {
+    categoryId?: string;
+    materialType?: string;
+    suggestedPrice?: number;
+    note?: string;
+    options?: { optionName: string; materialName?: string; quotedPrice: number; isSelected?: boolean }[];
+  } | null;
 }
 
 export const CreateModal: React.FC<CreateModalProps> = ({
@@ -111,7 +117,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         setSelectedMaterialIds([]);
       }
 
-      setCustomerMeasurements('');
+      setCustomerMeasurements(calculatorData?.note || '');
       setImageUrls([]);
     }
   }, [editingReq, categories, customers, isOpen, calculatorData]);
@@ -270,6 +276,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         desiredLeadTime: leadTime,
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         quotedPrice: calculatorData?.suggestedPrice,
+        options: calculatorData?.options && calculatorData.options.length > 0 ? calculatorData.options : undefined,
       });
 
       onClose();

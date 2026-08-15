@@ -32,7 +32,8 @@ interface AppShellProps {
 
 function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [scopeFilter, setScopeFilter] = useState('ALL');
+  // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả
+  const [scopeFilter, setScopeFilter] = useState(currentRole === 'SALE' ? 'MY_REQ' : 'ALL');
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,8 +49,8 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
     returnReqId, setReturnReqId, handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleAccept,
-    handlePricingSubmit, handleConfirmDirectQuote, handleSelectOption,
-    handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
+    handlePricingSubmit, handleConfirmDirectQuote,
+    handleRejectSubmit, handleReturnSubmit, handleResubmitDirect, handleMarkClosed,
   } = useQuoteRequests(currentUser, currentRole);
 
   const getSidebarKey = () => {
@@ -151,8 +152,8 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onReject={(id) => setRejectReqId(id)}
                 onReturn={(id) => setReturnReqId(id)}
                 onResubmit={handleResubmitDirect}
-                onSelectOption={handleSelectOption}
                 onConfirmDirectPrice={handleConfirmDirectQuote}
+                onMarkClosed={handleMarkClosed}
               />
             } />
 

@@ -82,13 +82,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onChange={(e) => onScopeFilterChange?.(e.target.value)}
               style={{
                 ...selectAppearanceStyle,
-                background: scopeFilter === 'MY_REQ' ? '#eff6ff' : '#f8fafc',
-                border: scopeFilter === 'MY_REQ' ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
                 borderRadius: '8px',
                 padding: '7px 30px 7px 12px',
                 fontSize: '12.5px',
-                fontWeight: 800,
-                color: scopeFilter === 'MY_REQ' ? '#1d4ed8' : '#0f172a',
+                fontWeight: 600,
+                color: '#334155',
                 outline: 'none',
                 cursor: 'pointer',
               }}

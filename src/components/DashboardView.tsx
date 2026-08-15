@@ -1,6 +1,6 @@
 import React from 'react';
 import type { QuoteRequest, Role } from '../types';
-import { ArrowRight, Calendar, FilePlus, Clock, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { ArrowRight, Calendar, FilePlus, Clock, CheckCircle, XCircle, RotateCcw, Award } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
@@ -8,6 +8,7 @@ import {
 import { UI_CONSTANTS } from '../constants';
 import { fetchQuoteRequests } from '../services/api';
 import { formatCurrency } from '../utils/currency';
+import { SaleStatusStatsGrid } from './SaleStatusStatsGrid';
 
 
 interface DashboardViewProps {
@@ -32,7 +33,7 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   requests: initialRequests,
   counts: initialCounts,
-  currentRole: _currentRole,
+  currentRole,
   onSelectReq,
   onViewAll,
   onOpenLibrary,
@@ -283,6 +284,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         return <span className="status-pill reject" style={{ background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}><XCircle size={12} /> TỪ CHỐI</span>;
       case 'NEED_MORE_INFO':
         return <span className="status-pill process" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }}><RotateCcw size={12} /> CẦN BỔ SUNG</span>;
+      case 'DA_CHOT':
+        return <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }}><Award size={12} /> ĐÃ CHỐT</span>;
       default:
         return <span className="status-pill new">{status}</span>;
     }
@@ -321,6 +324,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
 
+        {currentRole !== 'SALE' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {/* Time Range Filter Select Dropdown */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -351,10 +355,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </select>
           </div>
         </div>
+        )}
       </div>
 
-      {/* 3. Charts Row */}
-      {(() => {
+      {/* 3. Charts Row — SALE thấy ô số liệu theo trạng thái, không thấy biểu đồ */}
+      {currentRole === 'SALE' ? (
+        <SaleStatusStatsGrid />
+      ) : (() => {
         const chartData = [
           { name: 'Mới tạo',     value: counts.ycMoi,        fill: '#3b82f6' },
           { name: 'Đang xử lý',  value: counts.dangXly,      fill: '#f59e0b' },
@@ -554,8 +561,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         );
       })()}
-
       {/* 4. Split Content Layout */}
+
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '18px' }}>
         {/* Left 2/3: Yêu cầu gần đây */}

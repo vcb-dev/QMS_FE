@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { QuoteRequest, Role, User } from '../types';
 import {
   ArrowLeft,
@@ -22,6 +22,10 @@ import {
   Tag,
   Ruler,
   Target,
+  Award,
+  Copy,
+  Check,
+  HelpCircle,
 } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
@@ -37,8 +41,8 @@ interface QuoteDetailViewProps {
   onReject: (id: string) => void;
   onReturn?: (id: string) => void;
   onResubmit?: (id: string) => void;
-  onSelectOption?: (reqId: string, optionId: string) => void;
   onConfirmDirectPrice?: (id: string, price: number) => Promise<void>;
+  onMarkClosed?: (id: string, optionId?: string) => void;
 }
 
 export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
@@ -52,10 +56,44 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
   onReject,
   onReturn,
   onResubmit,
-  onSelectOption,
   onConfirmDirectPrice,
+  onMarkClosed,
 }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [copiedOptIdx, setCopiedOptIdx] = useState<number | null>(null);
+  const [copiedAllOpt, setCopiedAllOpt] = useState(false);
+
+  // Chọn phương án báo giá chỉ là thao tác xem/so sánh tại chỗ (không gọi API) —
+  // phương án được chọn chỉ ghi xuống DB khi Sale bấm "Đánh Dấu Đã Chốt".
+  const [localSelectedOptId, setLocalSelectedOptId] = useState<string | null>(null);
+  useEffect(() => {
+    setLocalSelectedOptId(
+      selectedReq?.selectedOptionId || selectedReq?.options?.find((o) => o.isSelected)?.id || null
+    );
+  }, [selectedReq?.id, selectedReq?.selectedOptionId]);
+
+  // Nhãn bỏ phần "(Áp dụng X%)" cho gọn — số % vẫn dùng để tính giá, chỉ ẩn khỏi UI/copy
+  const stripAppliedPct = (s: string) => (s || '').replace(/\s*\(Áp dụng[^)]*\)/gi, '').trim();
+  const cleanOptionLabel = (opt: { materialName?: string; optionName: string }) =>
+    stripAppliedPct(opt.materialName || opt.optionName || '');
+
+  const handleCopyOptionPrice = (idx: number, opt: { optionName: string; materialName?: string; quotedPrice: number }) => {
+    const text = `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedOptIdx(idx);
+      setTimeout(() => setCopiedOptIdx((cur) => (cur === idx ? null : cur)), 1500);
+    }).catch(() => {});
+  };
+
+  const handleCopyAllOptions = (options: { optionName: string; materialName?: string; quotedPrice: number }[]) => {
+    const text = options
+      .map((opt) => `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}`)
+      .join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedAllOpt(true);
+      setTimeout(() => setCopiedAllOpt(false), 1500);
+    }).catch(() => {});
+  };
 
   if (!selectedReq) {
     return (
@@ -126,10 +164,36 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
             <RotateCcw size={14} /> CẦN BỔ SUNG
           </span>
         );
+      case 'DA_CHOT':
+        return (
+          <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe', padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}>
+            <Award size={14} /> ĐÃ CHỐT
+          </span>
+        );
       default:
         return <span className="status-pill new">{status}</span>;
     }
   };
+
+  const diffDays = (from?: string, to?: string): string | null => {
+    if (!from || !to) return null;
+    const ms = new Date(to).getTime() - new Date(from).getTime();
+    if (Number.isNaN(ms) || ms < 0) return null;
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${Math.max(1, Math.round(seconds))} giây`;
+    const minutes = seconds / 60;
+    if (minutes < 60) return `${Math.max(1, Math.round(minutes))} phút`;
+    const hours = minutes / 60;
+    if (hours < 24) return `${Math.max(1, Math.round(hours))} giờ`;
+    return `${Math.round(hours / 24)} ngày`;
+  };
+
+  const timeToAccept = diffDays(selectedReq.createdAt, selectedReq.acceptedAt);
+  const timeToQuote = diffDays(selectedReq.acceptedAt, selectedReq.quotedDate);
+  const timeToReturn = diffDays(selectedReq.acceptedAt, selectedReq.returnedAt);
+  const timeToReject = selectedReq.status === 'TU_CHOI'
+    ? diffDays(selectedReq.acceptedAt || selectedReq.createdAt, selectedReq.updatedAt)
+    : null;
 
   const isMyReq =
     currentRole === 'PRICING'
@@ -227,6 +291,29 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                   }}
                 >
                   <Edit size={15} /> Sửa Yêu Cầu
+                </button>
+              )}
+
+              {selectedReq.status === 'XONG' && onMarkClosed && (
+                <button
+                  type="button"
+                  onClick={() => onMarkClosed(selectedReq.id, localSelectedOptId || undefined)}
+                  style={{
+                    background: '#7c3aed',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '9px 18px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(124, 58, 237, 0.3)',
+                  }}
+                >
+                  <Award size={15} /> Đánh Dấu Đã Chốt
                 </button>
               )}
 
@@ -379,6 +466,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
             </div>
           )}
 
+
           {/* Product Overview Card & Gallery */}
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', margin: '0 0 16px 0' }}>
@@ -475,24 +563,40 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
             </div>
           </div>
 
-          {/* Multiple Quote Options (if options exist) */}
-          {selectedReq.options && selectedReq.options.length > 0 && (
+          {/* Multiple Quote Options — chỉ hiện lúc đang báo giá (XONG), đã chốt với khách (DA_CHOT) thì thôi, chỉ còn giá cuối */}
+          {selectedReq.status !== 'DA_CHOT' && selectedReq.options && selectedReq.options.length > 0 && (
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Sparkles size={18} color="#d97706" /> Các Phương Án Báo Giá ({selectedReq.options.length})
                 </h3>
+                {selectedReq.options.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleCopyAllOptions(selectedReq.options!)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 12px', borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      background: copiedAllOpt ? '#dcfce7' : '#ffffff',
+                      color: copiedAllOpt ? '#16a34a' : '#334155',
+                      fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    {copiedAllOpt ? <Check size={13} /> : <Copy size={13} />} {copiedAllOpt ? 'Đã copy hết' : 'Copy hết'}
+                  </button>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
                 {selectedReq.options.map((opt, idx) => {
-                  const isSelected = opt.id === selectedReq.selectedOptionId || opt.isSelected;
+                  const isSelected = opt.id === localSelectedOptId;
                   const price = opt.quotedPrice ? formatCurrency(Number(opt.quotedPrice)) : '---';
 
                   return (
                     <div
                       key={opt.id || idx}
-                      onClick={() => opt.id && onSelectOption?.(selectedReq.id, opt.id)}
+                      onClick={() => opt.id && setLocalSelectedOptId(opt.id)}
                       style={{
                         background: isSelected ? '#f0fdf4' : '#ffffff',
                         border: isSelected ? '2px solid #16a34a' : '1px solid #e2e8f0',
@@ -508,9 +612,64 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                           ĐÃ CHỌN
                         </span>
                       )}
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>{opt.optionName}</div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>{opt.materialName || 'Tiêu chuẩn'}</div>
-                      <div style={{ fontSize: '18px', fontWeight: 900, color: '#16a34a', marginTop: '10px' }}>{price}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>{stripAppliedPct(opt.optionName)}</div>
+                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>{cleanOptionLabel(opt) || 'Tiêu chuẩn'}</div>
+
+                      {(opt.weightChi != null || opt.laborCost != null || opt.stoneCost != null || opt.vat != null || opt.stoneDescription) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0', fontSize: '11px', color: '#475569' }}>
+                          {opt.weightChi != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                              <span>Khối lượng</span><strong style={{ color: '#0f172a' }}>{opt.weightChi} chỉ</strong>
+                            </div>
+                          )}
+                          {opt.laborCost != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                              <span>Tiền công</span><strong style={{ color: '#0f172a' }}>{formatCurrency(Number(opt.laborCost))}</strong>
+                            </div>
+                          )}
+                          {opt.stoneCost != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                              <span>Tiền đá</span><strong style={{ color: '#0f172a' }}>{formatCurrency(Number(opt.stoneCost))}</strong>
+                            </div>
+                          )}
+                          {opt.stoneDescription && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                              <span>Mô tả đá</span><strong style={{ color: '#0f172a', textAlign: 'right' }}>{opt.stoneDescription}</strong>
+                            </div>
+                          )}
+                          {opt.vat != null && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                              <span>VAT</span><strong style={{ color: '#0f172a' }}>{opt.vat}%</strong>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '10px' }}>
+                        <div style={{ fontSize: '18px', fontWeight: 900, color: '#16a34a' }}>{price}</div>
+                        {opt.quotedPrice != null && (
+                          <button
+                            type="button"
+                            title="Copy giá"
+                            onClick={(e) => { e.stopPropagation(); handleCopyOptionPrice(idx, opt); }}
+                            style={{
+                              flexShrink: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '7px',
+                              border: '1px solid #cbd5e1',
+                              background: copiedOptIdx === idx ? '#dcfce7' : '#ffffff',
+                              color: copiedOptIdx === idx ? '#16a34a' : '#475569',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {copiedOptIdx === idx ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
+                        )}
+                      </div>
                       {opt.note && <div style={{ fontSize: '11px', color: '#475569', marginTop: '6px' }}>{opt.note}</div>}
                     </div>
                   );
@@ -540,7 +699,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                   </div>
                 )}
                 {selectedReq.customer?.province && (
-                  <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ fontSize: '12px', color: '#475569', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Building2 size={13} color="#1d4ed8" /> Tỉnh/TP: {selectedReq.customer.province}
                   </div>
                 )}
@@ -571,6 +730,42 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                   {selectedReq.pricer?.name || 'Chưa phân công'}
                 </div>
               </div>
+
+              {(timeToAccept !== null || timeToQuote !== null || timeToReturn !== null || timeToReject !== null) && (
+                <>
+                  <div style={{ height: '1px', background: '#f1f5f9' }} />
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      MỐC XỬ LÝ
+                      <span
+                        title={
+                          'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc PRICING tiếp nhận.\n' +
+                          'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
+                          'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.\n' +
+                          'Từ chối sau: từ lúc tiếp nhận đến lúc từ chối.'
+                        }
+                        style={{ display: 'inline-flex', cursor: 'help', color: '#94a3b8' }}
+                      >
+                        <HelpCircle size={12} />
+                      </span>
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                      {timeToAccept !== null && (
+                        <div style={{ fontWeight: 700, color: '#334155' }}>Nhận xử lý sau {timeToAccept}</div>
+                      )}
+                      {timeToQuote !== null && (
+                        <div style={{ fontWeight: 700, color: '#0f766e' }}>Báo giá sau {timeToQuote}</div>
+                      )}
+                      {timeToReturn !== null && (
+                        <div style={{ fontWeight: 700, color: '#c2410c' }}>Trả lại sau {timeToReturn}</div>
+                      )}
+                      {timeToReject !== null && (
+                        <div style={{ fontWeight: 700, color: '#be123c' }}>Từ chối sau {timeToReject}</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div style={{ height: '1px', background: '#f1f5f9' }} />
 

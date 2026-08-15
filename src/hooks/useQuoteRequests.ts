@@ -11,16 +11,18 @@ import {
   rejectQuoteRequest,
   returnQuoteRequest,
   resubmitQuoteRequest,
+  markQuoteClosed,
 } from '../services/api';
 
-export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
+export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   // Multi-Filter State
   const [currentFilter, setCurrentFilter] = useState<string>('OVERVIEW');
   const [statusSubFilter, setStatusSubFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [materialFilter, setMaterialFilter] = useState<string>('ALL');
-  const [ownerFilter, setOwnerFilter] = useState<string>('ALL');
+  // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả
+  const [ownerFilter, setOwnerFilter] = useState<string>(currentRole === 'SALE' ? 'MY_REQ' : 'ALL');
   const [timeRangeFilter, setTimeRangeFilter] = useState<string>('ALL');
   const [startDateFilter, setStartDateFilter] = useState<string>('');
   const [endDateFilter, setEndDateFilter] = useState<string>('');
@@ -389,6 +391,21 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
     }
   };
 
+  const handleMarkClosed = async (id: string, optionId?: string) => {
+    setLoadingMessage('Đang đánh dấu Đã chốt...');
+    setLoading(true);
+    try {
+      const updated = await markQuoteClosed(id, optionId);
+      setSelectedId(updated.id);
+      needCountsRef.current = true;
+      await loadData(false);
+    } catch (err: any) {
+      alert(`⚠️ Lỗi đánh dấu Đã chốt: ${err.message || 'Lỗi hệ thống'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectedReq =
     requests.find((r) => r.id === selectedId || r.code === selectedId) ||
     requests[0] ||
@@ -452,5 +469,6 @@ export function useQuoteRequests(currentUser: User | null, _currentRole: Role) {
     handleRejectSubmit,
     handleReturnSubmit,
     handleResubmitDirect,
+    handleMarkClosed,
   };
 }

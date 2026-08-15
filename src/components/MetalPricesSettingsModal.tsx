@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, X, Settings, TrendingUp, Zap, Clock, Save, RotateCcw, CheckCircle2 } from 'lucide-react';
-import type { MetalPrices, ManualOverrides } from '../hooks/useMetalPrices';
+import type { MetalPrices } from '../hooks/useMetalPrices';
 import { formatNumberVN } from '../utils/currency';
 
 interface MetalPricesSettingsModalProps {
@@ -10,15 +10,16 @@ interface MetalPricesSettingsModalProps {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
-  overrides: ManualOverrides;
-  apiFormatted: { gold24k: string; silver: string };
-  onSave: (overrides: ManualOverrides) => void;
-  onReset: () => void;
+  onSave: (payload: { gold24kVnd?: number; silverVnd?: number }) => Promise<void>;
 }
 
 function stripToNumber(s: string): string {
   const raw = s.replace(/\D/g, '');
   return raw ? formatNumberVN(Number(raw)) : '';
+}
+
+function fmt(num: number): string {
+  return formatNumberVN(num);
 }
 
 export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> = ({
@@ -28,36 +29,45 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
   loading,
   error,
   onRefresh,
-  overrides,
-  apiFormatted,
   onSave,
-  onReset,
 }) => {
-  const [goldInput, setGoldInput]     = useState(overrides.gold ?? apiFormatted.gold24k);
-  const [silverInput, setSilverInput] = useState(overrides.silver ?? apiFormatted.silver);
+  const [goldInput, setGoldInput]     = useState(fmt(prices.gold24kVnd));
+  const [silverInput, setSilverInput] = useState(fmt(prices.silverVnd));
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Chỉ đóng modal nếu cả mousedown lẫn click đều bắt đầu/kết thúc trên nền backdrop —
+  // tránh việc bôi đen (select) text rồi thả chuột ra ngoài bị hiểu nhầm là bấm ra ngoài để đóng.
+  const mouseDownOnBackdrop = useRef(false);
 
   // Sync when props change (e.g. API prices refreshed)
   useEffect(() => {
-    setGoldInput(overrides.gold ?? apiFormatted.gold24k);
-    setSilverInput(overrides.silver ?? apiFormatted.silver);
-  }, [overrides.gold, overrides.silver, apiFormatted.gold24k, apiFormatted.silver]);
+    setGoldInput(fmt(prices.gold24kVnd));
+    setSilverInput(fmt(prices.silverVnd));
+  }, [prices.gold24kVnd, prices.silverVnd]);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
-    onSave({
-      gold:   goldInput   !== apiFormatted.gold24k ? goldInput   : null,
-      silver: silverInput !== apiFormatted.silver  ? silverInput : null,
-    });
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onClose(); }, 800);
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await onSave({
+        gold24kVnd: parseFloat(goldInput.replace(/\D/g, '')) || undefined,
+        silverVnd: parseFloat(silverInput.replace(/\D/g, '')) || undefined,
+      });
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 800);
+    } catch (err: any) {
+      setSaveError(err.message || 'Lưu giá thất bại');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleResetAll = () => {
-    onReset();
-    setGoldInput(apiFormatted.gold24k);
-    setSilverInput(apiFormatted.silver);
+    setGoldInput(fmt(prices.gold24kVnd));
+    setSilverInput(fmt(prices.silverVnd));
   };
 
   return (
@@ -68,7 +78,8 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
         backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (mouseDownOnBackdrop.current && e.target === e.currentTarget) onClose(); }}
     >
       <div style={{ background: '#ffffff', borderRadius: '20px', width: '520px', maxWidth: '95vw', boxShadow: '0 24px 48px rgba(0,0,0,0.22)', overflow: 'hidden' }}>
 
@@ -81,7 +92,7 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
             <div>
               <div style={{ color: 'white', fontWeight: 900, fontSize: '16px', letterSpacing: '-0.2px' }}>Cài đặt giá kim loại (Vàng & Bạc)</div>
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11.5px', marginTop: '2px' }}>
-                Tự động cập nhật mỗi 12h · Có thể ghi đè thủ công
+                Tự động cập nhật mỗi 12h · Có thể sửa thủ công
               </div>
             </div>
           </div>
@@ -92,52 +103,29 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
 
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-          {/* API Status */}
-          <div style={{ background: error ? '#fef2f2' : '#f0fdf4', border: `1px solid ${error ? '#fca5a5' : '#86efac'}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: error ? '#ef4444' : '#22c55e', flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: error ? '#dc2626' : '#15803d' }}>
-                  {error ? 'Lỗi kết nối API' : 'API hoạt động bình thường'}
-                </div>
-                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
-                  {error || `Cập nhật: ${prices?.updatedAt ? new Date(prices.updatedAt).toLocaleString('vi-VN') : ''} `}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={onRefresh}
-              disabled={loading}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px', background: '#0f172a', border: 'none', color: 'white', fontSize: '12px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)' }}
-            >
-              <RefreshCw size={13} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
-              {loading ? 'Đang tải...' : 'Cập nhật API'}
-            </button>
-          </div>
+        
 
           {/* Price Inputs */}
           <div>
             <div style={{ fontSize: '11.5px', fontWeight: 900, color: '#475569', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '12px' }}>
-              Giá kim loại (VNĐ / chỉ = 3.75g) — Nhập tay để ghi đè
+              Giá kim loại (VNĐ / chỉ = 3.75g) — Nhập tay để sửa
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <PriceRow
                 label="Vàng 24K"
-                apiValue={apiFormatted.gold24k}
+                dbValue={fmt(prices.gold24kVnd)}
                 value={goldInput}
                 onChange={(v) => setGoldInput(stripToNumber(v))}
-                onReset={() => setGoldInput(apiFormatted.gold24k)}
-                isOverridden={overrides.gold !== null}
+                onReset={() => setGoldInput(fmt(prices.gold24kVnd))}
                 accent="#b45309" bg="linear-gradient(135deg, #fffdf5 0%, #fef3c7 100%)" border="#fde68a"
               />
               <PriceRow
                 label="Bạc (Silver)"
-                apiValue={apiFormatted.silver}
+                dbValue={fmt(prices.silverVnd)}
                 value={silverInput}
                 onChange={(v) => setSilverInput(stripToNumber(v))}
-                onReset={() => setSilverInput(apiFormatted.silver)}
-                isOverridden={overrides.silver !== null}
+                onReset={() => setSilverInput(fmt(prices.silverVnd))}
                 accent="#334155" bg="linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" border="#cbd5e1"
               />
             </div>
@@ -146,11 +134,16 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
           {/* Info */}
           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', fontSize: '11.5px', color: '#64748b', lineHeight: '1.6' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-              <Clock size={12} color="#0f172a" /> <span style={{ fontWeight: 800, color: '#0f172a' }}>Ghi đè thủ công</span>
+              <Clock size={12} color="#0f172a" /> <span style={{ fontWeight: 800, color: '#0f172a' }}>Sửa thủ công</span>
             </div>
-            Giá nhập tay được <strong>lưu vào trình duyệt</strong> và giữ sau khi tải lại trang.<br />
-            Bấm <em>"Reset về API"</em> để xóa ghi đè và dùng lại giá tự động từ thị trường.
+            Giá nhập tay được <strong>lưu thẳng vào hệ thống</strong>, áp dụng cho mọi lượt tính giá sau đó của tất cả người dùng.
           </div>
+
+          {saveError && (
+            <div style={{ color: '#b91c1c', fontSize: '12px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '10px', borderRadius: '8px' }}>
+              ⚠️ {saveError}
+            </div>
+          )}
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -158,14 +151,14 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
               onClick={handleResetAll}
               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '13px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
             >
-              <RotateCcw size={13} /> Reset về API
+              <RotateCcw size={13} /> Hủy sửa
             </button>
             <button
               onClick={handleSave}
-              disabled={saved}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 20px', borderRadius: '10px', background: saved ? '#16a34a' : '#0f172a', border: 'none', fontSize: '13px', fontWeight: 800, color: 'white', cursor: saved ? 'default' : 'pointer', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.25)', transition: 'background 0.3s' }}
+              disabled={saved || saving}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 20px', borderRadius: '10px', background: saved ? '#16a34a' : '#0f172a', border: 'none', fontSize: '13px', fontWeight: 800, color: 'white', cursor: (saved || saving) ? 'default' : 'pointer', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.25)', transition: 'background 0.3s', opacity: saving ? 0.7 : 1 }}
             >
-              {saved ? <><CheckCircle2 size={13} /> Đã lưu!</> : <><Save size={13} /> Lưu & Áp dụng</>}
+              {saved ? <><CheckCircle2 size={13} /> Đã lưu!</> : <><Save size={13} /> {saving ? 'Đang lưu...' : 'Lưu vào hệ thống'}</>}
             </button>
           </div>
 
@@ -178,22 +171,21 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
 // ── Sub-component: PriceRow ──────────────────────────────────────────────────
 interface PriceRowProps {
   label: string;
-  apiValue: string; value: string;
+  dbValue: string; value: string;
   onChange: (v: string) => void; onReset: () => void;
-  isOverridden: boolean;
   accent: string; bg: string; border: string;
 }
 
-const PriceRow: React.FC<PriceRowProps> = ({ label, apiValue, value, onChange, onReset, isOverridden, accent, bg, border }) => {
+const PriceRow: React.FC<PriceRowProps> = ({ label, dbValue, value, onChange, onReset, accent, bg, border }) => {
   const [focused, setFocused] = useState(false);
-  const isDirty = value !== apiValue;
+  const isDirty = value !== dbValue;
 
   return (
     <div style={{ background: bg, border: `2px solid ${focused ? accent : (isDirty ? accent + '80' : border)}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'border-color 0.15s' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
           <span style={{ fontSize: '11px', fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-          {isOverridden && <span style={{ fontSize: '10px', background: accent, color: 'white', padding: '1px 6px', borderRadius: '6px', fontWeight: 700 }}>Đang ghi đè</span>}
+          {isDirty && <span style={{ fontSize: '10px', background: accent, color: 'white', padding: '1px 6px', borderRadius: '6px', fontWeight: 700 }}>Chưa lưu</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input
@@ -209,7 +201,7 @@ const PriceRow: React.FC<PriceRowProps> = ({ label, apiValue, value, onChange, o
         </div>
         {isDirty && (
           <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '3px' }}>
-            API: {apiValue} ₫ &nbsp;
+            Hiện tại: {dbValue} ₫ &nbsp;
             <button onClick={onReset} style={{ background: 'none', border: 'none', color: accent, fontSize: '10.5px', fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
               Hoàn tác
             </button>

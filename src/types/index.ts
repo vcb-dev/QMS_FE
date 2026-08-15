@@ -1,6 +1,6 @@
 export type Role = 'SALE' | 'PRICING' | 'ADMIN';
 
-export type QuoteStatus = 'YC_MOI' | 'DANG_XLY' | 'XONG' | 'TU_CHOI' | 'NEED_MORE_INFO';
+export type QuoteStatus = 'YC_MOI' | 'DANG_XLY' | 'XONG' | 'TU_CHOI' | 'NEED_MORE_INFO' | 'DA_CHOT';
 
 export interface User {
   id: string;
@@ -67,6 +67,8 @@ export interface QuoteRequest {
   quotedDate?: string;
   rejectReason?: string;
   returnReason?: string;
+  acceptedAt?: string;
+  returnedAt?: string;
   selectedOptionId?: string;
   options?: QuoteOption[];
   version: number;
