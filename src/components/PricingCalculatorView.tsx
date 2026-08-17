@@ -350,8 +350,8 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
             </div>
           </div>
 
-          {/* Section 2 + 3: Đá quý & Chế tác — gộp lưới 2 cột con để giảm chiều cao trang. Bạc không dùng 2 nhóm này. */}
-          {!isSilverMaterial && (
+          {/* Section 2 + 3: Đá quý & Chế tác — gộp lưới 2 cột con để giảm chiều cao trang. Bạc dùng chung công/đá, chỉ ẩn riêng ô VAT (Bạc không tính VAT). */}
+          {(
             <div className="pricing-calc-subgrid">
               {/* Section 2: Thông số Đá quý */}
               <div style={cardStyle}>
@@ -635,16 +635,13 @@ export const PricingCalculatorView: React.FC<PricingCalculatorViewProps> = ({
               <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
                 {calcResult && (currentRole === 'PRICING' || currentRole === 'ADMIN') && (
                   <>
-                    {!isSilverMaterial ? (
-                      <>
-                        <BreakdownRow label="Giá kim loại (theo trọng lượng)" value={calcResult.totalMetalCost} />
-                        <BreakdownRow label="Đá quý" value={calcResult.stoneCost} />
-                        <BreakdownRow label="Công chế tác" value={calcResult.laborCost} />
-                        <BreakdownRow label="VAT" value={calcResult.vatAmount} />
-                      </>
-                    ) : (
+                    <BreakdownRow label="Giá kim loại (theo trọng lượng)" value={calcResult.totalMetalCost} />
+                    <BreakdownRow label="Đá quý" value={calcResult.stoneCost} />
+                    <BreakdownRow label="Công chế tác" value={calcResult.laborCost} />
+                    <BreakdownRow label="VAT" value={calcResult.vatAmount} />
+                    {isSilverMaterial && (
                       <div style={{ fontSize: '11px', color: '#6b7280' }}>
-                        Bạc: giá vốn × hệ số nhân — không cộng công/đá/VAT
+                        Bạc: (giá vốn + công + đá) có VAT × hệ số nhân — không qua bảng margin
                       </div>
                     )}
                     <div style={{ height: '1px', background: '#e5e7eb', margin: '2px 0' }} />

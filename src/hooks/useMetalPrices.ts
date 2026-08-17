@@ -83,7 +83,6 @@ export function useMetalPrices() {
     prices,
     loading,
     error,
-    /** Tải lại giá mới nhất từ DB (BE) */
     refresh: fetchPrices,
     formatted: {
       gold24k: fmt(prices.gold24kVnd),

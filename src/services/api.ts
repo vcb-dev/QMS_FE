@@ -36,12 +36,39 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response Interceptor: Tự động xử lý hết hạn phiên đăng nhập (401) ngoại trừ API login
+// Response Interceptor: Khi Access Token (cookie) hết hạn (401), tự động gọi
+// /auth/refresh (Refresh Token cookie tự gửi kèm) rồi thử lại request cũ.
+// Chỉ đăng xuất khi refresh cũng thất bại (Refresh Token hết hạn/không hợp lệ).
+let refreshPromise: Promise<boolean> | null = null;
+
+function requestRefresh(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post('/auth/refresh')
+      .then(() => true)
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const isLoginRequest = error.config?.url?.includes('/auth/login');
-    if (error.response?.status === 401 && !isLoginRequest) {
+  async (error) => {
+    const originalRequest = error.config;
+    const isAuthRequest = originalRequest?.url?.includes('/auth/login') || originalRequest?.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !isAuthRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshed = await requestRefresh();
+      if (refreshed) {
+        return api(originalRequest);
+      }
+    }
+
+    if (error.response?.status === 401 && !isAuthRequest) {
       clearSession();
       if (!window.location.pathname.includes('/login')) {
         window.location.reload();
@@ -51,8 +78,7 @@ api.interceptors.response.use(
   }
 );
 
-// "Ghi nhớ đăng nhập" = lưu localStorage (còn sau khi đóng trình duyệt).
-// Bỏ chọn = lưu sessionStorage (mất khi đóng tab). Đọc: ưu tiên sessionStorage trước.
+// Đọc: ưu tiên sessionStorage trước.
 export function getStoredToken(): string | null {
   return sessionStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem(STORAGE_KEYS.TOKEN);
 }
