@@ -223,7 +223,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       }
     }
 
-    // PRICING / ADMIN Role: Custom Icon Dropdown
+    // ORDER / ADMIN Role: Custom Icon Dropdown
     if (r.status === 'YC_MOI') {
       return (
         <StatusDropdown
@@ -243,9 +243,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       const isAssignedToCurrentPricing =
         r.pricer?.id === currentUser.id || r.pricer?.email === currentUser.email;
 
-      if (currentRole === 'PRICING' && !isAssignedToCurrentPricing) {
+      if (currentRole === 'ORDER' && !isAssignedToCurrentPricing) {
         return (
-          <span className="status-pill process" title="Yêu cầu đang do nhân sự Pricing khác xử lý">
+          <span className="status-pill process" title="Yêu cầu đang do nhân sự Order khác xử lý">
             <Clock size={13} color="#b45309" /> Đang xử lý
           </span>
         );
@@ -329,7 +329,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 Mốc Xử Lý
                 <span
                   title={
-                    'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc PRICING tiếp nhận.\n' +
+                    'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc ORDER tiếp nhận.\n' +
                     'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
                     'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.'
                   }
@@ -347,7 +347,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const isSelected = r.id === selectedId || r.code === selectedId;
             const isRejected = r.status === 'TU_CHOI';
             const isMyReq =
-              currentRole === 'PRICING'
+              currentRole === 'ORDER'
                 ? r.pricer?.id === currentUser.id || r.pricer?.email === currentUser.email
                 : r.createdBy?.id === currentUser.id ||
                   r.requester?.id === currentUser.id ||
@@ -484,8 +484,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     </>
                   )}
 
-                  {/* PRICING Role Permissions — cùng kiểu tối giản như bên SALE: chỉ nút thao tác được, còn lại "Đã khóa" */}
-                  {currentRole === 'PRICING' && (
+                  {/* ORDER Role Permissions — cùng kiểu tối giản như bên SALE: chỉ nút thao tác được, còn lại "Đã khóa" */}
+                  {currentRole === 'ORDER' && (
                     <>
                       {r.status === 'YC_MOI' ? (
                         <button

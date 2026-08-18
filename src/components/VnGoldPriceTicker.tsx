@@ -85,7 +85,7 @@ export const VnGoldPriceTicker: React.FC = () => {
         </div>
       </div>
 
-      {error && <div style={{ fontSize: '11.5px', color: '#fca5a5' }}>⚠️ {error}</div>}
+      {error && <div style={{ fontSize: '11.5px', color: '#fca5a5' }}> {error}</div>}
       {!error && items.length === 0 && (
         <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.5)' }}>Đang tải giá vàng thị trường...</div>
       )}

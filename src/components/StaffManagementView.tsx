@@ -53,7 +53,7 @@ const formatDuration = (ms: number): string => {
   return `${Math.round(hours / 24)} ngày`;
 };
 
-const ROLE_LABEL: Record<string, string> = { SALE: 'Sale', PRICING: 'Pricing', ADMIN: 'Admin' };
+const ROLE_LABEL: Record<string, string> = { SALE: 'Sale', ORDER: 'Order', ADMIN: 'Admin' };
 
 export const StaffManagementView: React.FC = () => {
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -90,7 +90,7 @@ export const StaffManagementView: React.FC = () => {
 
   // 2.1 Thống kê người dùng
   const totalUsers = users.length;
-  const byRole = { SALE: 0, PRICING: 0, ADMIN: 0 };
+  const byRole = { SALE: 0, ORDER: 0, ADMIN: 0 };
   const byDept = new Map<string, number>();
   let pendingCount = 0;
   users.forEach((u) => {
@@ -156,7 +156,7 @@ export const StaffManagementView: React.FC = () => {
   }).sort((a, b) => b.total - a.total);
 
   // 2.2 Quản lý người báo giá — thời gian TB báo giá & TB xử lý của từng pricer
-  const pricers = users.filter((u) => u.role === 'PRICING');
+  const pricers = users.filter((u) => u.role === 'ORDER');
   const pricerStats = pricers.map((pricer) => {
     const handled = quoteRequests.filter((r) => r.pricer?.id === pricer.id && r.acceptedAt);
     const quoteDurations: number[] = [];
@@ -194,7 +194,7 @@ export const StaffManagementView: React.FC = () => {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu nhân viên...</div>;
   }
   if (error) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}>⚠️ {error}</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}> {error}</div>;
   }
 
   return (
@@ -217,9 +217,9 @@ export const StaffManagementView: React.FC = () => {
           <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>{totalUsers}</div>
         </div>
         <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Sale / Pricing</div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Sale / Order</div>
           <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', marginTop: '8px' }}>
-            {byRole.SALE} <span style={{ color: '#cbd5e1', fontWeight: 700 }}>/</span> {byRole.PRICING}
+            {byRole.SALE} <span style={{ color: '#cbd5e1', fontWeight: 700 }}>/</span> {byRole.ORDER}
           </div>
         </div>
         <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
@@ -405,7 +405,7 @@ export const StaffManagementView: React.FC = () => {
         )}
       </div>
 
-      {/* 2.2 Hiệu suất Sale & Pricing */}
+      {/* 2.2 Hiệu suất Sale & Order */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
           <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -445,14 +445,14 @@ export const StaffManagementView: React.FC = () => {
           <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
           </h2>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>Thời gian trung bình báo giá & xử lý của từng Pricing</span>
+          <span style={{ fontSize: '11px', color: '#64748b' }}>Thời gian trung bình báo giá & xử lý của từng Order</span>
 
           {pricerStats.length > 0 ? (
             <div style={{ overflowX: 'auto', marginTop: '14px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Pricing</th>
+                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Order</th>
                     <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Đã xử lý</th>
                     <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>TB báo giá</th>
                     <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>TB xử lý</th>
@@ -478,7 +478,7 @@ export const StaffManagementView: React.FC = () => {
               </table>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Chưa có Pricing nào trong hệ thống</div>
+            <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Chưa có Order nào trong hệ thống</div>
           )}
         </div>
       </div>

@@ -13,7 +13,7 @@ interface DevQuickLoginAccountsProps {
 
 const TEST_ACCOUNTS = [
   { label: 'Sale (Nguyễn Văn Sale)', email: 'sale@vcb.vn' },
-  { label: 'Pricing (Trần Văn Pricing)', email: 'pricing@vcb.vn' },
+  { label: 'Order (Trần Văn Order)', email: 'pricing@vcb.vn' },
   { label: 'Admin (Ban Giám Đốc)', email: 'admin@vcb.vn' },
 ];
 

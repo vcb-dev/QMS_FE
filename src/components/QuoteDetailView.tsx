@@ -129,6 +129,13 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
   // Price calculations
   const priceVal = selectedReq.quotedPrice ? Number(selectedReq.quotedPrice) : 0;
 
+  // Phương án đã chốt (hoặc đang được chọn) — dùng để hiện chi tiết cấu thành giá cho ORDER/ADMIN,
+  // kể cả sau khi đã DA_CHOT (lúc đó card "Các Phương Án Báo Giá" bị ẩn, chỉ còn giá cuối)
+  const finalOption =
+    selectedReq.options?.find((o) => o.id === (selectedReq.selectedOptionId || localSelectedOptId)) ||
+    selectedReq.options?.find((o) => o.isSelected) ||
+    null;
+
   const imagesList = selectedReq.images && selectedReq.images.length > 0
     ? selectedReq.images.map((img) => img.imageUrl)
     : [UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE];
@@ -199,7 +206,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
     : null;
 
   const isMyReq =
-    currentRole === 'PRICING'
+    currentRole === 'ORDER'
       ? selectedReq.pricer?.id === currentUser.id || selectedReq.pricer?.email === currentUser.email
       : selectedReq.createdBy?.id === currentUser.id ||
         selectedReq.requester?.id === currentUser.id ||
@@ -345,8 +352,8 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
             </>
           )}
 
-          {/* PRICING / ADMIN actions */}
-          {(currentRole === 'PRICING' || currentRole === 'ADMIN') && (
+          {/* ORDER / ADMIN actions */}
+          {(currentRole === 'ORDER' || currentRole === 'ADMIN') && (
             <>
               {selectedReq.status === 'YC_MOI' && (
                 <button
@@ -778,7 +785,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
               <div style={{ height: '1px', background: '#f1f5f9' }} />
 
               <div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>CHUYÊN VIÊN PRICING</span>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>CHUYÊN VIÊN ORDER</span>
                 <div style={{ fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
                   {selectedReq.pricer?.name || 'Chưa phân công'}
                 </div>
@@ -792,7 +799,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                       MỐC XỬ LÝ
                       <span
                         title={
-                          'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc PRICING tiếp nhận.\n' +
+                          'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc ORDER tiếp nhận.\n' +
                           'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
                           'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.\n' +
                           'Từ chối sau: từ lúc tiếp nhận đến lúc từ chối.'
@@ -862,7 +869,34 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({
                 {priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có giá chốt'}
               </div>
 
-              {(currentRole === 'PRICING' || currentRole === 'ADMIN') &&
+              {/* Chi tiết cấu thành giá — chỉ ORDER/ADMIN xem, vẫn hiện kể cả khi đã DA_CHOT (Sale chỉ thấy tổng) */}
+              {(currentRole === 'ORDER' || currentRole === 'ADMIN') && finalOption &&
+               (finalOption.weightChi != null || finalOption.laborCost != null || finalOption.stoneCost != null || finalOption.vat != null) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0', fontSize: '11.5px', color: '#475569' }}>
+                  {finalOption.weightChi != null && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                      <span>Khối lượng</span><strong style={{ color: '#0f172a' }}>{finalOption.weightChi} chỉ</strong>
+                    </div>
+                  )}
+                  {finalOption.laborCost != null && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                      <span>Tiền công</span><strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.laborCost))}</strong>
+                    </div>
+                  )}
+                  {finalOption.stoneCost != null && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                      <span>Tiền đá</span><strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.stoneCost))}</strong>
+                    </div>
+                  )}
+                  {finalOption.vat != null && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                      <span>VAT</span><strong style={{ color: '#0f172a' }}>{finalOption.vat}%</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(currentRole === 'ORDER' || currentRole === 'ADMIN') &&
                (selectedReq.status === 'YC_MOI' || selectedReq.status === 'DANG_XLY') &&
                priceVal > 0 && (
                 <button

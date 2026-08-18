@@ -37,6 +37,8 @@ interface FilterBarProps {
   onTimeRangeFilterChange?: (range: string) => void;
   startDateFilter?: string;
   onStartDateChange?: (dateStr: string) => void;
+  endDateFilter?: string;
+  onEndDateChange?: (dateStr: string) => void;
   categories: ProductCategory[];
   materials: Material[];
   onResetFilters: () => void;
@@ -58,6 +60,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onTimeRangeFilterChange,
   startDateFilter = '',
   onStartDateChange,
+  endDateFilter = '',
+  onEndDateChange,
   categories,
   materials,
   onResetFilters,
@@ -68,7 +72,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     categoryFilter !== 'ALL' ||
     materialFilter !== 'ALL' ||
     timeRangeFilter !== 'ALL' ||
-    Boolean(startDateFilter);
+    Boolean(startDateFilter) ||
+    Boolean(endDateFilter);
 
   return (
     <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px' }}>
@@ -207,24 +212,49 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* Date Picker & Quick Filter Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          {/* Date Picker Input */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <input
-              type="date"
-              value={startDateFilter}
-              onChange={(e) => onStartDateChange?.(e.target.value)}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '6px 12px 6px 34px',
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#334155',
-                outline: 'none',
-              }}
-            />
-            <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#64748b', pointerEvents: 'none' }} />
+          {/* Date Range Picker: từ ngày A đến ngày B */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={startDateFilter}
+                max={endDateFilter || undefined}
+                onChange={(e) => onStartDateChange?.(e.target.value)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '6px 12px 6px 34px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#334155',
+                  outline: 'none',
+                }}
+              />
+              <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#64748b', pointerEvents: 'none' }} />
+            </div>
+
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#94a3b8' }}>đến</span>
+
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={endDateFilter}
+                min={startDateFilter || undefined}
+                onChange={(e) => onEndDateChange?.(e.target.value)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '6px 12px 6px 34px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#334155',
+                  outline: 'none',
+                }}
+              />
+              <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#64748b', pointerEvents: 'none' }} />
+            </div>
           </div>
 
           {/* Quick Range Toggle */}

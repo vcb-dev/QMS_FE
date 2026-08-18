@@ -71,7 +71,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'SALE' | 'PRICING' | 'ADMIN'>('SALE');
+  const [role, setRole] = useState<'SALE' | 'ORDER' | 'ADMIN'>('SALE');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
 

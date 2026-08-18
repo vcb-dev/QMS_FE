@@ -105,7 +105,7 @@ export const CustomerManagementView: React.FC = () => {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu khách hàng...</div>;
   }
   if (error) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}>⚠️ {error}</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}>{error}</div>;
   }
 
   return (

@@ -80,10 +80,10 @@ export const Header: React.FC<HeaderProps> = ({
               Sale
             </button>
             <button
-              className={currentRole === 'PRICING' ? 'active' : ''}
-              onClick={() => onRoleChange('PRICING')}
+              className={currentRole === 'ORDER' ? 'active' : ''}
+              onClick={() => onRoleChange('ORDER')}
             >
-              Pricing
+              Order
             </button>
             <button
               className={currentRole === 'ADMIN' ? 'active' : ''}
@@ -136,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {user.name || 'Nguyen Van A'}
               </span>
               <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>
-                {currentRole === 'SALE' ? 'Store Associate' : currentRole === 'PRICING' ? 'Pricing Specialist' : 'System Admin'}
+                {currentRole === 'SALE' ? 'Store Associate' : currentRole === 'ORDER' ? 'Order Specialist' : 'System Admin'}
               </span>
             </div>
 
@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Vai trò (Role):</span>
-                  <span style={{ fontWeight: 800, color: '#2563eb' }}>{user.role}</span>
+                  <span style={{ fontWeight: 800, color: '#0f172a' }}>{user.role}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Phòng ban:</span>

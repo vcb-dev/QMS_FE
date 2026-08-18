@@ -7,6 +7,7 @@ import {
   Calculator,
   Users,
   Contact,
+  Settings,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -97,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 2. Danh Sách Yêu Cầu Báo Giá */}
         <button
-          className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' && currentFilter !== 'STAFF' && currentFilter !== 'CUSTOMERS' ? 'active' : ''}
+          className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' && currentFilter !== 'STAFF' && currentFilter !== 'CUSTOMERS' && currentFilter !== 'PRICING_CONFIG' ? 'active' : ''}
           onClick={() => {
             onFilterChange('ALL');
             onCloseMobile?.();
@@ -164,6 +165,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
+        {/* 5. Cấu Hình Giá — chỉ ORDER/ADMIN */}
+        {(currentRole === 'ORDER' || currentRole === 'ADMIN') && (
+          <button
+            className={currentFilter === 'PRICING_CONFIG' ? 'active' : ''}
+            onClick={() => {
+              onFilterChange('PRICING_CONFIG');
+              onCloseMobile?.();
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Settings size={18} /> Cấu Hình Giá
+            </span>
+          </button>
+        )}
+
       </nav>
 
       {/* Bottom Role Card matching screenshot */}
@@ -191,8 +207,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginTop: '4px' }}>
           {currentRole === 'SALE'
             ? 'Sale - Cửa hàng'
-            : currentRole === 'PRICING'
-            ? 'Pricing - Xưởng chế tác'
+            : currentRole === 'ORDER'
+            ? 'Order - Xưởng chế tác'
             : 'Admin - Quản trị'}
         </div>
       </div>

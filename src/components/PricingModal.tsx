@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { X, Calculator, Plus, Trash2, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Calculator, Plus, Trash2, CheckCircle, Settings, Save } from 'lucide-react';
 import type { QuoteOption, QuoteRequest } from '../types';
-import { generatePricingOptionsApi } from '../services/api';
+import { generatePricingOptionsApi, fetchPricingConfig, updatePricingConfig, fetchStones, fetchSilverMultipliers } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
+
+type StoneCatalogItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -27,9 +29,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   // 1. Basic calculation inputs for Gold / Silver auto generator
   const [weightChi, setWeightChi] = useState<string>(PRICING_DEFAULTS.WEIGHT_CHI);
+  // Tiền công/VAT là cấu hình chuẩn lưu DB (PricingConfig) — mặc định khóa, bấm "Cấu hình" mới sửa được
   const [laborCost, setLaborCost] = useState<string>(String(PRICING_DEFAULTS.LABOR_COST));
+  const [isEditingCostConfig, setIsEditingCostConfig] = useState(false);
+  const [savingCostConfig, setSavingCostConfig] = useState(false);
+  const [savedCostConfig, setSavedCostConfig] = useState(false);
+  const [costConfigError, setCostConfigError] = useState<string | null>(null);
   const [stoneCost, setStoneCost] = useState<string>(String(PRICING_DEFAULTS.STONE_COST));
-  const [stoneDesc, setStoneDesc] = useState<string>(PRICING_DEFAULTS.STONE_DESC);
+  const [stoneDesc, setStoneDesc] = useState<string>('');
+  const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
+  const [silverMultipliers, setSilverMultipliers] = useState<number[]>([]);
+  const [selectedSilverMultiplier, setSelectedSilverMultiplier] = useState<number>(3);
 
   // 2. Options List & Material Detection
   const [options, setOptions] = useState<QuoteOption[]>([]);
@@ -48,6 +58,54 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       setManualBasePrice(String(selectedReq.quotedPrice));
     }
   }, [isOpen, selectedReq?.quotedPrice]);
+
+  // Load danh mục đá (đá chủ/đá tấm) mỗi lần mở modal
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchStones()
+      .then((rows: StoneCatalogItem[]) => {
+        setStoneCatalog(Array.isArray(rows) ? rows : []);
+        if (Array.isArray(rows) && rows.length > 0 && !stoneDesc) setStoneDesc(rows[0].name);
+      })
+      .catch((err) => console.error('Lỗi tải danh mục đá:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // Load VAT chuẩn từ PricingConfig mỗi lần mở modal
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchPricingConfig()
+      .then((config: any) => {
+        if (typeof config?.defaultVatRate === 'number') setVat(String(config.defaultVatRate));
+      })
+      .catch((err) => console.error('Lỗi tải cấu hình VAT chuẩn:', err));
+  }, [isOpen]);
+
+  // Danh sách hệ số nhân Bạc mỗi lần mở modal
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchSilverMultipliers()
+      .then((list) => {
+        setSilverMultipliers(list);
+        if (list.length > 0) setSelectedSilverMultiplier(list[0]);
+      })
+      .catch((err) => console.error('Lỗi tải hệ số nhân Bạc:', err));
+  }, [isOpen]);
+
+  const handleSaveCostConfig = async () => {
+    setSavingCostConfig(true);
+    setCostConfigError(null);
+    try {
+      await updatePricingConfig({ defaultVatRate: parseFloat(vat) || 0 });
+      setSavedCostConfig(true);
+      setIsEditingCostConfig(false);
+      setTimeout(() => setSavedCostConfig(false), 1500);
+    } catch (err: any) {
+      setCostConfigError(err.message || 'Lưu cấu hình thất bại');
+    } finally {
+      setSavingCostConfig(false);
+    }
+  };
 
   // Sync non-precious manual price mode
   useEffect(() => {
@@ -89,21 +147,39 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         vatRate: parseFloat(vat) || 10,
         includeVat,
         manualBasePrice: parseFloat(manualBasePrice) || 0,
+        silverMultiplier: isSilverReq ? selectedSilverMultiplier : undefined,
       });
 
       if (Array.isArray(generated) && generated.length > 0) {
-        setOptions(generated);
+        // Bỏ "(Áp dụng X%)" khỏi tên hiển thị, chỉ còn "Phương án chính/phụ (chất liệu)"
+        const cleaned = generated.map((opt: QuoteOption) => {
+          const cleanMat = (opt.materialName || '').replace(/\s*\(Áp dụng[^)]*\)/gi, '').trim();
+          return {
+            ...opt,
+            materialName: cleanMat,
+            optionName: opt.isSelected ? `Phương án chính (${cleanMat})` : `Phương đề xuất (${cleanMat})`,
+          };
+        });
+        setOptions(cleaned);
       }
     } catch (err) {
       console.error('Lỗi khi gọi API tính giá từ Backend:', err);
     }
   };
 
+  // Real-time khi nhập liệu — debounce 500ms sau lần gõ cuối để khỏi spam API trên từng phím gõ
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (isOpen && !isNonPrecious) {
+    if (!isOpen || isNonPrecious) return;
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
       generateKaratOptions();
-    }
-  }, [isOpen, requestedMatName, isNonPrecious, weightChi, laborCost, stoneCost, vat, stoneDesc]);
+    }, 500);
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, requestedMatName, isNonPrecious, weightChi, laborCost, stoneCost, vat, stoneDesc, selectedSilverMultiplier]);
 
   if (!isOpen) return null;
 
@@ -133,12 +209,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const handleOptionChange = (index: number, field: keyof QuoteOption, value: any) => {
     setOptions((prev) =>
       prev.map((opt, idx) => (idx === index ? { ...opt, [field]: value } : opt))
-    );
-  };
-
-  const handleSelectDefaultOption = (index: number) => {
-    setOptions((prev) =>
-      prev.map((opt, idx) => ({ ...opt, isSelected: idx === index }))
     );
   };
 
@@ -259,15 +329,40 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Calculator size={15} color="#475569" /> Tính & Tạo Phương Án Báo Giá: {isGoldReq ? 'Tất cả tuổi Vàng' : 'Các loại Bạc'}
                   </span>
-                  {onOpenCalculator && (
-                    <button
-                      type="button"
-                      onClick={onOpenCalculator}
-                      style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      <Calculator size={13} /> Mở Máy Tính Giá
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {isEditingCostConfig ? (
+                      <button
+                        type="button"
+                        onClick={handleSaveCostConfig}
+                        disabled={savingCostConfig || savedCostConfig}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          background: savedCostConfig ? '#16a34a' : '#0f172a', border: 'none', color: '#ffffff',
+                          padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700,
+                          cursor: (savingCostConfig || savedCostConfig) ? 'default' : 'pointer',
+                        }}
+                      >
+                        {savedCostConfig ? <><CheckCircle size={13} /> Đã lưu!</> : <><Save size={13} /> {savingCostConfig ? 'Đang lưu...' : 'Lưu'}</>}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingCostConfig(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f3f3f3', border: '1px solid #a3a3a3', color: '#000000', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        <Settings size={13} /> Cấu hình
+                      </button>
+                    )}
+                    {onOpenCalculator && (
+                      <button
+                        type="button"
+                        onClick={onOpenCalculator}
+                        style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        <Calculator size={13} /> Mở Máy Tính Giá
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', fontSize: '12px' }}>
@@ -277,7 +372,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </div>
                   <div>
                     <label style={{ fontWeight: 700, color: '#334155' }}>Tiền công (₫):</label>
-                    <input type="text" inputMode="numeric" className="form-control" value={formatNumberVN(laborCost)} onChange={(e) => setLaborCost(e.target.value.replace(/\D/g, ''))} style={{ padding: '6px 8px', fontSize: '12.5px' }} />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="form-control"
+                      value={formatNumberVN(laborCost)}
+                      onChange={(e) => setLaborCost(e.target.value.replace(/\D/g, ''))}
+                      style={{ padding: '6px 8px', fontSize: '12.5px' }}
+                    />
                   </div>
                   <div>
                     <label style={{ fontWeight: 700, color: '#334155' }}>Tiền đá (₫):</label>
@@ -285,18 +387,57 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </div>
                   <div>
                     <label style={{ fontWeight: 700, color: '#334155' }}>Loại đá đính:</label>
-                    <input type="text" className="form-control" value={stoneDesc} onChange={(e) => setStoneDesc(e.target.value)} style={{ padding: '6px 8px', fontSize: '12.5px' }} />
+                    <select className="form-control" value={stoneDesc} onChange={(e) => setStoneDesc(e.target.value)} style={{ padding: '6px 8px', fontSize: '12.5px' }}>
+                      <option value="">-- Chọn đá --</option>
+                      <optgroup label="Đá chủ">
+                        {stoneCatalog.filter((s) => s.stoneType === 'MAIN').map((s) => (
+                          <option key={s.id} value={s.name}>{s.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Đá tấm">
+                        {stoneCatalog.filter((s) => s.stoneType === 'SIDE').map((s) => (
+                          <option key={s.id} value={s.name}>{s.name}</option>
+                        ))}
+                      </optgroup>
+                    </select>
                   </div>
                   <div>
                     <label style={{ fontWeight: 700, color: '#334155' }}>Cộng VAT (%):</label>
-                    <input type="number" className="form-control" value={vat} onChange={(e) => setVat(e.target.value)} style={{ padding: '6px 8px', fontSize: '12.5px' }} />
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={vat}
+                      onChange={(e) => setVat(e.target.value)}
+                      disabled={!isEditingCostConfig}
+                      style={{ padding: '6px 8px', fontSize: '12.5px', background: isEditingCostConfig ? '#ffffff' : '#f1f5f9', color: isEditingCostConfig ? '#0f172a' : '#64748b', cursor: isEditingCostConfig ? 'text' : 'not-allowed' }}
+                    />
                   </div>
+                  {isSilverReq && (
+                    <div>
+                      <label style={{ fontWeight: 700, color: '#334155' }}>Hệ số nhân Bạc:</label>
+                      <select className="form-control" value={selectedSilverMultiplier} onChange={(e) => setSelectedSilverMultiplier(parseFloat(e.target.value) || 0)} style={{ padding: '6px 8px', fontSize: '12.5px' }}>
+                        {silverMultipliers.map((m) => (
+                          <option key={m} value={m}>× {m}</option>
+                        ))}
+                        {silverMultipliers.length === 0 && <option value={3}>× 3</option>}
+                      </select>
+                    </div>
+                  )}
                 </div>
+
+                {costConfigError && (
+                  <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px' }}>
+                     {costConfigError}
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => generateKaratOptions()}
+                    onClick={() => {
+                      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                      generateKaratOptions();
+                    }}
                     style={{ background: 'var(--primary)', color: '#ffffff', border: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
                   >
                     Tính & Tạo Lại Tất Cả Phương Án
@@ -335,15 +476,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       flexWrap: 'wrap',
                     }}
                   >
-                    <input
-                      type="radio"
-                      name="defaultOption"
-                      checked={!!opt.isSelected}
-                      onChange={() => handleSelectDefaultOption(idx)}
-                      title="Chọn làm phương án giá mặc định gửi cho Sale"
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-
                     <div style={{ flex: 2, minWidth: '180px' }}>
                       <input
                         type="text"

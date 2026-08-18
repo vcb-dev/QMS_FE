@@ -21,6 +21,7 @@ import { CalculatorPage } from './pages/CalculatorPage';
 import { DetailPage } from './pages/DetailPage';
 import { StaffPage } from './pages/StaffPage';
 import { CustomersPage } from './pages/CustomersPage';
+import { PricingConfigPage } from './pages/PricingConfigPage';
 
 import './index.css';
 
@@ -45,7 +46,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     selectedReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
-    startDateFilter, setStartDateFilter, currentPage, setCurrentPage,
+    startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     pageSize, setPageSize, totalRecords, totalPages, counts,
     loading, loadingMessage, listLoading, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
@@ -63,12 +64,13 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     if (p.startsWith('/calculator')) return 'CALCULATOR';
     if (p.startsWith('/staff')) return 'STAFF';
     if (p.startsWith('/customers')) return 'CUSTOMERS';
+    if (p.startsWith('/pricing-config')) return 'PRICING_CONFIG';
     return 'OVERVIEW';
   };
 
   const handleSidebarChange = (filter: string) => {
     const map: Record<string, string> = {
-      OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator', STAFF: '/staff', CUSTOMERS: '/customers',
+      OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator', STAFF: '/staff', CUSTOMERS: '/customers', PRICING_CONFIG: '/pricing-config',
     };
     navigate(map[filter] ?? '/requests');
     handleTabChange(filter);
@@ -87,7 +89,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
   return (
     <div
-      className={`mac-window ${currentRole === 'PRICING' ? 'pricing-mode-active' : ''}`}
+      className={`mac-window ${currentRole === 'ORDER' ? 'order-mode-active' : ''}`}
       style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}
     >
       <Sidebar
@@ -128,6 +130,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
                 timeRangeFilter={timeRangeFilter} setTimeRangeFilter={setTimeRangeFilter}
                 startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
+                endDateFilter={endDateFilter} setEndDateFilter={setEndDateFilter}
                 currentPage={currentPage} setCurrentPage={setCurrentPage}
                 pageSize={pageSize} setPageSize={setPageSize}
                 totalRecords={totalRecords} totalPages={totalPages}
@@ -179,6 +182,10 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
             <Route path="/customers" element={
               currentRole === 'ADMIN' ? <CustomersPage /> : <Navigate to="/" replace />
+            } />
+
+            <Route path="/pricing-config" element={
+              currentRole === 'ORDER' || currentRole === 'ADMIN' ? <PricingConfigPage /> : <Navigate to="/" replace />
             } />
 
             <Route path="*" element={

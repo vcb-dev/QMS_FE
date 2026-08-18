@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, X, Settings, TrendingUp, Zap, Clock, Save, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, X, Settings, TrendingUp, Zap, Clock, Save, RotateCcw, CheckCircle2,NotepadText } from 'lucide-react';
 import type { MetalPrices } from '../hooks/useMetalPrices';
 import { formatNumberVN } from '../utils/currency';
 
@@ -108,7 +108,7 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
           {/* Price Inputs */}
           <div>
             <div style={{ fontSize: '11.5px', fontWeight: 900, color: '#475569', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '12px' }}>
-              Giá kim loại (VNĐ / chỉ = 3.75g) — Nhập tay để sửa
+              Giá kim loại (VNĐ / chỉ = 3.75g) — Nhấn vào giá để sửa
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -134,14 +134,14 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
           {/* Info */}
           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', fontSize: '11.5px', color: '#64748b', lineHeight: '1.6' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-              <Clock size={12} color="#0f172a" /> <span style={{ fontWeight: 800, color: '#0f172a' }}>Sửa thủ công</span>
+              <NotepadText size={12} color="#0f172a" /> <span style={{ fontWeight: 800, color: '#0f172a' }}>Sửa thủ công</span>
             </div>
-            Giá nhập tay được <strong>lưu thẳng vào hệ thống</strong>, áp dụng cho mọi lượt tính giá sau đó của tất cả người dùng.
+            Giá được áp dụng cho mọi lượt tính giá sau đó của tất cả người dùng.
           </div>
 
           {saveError && (
             <div style={{ color: '#b91c1c', fontSize: '12px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '10px', borderRadius: '8px' }}>
-              ⚠️ {saveError}
+               {saveError}
             </div>
           )}
 

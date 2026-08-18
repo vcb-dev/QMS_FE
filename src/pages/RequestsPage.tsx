@@ -26,6 +26,8 @@ interface RequestsPageProps {
   setTimeRangeFilter: (v: string) => void;
   startDateFilter: string;
   setStartDateFilter: (v: string) => void;
+  endDateFilter: string;
+  setEndDateFilter: (v: string) => void;
   currentPage: number;
   setCurrentPage: (v: number) => void;
   pageSize: number;
@@ -66,6 +68,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   setTimeRangeFilter,
   startDateFilter,
   setStartDateFilter,
+  endDateFilter,
+  setEndDateFilter,
   currentPage,
   setCurrentPage,
   pageSize,
@@ -130,6 +134,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         onTimeRangeFilterChange={(v) => { setTimeRangeFilter(v); setCurrentPage(1); }}
         startDateFilter={startDateFilter}
         onStartDateChange={(v) => { setStartDateFilter(v); setCurrentPage(1); }}
+        endDateFilter={endDateFilter}
+        onEndDateChange={(v) => { setEndDateFilter(v); setCurrentPage(1); }}
         categories={categories}
         materials={materials}
         onResetFilters={onResetFilters}

@@ -1,4 +1,4 @@
-export type Role = 'SALE' | 'PRICING' | 'ADMIN';
+export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
 export type QuoteStatus = 'YC_MOI' | 'DANG_XLY' | 'XONG' | 'TU_CHOI' | 'NEED_MORE_INFO' | 'DA_CHOT';
 

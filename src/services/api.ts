@@ -414,7 +414,7 @@ export async function fetchMetalPrices() {
   }
 }
 
-export async function updateMetalPrices(payload: { gold24kVnd?: number; silverVnd?: number }) {
+export async function updateMetalPrices(payload: { gold24kVnd?: number; silverVnd?: number; platinumVnd?: number }) {
   try {
     const res = await api.post('/metal-prices', payload);
     return res.data;
@@ -447,12 +447,86 @@ export async function calculatePriceApi(payload: {
   laborCost?: number;
   stoneCost?: number;
   vatRate?: number;
+  includeVat?: boolean;
+  categoryId?: string;
+  silverMultiplier?: number;
 }) {
   try {
     const res = await api.post('/pricing-config/calculate', payload);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi tính giá từ hệ thống');
+  }
+}
+
+export async function fetchStones(stoneType?: 'MAIN' | 'SIDE') {
+  try {
+    const res = await api.get('/stones', { params: stoneType ? { stoneType } : undefined });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải danh mục đá');
+  }
+}
+
+export async function createStone(payload: { stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number }) {
+  try {
+    const res = await api.post('/stones', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể thêm đá mới');
+  }
+}
+
+export async function updateStone(id: string, payload: Partial<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number }>) {
+  try {
+    const res = await api.put(`/stones/${id}`, payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật đá');
+  }
+}
+
+export async function deleteStone(id: string) {
+  try {
+    const res = await api.delete(`/stones/${id}`);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể xóa đá');
+  }
+}
+
+export async function updateStonePrices(items: { id: string; price: number }[]) {
+  try {
+    const res = await api.patch('/stones/prices', { items });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật giá đá');
+  }
+}
+
+export async function deleteStonesMany(ids: string[]) {
+  try {
+    const res = await api.post('/stones/delete-many', { ids });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể xóa đá');
+  }
+}
+
+export async function importStonesExcel(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await api.post('/stones/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } catch (err: any) {
+    const data = err.response?.data;
+    if (data?.errors && Array.isArray(data.errors)) {
+      throw new Error(`${data.message}\n${data.errors.join('\n')}`);
+    }
+    throw new Error(data?.message || 'Không thể import bảng giá đá');
   }
 }
 
@@ -465,11 +539,67 @@ export async function generatePricingOptionsApi(payload: {
   vatRate?: number;
   includeVat?: boolean;
   manualBasePrice?: number;
+  categoryId?: string;
+  silverMultiplier?: number;
 }) {
   try {
     const res = await api.post('/pricing-config/generate-options', payload);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi tính danh sách phương án báo giá từ Backend');
+  }
+}
+
+export async function fetchSilverMultipliers(): Promise<number[]> {
+  try {
+    const res = await api.get('/pricing-config/silver-multipliers');
+    return Array.isArray(res.data?.silverMultipliers) ? res.data.silverMultipliers : [];
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải danh sách hệ số nhân Bạc');
+  }
+}
+
+export async function updateProductCategoryLaborCost(id: string, laborCost: number) {
+  try {
+    const res = await api.patch(`/product-categories/${id}`, { laborCost });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật tiền công danh mục');
+  }
+}
+
+export async function updateProductCategoryLaborCosts(items: { id: string; laborCost: number }[]) {
+  try {
+    const res = await api.patch('/product-categories/labor-costs', { items });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật tiền công danh mục');
+  }
+}
+
+export async function createProductCategory(name: string, laborCost?: number) {
+  try {
+    const res = await api.post('/product-categories', { name, laborCost });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể thêm danh mục sản phẩm');
+  }
+}
+
+export async function deleteProductCategory(id: string) {
+  try {
+    const res = await api.delete(`/product-categories/${id}`);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể xóa danh mục sản phẩm');
+  }
+}
+
+export async function deleteProductCategoriesMany(ids: string[]) {
+  try {
+    const res = await api.post('/product-categories/delete-many', { ids });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể xóa danh mục sản phẩm');
   }
 }

@@ -277,7 +277,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Không thể lưu yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Không thể lưu yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -292,7 +292,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Không thể xóa yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Không thể xóa yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -307,7 +307,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Không thể tiếp nhận: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Không thể tiếp nhận: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -324,7 +324,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Không thể báo giá: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Không thể báo giá: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -339,7 +339,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Không thể xác nhận báo giá: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Không thể xác nhận báo giá: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -353,7 +353,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       setSelectedId(updated.id);
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Lỗi chọn phương án: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Lỗi chọn phương án: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -370,7 +370,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Không thể từ chối: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Không thể từ chối: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -387,7 +387,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Không thể trả lại: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Không thể trả lại: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -404,7 +404,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Lỗi gửi lại yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Lỗi gửi lại yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }
@@ -419,7 +419,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       needCountsRef.current = true;
       await loadData(false);
     } catch (err: any) {
-      alert(`⚠️ Lỗi đánh dấu Đã chốt: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Lỗi đánh dấu Đã chốt: ${err.message || 'Lỗi hệ thống'}`);
     } finally {
       setLoading(false);
     }

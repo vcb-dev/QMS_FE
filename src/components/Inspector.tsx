@@ -122,7 +122,7 @@ export const Inspector: React.FC<InspectorProps> = ({
             </button>
           )}
 
-          {(currentRole === 'PRICING' || currentRole === 'ADMIN') && (
+          {(currentRole === 'ORDER' || currentRole === 'ADMIN') && (
             <button
               type="button"
               onClick={() => onPricing(selectedReq.id)}
