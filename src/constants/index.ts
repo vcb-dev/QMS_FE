@@ -18,6 +18,10 @@ export const UI_CONSTANTS = {
     RECENT_PRODUCTS_LIMIT: 4,
     GRID_COLUMNS_DESKTOP: 4,
   },
+
+  CREATE_QUOTE_REQUEST: {
+    MAX_IMAGES: 5,
+  },
 };
 
 export const PRICING_DEFAULTS = {
@@ -56,3 +60,11 @@ export const STATUS_BADGE_META: Record<string, { label: string; color: string; b
   REJECTED: { label: 'Từ chối', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
   CLOSED: { label: 'Đã chốt', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
 };
+export  const COMPANY_LOGO_URL = 'https://vienchibao.com/wp-content/uploads/2025/01/logo.png';
+// Ảnh vuông (1024x1024) — đặt trong public/ nên tham chiếu thẳng qua URL gốc, không import qua src/assets
+export const BACKGROUND_IMAGE_URL = '/screen.png';
+
+export const STONE_PAGE_SIZE = 5;
+export const CATEGORY_PAGE_SIZE = 10;
+// Giá trị đại diện "không giới hạn" cho bậc lợi nhuận cuối cùng — hiển thị dạng ∞/toggle thay vì bắt nhập số khổng lồ
+export const UNLIMITED_MAX_COST = 999_999_999_999;

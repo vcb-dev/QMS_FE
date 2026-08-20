@@ -1,53 +1,10 @@
 import React, { useState } from 'react';
-import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts } from '../types';
+import type { RequestsPageProps } from '../types';
 import { FilterBar } from '../components/FilterBar';
 import { QuoteTable } from '../components/QuoteTable';
 import { Pagination } from '../components/Pagination';
 import { PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-interface RequestsPageProps {
-  requests: QuoteRequest[];
-  categories: ProductCategory[];
-  materials: Material[];
-  currentRole: Role;
-  currentUser: User;
-  counts: StatusCounts;
-  statusSubFilter: string;
-  setStatusSubFilter: (v: string) => void;
-  searchTerm: string;
-  setSearchTerm: (v: string) => void;
-  categoryFilter: string;
-  setCategoryFilter: (v: string) => void;
-  materialFilter: string;
-  setMaterialFilter: (v: string) => void;
-  ownerFilter: string;
-  setOwnerFilter: (v: string) => void;
-  timeRangeFilter: string;
-  setTimeRangeFilter: (v: string) => void;
-  startDateFilter: string;
-  setStartDateFilter: (v: string) => void;
-  endDateFilter: string;
-  setEndDateFilter: (v: string) => void;
-  currentPage: number;
-  setCurrentPage: (v: number) => void;
-  pageSize: number;
-  setPageSize: (v: number) => void;
-  totalRecords: number;
-  totalPages: number;
-  scopeFilter: string;
-  setScopeFilter: (v: string) => void;
-  onSelectReq: (id: string) => void;
-  onEdit: (req: QuoteRequest) => void;
-  onAccept: (id: string, version: number) => void;
-  onPricing: (id: string) => void;
-  onReject: (id: string) => void;
-  onReturn: (id: string) => void;
-  onDelete?: (id: string) => void;
-  onOpenCreate: () => void;
-  onResetFilters: () => void;
-  selectedId?: string | null;
-}
 
 export const RequestsPage: React.FC<RequestsPageProps> = ({
   requests,
@@ -88,6 +45,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onReturn,
   onDelete,
   onOpenCreate,
+  onOpenExport,
   onResetFilters,
   selectedId,
 }) => {
@@ -142,6 +100,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         categories={categories}
         materials={materials}
         onResetFilters={onResetFilters}
+        onOpenExport={onOpenExport}
         totalFiltered={totalRecords}
         totalTabItems={totalRecords}
       />

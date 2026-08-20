@@ -151,7 +151,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
         const closed = items.filter((r) => r.status === 'CLOSED').length;
         setCounts({
           total: meta.total || items.length,
-          myReq: items.filter((r) => r.requester?.id === currentUser.id || r.pricer?.id === currentUser.id).length,
+          myReq: items.filter((r) => r.requester?.id === currentUser.id || r.assignee?.id === currentUser.id).length,
           pending,
           processing,
           needMoreInfo,
@@ -538,5 +538,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     handleResubmitDirect,
     handleMarkClosed,
     handleDeleteOption,
+    refreshQuietly: () => loadData(false),
   };
 }

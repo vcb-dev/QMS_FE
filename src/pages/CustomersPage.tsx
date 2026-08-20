@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Users, TrendingUp, ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react';
 import { searchCustomers, fetchQuoteRequests } from '../services/api';
-import type { QuoteRequest, Customer } from '../types';
+import type { QuoteRequest, Customer, SortMode } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { Pagination } from '../components/Pagination';
 import { STATUS_BADGE_META as STATUS_META } from '../constants';
 
-type SortMode = 'RECENT' | 'TOP_SPEND' | 'MOST_ORDERS';
 
 export const CustomersPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);

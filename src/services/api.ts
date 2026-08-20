@@ -1,8 +1,8 @@
 import axios from 'axios';
-import type { FilterOptions, User, QuoteRequest } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
 
 // Configured Axios Client with default withCredentials: true
 export const api = axios.create({
@@ -733,11 +733,65 @@ export async function createProductCategory(name: string, laborCost?: number) {
   }
 }
 
+export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { categoryId?: string; materialId?: string; ownerId?: string; timeRange?: string; startDate?: string; endDate?: string; fields?: string[] }) {
+  const params: Record<string, any> = {};
+  if (filter?.status) params.status = filter.status;
+  if (filter?.search) params.search = filter.search;
+  if (filter?.categoryId && filter.categoryId !== 'ALL') params.categoryId = filter.categoryId;
+  if (filter?.materialId && filter.materialId !== 'ALL') params.materialId = filter.materialId;
+  if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
+  if (filter?.timeRange) params.timeRange = filter.timeRange;
+  if (filter?.startDate) params.startDate = filter.startDate;
+  if (filter?.endDate) params.endDate = filter.endDate;
+  if (filter?.fields?.length) params.fields = filter.fields.join(',');
+
+  try {
+    const res = await api.get('/quote-requests/export', { params, responseType: 'blob' });
+
+    const disposition = res.headers['content-disposition'] as string | undefined;
+    const filenameMatch = disposition?.match(/filename="?([^";]+)"?/);
+    const filename = filenameMatch?.[1] || `bao-gia-${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể export danh sách yêu cầu báo giá');
+  }
+}
+
 export async function deleteProductCategoriesMany(ids: string[]) {
   try {
     const res = await api.post('/product-categories/delete-many', { ids });
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể xóa danh mục sản phẩm');
+  }
+}
+
+export async function fetchChatMessages(quoteRequestId: string): Promise<{ messages: ChatMessage[]; unreadCount: number }> {
+  try {
+    const res = await api.get(`/quote-chat/${quoteRequestId}/messages`);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải lịch sử trò chuyện');
+  }
+}
+
+export async function uploadChatImage(quoteRequestId: string, file: File): Promise<{ imageUrl: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await api.post(`/quote-chat/${quoteRequestId}/upload-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải ảnh lên');
   }
 }

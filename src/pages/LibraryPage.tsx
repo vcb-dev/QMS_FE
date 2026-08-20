@@ -1,21 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import type { QuoteRequest, ProductCategory, Material } from '../types';
+import type { SortModeLibrary, LibraryPageProps, TimeRange } from '../types';
 import { Search } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { formatCurrency } from '../utils/currency';
 
-interface LibraryPageProps {
-  requests: QuoteRequest[];
-  categories: ProductCategory[];
-  materials: Material[];
-  onSelectReq: (id: string) => void;
-  selectedId?: string | null;
-  totalCount?: number;
-}
-
-type SortMode = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT';
-type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   requests,
@@ -27,7 +16,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCat, setSelectedCat] = useState('ALL');
   const [selectedMat, setSelectedMat] = useState('ALL');
-  const [sortMode, setSortMode] = useState<SortMode>('PRICE_DESC');
+  const [sortMode, setSortMode] = useState<SortModeLibrary>('PRICE_DESC');
   const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(UI_CONSTANTS.PRODUCT_LIBRARY.DEFAULT_PAGE_SIZE);
@@ -176,7 +165,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         {/* Sort Dropdown */}
         <select
           value={sortMode}
-          onChange={(e) => setSortMode(e.target.value as SortMode)}
+          onChange={(e) => setSortMode(e.target.value as SortModeLibrary)}
           style={{
             background: '#f8fafc',
             border: '1px solid #cbd5e1',

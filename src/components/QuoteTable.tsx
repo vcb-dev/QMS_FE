@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, Role, User } from '../types';
 import { Edit, Inbox, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, Trash2, X } from 'lucide-react';
-import { formatCurrency } from '../utils/currency';
+import { formatCurrency, formatDuration as formatDurationMs } from '../utils/currency';
 import { STATUS_BADGE_META } from '../constants';
 
 interface QuoteTableProps {
@@ -81,13 +81,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   // Trả về null nếu mốc sau đứng trước mốc trước (data lỗi) — không che giấu bằng cách làm tròn về 1
   const formatDuration = (fromMs: number, toMs: number): string | null => {
     if (toMs < fromMs) return null;
-    const seconds = (toMs - fromMs) / 1000;
-    if (seconds < 60) return `${Math.max(1, Math.round(seconds))} giây`;
-    const minutes = seconds / 60;
-    if (minutes < 60) return `${Math.max(1, Math.round(minutes))} phút`;
-    const hours = minutes / 60;
-    if (hours < 24) return `${Math.max(1, Math.round(hours))} giờ`;
-    return `${Math.round(hours / 24)} ngày`;
+    return formatDurationMs(toMs - fromMs);
   };
 
   const renderProcessingTimeCell = (r: QuoteRequest) => {
@@ -328,7 +322,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'PROCESSING') {
       const isAssignedToCurrentPricing =
-        r.pricer?.id === currentUser.id || r.pricer?.email === currentUser.email;
+        r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email;
 
       if (currentRole === 'ORDER' && !isAssignedToCurrentPricing) {
         return (
@@ -437,7 +431,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const isRejected = r.status === 'REJECTED';
             const isMyReq =
               currentRole === 'ORDER'
-                ? r.pricer?.id === currentUser.id || r.pricer?.email === currentUser.email
+                ? r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email
                 : r.createdBy?.id === currentUser.id ||
                   r.requester?.id === currentUser.id ||
                   r.requester?.email === currentUser.email;
@@ -600,7 +594,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </td>
                 )}
                 {!isCompactView && (
-                  <td><strong style={{ color: '#334155' }}>{r.pricer?.name || 'Chưa phân công'}</strong></td>
+                  <td><strong style={{ color: '#334155' }}>{r.assignee?.name || 'Chưa phân công'}</strong></td>
                 )}
                 {!isCompactView && <td>{renderProcessingTimeCell(r)}</td>}
                 <td>

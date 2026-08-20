@@ -1,0 +1,27 @@
+export const ACTION_LABEL: Record<string, string> = {
+  ACCEPT_QUOTE: 'Tiếp nhận yêu cầu',
+  QUOTE_PRICE: 'Báo giá',
+  QUICK_QUOTE: 'Báo giá nhanh (nháp)',
+  QUICK_APPROVE: 'Duyệt báo giá nhanh',
+  QUICK_REJECT: 'Từ chối báo giá nhanh',
+  REJECT_QUOTE: 'Từ chối yêu cầu',
+  RETURN_QUOTE: 'Trả lại yêu cầu',
+  RESUBMIT_QUOTE: 'Gửi lại yêu cầu',
+  MARK_CLOSED: 'Đánh dấu đã chốt',
+  SELECT_OPTION: 'Chọn phương án báo giá',
+  CREATE_QUOTE: 'Tạo yêu cầu',
+  UPDATE_QUOTE: 'Sửa yêu cầu',
+  DELETE_QUOTE: 'Xóa yêu cầu',
+  QUICK_SUBMIT_QUOTE: 'Gửi báo giá nhanh',
+  APPROVE_USER: 'Duyệt tài khoản',
+  REJECT_USER: 'Từ chối tài khoản',
+  LOCK_USER: 'Khóa tài khoản',
+  UNLOCK_USER: 'Mở khóa tài khoản',
+  CREATE_CUSTOMER: 'Tạo khách hàng',
+  UPDATE_CUSTOMER: 'Sửa khách hàng',
+  DELETE_CUSTOMER: 'Xóa khách hàng',
+  CALCULATE_PRICE: 'Tính giá',
+  GENERATE_PRICING_OPTIONS: 'Tạo phương án giá',
+};
+
+export const ROLE_LABEL: Record<string, string> = { SALE: 'Sale', ORDER: 'Order', ADMIN: 'Admin' };

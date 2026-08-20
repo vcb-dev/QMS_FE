@@ -16,90 +16,9 @@ import {
   updateMetalPrices,
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
-
-type GoldRatio = { key: string; standard: number; applied: number; label: string };
-type ProfitMargin = { maxCost: number; divisor: number; margin: string };
-type StoneItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
-type CategoryItem = { id: string; name: string; laborCost?: number | null };
-type MetalPricesState = { gold24kVnd: number; silverVnd: number; platinumVnd: number };
-type ConfigSnapshot = {
-  defaultVatRate: number;
-  silverMultipliers: number[];
-  goldRatios: GoldRatio[];
-  profitMargins: ProfitMargin[];
-};
-
-const STONE_PAGE_SIZE = 5;
-const CATEGORY_PAGE_SIZE = 10;
-// Giá trị đại diện "không giới hạn" cho bậc lợi nhuận cuối cùng — hiển thị dạng ∞/toggle thay vì bắt nhập số khổng lồ
-const UNLIMITED_MAX_COST = 999_999_999_999;
-const PRIMARY_BLUE = '#2563eb';
-const PRIMARY_DARK = '#0f172a';
-
-// ==========================
-// Design tokens
-// ==========================
-
-const labelStyle: React.CSSProperties = {
-  fontSize: '10.5px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase',
-  letterSpacing: '0.04em', display: 'block', marginBottom: '6px',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1',
-  fontSize: '12.5px', fontWeight: 800, color: '#0f172a', outline: 'none',
-};
-
-// Box-model giống hệt inputStyle (cùng padding/viền, viền trong suốt) — bọc span chế độ xem để
-// chữ đứng yên đúng vị trí X/Y khi chuyển qua lại giữa xem và sửa, không bị "nhảy" do input có
-// padding/viền còn span trơn thì không.
-const valueBoxStyle: React.CSSProperties = {
-  display: 'inline-block', padding: '8px 10px', border: '1px solid transparent',
-  borderRadius: '8px', boxSizing: 'border-box',
-};
-
-const suffixStyle: React.CSSProperties = {
-  position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-  fontSize: '11px', fontWeight: 700, color: '#94a3b8', pointerEvents: 'none',
-};
-
-const fieldErrorStyle: React.CSSProperties = { fontSize: '10.5px', color: '#dc2626', fontWeight: 700 };
-
-const btnPrimaryStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-  background: PRIMARY_DARK, border: 'none', borderRadius: '8px', color: '#ffffff',
-  fontSize: '12.5px', fontWeight: 800, padding: '9px 18px', cursor: 'pointer',
-};
-
-const btnSecondaryStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '4px', background: '#ffffff',
-  border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 16px',
-  fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer',
-};
-
-const btnGhostSmallStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '4px', background: 'transparent',
-  border: '1px solid #cbd5e1', borderRadius: '6px', padding: '5px 10px',
-  fontSize: '11px', fontWeight: 700, color: '#334155', cursor: 'pointer',
-};
-
-const iconBtnStyle: React.CSSProperties = {
-  background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px',
-};
-
-const pageBtnStyle = (disabled: boolean): React.CSSProperties => ({
-  padding: '4px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff',
-  fontSize: '11.5px', fontWeight: 700, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-});
-
-const thStyle: React.CSSProperties = { padding: '8px 6px', textAlign: 'left' };
-// minHeight/verticalAlign giữ chiều cao dòng cố định giữa 2 chế độ xem (span) và sửa (input) —
-// input cao hơn span (~34px vs ~18px) nên nếu không giữ cố định, bấm sửa làm cả bảng phình ra,
-// đẩy nội dung bên dưới dịch xuống dưới con trỏ chuột, khiến lần bấm tiếp theo trúng nhầm dòng khác.
-const tdStyle: React.CSSProperties = { padding: '10px 6px', minHeight: '38px', verticalAlign: 'middle' };
-const tdCenterStyle: React.CSSProperties = { padding: '10px 6px', textAlign: 'center', minHeight: '38px', verticalAlign: 'middle' };
-const tableHeadRowStyle: React.CSSProperties = { color: '#94a3b8', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e5e7eb' };
-
+import type{GoldRatio, ProfitMargin, ConfigSnapshot, MetalPricesState, StoneItem, CategoryItem} from '../types';
+import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE} from "../constants/index";
+import {PRIMARY_BLUE,PRIMARY_DARK,thStyle,tdStyle,tdCenterStyle,tableHeadRowStyle,labelStyle, btnPrimaryStyle, btnSecondaryStyle, btnGhostSmallStyle, iconBtnStyle,pageBtnStyle, inputStyle, valueBoxStyle, suffixStyle, fieldErrorStyle } from '../styles/card';
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 
 // ==========================

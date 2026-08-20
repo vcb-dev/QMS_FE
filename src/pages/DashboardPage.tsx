@@ -1,5 +1,5 @@
 import React from 'react';
-import type { QuoteRequest, Role, StatusCounts } from '../types';
+import type { QuoteRequest ,DashboardPageProps} from '../types';
 import { ArrowRight, Calendar, FilePlus, Clock, CheckCircle, XCircle, RotateCcw, Award } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -11,13 +11,7 @@ import { fetchQuoteRequests, fetchQuoteRequestStats } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { SaleStatusStatsGrid } from '../components/SaleStatusStatsGrid';
 
-interface DashboardPageProps {
-  requests: QuoteRequest[];
-  counts: StatusCounts;
-  currentRole: Role;
-  onSelectReq: (id: string) => void;
-  onOpenCreateModal?: () => void;
-}
+
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   requests: initialRequests,

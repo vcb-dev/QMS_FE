@@ -10,8 +10,10 @@ export interface MetalPrices {
   source: string;
 }
 
-const CACHE_KEY    = 'metalPrices_cache';
-const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+// Không cache ở localStorage nữa — giá gốc là dữ liệu nhạy cảm (chỉ ORDER/ADMIN được xem, chặn
+// ở BE) và cache cũ khiến UI hiện giá sai lệch với DB tới 12 tiếng. BE đã tự cache 60s trong RAM
+// (APP_CONSTANTS.REFERENCE_DATA_TTL) nên FE luôn fetch mới không lo dồn query DB.
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 phút — đủ tươi, không gọi API dồn dập
 
 const DEFAULTS: MetalPrices = {
   gold24kVnd: 13_900_000,
@@ -21,38 +23,13 @@ const DEFAULTS: MetalPrices = {
   source: 'defaults (13.9 triệu)',
 };
 
-interface CacheEntry {
-  data: MetalPrices;
-  fetchedAt: number;
-}
-
-function readCache(): MetalPrices | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const entry: CacheEntry = JSON.parse(raw);
-    if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) return null;
-    return entry.data;
-  } catch {
-    return null;
-  }
-}
-
-function writeCache(data: MetalPrices) {
-  try {
-    const entry: CacheEntry = { data, fetchedAt: Date.now() };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
-  } catch {}
-}
-
 function fmt(num: number | undefined | null): string {
   if (num === undefined || num === null || isNaN(num)) return '0';
   return formatNumberVN(num);
 }
 
 export function useMetalPrices() {
-  const cached = readCache();
-  const [prices, setPrices] = useState<MetalPrices>(cached ?? DEFAULTS);
+  const [prices, setPrices] = useState<MetalPrices>(DEFAULTS);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -64,7 +41,6 @@ export function useMetalPrices() {
       const data: MetalPrices = await fetchMetalPrices();
       if (data && typeof data.gold24kVnd === 'number') {
         setPrices(data);
-        writeCache(data);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -75,8 +51,8 @@ export function useMetalPrices() {
   };
 
   useEffect(() => {
-    if (!cached) fetchPrices();
-    timerRef.current = setInterval(fetchPrices, CACHE_TTL_MS);
+    fetchPrices();
+    timerRef.current = setInterval(fetchPrices, REFRESH_INTERVAL_MS);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

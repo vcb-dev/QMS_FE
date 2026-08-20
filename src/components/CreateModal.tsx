@@ -1,28 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Customer, Material, ProductCategory, QuoteRequest } from '../types';
+import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { X, UserPlus, Users, Upload, Search, PlusCircle } from 'lucide-react';
-
-interface CreateModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (payload: any) => Promise<void>;
-  categories: ProductCategory[];
-  materials: Material[];
-  customers: Customer[];
-  onRefreshCustomers: () => Promise<void>;
-  editingReq: QuoteRequest | null;
-  saleName: string;
-  calculatorData?: {
-    categoryId?: string;
-    materialType?: string;
-    materials?: { id?: string; materialId?: string; materialName?: string; weightChi?: string | number }[];
-    stones?: { id?: string; stoneId?: string; quantity?: number }[];
-    suggestedPrice?: number;
-    note?: string;
-    options?: { optionName: string; materialName?: string; quotedPrice: number; isSelected?: boolean }[];
-  } | null;
-}
+import { UI_CONSTANTS } from '../constants';
 
 export const CreateModal: React.FC<CreateModalProps> = ({
   isOpen,
@@ -287,7 +267,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   if (!isOpen) return null;
 
-  const MAX_IMAGES = 5;
+  const MAX_IMAGES = UI_CONSTANTS.CREATE_QUOTE_REQUEST.MAX_IMAGES;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -349,14 +329,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       let finalCustomerId = selectedCustomerId;
 
       if (isNewCustomerMode) {
-        if (!newCustomerName.trim()) {
-          alert('Vui lòng nhập tên khách hàng!');
-          setSubmitting(false);
-          return;
-        }
-
         const createdCust = await createCustomer({
-          name: newCustomerName.trim(),
+          name: newCustomerName.trim() || 'Khách lẻ',
           phone: newCustomerPhone.trim() || undefined,
           province: newCustomerProvince || undefined,
           ward: newCustomerWard || undefined,
@@ -370,21 +344,15 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         setSelectedCustomerId(createdCust.id);
         setIsNewCustomerMode(false);
         onRefreshCustomers().catch(() => {});
-      } else if (!finalCustomerId && customerSearch.trim()) {
-        // Tự động tạo khách hàng nhanh từ tên đã gõ trong ô tìm kiếm
+      } else if (!finalCustomerId) {
+        // Không chọn khách có sẵn cũng không bắt buộc gõ tên — tự tạo "Khách lẻ" nếu để trống hẳn.
         const createdCust = await createCustomer({
-          name: customerSearch.trim(),
+          name: customerSearch.trim() || 'Khách lẻ',
         });
         finalCustomerId = createdCust.id;
         setCustomerList((prev) => [createdCust, ...prev]);
         setSelectedCustomerId(createdCust.id);
         onRefreshCustomers().catch(() => {});
-      }
-
-      if (!finalCustomerId) {
-        alert('Vui lòng chọn khách hàng hoặc nhập tên khách hàng mới!');
-        setSubmitting(false);
-        return;
       }
 
       await onSubmit({
@@ -450,7 +418,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               <div className="form-group">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <label className="form-label">
-                    {isNewCustomerMode ? 'Thông Tin Khách Hàng Mới' : 'Thông Tin Khách Hàng'} <span className="req">*</span>
+                    {isNewCustomerMode ? 'Thông Tin Khách Hàng Mới' : 'Thông Tin Khách Hàng'}
                   </label>
                   {isNewCustomerMode && (
                     <button
@@ -542,11 +510,11 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
-                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Tên Khách Hàng <span className="req">*</span></label>
+                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Tên Khách Hàng</label>
                         <input
                           type="text"
                           className="form-control"
-                          placeholder="Ví dụ: Nguyễn Văn A"
+                          placeholder="Để trống sẽ lưu là &quot;Khách lẻ&quot;"
                           value={newCustomerName}
                           onChange={(e) => setNewCustomerName(e.target.value)}
                         />

@@ -1,60 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Calculator, CheckCircle2, RotateCcw, Copy, Check, Plus, Trash2 } from 'lucide-react';
-import type { Role } from '../types';
 import { fetchMasterData, calculatePriceApi, calculatePriceMultiApi, generatePricingOptionsApi, fetchPricingConfig, fetchStones, fetchSilverMultipliers } from '../services/api';
 import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
-
-interface CalculatorPageProps {
-  currentRole?: Role;
-  onApplyToNewRequest?: (productData: any) => void;
-}
-
-type MaterialRow = {
-  id: string;
-  materialId: string;
-  materialName: string;
-  weightChi: string;
-};
-
-type StoneRow = {
-  id: string;
-  stoneType: 'MAIN' | 'SIDE' | '';
-  stoneId: string;
-  qty: number;
-};
-
-type StoneCatalogItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
-
-type CalcResult = {
-  totalMetalCost: number;
-  metalRawCost?: number;
-  laborCost: number;
-  stoneCost: number;
-  stonePrice: number;
-  vatRate: number;
-  vatAmount: number;
-  quotedPrice: number;
-  profitMarginLabel?: string;
-  breakdown?: { materialId: string; materialName: string; weightChi: number; cost: number }[];
-};
-
-const cardStyle: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '16px',
-  padding: '22px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-};
-
-const cardTitleStyle: React.CSSProperties = {
-  fontSize: '15px',
-  fontWeight: 800,
-  color: '#0f172a',
-  margin: '0 0 16px 0',
-};
+import type {CalculatorPageProps, MaterialRow, StoneRow,StoneCatalogItem,CalcResult} from '../types';
+import {cardStyle, cardTitleStyle} from '../styles/card';
 
 export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   currentRole,

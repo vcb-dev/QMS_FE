@@ -2,58 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity } from 'lucide-react';
 import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi } from '../services/api';
 import { fetchQuoteRequests } from '../services/api';
-import type { QuoteRequest, Role } from '../types';
+import type { QuoteRequest, StaffUser} from '../types';
 import { Pagination } from '../components/Pagination';
+import { formatDuration } from '../utils/currency';
+import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
 
-const ACTION_LABEL: Record<string, string> = {
-  ACCEPT_QUOTE: 'Tiếp nhận yêu cầu',
-  QUOTE_PRICE: 'Báo giá',
-  QUICK_QUOTE: 'Báo giá nhanh (nháp)',
-  QUICK_APPROVE: 'Duyệt báo giá nhanh',
-  QUICK_REJECT: 'Từ chối báo giá nhanh',
-  REJECT_QUOTE: 'Từ chối yêu cầu',
-  RETURN_QUOTE: 'Trả lại yêu cầu',
-  RESUBMIT_QUOTE: 'Gửi lại yêu cầu',
-  MARK_CLOSED: 'Đánh dấu đã chốt',
-  SELECT_OPTION: 'Chọn phương án báo giá',
-  CREATE_QUOTE: 'Tạo yêu cầu',
-  UPDATE_QUOTE: 'Sửa yêu cầu',
-  DELETE_QUOTE: 'Xóa yêu cầu',
-  QUICK_SUBMIT_QUOTE: 'Gửi báo giá nhanh',
-  APPROVE_USER: 'Duyệt tài khoản',
-  REJECT_USER: 'Từ chối tài khoản',
-  LOCK_USER: 'Khóa tài khoản',
-  UNLOCK_USER: 'Mở khóa tài khoản',
-  CREATE_CUSTOMER: 'Tạo khách hàng',
-  UPDATE_CUSTOMER: 'Sửa khách hàng',
-  DELETE_CUSTOMER: 'Xóa khách hàng',
-  CALCULATE_PRICE: 'Tính giá',
-  GENERATE_PRICING_OPTIONS: 'Tạo phương án giá',
-};
 
-interface StaffUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  isApproved: boolean;
-  isActive: boolean;
-  department?: { id: string; name: string } | null;
-  createdAt: string;
-}
 
-// Dưới 1 phút hiện giây, dưới 1 giờ hiện phút, dưới 1 ngày hiện giờ, từ 1 ngày trở lên hiện ngày tròn
-const formatDuration = (ms: number): string => {
-  const seconds = ms / 1000;
-  if (seconds < 60) return `${Math.max(1, Math.round(seconds))} giây`;
-  const minutes = seconds / 60;
-  if (minutes < 60) return `${Math.max(1, Math.round(minutes))} phút`;
-  const hours = minutes / 60;
-  if (hours < 24) return `${Math.max(1, Math.round(hours))} giờ`;
-  return `${Math.round(hours / 24)} ngày`;
-};
-
-const ROLE_LABEL: Record<string, string> = { SALE: 'Sale', ORDER: 'Order', ADMIN: 'Admin' };
 
 export const StaffPage: React.FC = () => {
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -158,7 +113,7 @@ export const StaffPage: React.FC = () => {
   // 2.2 Quản lý người báo giá — thời gian TB báo giá & TB xử lý của từng pricer
   const pricers = users.filter((u) => u.role === 'ORDER');
   const pricerStats = pricers.map((pricer) => {
-    const handled = quoteRequests.filter((r) => r.pricerId === pricer.id && r.acceptedAt);
+    const handled = quoteRequests.filter((r) => r.assigneeId === pricer.id && r.acceptedAt);
     const quoteDurations: number[] = [];
     const processDurations: number[] = [];
 

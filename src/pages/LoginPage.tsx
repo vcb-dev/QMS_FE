@@ -1,68 +1,17 @@
 import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import type { User } from '../types';
+import type { LoginPageProps, AuthMode } from '../types';
 import { loginApi, registerApi, forgotPasswordApi, resetPasswordApi } from '../services/api';
 import {
   Lock, Mail, UserPlus, KeyRound, ArrowLeft, ArrowRight, CheckCircle2,
   User as UserIcon, Briefcase, Eye, EyeOff,
 } from 'lucide-react';
 import { DevQuickLoginAccounts } from '../components/DevQuickLoginAccounts';
-
-const COMPANY_LOGO_URL = 'https://vienchibao.com/wp-content/uploads/2025/01/logo.png';
-// Ảnh vuông (1024x1024) — đặt trong public/ nên tham chiếu thẳng qua URL gốc, không import qua src/assets
-const BACKGROUND_IMAGE_URL = '/screen.png';
-
-interface LoginPageProps {
-  currentUser: User | null;
-  onLoginSuccess: (user: User) => void;
-}
-
-type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
+import { COMPANY_LOGO_URL, BACKGROUND_IMAGE_URL } from '../constants';
+import {backLinkStyle, fieldLabelStyle,fieldIconStyle,fieldInputStyle,goldButtonStyle} from '../styles/card';
 
 // Style dùng chung cho input trên nền thẻ sáng màu
-const fieldLabelStyle: React.CSSProperties = { fontSize: '12.5px', fontWeight: 700, color: '#374151' };
-const fieldInputStyle: React.CSSProperties = {
-  width: '100%',
-  background: '#f9fafb',
-  border: '1px solid #e5e7eb',
-  borderRadius: '10px',
-  padding: '11px 14px 11px 40px',
-  color: '#111827',
-  fontSize: '13.5px',
-  outline: 'none',
-};
-const fieldIconStyle: React.CSSProperties = { position: 'absolute', left: '13px', color: '#9ca3af' };
 
-const goldButtonStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'linear-gradient(135deg, #f0b429 0%, #d97706 100%)',
-  color: '#ffffff',
-  border: 'none',
-  borderRadius: '10px',
-  padding: '13px',
-  fontSize: '14.5px',
-  fontWeight: 700,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  boxShadow: '0 6px 16px rgba(217, 119, 6, 0.35)',
-};
-
-const backLinkStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: '#9ca3af',
-  fontSize: '13px',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '6px',
-  fontWeight: 600,
-  marginTop: '4px',
-};
 
 export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSuccess }) => {
   const navigate = useNavigate();

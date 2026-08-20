@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Material, ProductCategory, StatusCounts } from '../types';
-import { Calendar, ChevronDown, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import { Calendar, ChevronDown, Download, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 
 const selectArrowStyle: React.CSSProperties = {
@@ -84,6 +84,7 @@ interface FilterBarProps {
   categories: ProductCategory[];
   materials: Material[];
   onResetFilters: () => void;
+  onOpenExport?: () => void;
   totalFiltered: number;
   totalTabItems: number;
 }
@@ -110,6 +111,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   categories,
   materials,
   onResetFilters,
+  onOpenExport,
 }) => {
   const [panelOpen, setPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -384,7 +386,30 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </div>
         </div>
 
-        {/* Xóa lọc — góc phải */}
+        {/* Xuất Excel + Xóa lọc — góc phải */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        {onOpenExport && (
+          <button
+            type="button"
+            onClick={onOpenExport}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#f0fdf4',
+              color: '#15803d',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              padding: '8px 14px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+            title="Xuất danh sách đang lọc ra Excel"
+          >
+            <Download size={13} /> Xuất Excel
+          </button>
+        )}
         <button
           type="button"
           onClick={onResetFilters}
@@ -408,6 +433,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         >
           <RotateCcw size={13} /> Xóa bộ lọc
         </button>
+        </div>
       </div>
     </div>
   );

@@ -20,3 +20,13 @@ export function formatCurrency(
   if (!formatted) return fallback;
   return `${formatted} đ`;
 }
+
+export const formatDuration = (ms: number): string => {
+  const seconds = ms / 1000;
+  if (seconds < 60) return `${Math.max(1, Math.round(seconds))} giây`;
+  const minutes = seconds / 60;
+  if (minutes < 60) return `${Math.max(1, Math.round(minutes))} phút`;
+  const hours = minutes / 60;
+  if (hours < 24) return `${Math.max(1, Math.round(hours))} giờ`;
+  return `${Math.round(hours / 24)} ngày`;
+};

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import type { QuoteRequest, Role, User } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import type { QuoteRequest, DetailPageProps } from '../types';
 import {
   ArrowLeft,
   Printer,
@@ -30,26 +30,16 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchQuoteRequestById } from '../services/api';
+import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
+import { ChatPopup } from '../components/ChatPopup';
+import { connectChatSocket } from '../services/socket';
+import { CHAT_EVENTS } from '../constants/chatEvents';
+import type { Socket } from 'socket.io-client';
 
-interface DetailPageProps {
-  selectedReq: QuoteRequest | null;
-  currentRole: Role;
-  currentUser: User;
-  onEdit: (req: QuoteRequest) => void;
-  onAccept: (id: string, version: number) => void;
-  onPricing: (id: string) => void;
-  onReject: (id: string) => void;
-  onReturn?: (id: string) => void;
-  onResubmit?: (id: string) => void;
-  onConfirmDirectPrice?: (id: string, price: number) => Promise<void>;
-  onMarkClosed?: (id: string, optionId?: string) => void;
-  onDelete?: (id: string) => void;
-  onDeleteOption?: (id: string, optionId: string) => void;
-}
+
 
 export const DetailPage: React.FC<DetailPageProps> = ({
   selectedReq: initialSelectedReq,
@@ -109,6 +99,49 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [copiedOptIdx, setCopiedOptIdx] = useState<number | null>(null);
   const [copiedAllOpt, setCopiedAllOpt] = useState(false);
+
+  const [chatSocket, setChatSocket] = useState<Socket | null>(null);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const isChatOpenRef = useRef(isChatOpen);
+  useEffect(() => {
+    isChatOpenRef.current = isChatOpen;
+  }, [isChatOpen]);
+
+  // Chat chỉ dành cho đúng 2 người liên quan tới yêu cầu (requester + assignee) — không phải cứ có
+  // assigneeId là bất kỳ ai xem trang chi tiết (VD ADMIN xem hộ) cũng được tự nối socket + join room.
+  // Tính null-safe (selectedReq có thể chưa tải xong ở lần render đầu) để dùng được ngay trong effect
+  // bên dưới lẫn trong điều kiện render ChatPopup phía cuối component.
+  const isChatParticipant =
+    !!selectedReq &&
+    (currentUser.id === selectedReq.requesterId || currentUser.id === selectedReq.assigneeId);
+
+  useEffect(() => {
+    if (!selectedReq?.id || !selectedReq?.assigneeId || !isChatParticipant) return;
+
+    const socket = connectChatSocket();
+    setChatSocket(socket);
+
+    socket.on('connect', () => {
+      socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: selectedReq.id });
+    });
+
+    fetchChatMessages(selectedReq.id)
+      .then((res) => setChatUnreadCount(res.unreadCount))
+      .catch(() => {});
+
+    const handleNewMessage = (msg: { quoteRequestId: string }) => {
+      if (msg.quoteRequestId !== selectedReq.id) return;
+      setChatUnreadCount((prev) => (isChatOpenRef.current ? prev : prev + 1));
+    };
+    socket.on(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage);
+
+    return () => {
+      socket.off(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage);
+      socket.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedReq?.id, selectedReq?.assigneeId, isChatParticipant]);
 
   // Chọn phương án báo giá chỉ là thao tác xem/so sánh tại chỗ (không gọi API) —
   // phương án được chọn chỉ ghi xuống DB khi Sale bấm "Đánh Dấu Đã Chốt".
@@ -263,7 +296,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
   const isMyReq =
     currentRole === 'ORDER'
-      ? selectedReq.pricer?.id === currentUser.id || selectedReq.pricer?.email === currentUser.email
+      ? selectedReq.assignee?.id === currentUser.id || selectedReq.assignee?.email === currentUser.email
       : selectedReq.createdBy?.id === currentUser.id ||
         selectedReq.requester?.id === currentUser.id ||
         selectedReq.requester?.email === currentUser.email;
@@ -1152,7 +1185,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               <div>
                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>CHUYÊN VIÊN BÁO GIÁ</span>
                 <div style={{ fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
-                  {selectedReq.pricer?.name || 'Chưa phân công'}
+                  {selectedReq.assignee?.name || 'Chưa phân công'}
                 </div>
               </div>
 
@@ -1204,6 +1237,18 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
         </div>
       </div>
+
+      {selectedReq.assigneeId && isChatParticipant && chatSocket && (
+        <ChatPopup
+          key={selectedReq.id}
+          quoteRequestId={selectedReq.id}
+          currentUserId={currentUser.id}
+          currentUserName={currentUser.name}
+          socket={chatSocket}
+          unreadCount={chatUnreadCount}
+          onOpenChange={(open) => { setIsChatOpen(open); if (open) setChatUnreadCount(0); }}
+        />
+      )}
     </div>
   );
 };

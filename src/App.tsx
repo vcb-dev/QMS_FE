@@ -1,4 +1,6 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { connectRealtimeSocket } from './services/realtimeSocket';
+import { REALTIME_EVENTS } from './constants/realtimeEvents';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthGate';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
@@ -10,6 +12,7 @@ import { CreateModal } from './components/CreateModal';
 import { PricingModal } from './components/PricingModal';
 import { RejectModal } from './components/RejectModal';
 import { ReturnModal } from './components/ReturnModal';
+import { ExportModal } from './components/ExportModal';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { NavProgressBar } from './components/NavProgressBar';
 
@@ -36,6 +39,7 @@ interface AppShellProps {
 
 function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: AppShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả
   const [scopeFilter, setScopeFilter] = useState(currentRole === 'SALE' ? 'MY_REQ' : 'ALL');
 
@@ -56,7 +60,21 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     handlePricingSubmit, handleConfirmDirectQuote,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect, handleMarkClosed,
     handleDeleteOption,
+    refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole);
+
+  // Socket /realtime — connect 1 lần suốt phiên (khác chat, connect theo từng DetailPage) để
+  // trang danh sách cũng nhận trạng thái mới ngay, không cần F5.
+  useEffect(() => {
+    const socket = connectRealtimeSocket();
+    const handleStatusChanged = () => refreshQuietly();
+    socket.on(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
+    return () => {
+      socket.off(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
+      socket.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getSidebarKey = () => {
     const p = location.pathname;
@@ -150,6 +168,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onReturn={(id) => setReturnReqId(id)}
                 onDelete={handleDeleteRequest}
                 onOpenCreate={handleOpenCreate}
+                onOpenExport={() => setIsExportOpen(true)}
                 onResetFilters={() => { handleResetFilters(); setScopeFilter('ALL'); }}
                 selectedId={selectedReq?.id || selectedId || null}
               />
@@ -215,6 +234,19 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
       <ReturnModal isOpen={returnReqId !== null} onClose={() => setReturnReqId(null)}
         onSubmit={handleReturnSubmit} />
+
+      <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)}
+        categories={categories} materials={materials}
+        initialFilters={{
+          status: statusSubFilter,
+          categoryId: categoryFilter,
+          materialId: materialFilter,
+          ownerId: ownerFilter === 'MY_REQ' ? currentUser.id : undefined,
+          timeRange: timeRangeFilter,
+          startDate: startDateFilter,
+          endDate: endDateFilter,
+          search: searchTerm,
+        }} />
 
       <LoadingOverlay show={loading} message={loadingMessage} />
       <NavProgressBar show={listLoading} />
