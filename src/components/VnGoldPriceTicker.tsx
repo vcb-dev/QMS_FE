@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 import { fetchVnGoldPrice } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
-
+import {PRICING_DEFAULTS} from '../constants';
 interface VnGoldPriceItem {
   key: string;
   label: string;
@@ -11,7 +11,6 @@ interface VnGoldPriceItem {
   changePct: number | null;
 }
 
-const REFRESH_MS = 60 * 1000;
 
 // Nhãn bỏ phần "(Áp dụng X%)" cho gọn — số % vẫn dùng để tính giá tham khảo, chỉ ẩn khỏi UI
 const cleanLabel = (label: string) => label.replace(/\s*\(Áp dụng[^)]*\)/i, '').trim();
@@ -36,7 +35,7 @@ export const VnGoldPriceTicker: React.FC = () => {
 
   useEffect(() => {
     load();
-    const timer = setInterval(load, REFRESH_MS);
+    const timer = setInterval(load, PRICING_DEFAULTS.REFRESH_MS);
     return () => clearInterval(timer);
   }, [load]);
 

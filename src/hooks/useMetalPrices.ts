@@ -5,6 +5,7 @@ import { formatNumberVN } from '../utils/currency';
 export interface MetalPrices {
   gold24kVnd: number;
   silverVnd: number;
+  platinumVnd: number;
   updatedAt: string;
   source: string;
 }
@@ -15,6 +16,7 @@ const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 const DEFAULTS: MetalPrices = {
   gold24kVnd: 13_900_000,
   silverVnd: 1_200_000,
+  platinumVnd: 6_300_000,
   updatedAt: new Date().toISOString(),
   source: 'defaults (13.9 triệu)',
 };
@@ -87,6 +89,7 @@ export function useMetalPrices() {
     formatted: {
       gold24k: fmt(prices.gold24kVnd),
       silver:  fmt(prices.silverVnd),
+      platinum: fmt(prices.platinumVnd),
     },
   };
 }

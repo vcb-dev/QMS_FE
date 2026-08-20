@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, X, Settings, TrendingUp, Zap, Clock, Save, RotateCcw, CheckCircle2,NotepadText } from 'lucide-react';
+import { X, Settings, TrendingUp, Zap, Save, RotateCcw, CheckCircle2,NotepadText } from 'lucide-react';
 import type { MetalPrices } from '../hooks/useMetalPrices';
 import { formatNumberVN } from '../utils/currency';
 
@@ -10,7 +10,7 @@ interface MetalPricesSettingsModalProps {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
-  onSave: (payload: { gold24kVnd?: number; silverVnd?: number }) => Promise<void>;
+  onSave: (payload: { gold24kVnd?: number; silverVnd?: number, platinumVnd?: number }) => Promise<void>;
 }
 
 function stripToNumber(s: string): string {
@@ -26,13 +26,11 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
   isOpen,
   onClose,
   prices,
-  loading,
-  error,
-  onRefresh,
   onSave,
 }) => {
   const [goldInput, setGoldInput]     = useState(fmt(prices.gold24kVnd));
   const [silverInput, setSilverInput] = useState(fmt(prices.silverVnd));
+  const [platinumInput,setPlatinumInput] = useState(fmt(prices.platinumVnd)); 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -44,7 +42,8 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
   useEffect(() => {
     setGoldInput(fmt(prices.gold24kVnd));
     setSilverInput(fmt(prices.silverVnd));
-  }, [prices.gold24kVnd, prices.silverVnd]);
+    setPlatinumInput(fmt(prices.platinumVnd));
+  }, [prices.gold24kVnd, prices.silverVnd, prices.platinumVnd]);
 
   if (!isOpen) return null;
 
@@ -55,6 +54,7 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
       await onSave({
         gold24kVnd: parseFloat(goldInput.replace(/\D/g, '')) || undefined,
         silverVnd: parseFloat(silverInput.replace(/\D/g, '')) || undefined,
+        platinumVnd: parseFloat(platinumInput.replace(/\D/g, '')) || undefined,
       });
       setSaved(true);
       setTimeout(() => { setSaved(false); onClose(); }, 800);
@@ -68,6 +68,7 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
   const handleResetAll = () => {
     setGoldInput(fmt(prices.gold24kVnd));
     setSilverInput(fmt(prices.silverVnd));
+    setPlatinumInput(fmt(prices.platinumVnd));
   };
 
   return (
@@ -128,6 +129,14 @@ export const MetalPricesSettingsModal: React.FC<MetalPricesSettingsModalProps> =
                 onReset={() => setSilverInput(fmt(prices.silverVnd))}
                 accent="#334155" bg="linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" border="#cbd5e1"
               />
+              <PriceRow
+                label="Bạch kim (Platinum / PT)"
+                dbValue={fmt(prices.            
+                platinumVnd)}                       
+                value={platinumInput}           
+                onChange={(v) => setPlatinumInput(stripToNumber(v))} 
+                onReset={() => setPlatinumInput(fmt(prices.platinumVnd))}                      
+                accent="#475569" bg="linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" border="#cbd5e1"  />
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { FilterOptions, User } from '../types';
+import type { FilterOptions, User, QuoteRequest } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
@@ -12,6 +12,22 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Gộp các request GET trùng lặp đang bay cùng lúc (VD: React.StrictMode / lazy-mount kích hoạt effect
+// nhiều lần) thành 1 request thật duy nhất — các lệnh gọi sau chỉ "ăn theo" promise đang chờ, không bắn
+// thêm request mới. Không cache lâu dài: request tiếp theo sau khi cái cũ đã xong vẫn lấy dữ liệu mới.
+const inFlightGetRequests = new Map<string, Promise<any>>();
+function dedupedGet(url: string, params?: Record<string, any>) {
+  const key = params ? `${url}?${JSON.stringify(params)}` : url;
+  let pending = inFlightGetRequests.get(key);
+  if (!pending) {
+    pending = api.get(url, params ? { params } : undefined).finally(() => {
+      inFlightGetRequests.delete(key);
+    });
+    inFlightGetRequests.set(key, pending);
+  }
+  return pending;
+}
 
 export function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -155,15 +171,6 @@ export async function getAllUsersApi(): Promise<any[]> {
   }
 }
 
-export async function getPendingUsersApi(): Promise<User[]> {
-  try {
-    const res = await api.get('/users/pending');
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể lấy danh sách tài khoản chờ duyệt');
-  }
-}
-
 export async function approveUserApi(userId: string, role?: string): Promise<User> {
   try {
     const res = await api.patch(`/users/${userId}/approve`, { role });
@@ -209,21 +216,7 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   }
 }
 
-export async function uploadImageToBackend(file: File): Promise<{ url: string; publicId: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await api.post('/upload/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải ảnh lên hệ thống');
-  }
-}
-
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -236,12 +229,40 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.timeRange) params.timeRange = filter.timeRange;
   if (filter?.startDate) params.startDate = filter.startDate;
   if (filter?.endDate) params.endDate = filter.endDate;
+  if (filter?.lite) params.lite = true;
 
   try {
     const res = await api.get('/quote-requests', { params });
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải danh sách báo giá');
+  }
+}
+
+export async function fetchQuoteRequestStats(filter?: { timeRange?: string; startDate?: string; endDate?: string; status?: string; categoryId?: string; materialId?: string; ownerId?: string }) {
+  const params: Record<string, any> = {};
+  if (filter?.timeRange) params.timeRange = filter.timeRange;
+  if (filter?.startDate) params.startDate = filter.startDate;
+  if (filter?.endDate) params.endDate = filter.endDate;
+  if (filter?.status) params.status = filter.status;
+  if (filter?.categoryId && filter.categoryId !== 'ALL') params.categoryId = filter.categoryId;
+  if (filter?.materialId && filter.materialId !== 'ALL') params.materialId = filter.materialId;
+  if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
+
+  try {
+    const res = await api.get('/quote-requests/stats', { params });
+    return res.data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải số liệu tổng hợp');
+  }
+}
+
+export async function fetchQuoteRequestById(id: string): Promise<QuoteRequest> {
+  try {
+    const res = await api.get(`/quote-requests/${id}`);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải chi tiết yêu cầu báo giá');
   }
 }
 
@@ -264,6 +285,8 @@ export async function fetchMasterData() {
         customers: [],
       };
     } catch {
+      // Không cache kết quả lỗi — lần gọi tiếp theo sẽ thử lại thay vì kẹt rỗng vĩnh viễn cả phiên
+      masterDataCachePromise = null;
       return { categories: [], materials: [], customers: [] };
     }
   })();
@@ -314,9 +337,19 @@ export async function createCustomer(payload: { name: string; phone?: string; ad
   }
 }
 
+// CreateQuoteRequestDto/UpdateQuoteRequestDto không có field quotedPrice cấp ngoài, và options[]
+// phải qua sanitizeQuoteOption như completeQuoteRequest — nếu không NestJS whitelist reject.
+function sanitizeQuoteRequestPayload(payload: any) {
+  const { quotedPrice: _quotedPrice, ...rest } = payload || {};
+  return {
+    ...rest,
+    options: Array.isArray(payload?.options) ? payload.options.map((opt: any) => sanitizeQuoteOption(opt)) : payload?.options,
+  };
+}
+
 export async function createQuoteRequest(payload: any) {
   try {
-    const res = await api.post('/quote-requests', payload);
+    const res = await api.post('/quote-requests', sanitizeQuoteRequestPayload(payload));
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi tạo yêu cầu báo giá');
@@ -334,7 +367,7 @@ export async function deleteQuoteRequest(id: string) {
 
 export async function updateQuoteRequest(id: string, payload: any) {
   try {
-    const res = await api.patch(`/quote-requests/${id}`, payload);
+    const res = await api.patch(`/quote-requests/${id}`, sanitizeQuoteRequestPayload(payload));
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật yêu cầu báo giá');
@@ -350,6 +383,10 @@ export async function changeQuoteStatus(id: string, payload: {
   rejectReason?: string;
   returnReason?: string;
   optionId?: string;
+  materialWeights?: { materialId: string; weightChi: number }[];
+  manualStoneName?: string;
+  manualStonePrice?: number;
+  stones?: { stoneId: string; quantity: number }[];
 }) {
   try {
     const res = await api.patch(`/quote-requests/${id}/status`, payload);
@@ -363,8 +400,116 @@ export async function acceptQuoteRequest(id: string, version: number) {
   return changeQuoteStatus(id, { action: 'ACCEPT', version });
 }
 
-export async function completeQuoteRequest(id: string, quotedPrice: number, vat?: number, options?: any[]) {
-  return changeQuoteStatus(id, { action: 'QUOTE', quotedPrice, vat, options });
+// BE UpdateQuoteStatusDto không còn nhận quotedPrice/vat cấp ngoài (đã dồn hết vào options[]),
+// và QuoteOptionItemDto chỉ nhận đúng tập field cố định — options[] gửi lên phải lọc bỏ các field
+// hiển thị-only (materialName, stoneDescription...) kẻo NestJS whitelist reject. isSelected được
+// giữ lại có chủ đích — BE dùng để set QuoteOption.selectionStatus.
+function sanitizeQuoteOption(
+  opt: any,
+  fallbackMaterials?: { materialId: string; weightChi: number }[],
+  fallbackStones?: { stoneId: string; quantity: number }[],
+) {
+  if (!opt) return opt;
+
+  const toNum = (v: any) => {
+    if (v === null || v === undefined || v === '') return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  const clean: any = {
+    optionName:
+      typeof opt.optionName === 'string' && opt.optionName.trim()
+        ? opt.optionName.trim()
+        : 'Phương án',
+  };
+
+  if (opt.id && typeof opt.id === 'string' && !opt.id.startsWith('temp_')) {
+    clean.id = opt.id;
+  }
+
+  // Phương án nào đang được chọn làm giá chính — BE dùng để set QuoteOption.selectionStatus.
+  if (typeof opt.isSelected === 'boolean') {
+    clean.isSelected = opt.isSelected;
+  }
+
+  const numFields = [
+    'weightChi',
+    'laborCost',
+    'stoneCost',
+    'vat',
+    'quotedPrice',
+    'totalMetalCost',
+    'metalRawCost',
+    'stonePrice',
+  ] as const;
+
+  for (const field of numFields) {
+    const val = toNum(opt[field]);
+    if (val !== undefined) clean[field] = val;
+  }
+
+  if (typeof opt.note === 'string' && opt.note.trim()) {
+    clean.note = opt.note.trim();
+  }
+
+  // Sanitize materials: ONLY materialId and weightChi (number)
+  const rawMaterials = opt.materials || fallbackMaterials;
+  if (Array.isArray(rawMaterials) && rawMaterials.length > 0) {
+    const cleanedMats = rawMaterials
+      .map((m: any) => {
+        const matId = m.materialId || m.id;
+        if (!matId || typeof matId !== 'string') return null;
+        const w = toNum(m.weightChi);
+        return {
+          materialId: matId,
+          weightChi: w !== undefined ? w : clean.weightChi,
+        };
+      })
+      .filter(Boolean);
+
+    if (cleanedMats.length > 0) {
+      clean.materials = cleanedMats;
+    }
+  }
+
+  // Sanitize stones: ONLY stoneId and quantity (number)
+  const rawStones = opt.stones || fallbackStones;
+  if (Array.isArray(rawStones) && rawStones.length > 0) {
+    const cleanedStones = rawStones
+      .map((s: any) => {
+        const sId = s.stoneId || s.id;
+        if (!sId || typeof sId !== 'string') return null;
+        const qty = parseInt(String(s.quantity ?? s.qty ?? 1), 10) || 1;
+        return {
+          stoneId: sId,
+          quantity: qty,
+        };
+      })
+      .filter(Boolean);
+
+    if (cleanedStones.length > 0) {
+      clean.stones = cleanedStones;
+    }
+  }
+
+  return clean;
+}
+
+export async function completeQuoteRequest(
+  id: string,
+  _quotedPrice: number,
+  _vat?: number,
+  options?: any[],
+  extras?: {
+    materialWeights?: { materialId: string; weightChi: number }[];
+    manualStoneName?: string;
+    manualStonePrice?: number;
+    stones?: { stoneId: string; quantity: number }[];
+  },
+) {
+  const cleanOptions = options?.map((opt) => sanitizeQuoteOption(opt, extras?.materialWeights, extras?.stones));
+  return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions });
 }
 
 export async function selectQuoteOption(id: string, optionId: string) {
@@ -387,9 +532,18 @@ export async function markQuoteClosed(id: string, optionId?: string) {
   return changeQuoteStatus(id, { action: 'MARK_CLOSED', optionId });
 }
 
+export async function deleteQuoteOption(id: string, optionId: string) {
+  try {
+    const res = await api.delete(`/quote-requests/${id}/options/${optionId}`);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể xóa phương án báo giá');
+  }
+}
+
 export async function fetchPricingConfig() {
   try {
-    const res = await api.get('/pricing-config');
+    const res = await dedupedGet('/pricing-config');
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải cấu hình tính giá');
@@ -398,7 +552,7 @@ export async function fetchPricingConfig() {
 
 export async function fetchVnGoldPrice() {
   try {
-    const res = await api.get('/vn-gold-price');
+    const res = await dedupedGet('/vn-gold-price');
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải giá vàng thị trường tham khảo');
@@ -407,7 +561,7 @@ export async function fetchVnGoldPrice() {
 
 export async function fetchMetalPrices() {
   try {
-    const res = await api.get('/metal-prices');
+    const res = await dedupedGet('/metal-prices');
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải giá vàng & bạc trực tuyến');
@@ -432,15 +586,6 @@ export async function updatePricingConfig(payload: any) {
   }
 }
 
-export async function submitQuickQuote(payload: any) {
-  try {
-    const res = await api.post('/quote-requests/quick-submit', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi gửi yêu cầu báo giá nhanh');
-  }
-}
-
 export async function calculatePriceApi(payload: {
   materialNameOrKey: string;
   weightChi: number;
@@ -459,9 +604,38 @@ export async function calculatePriceApi(payload: {
   }
 }
 
+export interface CalculateMultiResult {
+  totalMetalCost: number;
+  metalRawCost: number;
+  stoneCost: number;
+  stonePrice: number;
+  laborCost: number;
+  vatAmount: number;
+  quotedPrice: number;
+  breakdown: { materialId: string; materialName: string; weightChi: number; cost: number }[];
+}
+
+export async function calculatePriceMultiApi(payload: {
+  materials: { materialId: string; materialName: string; weightChi: number }[];
+  categoryId?: string;
+  laborCost?: number;
+  vatRate?: number;
+  includeVat?: boolean;
+  manualStoneName?: string;
+  manualStonePrice?: number;
+  stones?: { stoneId: string; quantity: number }[];
+}): Promise<CalculateMultiResult> {
+  try {
+    const res = await api.post('/pricing-config/calculate-multi', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tính giá nhiều chất liệu');
+  }
+}
+
 export async function fetchStones(stoneType?: 'MAIN' | 'SIDE') {
   try {
-    const res = await api.get('/stones', { params: stoneType ? { stoneType } : undefined });
+    const res = await dedupedGet('/stones', stoneType ? { stoneType } : undefined);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải danh mục đá');
@@ -474,24 +648,6 @@ export async function createStone(payload: { stoneType: 'MAIN' | 'SIDE'; name: s
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể thêm đá mới');
-  }
-}
-
-export async function updateStone(id: string, payload: Partial<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number }>) {
-  try {
-    const res = await api.put(`/stones/${id}`, payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật đá');
-  }
-}
-
-export async function deleteStone(id: string) {
-  try {
-    const res = await api.delete(`/stones/${id}`);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể xóa đá');
   }
 }
 
@@ -552,19 +708,10 @@ export async function generatePricingOptionsApi(payload: {
 
 export async function fetchSilverMultipliers(): Promise<number[]> {
   try {
-    const res = await api.get('/pricing-config/silver-multipliers');
+    const res = await dedupedGet('/pricing-config/silver-multipliers');
     return Array.isArray(res.data?.silverMultipliers) ? res.data.silverMultipliers : [];
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải danh sách hệ số nhân Bạc');
-  }
-}
-
-export async function updateProductCategoryLaborCost(id: string, laborCost: number) {
-  try {
-    const res = await api.patch(`/product-categories/${id}`, { laborCost });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật tiền công danh mục');
   }
 }
 
@@ -583,15 +730,6 @@ export async function createProductCategory(name: string, laborCost?: number) {
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể thêm danh mục sản phẩm');
-  }
-}
-
-export async function deleteProductCategory(id: string) {
-  try {
-    const res = await api.delete(`/product-categories/${id}`);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể xóa danh mục sản phẩm');
   }
 }
 

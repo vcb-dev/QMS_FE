@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthGate';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
@@ -14,14 +14,15 @@ import { LoadingOverlay } from './components/LoadingOverlay';
 import { NavProgressBar } from './components/NavProgressBar';
 
 import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { RequestsPage } from './pages/RequestsPage';
-import { LibraryPage } from './pages/LibraryPage';
-import { CalculatorPage } from './pages/CalculatorPage';
-import { DetailPage } from './pages/DetailPage';
-import { StaffPage } from './pages/StaffPage';
-import { CustomersPage } from './pages/CustomersPage';
-import { PricingConfigPage } from './pages/PricingConfigPage';
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const RequestsPage = lazy(() => import('./pages/RequestsPage').then((m) => ({ default: m.RequestsPage })));
+const LibraryPage = lazy(() => import('./pages/LibraryPage').then((m) => ({ default: m.LibraryPage })));
+const CalculatorPage = lazy(() => import('./pages/CalculatorPage').then((m) => ({ default: m.CalculatorPage })));
+const DetailPage = lazy(() => import('./pages/DetailPage').then((m) => ({ default: m.DetailPage })));
+const StaffPage = lazy(() => import('./pages/StaffPage').then((m) => ({ default: m.StaffPage })));
+const CustomersPage = lazy(() => import('./pages/CustomersPage').then((m) => ({ default: m.CustomersPage })));
+const PricingConfigPage = lazy(() => import('./pages/PricingConfigPage').then((m) => ({ default: m.PricingConfigPage })));
 
 import './index.css';
 
@@ -54,6 +55,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handlePricingSubmit, handleConfirmDirectQuote,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect, handleMarkClosed,
+    handleDeleteOption,
   } = useQuoteRequests(currentUser, currentRole);
 
   const getSidebarKey = () => {
@@ -113,6 +115,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
         />
 
         <main className="content page-transition" key={location.pathname} style={{ flex: 1, overflowY: 'auto' }}>
+          <Suspense fallback={<LoadingOverlay show message="Đang tải..." />}>
           <Routes>
             <Route path="/" element={
               <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
@@ -122,7 +125,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
             <Route path="/requests" element={
               <RequestsPage
                 requests={requests} categories={categories} materials={materials}
-                currentRole={currentRole} currentUser={currentUser!}
+                currentRole={currentRole} currentUser={currentUser!} counts={counts}
                 statusSubFilter={statusSubFilter} setStatusSubFilter={setStatusSubFilter}
                 searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                 categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
@@ -163,13 +166,14 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onConfirmDirectPrice={handleConfirmDirectQuote}
                 onMarkClosed={handleMarkClosed}
                 onDelete={handleDeleteRequest}
+                onDeleteOption={handleDeleteOption}
               />
             } />
 
             <Route path="/library" element={
               <LibraryPage requests={requests} categories={categories} materials={materials}
                 onSelectReq={handleOpenDetail} selectedId={selectedReq?.id || selectedId}
-                totalCount={counts.xong} />
+                totalCount={counts.closed} />
             } />
 
             <Route path="/calculator" element={
@@ -193,6 +197,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate} />
             } />
           </Routes>
+          </Suspense>
         </main>
       </div>
 
@@ -203,7 +208,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
         saleName={currentUser!.name} calculatorData={calculatorData} />
 
       <PricingModal isOpen={pricingReqId !== null} onClose={() => setPricingReqId(null)}
-        onSubmit={handlePricingSubmit} selectedReq={selectedReq} />
+        onSubmit={handlePricingSubmit} selectedReq={selectedReq} currentRole={currentRole} materials={materials} />
 
       <RejectModal isOpen={rejectReqId !== null} onClose={() => setRejectReqId(null)}
         onSubmit={handleRejectSubmit} />

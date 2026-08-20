@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Customer, Material, ProductCategory, QuoteRequest, Role, User } from '../types';
+import type { Customer, Material, ProductCategory, QuoteRequest, Role, User, StatusCounts } from '../types';
 import {
   fetchQuoteRequests,
   fetchMasterData,
@@ -13,6 +13,7 @@ import {
   returnQuoteRequest,
   resubmitQuoteRequest,
   markQuoteClosed,
+  deleteQuoteOption,
 } from '../services/api';
 
 export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
@@ -33,22 +34,31 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [pageSize, setPageSize] = useState<number>(10);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [serverTotalPages, setServerTotalPages] = useState<number>(1);
-  const [counts, setCounts] = useState({
+  const [counts, setCounts] = useState<StatusCounts>({
     total: 0,
     myReq: 0,
-    ycMoi: 0,
-    dangXly: 0,
+    pending: 0,
+    processing: 0,
     needMoreInfo: 0,
-    xong: 0,
-    tuChoi: 0,
-    daChot: 0,
+    quoted: 0,
+    rejected: 0,
+    closed: 0,
   });
 
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [customers] = useState<Customer[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const getInitialSelectedId = () => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/requests/')) {
+      const match = window.location.pathname.match(/\/requests\/([^/]+)/);
+      if (match && match[1]) return decodeURIComponent(match[1]);
+    }
+    return null;
+  };
+
+  const [selectedId, setSelectedId] = useState<string | null>(getInitialSelectedId);
 
   // Modals & UI States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -93,11 +103,12 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     }
     try {
       let targetStatus: import('../types').QuoteStatus | undefined = undefined;
-      if (currentFilter === 'YC_MOI') targetStatus = 'YC_MOI';
-      else if (currentFilter === 'DANG_XLY') targetStatus = 'DANG_XLY';
+      if (currentFilter === 'PENDING' ) targetStatus = 'PENDING';
+      else if (currentFilter === 'PROCESSING' ) targetStatus = 'PROCESSING';
       else if (currentFilter === 'NEED_MORE_INFO') targetStatus = 'NEED_MORE_INFO';
-      else if (currentFilter === 'XONG' || currentFilter === 'LIBRARY') targetStatus = 'XONG';
-      else if (currentFilter === 'TU_CHOI') targetStatus = 'TU_CHOI';
+      else if (currentFilter === 'QUOTED'  || currentFilter === 'LIBRARY') targetStatus = 'QUOTED';
+      else if (currentFilter === 'REJECTED') targetStatus = 'REJECTED';
+      else if (currentFilter === 'CLOSED') targetStatus = 'CLOSED';
       else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter as import('../types').QuoteStatus;
 
       const ownerId = (currentFilter === 'MY_REQ' || ownerFilter === 'MY_REQ') ? currentUser.id : undefined;
@@ -132,21 +143,21 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       if (meta.counts) {
         setCounts(meta.counts);
       } else if (items) {
-        const ycMoi = items.filter((r) => r.status === 'YC_MOI').length;
-        const dangXly = items.filter((r) => r.status === 'DANG_XLY').length;
+        const pending = items.filter((r) => r.status === 'PENDING').length;
+        const processing = items.filter((r) => r.status === 'PROCESSING').length;
         const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
-        const xong = items.filter((r) => r.status === 'XONG').length;
-        const tuChoi = items.filter((r) => r.status === 'TU_CHOI').length;
-        const daChot = items.filter((r) => r.status === 'DA_CHOT').length;
+        const quoted = items.filter((r) => r.status === 'QUOTED').length;
+        const rejected = items.filter((r) => r.status === 'REJECTED').length;
+        const closed = items.filter((r) => r.status === 'CLOSED').length;
         setCounts({
           total: meta.total || items.length,
           myReq: items.filter((r) => r.requester?.id === currentUser.id || r.pricer?.id === currentUser.id).length,
-          ycMoi,
-          dangXly,
+          pending,
+          processing,
           needMoreInfo,
-          xong,
-          tuChoi,
-          daChot,
+          quoted,
+          rejected,
+          closed,
         });
       }
 
@@ -155,6 +166,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
           if (prevId && items.some((item) => item.id === prevId || item.code === prevId)) {
             return prevId;
           }
+          const urlId = getInitialSelectedId();
+          if (urlId) return urlId;
           return items[0].id;
         });
       }
@@ -202,10 +215,14 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   useEffect(() => {
     if (!currentUser) return;
     if (requests.length > 0) {
+      const urlId = getInitialSelectedId();
+      if (urlId && (selectedId === urlId || !selectedId)) {
+        return;
+      }
       const isSelectedInPage = requests.some(
         (r) => r.id === selectedId || r.code === selectedId
       );
-      if (!isSelectedInPage) {
+      if (!isSelectedInPage && !urlId) {
         setSelectedId(requests[0].id);
       }
     }
@@ -313,12 +330,22 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     }
   };
 
-  const handlePricingSubmit = async (quotedPrice: number, vat?: number, options?: any[]) => {
+  const handlePricingSubmit = async (
+    quotedPrice: number,
+    vat?: number,
+    options?: any[],
+    extras?: {
+      materialWeights?: { materialId: string; weightChi: number }[];
+      manualStoneName?: string;
+      manualStonePrice?: number;
+      stones?: { stoneId: string; quantity: number }[];
+    },
+  ) => {
     if (!pricingReqId) return;
     setLoadingMessage('Đang cập nhật báo giá...');
     setLoading(true);
     try {
-      const updated = await completeQuoteRequest(pricingReqId, quotedPrice, vat, options);
+      const updated = await completeQuoteRequest(pricingReqId, quotedPrice, vat, options, extras);
       setSelectedId(updated.id);
       setPricingReqId(null);
       needCountsRef.current = true;
@@ -334,7 +361,12 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     setLoadingMessage('Đang xác nhận báo giá...');
     setLoading(true);
     try {
-      const updated = await completeQuoteRequest(id, price, 10);
+      // BE bắt buộc options[].quotedPrice khi chuyển sang ĐÃ BÁO GIÁ — gửi lại nguyên các phương
+      // án đang có (không gửi rỗng, kẻo BE báo lỗi thiếu giá dù đang hiện rõ giá trên màn hình,
+      // và tránh xóa mất các phương án khác nếu request đã có sẵn nhiều phương án).
+      const target = requests.find((r) => r.id === id);
+      const existingOptions = target?.options && target.options.length > 0 ? target.options : undefined;
+      const updated = await completeQuoteRequest(id, price, 10, existingOptions);
       setSelectedId(updated.id);
       needCountsRef.current = true;
       await loadData(false);
@@ -425,6 +457,21 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     }
   };
 
+  const handleDeleteOption = async (id: string, optionId: string) => {
+    setLoadingMessage('Đang xóa phương án báo giá...');
+    setLoading(true);
+    try {
+      const updated = await deleteQuoteOption(id, optionId);
+      setSelectedId(updated.id);
+      needCountsRef.current = true;
+      await loadData(false);
+    } catch (err: any) {
+      alert(`Lỗi xóa phương án báo giá: ${err.message || 'Lỗi hệ thống'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectedReq =
     requests.find((r) => r.id === selectedId || r.code === selectedId) ||
     requests[0] ||
@@ -490,5 +537,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     handleReturnSubmit,
     handleResubmitDirect,
     handleMarkClosed,
+    handleDeleteOption,
   };
 }

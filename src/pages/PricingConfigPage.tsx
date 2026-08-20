@@ -50,6 +50,14 @@ const inputStyle: React.CSSProperties = {
   fontSize: '12.5px', fontWeight: 800, color: '#0f172a', outline: 'none',
 };
 
+// Box-model giống hệt inputStyle (cùng padding/viền, viền trong suốt) — bọc span chế độ xem để
+// chữ đứng yên đúng vị trí X/Y khi chuyển qua lại giữa xem và sửa, không bị "nhảy" do input có
+// padding/viền còn span trơn thì không.
+const valueBoxStyle: React.CSSProperties = {
+  display: 'inline-block', padding: '8px 10px', border: '1px solid transparent',
+  borderRadius: '8px', boxSizing: 'border-box',
+};
+
 const suffixStyle: React.CSSProperties = {
   position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
   fontSize: '11px', fontWeight: 700, color: '#94a3b8', pointerEvents: 'none',
@@ -85,8 +93,11 @@ const pageBtnStyle = (disabled: boolean): React.CSSProperties => ({
 });
 
 const thStyle: React.CSSProperties = { padding: '8px 6px', textAlign: 'left' };
-const tdStyle: React.CSSProperties = { padding: '10px 6px' };
-const tdCenterStyle: React.CSSProperties = { padding: '10px 6px', textAlign: 'center' };
+// minHeight/verticalAlign giữ chiều cao dòng cố định giữa 2 chế độ xem (span) và sửa (input) —
+// input cao hơn span (~34px vs ~18px) nên nếu không giữ cố định, bấm sửa làm cả bảng phình ra,
+// đẩy nội dung bên dưới dịch xuống dưới con trỏ chuột, khiến lần bấm tiếp theo trúng nhầm dòng khác.
+const tdStyle: React.CSSProperties = { padding: '10px 6px', minHeight: '38px', verticalAlign: 'middle' };
+const tdCenterStyle: React.CSSProperties = { padding: '10px 6px', textAlign: 'center', minHeight: '38px', verticalAlign: 'middle' };
 const tableHeadRowStyle: React.CSSProperties = { color: '#94a3b8', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e5e7eb' };
 
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -134,8 +145,8 @@ const DeleteIconButton: React.FC<{ onClick: () => void; marked?: boolean; title?
 );
 
 const ValueDisplay: React.FC<{ value: number; unit?: string; dirty?: boolean }> = ({ value, unit, dirty }) => (
-  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-    <span style={{ fontWeight: 800, fontSize: '13.5px', color: dirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(value)}</span>
+  <div style={{ ...valueBoxStyle, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+    <span style={{ fontWeight: 800, fontSize: '12.5px', color: dirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(value)}</span>
     {unit && <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>{unit}</span>}
   </div>
 );
@@ -611,12 +622,12 @@ export const PricingConfigPage: React.FC = () => {
                 action={<button type="button" onClick={addGoldRatio} style={btnGhostSmallStyle}><Plus size={12} /> Thêm tỷ lệ</button>}
               >
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                  <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                     <thead>
                       <tr style={tableHeadRowStyle}>
-                        <th style={thStyle}>Tên loại vàng</th>
-                        <th style={thStyle}>Tỷ lệ áp dụng</th>
-                        <th style={{ ...thStyle, textAlign: 'center' }}>Thao tác</th>
+                        <th style={{ ...thStyle, width: '45%' }}>Tên loại vàng</th>
+                        <th style={{ ...thStyle, width: '35%' }}>Tỷ lệ áp dụng</th>
+                        <th style={{ ...thStyle, width: '90px', textAlign: 'center' }}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -631,7 +642,7 @@ export const PricingConfigPage: React.FC = () => {
                               {isEditing ? (
                                 <input value={r.label} onChange={(e) => updateGoldRatio(idx, { label: e.target.value })} style={inputStyle} placeholder="VD: 10K" />
                               ) : (
-                                <span style={{ fontWeight: 800, color: '#0f172a' }}>{r.label || '—'}</span>
+                                <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{r.label || '—'}</span>
                               )}
                             </td>
                             <td style={tdStyle}>
@@ -641,7 +652,7 @@ export const PricingConfigPage: React.FC = () => {
                                   {ratioError && <span style={fieldErrorStyle}>{ratioError}</span>}
                                 </div>
                               ) : (
-                                <span style={{ fontWeight: 700, color: '#334155' }}>{r.applied}</span>
+                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{r.applied}</span>
                               )}
                             </td>
                             <td style={tdCenterStyle}>
@@ -779,12 +790,12 @@ export const PricingConfigPage: React.FC = () => {
                 action={<button type="button" onClick={addSilverMultiplier} style={btnGhostSmallStyle}><Plus size={12} /> Thêm hệ số</button>}
               >
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                  <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                     <thead>
                       <tr style={tableHeadRowStyle}>
                         <th style={{ ...thStyle, width: '60px' }}>STT</th>
                         <th style={thStyle}>Hệ số nhân</th>
-                        <th style={{ ...thStyle, textAlign: 'right' }}>Thao tác</th>
+                        <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -801,7 +812,7 @@ export const PricingConfigPage: React.FC = () => {
                                   {multError && <span style={fieldErrorStyle}>{multError}</span>}
                                 </div>
                               ) : (
-                                <span style={{ fontWeight: 800, color: '#0f172a' }}>{mult}</span>
+                                <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{mult}</span>
                               )}
                             </td>
                             <td style={{ ...tdStyle, textAlign: 'right' }}>
@@ -828,12 +839,12 @@ export const PricingConfigPage: React.FC = () => {
                 action={<button type="button" onClick={addMargin} style={btnGhostSmallStyle}><Plus size={12} /> Thêm bậc</button>}
               >
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                  <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                     <thead>
                       <tr style={tableHeadRowStyle}>
-                        <th style={thStyle}>Chi phí tối đa (VNĐ)</th>
-                        <th style={thStyle}>Biên độ lợi nhuận (%)</th>
-                        <th style={{ ...thStyle, textAlign: 'right' }}>Thao tác</th>
+                        <th style={{ ...thStyle, width: '42%' }}>Chi phí tối đa (VNĐ)</th>
+                        <th style={{ ...thStyle, width: '38%' }}>Biên độ lợi nhuận (%)</th>
+                        <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -856,7 +867,7 @@ export const PricingConfigPage: React.FC = () => {
                                   {!isUnlimited && <MoneyField value={m.maxCost} onChange={(v) => updateMargin(idx, { maxCost: v })} />}
                                 </div>
                               ) : (
-                                isUnlimited ? <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>Không giới hạn</span> : <ValueDisplay value={m.maxCost} unit="VNĐ" />
+                                isUnlimited ? <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>Không giới hạn</span> : <ValueDisplay value={m.maxCost} unit="VNĐ" />
                               )}
                             </td>
                             <td style={tdStyle}>
@@ -1003,13 +1014,13 @@ const CategoryTable: React.FC<{
         const isDirty = !markedDelete && !!original && (original.laborCost || 0) !== (c.laborCost || 0);
         const isEditing = editingIds.includes(c.id);
         return (
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '9px 0', borderBottom: '1px solid #f1f5f9', background: markedDelete ? '#fef2f2' : isDirty ? '#fffbeb' : undefined }}>
+          <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '9px 0', minHeight: '38px', borderBottom: '1px solid #f1f5f9', background: markedDelete ? '#fef2f2' : isDirty ? '#fffbeb' : undefined }}>
             <span style={{ fontSize: '12.5px', fontWeight: 700, color: markedDelete ? '#94a3b8' : '#334155', textDecoration: markedDelete ? 'line-through' : 'none' }}>{c.name}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
               {isEditing && !markedDelete ? (
                 <MoneyField value={c.laborCost || 0} onChange={(v) => onLaborCostChange(c.id, v)} width="120px" />
               ) : (
-                <span style={{ fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(c.laborCost || 0)}</span>
+                <span style={{ ...valueBoxStyle, width: '120px', fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(c.laborCost || 0)}</span>
               )}
               <EditIconButton onClick={() => onToggleEdit(c.id)} active={isEditing} title={markedDelete ? undefined : (isEditing ? 'Đóng sửa' : 'Sửa')} />
               <DeleteIconButton onClick={() => onToggleDelete(c.id)} marked={markedDelete} />
@@ -1070,14 +1081,14 @@ const StoneGroupTable: React.FC<{
     <div>
       <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', margin: '0 0 8px 0' }}>{title}</h4>
       <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
           <thead>
             <tr style={tableHeadRowStyle}>
-              <th style={thStyle}>Tên đá</th>
-              <th style={thStyle}>Giác cắt</th>
-              <th style={thStyle}>Size (mm)</th>
-              <th style={thStyle}>Giá (VNĐ)</th>
-              <th style={{ ...thStyle, textAlign: 'center' }}>Thao tác</th>
+              <th style={{ ...thStyle, width: '26%' }}>Tên đá</th>
+              <th style={{ ...thStyle, width: '18%' }}>Giác cắt</th>
+              <th style={{ ...thStyle, width: '15%' }}>Size (mm)</th>
+              <th style={{ ...thStyle, width: '26%' }}>Giá (VNĐ)</th>
+              <th style={{ ...thStyle, width: '90px', textAlign: 'center' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>

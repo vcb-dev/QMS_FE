@@ -1,7 +1,7 @@
-import React from 'react';
-import type { Material, ProductCategory } from '../types';
-import { Calendar, ChevronDown, RotateCcw } from 'lucide-react';
-import { QUOTE_STATUS_OPTIONS } from '../constants';
+import React, { useEffect, useRef, useState } from 'react';
+import type { Material, ProductCategory, StatusCounts } from '../types';
+import { Calendar, ChevronDown, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 
 const selectArrowStyle: React.CSSProperties = {
   position: 'absolute',
@@ -18,9 +18,51 @@ const selectAppearanceStyle: React.CSSProperties = {
   MozAppearance: 'none',
 };
 
+const selectStyle: React.CSSProperties = {
+  ...selectAppearanceStyle,
+  width: '100%',
+  background: '#f8fafc',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  padding: '8px 30px 8px 12px',
+  fontSize: '12.5px',
+  fontWeight: 600,
+  color: '#334155',
+  outline: 'none',
+  cursor: 'pointer',
+  boxSizing: 'border-box',
+};
+
+const dateInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: '#f8fafc',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  padding: '7px 10px 7px 32px',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#334155',
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const popoverLabelStyle: React.CSSProperties = {
+  fontSize: '10.5px',
+  fontWeight: 800,
+  color: '#94a3b8',
+  textTransform: 'uppercase',
+  letterSpacing: '0.4px',
+  marginBottom: '5px',
+  display: 'block',
+};
+
+const STATUS_SQUARES: { value: string; label: string; color: string; countKey: keyof StatusCounts }[] =
+  STATUS_CHART_META.map((s) => ({ ...s, countKey: STATUS_COUNT_KEYS[s.value] as keyof StatusCounts }));
+
 interface FilterBarProps {
   currentTab: string;
   tabLabel: string;
+  counts: StatusCounts;
   scopeFilter?: string;
   onScopeFilterChange?: (scope: string) => void;
   searchTerm: string;
@@ -48,8 +90,11 @@ interface FilterBarProps {
 
 export const FilterBar: React.FC<FilterBarProps> = ({
   currentTab: _currentTab,
+  counts,
   scopeFilter = 'ALL',
   onScopeFilterChange,
+  searchTerm,
+  onSearchChange,
   statusSubFilter,
   onStatusSubFilterChange,
   categoryFilter,
@@ -66,227 +111,303 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   materials,
   onResetFilters,
 }) => {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [panelOpen]);
+
+  const panelFilterCount =
+    (scopeFilter !== 'ALL' ? 1 : 0) +
+    (categoryFilter !== 'ALL' ? 1 : 0) +
+    (materialFilter !== 'ALL' ? 1 : 0) +
+    (timeRangeFilter !== 'ALL' ? 1 : 0) +
+    (startDateFilter ? 1 : 0) +
+    (endDateFilter ? 1 : 0);
+
   const isFiltered =
-    scopeFilter !== 'ALL' ||
     statusSubFilter !== 'ALL' ||
-    categoryFilter !== 'ALL' ||
-    materialFilter !== 'ALL' ||
-    timeRangeFilter !== 'ALL' ||
-    Boolean(startDateFilter) ||
-    Boolean(endDateFilter);
+    Boolean(searchTerm) ||
+    panelFilterCount > 0;
 
   return (
-    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        {/* Dropdowns Group */}
+    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Status Squares — bấm để lọc theo trạng thái, thay cho dropdown */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
+        <button
+          type="button"
+          onClick={() => onStatusSubFilterChange('ALL')}
+          style={{
+            background: statusSubFilter === 'ALL' ? '#0f172a' : '#f8fafc',
+            border: statusSubFilter === 'ALL' ? '1px solid #0f172a' : '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <div style={{ fontSize: '10.5px', fontWeight: 700, color: statusSubFilter === 'ALL' ? 'rgba(255,255,255,0.7)' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '4px' }}>
+            Tất cả
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 900, color: statusSubFilter === 'ALL' ? '#ffffff' : '#0f172a' }}>
+            {counts.total}
+          </div>
+        </button>
+
+        {STATUS_SQUARES.map((s) => {
+          const isActive = statusSubFilter === s.value;
+          return (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => onStatusSubFilterChange(s.value)}
+              style={{
+                background: isActive ? '#f8fafc' : '#ffffff',
+                border: isActive ? `1px solid ${s.color}` : '1px solid #e2e8f0',
+                borderLeft: `3px solid ${s.color}`,
+                borderRadius: '10px',
+                padding: '10px 12px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                boxShadow: isActive ? `0 0 0 1px ${s.color}` : 'none',
+              }}
+            >
+              <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.label}
+              </div>
+              <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>
+                {counts[s.countKey]}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search (trái) + nút Bộ lọc gom hết dropdown/date, Xóa lọc ở góc phải */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Scope Select (Tất cả yêu cầu vs Chỉ yêu cầu của tôi) */}
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
-            <select
-              value={scopeFilter}
-              onChange={(e) => onScopeFilterChange?.(e.target.value)}
+          {/* Search Input */}
+          <div style={{ position: 'relative', width: '260px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Tìm kiếm mã, tên khách, sản phẩm..."
               style={{
-                ...selectAppearanceStyle,
+                width: '100%',
                 background: '#f8fafc',
                 border: '1px solid #cbd5e1',
                 borderRadius: '8px',
-                padding: '7px 30px 7px 12px',
+                padding: '8px 12px 8px 34px',
                 fontSize: '12.5px',
-                fontWeight: 600,
-                color: '#334155',
+                color: '#0f172a',
                 outline: 'none',
-                cursor: 'pointer',
+                boxSizing: 'border-box',
               }}
-            >
-              <option value="ALL">Tất cả yêu cầu báo giá</option>
-              <option value="MY_REQ">Chỉ yêu cầu của tôi</option>
-            </select>
-            <ChevronDown size={14} style={selectArrowStyle} />
-          </div>
-          {/* Status Select */}
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
-            <select
-              value={statusSubFilter}
-              onChange={(e) => onStatusSubFilterChange(e.target.value)}
-              style={{
-                ...selectAppearanceStyle,
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '7px 30px 7px 12px',
-                fontSize: '12.5px',
-                fontWeight: 600,
-                color: '#334155',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              {QUOTE_STATUS_OPTIONS.map((st) => (
-                <option key={st.value} value={st.value}>
-                  {st.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} style={selectArrowStyle} />
+            />
           </div>
 
-          {/* Category Select */}
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
-            <select
-              value={categoryFilter}
-              onChange={(e) => onCategoryFilterChange(e.target.value)}
+          {/* Nút Bộ Lọc — gom scope/danh mục/chất liệu/ngày */}
+          <div style={{ position: 'relative' }} ref={panelRef}>
+            <button
+              type="button"
+              onClick={() => setPanelOpen((v) => !v)}
               style={{
-                ...selectAppearanceStyle,
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: panelFilterCount > 0 ? '#0f172a' : '#f8fafc',
+                color: panelFilterCount > 0 ? '#ffffff' : '#334155',
+                border: panelFilterCount > 0 ? '1px solid #0f172a' : '1px solid #cbd5e1',
                 borderRadius: '8px',
-                padding: '7px 30px 7px 12px',
+                padding: '8px 14px',
                 fontSize: '12.5px',
-                fontWeight: 600,
-                color: '#334155',
-                outline: 'none',
+                fontWeight: 700,
                 cursor: 'pointer',
               }}
             >
-              <option value="ALL">Tất cả danh mục</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} style={selectArrowStyle} />
-          </div>
+              <SlidersHorizontal size={14} />
+              Bộ lọc
+              {panelFilterCount > 0 && (
+                <span style={{
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  borderRadius: '999px',
+                  fontSize: '10.5px',
+                  fontWeight: 900,
+                  padding: '1px 6px',
+                  minWidth: '16px',
+                  textAlign: 'center',
+                }}>
+                  {panelFilterCount}
+                </span>
+              )}
+            </button>
 
-          {/* Material Select */}
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
-            <select
-              value={materialFilter}
-              onChange={(e) => onMaterialFilterChange(e.target.value)}
-              style={{
-                ...selectAppearanceStyle,
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '7px 30px 7px 12px',
-                fontSize: '12.5px',
-                fontWeight: 600,
-                color: '#334155',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="ALL">Tất cả chất liệu</option>
-              {materials.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} style={selectArrowStyle} />
-          </div>
+            {panelOpen && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                left: 0,
+                zIndex: 20,
+                width: '340px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                boxShadow: '0 12px 32px rgba(15, 23, 42, 0.16)',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+              }}>
+                {/* Scope */}
+                <div>
+                  <label style={popoverLabelStyle}>Phạm vi</label>
+                  <div style={{ position: 'relative' }}>
+                    <select
+                      value={scopeFilter}
+                      onChange={(e) => onScopeFilterChange?.(e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="ALL">Tất cả yêu cầu báo giá</option>
+                      <option value="MY_REQ">Chỉ yêu cầu của tôi</option>
+                    </select>
+                    <ChevronDown size={14} style={selectArrowStyle} />
+                  </div>
+                </div>
 
-          <button
-            type="button"
-            onClick={onResetFilters}
-            disabled={!isFiltered}
-            style={{
-              background: isFiltered ? '#fee2e2' : '#f8fafc',
-              color: isFiltered ? '#b91c1c' : '#cbd5e1',
-              border: isFiltered ? '1px solid #fca5a5' : '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: isFiltered ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              opacity: isFiltered ? 1 : 0.6,
-            }}
-            title={isFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-          >
-            <RotateCcw size={13} /> Xóa bộ lọc
-          </button>
+                {/* Category */}
+                <div>
+                  <label style={popoverLabelStyle}>Danh mục</label>
+                  <div style={{ position: 'relative' }}>
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => onCategoryFilterChange(e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="ALL">Tất cả danh mục</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} style={selectArrowStyle} />
+                  </div>
+                </div>
+
+                {/* Material */}
+                <div>
+                  <label style={popoverLabelStyle}>Chất liệu</label>
+                  <div style={{ position: 'relative' }}>
+                    <select
+                      value={materialFilter}
+                      onChange={(e) => onMaterialFilterChange(e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="ALL">Tất cả chất liệu</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} style={selectArrowStyle} />
+                  </div>
+                </div>
+
+                {/* Quick Range */}
+                <div>
+                  <label style={popoverLabelStyle}>Lọc nhanh theo thời gian</label>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {([
+                      { value: 'TODAY', label: 'Hôm nay' },
+                      { value: 'THIS_WEEK', label: 'Tuần này' },
+                      { value: 'THIS_MONTH', label: 'Tháng này' },
+                      { value: 'ALL', label: 'Tất cả' },
+                    ] as { value: string; label: string }[]).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => onTimeRangeFilterChange?.(opt.value)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          background: timeRangeFilter === opt.value ? '#0f172a' : '#f1f5f9',
+                          color: timeRangeFilter === opt.value ? '#ffffff' : '#64748b',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date Range */}
+                <div>
+                  <label style={popoverLabelStyle}>Khoảng ngày tùy chọn</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                      <input
+                        type="date"
+                        value={startDateFilter}
+                        max={endDateFilter || undefined}
+                        onChange={(e) => onStartDateChange?.(e.target.value)}
+                        style={dateInputStyle}
+                      />
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>đến</span>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                      <input
+                        type="date"
+                        value={endDateFilter}
+                        min={startDateFilter || undefined}
+                        onChange={(e) => onEndDateChange?.(e.target.value)}
+                        style={dateInputStyle}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Date Picker & Quick Filter Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          {/* Date Range Picker: từ ngày A đến ngày B */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
-                type="date"
-                value={startDateFilter}
-                max={endDateFilter || undefined}
-                onChange={(e) => onStartDateChange?.(e.target.value)}
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px 12px 6px 34px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: '#334155',
-                  outline: 'none',
-                }}
-              />
-              <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#64748b', pointerEvents: 'none' }} />
-            </div>
-
-            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#94a3b8' }}>đến</span>
-
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
-                type="date"
-                value={endDateFilter}
-                min={startDateFilter || undefined}
-                onChange={(e) => onEndDateChange?.(e.target.value)}
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px 12px 6px 34px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: '#334155',
-                  outline: 'none',
-                }}
-              />
-              <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#64748b', pointerEvents: 'none' }} />
-            </div>
-          </div>
-
-          {/* Quick Range Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-              LỌC NHANH:
-            </span>
-            <div style={{ position: 'relative', display: 'inline-flex' }}>
-              <select
-                value={timeRangeFilter}
-                onChange={(e) => onTimeRangeFilterChange?.(e.target.value)}
-                style={{
-                  ...selectAppearanceStyle,
-                  background: timeRangeFilter !== 'ALL' ? '#0f172a' : '#f1f5f9',
-                  color: timeRangeFilter !== 'ALL' ? '#ffffff' : '#64748b',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '5px 26px 5px 10px',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="TODAY">Hôm nay</option>
-                <option value="THIS_WEEK">Tuần này</option>
-                <option value="THIS_MONTH">Tháng này</option>
-                <option value="ALL">Tất cả</option>
-              </select>
-              <ChevronDown size={13} style={{ ...selectArrowStyle, right: '8px', color: timeRangeFilter !== 'ALL' ? '#ffffff' : '#64748b' }} />
-            </div>
-          </div>
-        </div>
+        {/* Xóa lọc — góc phải */}
+        <button
+          type="button"
+          onClick={onResetFilters}
+          disabled={!isFiltered}
+          style={{
+            background: isFiltered ? '#fee2e2' : '#f8fafc',
+            color: isFiltered ? '#b91c1c' : '#cbd5e1',
+            border: isFiltered ? '1px solid #fca5a5' : '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '8px 14px',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: isFiltered ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            opacity: isFiltered ? 1 : 0.6,
+            flexShrink: 0,
+          }}
+          title={isFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
+        >
+          <RotateCcw size={13} /> Xóa bộ lọc
+        </button>
       </div>
     </div>
   );

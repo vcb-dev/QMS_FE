@@ -1,27 +1,16 @@
 import React from 'react';
 import { ArrowUp, ArrowDown, Sparkles } from 'lucide-react';
-import { fetchQuoteRequests } from '../services/api';
+import { fetchQuoteRequestStats } from '../services/api';
+import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
+import type { StatusCounts } from '../types';
 
 type Period = 'WEEK' | 'MONTH';
 
-type StatusCounts = {
-  total: number;
-  ycMoi: number;
-  dangXly: number;
-  needMoreInfo: number;
-  xong: number;
-  tuChoi: number;
-};
+const EMPTY_COUNTS: StatusCounts = { total: 0, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0 };
 
-const EMPTY_COUNTS: StatusCounts = { total: 0, ycMoi: 0, dangXly: 0, needMoreInfo: 0, xong: 0, tuChoi: 0 };
-
-const STATUS_ITEMS: { key: keyof StatusCounts; label: string; color: string }[] = [
-  { key: 'ycMoi', label: 'Mới tạo', color: '#3b82f6' },
-  { key: 'dangXly', label: 'Đang xử lý', color: '#f59e0b' },
-  { key: 'needMoreInfo', label: 'Cần bổ sung', color: '#f97316' },
-  { key: 'xong', label: 'Hoàn thành', color: '#22c55e' },
-  { key: 'tuChoi', label: 'Từ chối', color: '#ef4444' },
-];
+const STATUS_ITEMS: { key: keyof StatusCounts; label: string; color: string }[] = STATUS_CHART_META
+  .filter((s) => s.value !== 'CLOSED')
+  .map((s) => ({ key: STATUS_COUNT_KEYS[s.value] as keyof StatusCounts, label: s.label, color: s.color }));
 
 export const SaleStatusStatsGrid: React.FC = () => {
   const [period, setPeriod] = React.useState<Period>('WEEK');
@@ -36,13 +25,13 @@ export const SaleStatusStatsGrid: React.FC = () => {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      fetchQuoteRequests({ timeRange: currentRange, includeCounts: true, limit: 1 }),
-      fetchQuoteRequests({ timeRange: previousRange, includeCounts: true, limit: 1 }),
+      fetchQuoteRequestStats({ timeRange: currentRange }),
+      fetchQuoteRequestStats({ timeRange: previousRange }),
     ])
       .then(([currRes, prevRes]) => {
         if (cancelled) return;
-        setCurrent(currRes?.meta?.counts || EMPTY_COUNTS);
-        setPrevious(prevRes?.meta?.counts || EMPTY_COUNTS);
+        setCurrent(currRes?.counts || EMPTY_COUNTS);
+        setPrevious(prevRes?.counts || EMPTY_COUNTS);
       })
       .catch((err) => console.error('Lỗi tải thống kê trạng thái:', err))
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -122,7 +111,7 @@ export const SaleStatusStatsGrid: React.FC = () => {
               {current[item.key]}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              {renderChange(current[item.key], previous[item.key])}
+              {renderChange(current[item.key] ?? 0, previous[item.key] ?? 0)}
               <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>so với {periodLabel}</span>
             </div>
           </div>

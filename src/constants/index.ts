@@ -23,22 +23,36 @@ export const UI_CONSTANTS = {
 export const PRICING_DEFAULTS = {
   WEIGHT_CHI: '1.2',
   LABOR_COST: 500000,
-  STONE_COST: 300000,
-  MANUAL_BASE_PRICE: 1200000,
   VAT_PCT: 10,
-  STONE_DESC: 'Đá CZ cao cấp',
-  SILVER_PLATING_EXTRA: 150000,
-  FALLBACK_GOLD_24K: 13900000,
-  FALLBACK_SILVER: 1200000,
-  SILVER_MULTIPLIER: 3,
-  PROFIT_DIVISOR: 0.7,
+  REFRESH_MS: 24 * 60 * 60 * 1000,
 };
-export const QUOTE_STATUS_OPTIONS = [
-  { value: 'ALL', label: 'Tất cả trạng thái' },
-  { value: 'YC_MOI', label: 'Yêu cầu mới' },
-  { value: 'DANG_XLY', label: 'Đang xử lý' },
-  { value: 'NEED_MORE_INFO', label: 'Cần bổ sung thông tin' },
-  { value: 'XONG', label: 'Hoàn thành / Đã báo giá' },
-  { value: 'DA_CHOT', label: 'Đã chốt' },
-  { value: 'TU_CHOI', label: 'Bị từ chối' },
-] as const;
+
+// Ánh xạ status -> field đếm trong các object StatusCounts (FilterBar, SaleStatusStatsGrid).
+export const STATUS_COUNT_KEYS: Record<string, string> = {
+  PENDING: 'pending',
+  PROCESSING: 'processing',
+  NEED_MORE_INFO: 'needMoreInfo',
+  QUOTED: 'quoted',
+  REJECTED: 'rejected',
+  CLOSED: 'closed',
+};
+
+// Màu/label dùng cho biểu đồ, ô lọc trạng thái (FilterBar, SaleStatusStatsGrid, DashboardPage).
+export const STATUS_CHART_META: { value: string; label: string; color: string }[] = [
+  { value: 'PENDING', label: 'Mới tạo', color: '#3b82f6' },
+  { value: 'PROCESSING', label: 'Đang xử lý', color: '#f59e0b' },
+  { value: 'NEED_MORE_INFO', label: 'Cần bổ sung', color: '#f97316' },
+  { value: 'QUOTED', label: 'Hoàn thành', color: '#22c55e' },
+  { value: 'CLOSED', label: 'Đã chốt', color: '#8b5cf6' },
+  { value: 'REJECTED', label: 'Từ chối', color: '#ef4444' },
+];
+
+// Màu/label/nền dùng cho badge trạng thái trong bảng (QuoteTable, CustomersPage).
+export const STATUS_BADGE_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  PENDING: { label: 'Mới tạo', color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+  PROCESSING: { label: 'Đang xử lý', color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+  NEED_MORE_INFO: { label: 'Cần bổ sung', color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
+  QUOTED: { label: 'Đã báo giá', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+  REJECTED: { label: 'Từ chối', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+  CLOSED: { label: 'Đã chốt', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
+};

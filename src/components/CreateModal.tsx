@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Customer, Material, ProductCategory, QuoteRequest } from '../types';
-import { createCustomer, searchCustomers, fetchProvinces, fetchWards } from '../services/api';
+import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { X, UserPlus, Users, Upload, Search, PlusCircle } from 'lucide-react';
 
 interface CreateModalProps {
@@ -16,6 +16,8 @@ interface CreateModalProps {
   calculatorData?: {
     categoryId?: string;
     materialType?: string;
+    materials?: { id?: string; materialId?: string; materialName?: string; weightChi?: string | number }[];
+    stones?: { id?: string; stoneId?: string; quantity?: number }[];
     suggestedPrice?: number;
     note?: string;
     options?: { optionName: string; materialName?: string; quotedPrice: number; isSelected?: boolean }[];
@@ -60,6 +62,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
+  const [selectedStoneTypes, setSelectedStoneTypes] = useState<('MAIN' | 'SIDE')[]>([]);
+  const [stoneOptionsAll, setStoneOptionsAll] = useState<{ id: string; name: string; stoneType: 'MAIN' | 'SIDE' }[]>([]);
+  const [selectedStoneIds, setSelectedStoneIds] = useState<string[]>([]);
   const [customerMeasurements, setCustomerMeasurements] = useState('');
   const [leadTime, setLeadTime] = useState('7-15 NGÀY (Tiêu chuẩn)');
   const [closeRateText, setCloseRateText] = useState('Khách chưa chốt báo giá');
@@ -67,6 +72,65 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [understandProcess, setUnderstandProcess] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Dropdown chọn nhiều chất liệu — mở 1 lần, tick nhiều ô checkbox, đóng khi bấm ra ngoài
+  const [materialDropdownOpen, setMaterialDropdownOpen] = useState(false);
+  const materialDropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!materialDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (materialDropdownRef.current && !materialDropdownRef.current.contains(e.target as Node)) {
+        setMaterialDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [materialDropdownOpen]);
+
+  const toggleMaterialId = (id: string) => {
+    setSelectedMaterialIds((prev) =>
+      prev.includes(id) ? prev.filter((mId) => mId !== id) : [...prev, id]
+    );
+  };
+
+  // Loại đá (đá chủ/đá tấm) — không bắt buộc. Chọn loại xong mới tải danh mục đá cụ thể của loại đó.
+  const [stoneDropdownOpen, setStoneDropdownOpen] = useState(false);
+  const stoneDropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!stoneDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (stoneDropdownRef.current && !stoneDropdownRef.current.contains(e.target as Node)) {
+        setStoneDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [stoneDropdownOpen]);
+
+  // Tải toàn bộ đá (đá chủ + đá tấm) 1 lần — checkbox loại đá bên dưới chỉ lọc hiển thị trong dropdown.
+  useEffect(() => {
+    fetchStones()
+      .then((data) => setStoneOptionsAll(Array.isArray(data) ? data : []))
+      .catch(() => setStoneOptionsAll([]));
+  }, []);
+
+  const toggleStoneType = (t: 'MAIN' | 'SIDE') => {
+    setSelectedStoneTypes((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    );
+  };
+
+  // Tích "Đá chủ" -> chỉ hiện đá chủ, tích "Đá tấm" -> chỉ hiện đá tấm, tích cả 2 -> hiện cả 2.
+  const filteredStoneOptions =
+    selectedStoneTypes.length > 0
+      ? stoneOptionsAll.filter((s) => selectedStoneTypes.includes(s.stoneType))
+      : [];
+
+  const toggleStoneId = (id: string) => {
+    setSelectedStoneIds((prev) =>
+      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
+    );
+  };
 
   useEffect(() => {
     if (editingReq) {
@@ -99,7 +163,34 @@ export const CreateModal: React.FC<CreateModalProps> = ({
           setSelectedCategoryId(categories[0].id);
         }
 
-        if (calculatorData.materialType) {
+        if (calculatorData.materials && calculatorData.materials.length > 0) {
+          const matchedIds: string[] = [];
+          calculatorData.materials.forEach((mItem: any) => {
+            const mId = mItem.materialId || mItem.id;
+            if (mId && materials.some((m) => m.id === mId)) {
+              if (!matchedIds.includes(mId)) {
+                matchedIds.push(mId);
+              }
+            } else if (mItem.materialName) {
+              const lowerMat = mItem.materialName.toLowerCase().trim();
+              const found = materials.find(
+                (m) =>
+                  lowerMat.includes(m.name.toLowerCase()) ||
+                  m.name.toLowerCase().includes(lowerMat),
+              );
+              if (found && !matchedIds.includes(found.id)) {
+                matchedIds.push(found.id);
+              }
+            }
+          });
+          setSelectedMaterialIds(
+            matchedIds.length > 0
+              ? matchedIds
+              : materials.length > 0
+                ? [materials[0].id]
+                : [],
+          );
+        } else if (calculatorData.materialType) {
           const lowerMat = calculatorData.materialType.toLowerCase();
           const matchedMat = materials.find(
             (m) => lowerMat.includes(m.name.toLowerCase()) || m.name.toLowerCase().includes(lowerMat)
@@ -112,15 +203,35 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         } else {
           setSelectedMaterialIds([]);
         }
+
+        if (calculatorData.stones && calculatorData.stones.length > 0) {
+          const stoneIds = calculatorData.stones
+            .map((s: any) => s.stoneId || s.id)
+            .filter(Boolean);
+          setSelectedStoneIds(stoneIds);
+          const types = Array.from(
+            new Set(
+              stoneIds
+                .map((id: string) => stoneOptionsAll.find((s) => s.id === id)?.stoneType)
+                .filter(Boolean),
+            ),
+          ) as ('MAIN' | 'SIDE')[];
+          if (types.length > 0) setSelectedStoneTypes(types);
+        } else {
+          setSelectedStoneIds([]);
+          setSelectedStoneTypes([]);
+        }
       } else {
         if (categories.length > 0) setSelectedCategoryId(categories[0].id);
         setSelectedMaterialIds([]);
+        setSelectedStoneIds([]);
+        setSelectedStoneTypes([]);
       }
 
       setCustomerMeasurements(calculatorData?.note || '');
       setImageUrls([]);
     }
-  }, [editingReq, categories, customers, isOpen, calculatorData]);
+  }, [editingReq, categories, customers, isOpen, calculatorData, materials, stoneOptionsAll]);
 
   // Load Provinces on Modal Open
   useEffect(() => {
@@ -239,7 +350,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
       if (isNewCustomerMode) {
         if (!newCustomerName.trim()) {
-          alert('Vui lòng nhập tên khách hàng mới!');
+          alert('Vui lòng nhập tên khách hàng!');
           setSubmitting(false);
           return;
         }
@@ -259,10 +370,19 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         setSelectedCustomerId(createdCust.id);
         setIsNewCustomerMode(false);
         onRefreshCustomers().catch(() => {});
+      } else if (!finalCustomerId && customerSearch.trim()) {
+        // Tự động tạo khách hàng nhanh từ tên đã gõ trong ô tìm kiếm
+        const createdCust = await createCustomer({
+          name: customerSearch.trim(),
+        });
+        finalCustomerId = createdCust.id;
+        setCustomerList((prev) => [createdCust, ...prev]);
+        setSelectedCustomerId(createdCust.id);
+        onRefreshCustomers().catch(() => {});
       }
 
       if (!finalCustomerId) {
-        alert('Vui lòng chọn hoặc tạo mới khách hàng!');
+        alert('Vui lòng chọn khách hàng hoặc nhập tên khách hàng mới!');
         setSubmitting(false);
         return;
       }
@@ -272,6 +392,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         categoryId: selectedCategoryId === 'OTHER' ? (categories[0]?.id || '') : selectedCategoryId,
         newCategoryName: selectedCategoryId === 'OTHER' ? newCategoryName.trim() : undefined,
         materialIds: selectedMaterialIds,
+        stoneIds: selectedStoneIds.length > 0 ? selectedStoneIds : undefined,
         customerMeasurements,
         desiredLeadTime: leadTime,
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
@@ -556,34 +677,73 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 <label className="form-label">
                   Chất liệu Khách muốn chế tác <span className="req">*</span> (Có thể chọn nhiều)
                 </label>
-                <select
-                  className="form-control"
-                  value=""
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val && !selectedMaterialIds.includes(val)) {
-                      setSelectedMaterialIds([...selectedMaterialIds, val]);
-                    }
-                  }}
-                  disabled={!!calculatorData?.materialType}
-                  style={{
-                    width: '100%',
-                    fontWeight: 700,
-                    opacity: calculatorData?.materialType ? 0.75 : 1,
-                    cursor: calculatorData?.materialType ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <option value="">-- Chọn thêm chất liệu chế tác... --</option>
-                  {materials.map((m) => (
-                    <option
-                      key={m.id}
-                      value={m.id}
-                      disabled={selectedMaterialIds.includes(m.id)}
+                <div ref={materialDropdownRef} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setMaterialDropdownOpen((prev) => !prev)}
+                    disabled={!!(calculatorData?.materials?.length || calculatorData?.materialType)}
+                    className="form-control"
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      fontWeight: 700,
+                      background: '#ffffff',
+                      opacity: (calculatorData?.materials?.length || calculatorData?.materialType) ? 0.75 : 1,
+                      cursor: (calculatorData?.materials?.length || calculatorData?.materialType) ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {selectedMaterialIds.length > 0
+                      ? `Đã chọn ${selectedMaterialIds.length} chất liệu`
+                      : '-- Chọn chất liệu chế tác... --'}
+                  </button>
+
+                  {materialDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        zIndex: 20,
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                        maxHeight: '220px',
+                        overflowY: 'auto',
+                        padding: '6px',
+                      }}
                     >
-                      {selectedMaterialIds.includes(m.id) ? `✓ ${m.name} (Đã chọn)` : m.name}
-                    </option>
-                  ))}
-                </select>
+                      {materials.length === 0 && (
+                        <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8' }}>Chưa có chất liệu nào</div>
+                      )}
+                      {materials.map((m) => (
+                        <label
+                          key={m.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '7px 8px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: '#334155',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedMaterialIds.includes(m.id)}
+                            onChange={() => toggleMaterialId(m.id)}
+                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                          />
+                          {m.name}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Selected Material Badges with Remove (✕) Button */}
                 {selectedMaterialIds.length > 0 && (
@@ -608,7 +768,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                           }}
                         >
                           ✓ {mat.name}
-                          {!calculatorData?.materialType && (
+                          {!(calculatorData?.materials?.length || calculatorData?.materialType) && (
                             <button
                               type="button"
                               onClick={() => setSelectedMaterialIds(selectedMaterialIds.filter((id) => id !== mId))}
@@ -623,6 +783,149 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                                 fontWeight: 800,
                               }}
                               title="Xóa chất liệu này"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Loại đá Khách muốn (đá chủ / đá tấm) - không bắt buộc */}
+              <div className="form-group">
+                <label className="form-label">Loại đá</label>
+                <div ref={stoneDropdownRef} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setStoneDropdownOpen((prev) => !prev)}
+                    disabled={!!(calculatorData?.stones?.length)}
+                    className="form-control"
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      fontWeight: 700,
+                      background: '#ffffff',
+                      opacity: calculatorData?.stones?.length ? 0.75 : 1,
+                      cursor: calculatorData?.stones?.length ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {selectedStoneIds.length > 0
+                      ? `Đã chọn ${selectedStoneIds.length} đá`
+                      : '-- Chọn đá (không bắt buộc)... --'}
+                  </button>
+
+                  {stoneDropdownOpen && !calculatorData?.stones?.length && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        zIndex: 20,
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                        maxHeight: '260px',
+                        overflowY: 'auto',
+                        padding: '6px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '16px', padding: '4px 8px 8px', borderBottom: '1px solid #e2e8f0', marginBottom: '4px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedStoneTypes.includes('MAIN')}
+                            onChange={() => toggleStoneType('MAIN')}
+                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                          />
+                          Đá chủ
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedStoneTypes.includes('SIDE')}
+                            onChange={() => toggleStoneType('SIDE')}
+                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                          />
+                          Đá tấm
+                        </label>
+                      </div>
+
+                      {selectedStoneTypes.length === 0 && (
+                        <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8' }}>Tích đá chủ hoặc đá tấm để xem danh sách đá</div>
+                      )}
+                      {selectedStoneTypes.length > 0 && filteredStoneOptions.length === 0 && (
+                        <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8' }}>Chưa có đá nào thuộc loại này</div>
+                      )}
+                      {filteredStoneOptions.map((s) => (
+                        <label
+                          key={s.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '7px 8px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: '#334155',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedStoneIds.includes(s.id)}
+                            onChange={() => toggleStoneId(s.id)}
+                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                          />
+                          {s.name}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {selectedStoneIds.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                    {selectedStoneIds.map((sId) => {
+                      const stone = stoneOptionsAll.find((s) => s.id === sId);
+                      if (!stone) return null;
+                      return (
+                        <span
+                          key={sId}
+                          style={{
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#1d4ed8',
+                            padding: '4px 10px',
+                            borderRadius: '16px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          ✓ {stone.name}
+                          {!calculatorData?.stones?.length && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStoneIds(selectedStoneIds.filter((id) => id !== sId))}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#1d4ed8',
+                                cursor: 'pointer',
+                                padding: 0,
+                                fontSize: '12px',
+                                lineHeight: 1,
+                                fontWeight: 800,
+                              }}
+                              title="Xóa đá này"
                             >
                               ✕
                             </button>

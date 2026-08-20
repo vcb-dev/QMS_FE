@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Material, ProductCategory, QuoteRequest, Role, User } from '../types';
+import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts } from '../types';
 import { FilterBar } from '../components/FilterBar';
 import { QuoteTable } from '../components/QuoteTable';
 import { Pagination } from '../components/Pagination';
@@ -12,6 +12,7 @@ interface RequestsPageProps {
   materials: Material[];
   currentRole: Role;
   currentUser: User;
+  counts: StatusCounts;
   statusSubFilter: string;
   setStatusSubFilter: (v: string) => void;
   searchTerm: string;
@@ -54,6 +55,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   materials,
   currentRole,
   currentUser,
+  counts,
   statusSubFilter,
   setStatusSubFilter,
   searchTerm,
@@ -118,6 +120,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
       <FilterBar
         currentTab={currentFilter}
         tabLabel="Danh Sách Yêu Cầu Báo Giá"
+        counts={counts}
         scopeFilter={scopeFilter}
         onScopeFilterChange={handleScopeChange}
         searchTerm={searchTerm}

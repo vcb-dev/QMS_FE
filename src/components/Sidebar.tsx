@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Role, User } from '../types';
+import type { Role, User, StatusCounts } from '../types';
 import {
   LayoutDashboard,
   FileText,
@@ -13,15 +13,7 @@ import {
 interface SidebarProps {
   currentFilter: string;
   onFilterChange: (filter: string) => void;
-  counts: {
-    total: number;
-    myReq: number;
-    ycMoi: number;
-    dangXly: number;
-    needMoreInfo: number;
-    xong: number;
-    tuChoi: number;
-  };
+  counts: StatusCounts;
   user: User;
   currentRole: Role;
   onOpenCreate: () => void;
