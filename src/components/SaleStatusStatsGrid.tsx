@@ -8,11 +8,15 @@ type Period = 'WEEK' | 'MONTH';
 
 const EMPTY_COUNTS: StatusCounts = { total: 0, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0 };
 
-const STATUS_ITEMS: { key: keyof StatusCounts; label: string; color: string }[] = STATUS_CHART_META
-  .filter((s) => s.value !== 'CLOSED')
-  .map((s) => ({ key: STATUS_COUNT_KEYS[s.value] as keyof StatusCounts, label: s.label, color: s.color }));
+const STATUS_ITEMS: { key: keyof StatusCounts; value: string; label: string; color: string }[] = STATUS_CHART_META
+  .map((s) => ({ key: STATUS_COUNT_KEYS[s.value] as keyof StatusCounts, value: s.value, label: s.label, color: s.color }));
 
-export const SaleStatusStatsGrid: React.FC = () => {
+interface SaleStatusStatsGridProps {
+  // Bấm vào 1 ô trạng thái — điều hướng sang trang danh sách, lọc sẵn theo trạng thái đó
+  onSelectStatus?: (status: string) => void;
+}
+
+export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSelectStatus }) => {
   const [period, setPeriod] = React.useState<Period>('WEEK');
   const [current, setCurrent] = React.useState<StatusCounts>(EMPTY_COUNTS);
   const [previous, setPrevious] = React.useState<StatusCounts>(EMPTY_COUNTS);
@@ -96,12 +100,14 @@ export const SaleStatusStatsGrid: React.FC = () => {
         {STATUS_ITEMS.map((item) => (
           <div
             key={item.key}
+            onClick={() => onSelectStatus?.(item.value)}
             style={{
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
               borderLeft: `3px solid ${item.color}`,
               borderRadius: '10px',
               padding: '14px',
+              cursor: onSelectStatus ? 'pointer' : 'default',
             }}
           >
             <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '6px' }}>

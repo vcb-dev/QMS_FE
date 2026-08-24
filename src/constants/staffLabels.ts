@@ -21,6 +21,7 @@ export const ACTION_LABEL: Record<string, string> = {
   UPDATE_CUSTOMER: 'Sửa khách hàng',
   DELETE_CUSTOMER: 'Xóa khách hàng',
   CALCULATE_PRICE: 'Tính giá',
+  CALCULATE_MULTI_MATERIAL_PRICE: 'Tính giá',
   GENERATE_PRICING_OPTIONS: 'Tạo phương án giá',
 };
 

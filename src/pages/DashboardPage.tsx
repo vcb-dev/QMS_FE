@@ -19,6 +19,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   currentRole,
   onSelectReq,
   onOpenCreateModal: _onOpenCreateModal,
+  onFilterStatus,
 }) => {
   const navigate = useNavigate();
   const onViewAll = () => navigate('/requests');
@@ -293,8 +294,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return apiRequests.slice(0, 5);
   }, [apiRequests]);
 
+  // Mỗi phương án báo giá (QuoteOption) là 1 "sản phẩm" riêng — 1 đơn có nhiều phương án thì ra
+  // nhiều thẻ, giống cách LibraryPage dựng danh sách sản phẩm (không gộp về 1 thẻ/đơn như trước).
   const completedProducts = React.useMemo(() => {
-    return apiRequests.filter((r) => r.status === 'QUOTED' || r.quotedPrice);
+    const items: { key: string; productName: string; price: number; images?: QuoteRequest['images'] }[] = [];
+    for (const r of apiRequests) {
+      if (r.status !== 'QUOTED' && r.status !== 'CLOSED') continue;
+      const catName = r.category?.name || '';
+      for (const o of r.options || []) {
+        if (o.quotedPrice == null) continue;
+        const matStr =
+          o.materials && o.materials.length > 0
+            ? o.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
+            : o.materialName || '';
+        items.push({
+          key: `${r.id}:${o.id || matStr}`,
+          productName: `${catName} ${matStr}`.trim() || r.productName || 'Sản phẩm chế tác',
+          price: Number(o.quotedPrice),
+          images: r.images,
+        });
+      }
+    }
+    return items;
   }, [apiRequests]);
 
   // Doanh thu (Admin Analytics) — tổng tiền đơn đã chốt & tổng tiền đơn đã báo giá (chưa chốt)
@@ -567,7 +588,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 3. Charts Row — SALE thấy ô số liệu theo trạng thái, không thấy biểu đồ */}
       {currentRole === 'SALE' ? (
-        <SaleStatusStatsGrid />
+        <SaleStatusStatsGrid onSelectStatus={onFilterStatus} />
       ) : (() => {
         const chartData = [
           { name: 'Mới tạo',     value: counts.pending,        fill: '#3b82f6' },
@@ -1098,15 +1119,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {completedProducts.length > 0 ? (
-              completedProducts.slice(0, 4).map((r) => {
-                const rawImg = r.images && r.images.length > 0 ? r.images[0].imageUrl : null;
+              completedProducts.slice(0, 4).map((item) => {
+                const rawImg = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
                 const imgUrl = rawImg || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
-                const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
-                const formattedPrice = priceVal > 0 ? formatCurrency(priceVal) : '---';
+                const formattedPrice = item.price > 0 ? formatCurrency(item.price) : '---';
 
                 return (
                   <div
-                    key={r.id}
+                    key={item.key}
                     // Tạm thời disable — không cho bấm vào sản phẩm nổi bật
                     style={{
                       background: '#ffffff',
@@ -1130,7 +1150,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </div>
                     <div style={{ padding: '8px 10px' }}>
                       <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {r.productName}
+                        {item.productName}
                       </div>
                       <div style={{ fontSize: '11px', fontWeight: 900, color: '#2563eb', marginTop: '2px' }}>
                         {formattedPrice}
