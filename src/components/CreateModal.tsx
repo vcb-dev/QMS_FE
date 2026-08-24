@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { X, UserPlus, Users, Upload, Search, PlusCircle } from 'lucide-react';
@@ -74,17 +75,40 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   };
 
   // Loại đá (đá chủ/đá tấm) — không bắt buộc. Chọn loại xong mới tải danh mục đá cụ thể của loại đó.
+  // Panel render qua createPortal ra document.body (position: fixed, tọa độ tự tính từ nút bấm) —
+  // form cha có overflow:hidden + khối cuộn overflowY:auto, panel position:absolute con nằm trong
+  // đó bị cắt mất phần vượt khỏi vùng cuộn hiện tại (nhất là khi trường này nằm gần đáy form), bấm
+  // vào coi như không phản hồi gì dù state đã mở đúng.
   const [stoneDropdownOpen, setStoneDropdownOpen] = useState(false);
   const stoneDropdownRef = useRef<HTMLDivElement>(null);
+  const stoneDropdownMenuRef = useRef<HTMLDivElement>(null);
+  const stoneDropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const [stoneDropdownPos, setStoneDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+
+  const updateStoneDropdownPos = () => {
+    const rect = stoneDropdownTriggerRef.current?.getBoundingClientRect();
+    if (rect) setStoneDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  };
+
   useEffect(() => {
     if (!stoneDropdownOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (stoneDropdownRef.current && !stoneDropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        stoneDropdownRef.current && !stoneDropdownRef.current.contains(target) &&
+        !stoneDropdownMenuRef.current?.contains(target)
+      ) {
         setStoneDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', updateStoneDropdownPos);
+    document.addEventListener('scroll', updateStoneDropdownPos, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', updateStoneDropdownPos);
+      document.removeEventListener('scroll', updateStoneDropdownPos, true);
+    };
   }, [stoneDropdownOpen]);
 
   // Tải toàn bộ đá (đá chủ + đá tấm) 1 lần — checkbox loại đá bên dưới chỉ lọc hiển thị trong dropdown.
@@ -94,13 +118,14 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       .catch(() => setStoneOptionsAll([]));
   }, []);
 
+  // Chỉ lọc theo 1 loại tại 1 thời điểm (tích đá chủ tự bỏ tích đá tấm và ngược lại) — KHÔNG giới
+  // hạn đá đã CHỌN (selectedStoneIds vẫn giữ nguyên khi đổi bộ lọc), nên vẫn thêm được cả đá chủ
+  // lẫn đá tấm, chỉ là phải đổi qua lại bộ lọc để duyệt từng loại thay vì xem gộp chung 1 danh sách.
   const toggleStoneType = (t: 'MAIN' | 'SIDE') => {
-    setSelectedStoneTypes((prev) =>
-      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
-    );
+    setSelectedStoneTypes((prev) => (prev.includes(t) ? [] : [t]));
   };
 
-  // Tích "Đá chủ" -> chỉ hiện đá chủ, tích "Đá tấm" -> chỉ hiện đá tấm, tích cả 2 -> hiện cả 2.
+  // Tích "Đá chủ" -> chỉ hiện đá chủ, tích "Đá tấm" -> chỉ hiện đá tấm.
   const filteredStoneOptions =
     selectedStoneTypes.length > 0
       ? stoneOptionsAll.filter((s) => selectedStoneTypes.includes(s.stoneType))
@@ -771,17 +796,25 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 <label className="form-label">Loại đá</label>
                 <div ref={stoneDropdownRef} style={{ position: 'relative' }}>
                   <button
+                    ref={stoneDropdownTriggerRef}
                     type="button"
-                    onClick={() => setStoneDropdownOpen((prev) => !prev)}
-                    disabled={!!(calculatorData?.stones?.length)}
+                    onClick={() => {
+                      if (!stoneDropdownOpen) updateStoneDropdownPos();
+                      setStoneDropdownOpen((prev) => !prev);
+                    }}
+                    // Giá đã tính sẵn ở máy tính (calculatorData) là giá ĐÓNG BĂNG theo đúng cấu
+                    // hình đá lúc tính (kể cả 0 đá) — khóa cả khi lúc tính KHÔNG có đá nào, không
+                    // chỉ khi có đá, nếu không Sale thêm đá tay ở đây thì giá hiển thị vẫn y nguyên,
+                    // không phản ánh đá vừa thêm.
+                    disabled={!!calculatorData}
                     className="form-control"
                     style={{
                       width: '100%',
                       textAlign: 'left',
                       fontWeight: 700,
                       background: '#ffffff',
-                      opacity: calculatorData?.stones?.length ? 0.75 : 1,
-                      cursor: calculatorData?.stones?.length ? 'not-allowed' : 'pointer',
+                      opacity: calculatorData ? 0.75 : 1,
+                      cursor: calculatorData ? 'not-allowed' : 'pointer',
                     }}
                   >
                     {selectedStoneIds.length > 0
@@ -789,14 +822,15 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       : '-- Chọn đá (không bắt buộc)... --'}
                   </button>
 
-                  {stoneDropdownOpen && !calculatorData?.stones?.length && (
+                  {stoneDropdownOpen && !calculatorData && createPortal(
                     <div
+                      ref={stoneDropdownMenuRef}
                       style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        left: 0,
-                        right: 0,
-                        zIndex: 20,
+                        position: 'fixed',
+                        top: stoneDropdownPos.top,
+                        left: stoneDropdownPos.left,
+                        width: stoneDropdownPos.width,
+                        zIndex: 9999,
                         background: '#ffffff',
                         border: '1px solid #cbd5e1',
                         borderRadius: '8px',
@@ -857,7 +891,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                           {s.name}
                         </label>
                       ))}
-                    </div>
+                    </div>,
+                    document.body,
                   )}
                 </div>
 
@@ -883,7 +918,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                           }}
                         >
                           ✓ {stone.name}
-                          {!calculatorData?.stones?.length && (
+                          {!calculatorData && (
                             <button
                               type="button"
                               onClick={() => setSelectedStoneIds(selectedStoneIds.filter((id) => id !== sId))}

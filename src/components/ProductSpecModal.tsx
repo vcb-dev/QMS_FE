@@ -5,6 +5,7 @@ import type { ProductSpecModalProps } from '../types';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { ImageLightbox } from './ImageLightbox';
+import { displayPrice } from '../utils/quoteOption';
 
 const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> = {
   CLOSED: { label: 'Đã chốt', bg: '#dcfce7', color: '#15803d' },
@@ -25,9 +26,9 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
         <div className="modal-header">
           <div style={{ minWidth: 0 }}>
             <h2 style={{ fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.productName}</h2>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginTop: '2px' }}>
+            {/* <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginTop: '2px' }}>
               {item.code} · {item.option.optionName}
-            </div>
+            </div> */}
           </div>
           <button
             onClick={onClose}
@@ -80,7 +81,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
           <div className="product-spec-info-col">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
               <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--text-main)' }}>
-                {formatCurrency(item.option.quotedPrice)}
+                {formatCurrency(displayPrice(item.option))}
               </div>
               {tag && (
                 <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '10px', background: tag.bg, color: tag.color, flexShrink: 0 }}>

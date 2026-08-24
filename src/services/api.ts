@@ -94,7 +94,10 @@ api.interceptors.response.use(
   }
 );
 
-// Đọc: ưu tiên sessionStorage trước.
+// Đọc: ưu tiên sessionStorage trước, rồi mới tới localStorage — loginApi lưu vào localStorage khi
+// rememberMe=true (mặc định của form đăng nhập), nếu ở đây chỉ đọc sessionStorage thì y hệt trường
+// hợp "đã đăng nhập nhớ tôi" vẫn bị đá về login mỗi lần F5, vì token/user nằm ở localStorage
+// nhưng hàm đọc chưa bao giờ nhìn vào đó.
 export function getStoredToken(): string | null {
   return sessionStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem(STORAGE_KEYS.TOKEN);
 }
@@ -110,10 +113,10 @@ export function getStoredUser(): User | null {
 }
 
 export function clearSession() {
-  localStorage.removeItem(STORAGE_KEYS.TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.USER);
   sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
   sessionStorage.removeItem(STORAGE_KEYS.USER);
+  localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER);
 }
 
 export async function logoutApi(): Promise<void> {
@@ -216,7 +219,7 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   }
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; withLivePrice?: boolean }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -231,6 +234,7 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.endDate) params.endDate = filter.endDate;
   if (filter?.lite) params.lite = true;
   if (filter?.includeLocked) params.includeLocked = true;
+  if (filter?.withLivePrice) params.withLivePrice = true;
 
   try {
     const res = await dedupedGet('/quote-requests', params);
@@ -633,7 +637,7 @@ export async function calculatePriceApi(payload: {
   silverMultiplier?: number;
 }) {
   try {
-    const res = await api.post('/pricing-config/calculate', payload);
+    const res = await api.post('/quote-options/calculate', payload);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi tính giá từ hệ thống');
@@ -662,7 +666,7 @@ export async function calculatePriceMultiApi(payload: {
   stones?: { stoneId: string; quantity: number }[];
 }): Promise<CalculateMultiResult> {
   try {
-    const res = await api.post('/pricing-config/calculate-multi', payload);
+    const res = await api.post('/quote-options/calculate-multi', payload);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tính giá nhiều chất liệu');
@@ -735,7 +739,7 @@ export async function generatePricingOptionsApi(payload: {
   silverMultiplier?: number;
 }) {
   try {
-    const res = await api.post('/pricing-config/generate-options', payload);
+    const res = await api.post('/quote-options/generate-options', payload);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Lỗi khi tính danh sách phương án báo giá từ Backend');
@@ -744,7 +748,7 @@ export async function generatePricingOptionsApi(payload: {
 
 export async function fetchSilverMultipliers(): Promise<number[]> {
   try {
-    const res = await dedupedGet('/pricing-config/silver-multipliers');
+    const res = await dedupedGet('/quote-options/silver-multipliers');
     return Array.isArray(res.data?.silverMultipliers) ? res.data.silverMultipliers : [];
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải danh sách hệ số nhân Bạc');

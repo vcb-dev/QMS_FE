@@ -84,7 +84,10 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
             <button
               className="primary-action"
-              onClick={onOpenCreate}
+              // Gọi trực tiếp onClick={onOpenCreate} sẽ vô tình truyền thẳng SyntheticEvent của
+              // click vào làm calcData (object luôn truthy) — khiến CreateModal tưởng đang tạo đơn
+              // từ máy tính giá, khóa nhầm phần chọn đá dù đây là luồng tạo đơn thường.
+              onClick={() => onOpenCreate()}
               style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá

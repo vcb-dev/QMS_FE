@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard } from '../types';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { formatCurrency } from '../utils/currency';
 import { ProductSpecModal } from '../components/ProductSpecModal';
+import { displayPrice } from '../utils/quoteOption';
 
 const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> = {
   CLOSED: { label: 'Đã chốt', bg: '#dcfce7', color: '#15803d' },
@@ -15,8 +16,10 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   requests,
   categories,
   materials,
+  currentRole,
   onSelectReq,
-  selectedId,
+  onRefreshPrices,
+  refreshing,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCat, setSelectedCat] = useState('ALL');
@@ -27,11 +30,11 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [pageSize, setPageSize] = useState(UI_CONSTANTS.PRODUCT_LIBRARY.DEFAULT_PAGE_SIZE);
   const [detailItem, setDetailItem] = useState<ProductOptionCard | null>(null);
 
-  // Mỗi phương án báo giá (QuoteOption) là 1 "sản phẩm" riêng — 1 đơn có nhiều phương án thì ra
-  // nhiều thẻ. Chỉ lấy phương án thuộc đơn đã QUOTED/CLOSED: completeQuote (BE) xóa sạch & ghi đè
-  // toàn bộ options bằng đúng bộ ORDER gửi lên khi duyệt, nên option còn tồn tại trên đơn ở 2 status
-  // này chắc chắn đã qua ORDER — phương án Sale tự tạo (quick-quote, đơn còn PROCESSING) chưa duyệt
-  // sẽ không có mặt ở đây.
+  // Mỗi phương án báo giá (QuoteOption) là 1 "sản phẩm" riêng — 1 đơn có nhiều phương án (ORDER
+  // tạo để so sánh, mỗi phương án giá khác nhau) thì ra nhiều thẻ, hiện đủ hết. Chỉ lấy phương án
+  // thuộc đơn đã QUOTED/CLOSED: completeQuote (BE) xóa sạch & ghi đè toàn bộ options bằng đúng bộ
+  // ORDER gửi lên khi duyệt, nên option còn tồn tại trên đơn ở 2 status này chắc chắn đã qua ORDER —
+  // phương án Sale tự tạo (quick-quote, đơn còn PROCESSING) chưa duyệt sẽ không có mặt ở đây.
   const productOptions = useMemo<ProductOptionCard[]>(() => {
     const items: ProductOptionCard[] = [];
     for (const r of requests) {
@@ -76,7 +79,36 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         });
       }
     }
-    return items;
+
+    // Gộp sản phẩm giống nhau (cùng danh mục + chất liệu/khối lượng + đá) — KHÔNG xét giá, giá
+    // khác nhau vẫn coi là cùng 1 sản phẩm (chỉ khác thời điểm/khách báo giá). Giữ bản MỚI NHẤT
+    // làm đại diện, gắn số lần trùng để biết đã báo giá bao nhiêu lần.
+    const groups = new Map<string, ProductOptionCard[]>();
+    for (const item of items) {
+      const matKey =
+        item.option.materials && item.option.materials.length > 0
+          ? item.option.materials.map((m) => `${m.materialId}:${m.weightChi || 0}`).sort().join(',')
+          : `${item.matStr}:${item.option.weightChi || 0}`;
+      const stoneKey =
+        item.option.stones && item.option.stones.length > 0
+          ? item.option.stones.map((s) => `${s.stoneId}:${s.quantity}`).sort().join(',')
+          : item.option.stoneDescription || (item.option.stoneCost ? `cost:${item.option.stoneCost}` : 'none');
+      const dedupKey = `${item.categoryId || ''}|${matKey}|${stoneKey}`;
+      const group = groups.get(dedupKey);
+      if (group) group.push(item);
+      else groups.set(dedupKey, [item]);
+    }
+
+    const deduped: ProductOptionCard[] = [];
+    for (const group of groups.values()) {
+      group.sort(
+        (a, b) =>
+          new Date(b.option.quotedDate || b.requestCreatedAt || 0).getTime() -
+          new Date(a.option.quotedDate || a.requestCreatedAt || 0).getTime(),
+      );
+      deduped.push({ ...group[0], duplicateCount: group.length });
+    }
+    return deduped;
   }, [requests]);
 
   const filteredOptions = useMemo(() => {
@@ -105,8 +137,9 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
     });
 
     return list.sort((a, b) => {
-      if (sortMode === 'PRICE_DESC') return (Number(b.option.quotedPrice) || 0) - (Number(a.option.quotedPrice) || 0);
-      if (sortMode === 'PRICE_ASC') return (Number(a.option.quotedPrice) || 0) - (Number(b.option.quotedPrice) || 0);
+      if (sortMode === 'PRICE_DESC') return displayPrice(b.option) - displayPrice(a.option);
+      if (sortMode === 'PRICE_ASC') return displayPrice(a.option) - displayPrice(b.option);
+      if (sortMode === 'MOST_QUOTED') return (b.duplicateCount || 1) - (a.duplicateCount || 1);
       const dateA = new Date(a.option.quotedDate || a.requestCreatedAt || 0).getTime();
       const dateB = new Date(b.option.quotedDate || b.requestCreatedAt || 0).getTime();
       return dateB - dateA;
@@ -133,13 +166,32 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '30px' }}>
       {/* Header Title */}
-      <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
-          Quản Lý Sản Phẩm
-        </h1>
-        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-          Xếp hạng sản phẩm đã báo giá cho khách theo giá, mốc thời gian và phân loại
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
+            {currentRole === 'SALE' ? 'Thư Viện Sản Phẩm' : 'Quản Lý Sản Phẩm'}
+          </h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+            Xếp hạng sản phẩm đã báo giá cho khách theo giá, mốc thời gian và phân loại
+          </p>
+        </div>
+        {onRefreshPrices && (
+          <button
+            type="button"
+            onClick={onRefreshPrices}
+            disabled={refreshing}
+            title="Tính lại giá theo giá kim loại/đá hiện tại"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+              padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1',
+              background: '#ffffff', color: '#0f172a', fontSize: '12.5px', fontWeight: 700,
+              cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1,
+            }}
+          >
+            <RefreshCw size={14} style={refreshing ? { animation: 'spin 1s linear infinite' } : undefined} />
+            {refreshing ? 'Đang tải giá...' : 'Tải lại giá'}
+          </button>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -233,6 +285,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           <option value="PRICE_DESC">Giá cao nhất</option>
           <option value="PRICE_ASC">Giá thấp nhất</option>
           <option value="RECENT">Mới nhất</option>
+          <option value="MOST_QUOTED">Báo giá nhiều nhất</option>
         </select>
 
         {/* Search Input */}
@@ -260,9 +313,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
       {/* Product Cards Grid: 4 Columns */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '16px' }}>
-        {pagedOptions.length > 0 ? (
+        {refreshing ? (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
+            Đang tải giá sản phẩm...
+          </div>
+        ) : pagedOptions.length > 0 ? (
           pagedOptions.map((item, idx) => {
-            const isSelected = item.requestId === selectedId;
             const rawImgUrl = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
             const imgUrl = rawImgUrl || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
             const tag = item.option.selectionStatus ? STATUS_TAG[item.option.selectionStatus] : undefined;
@@ -273,7 +329,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                 onClick={() => setDetailItem(item)}
                 style={{
                   background: '#ffffff',
-                  border: isSelected ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '14px',
                   overflow: 'hidden',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
@@ -302,7 +358,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                  {sortMode === 'PRICE_DESC' && (
+                  {(sortMode === 'PRICE_DESC' || sortMode === 'MOST_QUOTED') && (
                     <span
                       style={{
                         position: 'absolute',
@@ -357,12 +413,25 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
                 {/* Body Details */}
                 <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-                  <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.productName}>
-                    {item.productName}
-                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }} title={item.productName}>
+                      {item.productName}
+                    </h3>
+                    {item.duplicateCount && item.duplicateCount > 1 && (
+                      <span
+                        title={`Đã báo giá ${item.duplicateCount} lần cho mẫu này`}
+                        style={{
+                          flexShrink: 0, fontSize: '10px', fontWeight: 800, color: '#0369a1',
+                          background: '#e0f2fe', padding: '2px 6px', borderRadius: '8px',
+                        }}
+                      >
+                        ×{item.duplicateCount}
+                      </span>
+                    )}
+                  </div>
 
                   <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a', marginTop: '1px' }}>
-                    {formatVND(item.option.quotedPrice)}
+                    {formatVND(displayPrice(item.option))}
                   </div>
 
                   <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px', lineHeight: '1.4' }}>

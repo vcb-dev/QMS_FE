@@ -122,7 +122,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
       const includeCounts = needCountsRef.current;
       needCountsRef.current = false; // Reset sau lần đầu
-      const effectiveLimit = currentFilter === 'LIBRARY' ? 100 : pageSize;
+      const effectiveLimit = currentFilter === 'LIBRARY' ? 8 : pageSize;
 
       const quoteRes = await fetchQuoteRequests({
         page: currentFilter === 'LIBRARY' ? 1 : currentPage,
@@ -137,6 +137,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
         endDate: endDateFilter || undefined,
         includeCounts,
         includeLocked,
+        withLivePrice: currentFilter === 'LIBRARY',
       });
 
       // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)
@@ -505,6 +506,12 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     requests[0] ||
     null;
 
+  // Đơn PricingModal đang xử lý — PHẢI tra riêng theo pricingReqId, không được dùng chung
+  // selectedReq (tra theo selectedId của DetailPage). Trước đây PricingModal nhận thẳng
+  // selectedReq nên bấm "Báo Giá"/"Chốt giá" ở BẤT KỲ đơn nào cũng hiện data của đơn đang xem
+  // chi tiết (hoặc requests[0] nếu chưa xem đơn nào) — sai hoàn toàn đơn vừa bấm.
+  const pricingReq = requests.find((r) => r.id === pricingReqId) || null;
+
   return {
     requests,
     categories,
@@ -513,6 +520,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     selectedId,
     setSelectedId,
     selectedReq,
+    pricingReq,
     currentFilter,
     setCurrentFilter,
     statusSubFilter,
@@ -575,5 +583,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     handleCloseOptionSubmit,
     handleDeleteOption,
     refreshQuietly: () => loadData(false),
+    refreshList: () => loadData(true),
   };
 }

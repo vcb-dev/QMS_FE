@@ -50,7 +50,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
   const {
     requests, categories, materials, customers, selectedId, setSelectedId,
-    selectedReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
+    selectedReq, pricingReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
@@ -65,7 +65,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
     handleMarkClosedClick, handleCloseOptionSubmit,
     handleDeleteOption,
-    refreshQuietly,
+    refreshQuietly, refreshList,
   } = useQuoteRequests(currentUser, currentRole);
 
   // Socket /realtime — 1 kết nối duy nhất suốt phiên đăng nhập (dùng chung cho cả Realtime trạng thái & Chat)
@@ -199,8 +199,10 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
             <Route path="/library" element={
               <LibraryPage requests={requests} categories={categories} materials={materials}
-                onSelectReq={handleOpenDetail} selectedId={selectedReq?.id || selectedId}
-                totalCount={counts.closed} />
+                currentRole={currentRole}
+                onSelectReq={handleOpenDetail}
+                totalCount={counts.closed}
+                onRefreshPrices={refreshList} refreshing={listLoading} />
             } />
 
             <Route path="/calculator" element={
@@ -236,7 +238,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
         saleName={currentUser!.name} calculatorData={calculatorData} />
 
       <PricingModal isOpen={pricingReqId !== null} onClose={() => setPricingReqId(null)}
-        onSubmit={handlePricingSubmit} selectedReq={selectedReq} currentRole={currentRole} materials={materials} />
+        onSubmit={handlePricingSubmit} selectedReq={pricingReq} currentRole={currentRole} materials={materials} />
 
       <RejectModal isOpen={rejectReqId !== null} onClose={() => setRejectReqId(null)}
         onSubmit={handleRejectSubmit} />

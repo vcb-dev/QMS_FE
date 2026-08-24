@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Package size={18} /> Quản Lý Sản Phẩm
+            <Package size={18} /> {currentRole === 'SALE' ? 'Thư Viện Sản Phẩm' : 'Quản Lý Sản Phẩm'}
           </span>
         </button>
 

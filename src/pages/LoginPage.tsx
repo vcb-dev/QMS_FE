@@ -24,7 +24,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'SALE' | 'ORDER' | 'ADMIN'>('SALE');
+  // Tự đăng ký chỉ chọn được SALE/ORDER — ADMIN không tự cấp được, phải nhờ 1 ADMIN khác cấp tay.
+  const [role, setRole] = useState<'SALE' | 'ORDER'>('SALE');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -340,7 +341,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                   <select value={role} onChange={(e) => setRole(e.target.value as any)} style={{ ...fieldInputStyle, cursor: 'pointer' }}>
                     <option value="SALE">Chuyên Viên Kinh Doanh (SALE)</option>
                     <option value="ORDER">Chuyên Viên Báo Giá (ORDER)</option>
-                    <option value="ADMIN">Quản Trị Hệ Thống (ADMIN)</option>
                   </select>
                 </div>
               </div>

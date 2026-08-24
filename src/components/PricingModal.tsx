@@ -3,7 +3,6 @@ import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp } from 'luc
 import type { QuoteOption, QuoteRequest, Role } from '../types';
 import {
   fetchMasterData,
-  calculatePriceApi,
   calculatePriceMultiApi,
   generatePricingOptionsApi,
   fetchStones,
@@ -86,14 +85,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const [calcManualStoneName, setCalcManualStoneName] = useState('');
   const [calcManualStonePrice, setCalcManualStonePrice] = useState('');
 
-  // Tên phương án mới & Kết quả tính thử
-  const [calcOptionName, setCalcOptionName] = useState('');
-  const [calcResult, setCalcResult] = useState<any | null>(null);
   const [calcLoading, setCalcLoading] = useState(false);
   const [calcError, setCalcError] = useState<string | null>(null);
-  // Bảng phương án gợi ý tự sinh (VD: đủ giá 10K/14K/18K/24K khi chọn vàng) — giống CalculatorPage,
-  // chỉ tính khi luồng 1 chất liệu. Mỗi gợi ý có thể bấm "+ Thêm" để đưa thẳng vào danh sách báo giá.
-  const [generatedOptions, setGeneratedOptions] = useState<any[]>([]);
 
   // Load lookup data once on mount
   useEffect(() => {
@@ -124,10 +117,29 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     // bị gửi kèm lên BE lúc Xác Nhận, tạo dư 1 row quote_options + quote_option_materials rỗng.
     const realOptions = (selectedReq.options || []).filter((opt) => opt.quotedPrice != null);
     if (realOptions.length > 0) {
+      // Phương án Sale THẬT SỰ chọn — ưu tiên CLOSED/SELECTED; nếu đơn cũ/dữ liệu thiếu cờ này
+      // (không option nào SELECTED/CLOSED) thì fallback về option ĐẦU TIÊN thay vì khóa hết —
+      // khóa hết sẽ khiến Order không còn cách nào chọn giá chính để báo giá cho đơn đó.
+      const salePrimaryOption =
+        realOptions.find((opt) => opt.selectionStatus === 'CLOSED') ||
+        realOptions.find((opt) => opt.selectionStatus === 'SELECTED') ||
+        realOptions[0];
       setOptions(
         realOptions.map((opt) => ({
           ...opt,
-          isSelected: opt.selectionStatus === 'SELECTED' || opt.selectionStatus === 'CLOSED' || !!opt.isSelected,
+          // Option load từ DB (Sale tạo/đơn cũ) có quotedPrice là Decimal Prisma — qua JSON serialize
+          // thành STRING, khác option Order vừa tự tính (số JS thật). hasValidPrice check
+          // typeof === 'number' nên nếu không ép kiểu, chọn đúng option Sale sẽ bị coi là giá không
+          // hợp lệ, nút "Xác Nhận & Gửi Báo Giá" bị khóa im lặng dù giá hiển thị vẫn đúng.
+          quotedPrice: Number(opt.quotedPrice),
+          isSelected: opt === salePrimaryOption,
+          // Sale có thể gửi kèm nhiều phương án so sánh tuổi vàng (CalculatorPage tự sinh) — vẫn
+          // hiện đủ để Order tham khảo, nhưng chỉ đúng 1 phương án Sale THẬT SỰ chọn mới được chọn
+          // làm giá chính; các phương án còn lại là hàng đính kèm, khóa lựa chọn.
+          locked: opt !== salePrimaryOption,
+          // Cùng 1 cụm Sale gửi lên — để lồng các phương án đính kèm vào trong card của
+          // salePrimaryOption khi hiển thị, thay vì hiện dạng list rời.
+          groupId: 'sale',
         })),
       );
     } else if (selectedReq.quotedPrice) {
@@ -214,20 +226,16 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       setCalcManualStoneName('');
     }
 
-    setCalcResult(null);
     setCalcError(null);
-    setCalcOptionName('');
-    setGeneratedOptions([]);
   }, [isOpen, selectedReq, dbMaterials, defaultVatRate]);
 
-  // Đổi chất liệu/khối lượng/tiền công/VAT/đá sau khi đã bấm "Tính Giá Ngay" — xóa kết quả cũ ngay,
-  // tránh hiển thị nhầm giá của chất liệu/thông số trước đó (VD: đổi sang Bạc nhưng vẫn thấy giá Vàng cũ).
+  // Đổi chất liệu/khối lượng/đá hoặc tiền công/VAT sau khi đã bấm "Tính Giá Ngay" — chỉ xóa lỗi cũ.
+  // Kết quả tính đã được thêm thẳng vào "Các Phương Án Báo Giá" ngay khi tính xong (xem
+  // handleRunCalculate), không còn ở trạng thái xem trước nên không cần xóa gì thêm ở đây.
   useEffect(() => {
-    setCalcResult(null);
     setCalcError(null);
-    setGeneratedOptions([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calcMaterialRows, calcLaborCost, calcVat, calcIncludeVat, calcSilverMultiplier, calcStoneRows, calcStoneMode, calcManualStonePrice, calcManualStoneName]);
+  }, [calcMaterialRows, calcSilverMultiplier, calcStoneRows, calcStoneMode, calcManualStonePrice, calcManualStoneName, calcLaborCost, calcVat, calcIncludeVat]);
 
   if (!isOpen) return null;
 
@@ -298,6 +306,31 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     setCalcStoneRows((prev) => prev.filter((r) => r.id !== id));
   };
 
+  // Gộp thẳng phương án mới tính được vào "Các Phương Án Báo Giá" — không còn bước xem trước/bấm
+  // "Thêm" thủ công nữa. Phương án trùng giá với phương án đã có bị bỏ qua (không có ý nghĩa so
+  // sánh thêm). Nếu danh sách chưa có phương án nào được chọn, phương án ĐẦU TIÊN không bị khóa
+  // (đúng chất liệu Sale yêu cầu) tự động được chọn làm giá chính; các phương án khác chất liệu
+  // (locked=true) vẫn được thêm vào cùng danh sách để hiện dạng "OPTION ĐÍNH KÈM — CHỈ THAM KHẢO".
+  const addOptionsToList = (newOpts: QuoteOption[]) => {
+    setOptions((prev) => {
+      const seenPrices = new Set(prev.map((o) => Number(o.quotedPrice)));
+      const added: QuoteOption[] = [];
+      newOpts.forEach((opt) => {
+        if (opt.quotedPrice == null) return;
+        const price = Number(opt.quotedPrice);
+        if (seenPrices.has(price)) return;
+        seenPrices.add(price);
+        added.push(opt);
+      });
+      const hasSelected = prev.some((o) => o.isSelected);
+      if (!hasSelected) {
+        const firstSelectable = added.find((o) => !o.locked);
+        if (firstSelectable) firstSelectable.isSelected = true;
+      }
+      return [...prev, ...added];
+    });
+  };
+
   const handleRunCalculate = async () => {
     const validRows = calcMaterialRows.filter(
       (m) => m.materialName && (parseFloat(m.weightChi) || 0) > 0,
@@ -335,58 +368,57 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             ? calcManualStoneName
             : calcStoneRows.map((r) => r.type).join(', ');
 
-        const [res, generated] = await Promise.all([
-          calculatePriceApi({
-            materialNameOrKey: single.materialName,
-            weightChi: w,
-            laborCost: l,
-            stoneCost: totalStoneCost,
-            vatRate: vatVal,
-            includeVat: calcIncludeVat,
-            categoryId: selectedReq?.category?.id || undefined,
-            silverMultiplier: isSilver ? calcSilverMultiplier : undefined,
-          }),
-          generatePricingOptionsApi({
-            requestedMatName: single.materialName,
-            weightChi: w,
-            laborCost: l,
-            stoneCost: totalStoneCost,
-            stoneDesc,
-            vatRate: vatVal,
-            includeVat: calcIncludeVat,
-            categoryId: selectedReq?.category?.id || undefined,
-            silverMultiplier: isSilver ? calcSilverMultiplier : undefined,
-          }).catch(() => []),
-        ]);
+        const fixedMaterialId = single.materialId || single.id;
 
-        setCalcResult({
-          ...res,
+        // BE sinh đủ tuổi vàng (10K/14K/18K/24K...) theo ĐÚNG tiền công/VAT vừa nhập, đánh dấu
+        // isSelected=true cho ĐÚNG 1 phương án khớp chất liệu Sale yêu cầu — breakdown giá của
+        // phương án khớp này giống hệt gọi /calculate riêng nên không cần gọi thêm API đó nữa.
+        const generated = await generatePricingOptionsApi({
+          requestedMatName: single.materialName,
           weightChi: w,
-          materials: [
-            {
-              materialId: single.materialId || single.id,
-              materialName: single.materialName,
-              weightChi: w,
-            },
-          ],
-          stones: stoneSelections,
-          stoneDescription: stoneDesc,
+          laborCost: l,
+          stoneCost: totalStoneCost,
+          stoneDesc,
+          vatRate: vatVal,
+          includeVat: calcIncludeVat,
+          categoryId: selectedReq?.category?.id || undefined,
+          silverMultiplier: isSilver ? calcSilverMultiplier : undefined,
         });
 
-        // Ép về đúng chất liệu/đá đang nhập trong máy tính — API generate-options chỉ tính giá theo
-        // tuổi vàng, không biết materialId/stones cụ thể (giống cách CalculatorPage xử lý).
-        setGeneratedOptions(
-          (Array.isArray(generated) ? generated : []).map((opt: any) => ({
-            ...opt,
-            weightChi: opt.weightChi != null ? opt.weightChi : w,
-            materials: single.materialId
-              ? [{ materialId: single.materialId, weightChi: w }]
-              : undefined,
-            stones: stoneSelections,
-          })),
-        );
+        // groupId chung cho cả cụm (phương án khớp chất liệu Sale + các phương án tuổi vàng khác) —
+        // để lồng các phương án khác chất liệu vào trong card của phương án khớp khi hiển thị.
+        const groupId = `g_${Date.now()}`;
+        // BE luôn đánh số "Phương án 1/2/3..." lại từ đầu mỗi lần gọi — Order bấm "Tính Giá Ngay"
+        // nhiều lần (đổi công/VAT để so sánh) sẽ ra trùng tên "Phương án 1" giữa các cụm, lưu vào DB
+        // vậy không phân biệt được. Đặt tên theo chất liệu + đúng mức công/VAT của cụm đó thay thế.
+        const laborLabel = l.toLocaleString('vi-VN');
+        const newOpts: QuoteOption[] = (Array.isArray(generated) ? generated : [])
+          .filter((opt: any) => opt.quotedPrice != null)
+          .map((opt: any) => {
+            const optMaterial = dbMaterials.find((m) => m.name === opt.materialName);
+            const materialId = optMaterial?.id || fixedMaterialId;
+            return {
+              optionName: `${opt.materialName} · Công ${laborLabel}₫ · VAT ${vatVal}%`,
+              materialName: opt.materialName,
+              weightChi: opt.weightChi != null ? opt.weightChi : w,
+              laborCost: opt.laborCost,
+              stoneCost: opt.stoneCost,
+              totalMetalCost: opt.totalMetalCost,
+              metalRawCost: opt.metalRawCost,
+              stonePrice: opt.stonePrice,
+              vat: opt.vat,
+              quotedPrice: opt.quotedPrice,
+              isSelected: false,
+              locked: !opt.isSelected,
+              groupId,
+              materials: materialId ? [{ materialId, weightChi: w }] : undefined,
+              stones: stoneSelections,
+              stoneDescription: stoneDesc,
+              note: 'Tính từ máy tính giá',
+            };
+          });
+        addOptionsToList(newOpts);
       } else {
-        setGeneratedOptions([]);
         const payload = {
           materials: validRows.map((m) => ({
             materialId: m.materialId || m.id,
@@ -411,25 +443,32 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         };
 
         const res = await calculatePriceMultiApi(payload);
+        const matSummary = validRows.map((m) => `${m.materialName} (${m.weightChi} chỉ)`).join(' + ');
 
-        setCalcResult({
-          totalMetalCost: res.totalMetalCost,
-          metalRawCost: res.metalRawCost,
-          laborCost: res.laborCost,
-          stoneCost: res.stoneCost,
-          stonePrice: res.stonePrice || 0,
-          vatRate: vatVal,
-          vatAmount: res.vatAmount,
-          quotedPrice: res.quotedPrice,
-          breakdown: res.breakdown,
-          weightChi: validRows.reduce((sum, m) => sum + (parseFloat(m.weightChi) || 0), 0),
-          materials: payload.materials,
-          stones: payload.stones,
-          stoneDescription:
-            calcStoneMode === 'manual'
-              ? calcManualStoneName
-              : calcStoneRows.map((r) => r.type).join(', '),
-        });
+        addOptionsToList([
+          {
+            // Cùng lý do với nhánh 1 chất liệu — kèm công/VAT vào tên để bấm "Tính Giá Ngay" nhiều
+            // lần không ra trùng tên "Phương án phối hợp" giữa các cụm khi lưu vào DB.
+            optionName: `Phương án phối hợp (${matSummary}) · Công ${l.toLocaleString('vi-VN')}₫ · VAT ${vatVal}%`,
+            materialName: matSummary,
+            weightChi: validRows.reduce((sum, m) => sum + (parseFloat(m.weightChi) || 0), 0),
+            laborCost: res.laborCost,
+            stoneCost: res.stoneCost,
+            totalMetalCost: res.totalMetalCost,
+            metalRawCost: res.metalRawCost,
+            stonePrice: res.stonePrice || 0,
+            vat: vatVal,
+            quotedPrice: res.quotedPrice,
+            isSelected: false,
+            materials: payload.materials,
+            stones: payload.stones,
+            stoneDescription:
+              calcStoneMode === 'manual'
+                ? calcManualStoneName
+                : calcStoneRows.map((r) => r.type).join(', '),
+            note: 'Tính từ máy tính giá',
+          },
+        ]);
       }
     } catch (err: any) {
       console.error('Lỗi tính giá:', err);
@@ -439,94 +478,30 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   };
 
-  const handleAddCalculatedOption = () => {
-    if (!calcResult || !calcResult.quotedPrice) return;
-
-    const validRows = calcMaterialRows.filter(
-      (m) => m.materialName && (parseFloat(m.weightChi) || 0) > 0,
-    );
-    const matSummary = validRows.map((m) => `${m.materialName} (${m.weightChi} chỉ)`).join(' + ');
-    const defaultName = `Phương án ${options.length + 1} (${matSummary})`;
-    const finalName = calcOptionName.trim() || defaultName;
-
-    const newOption: QuoteOption = {
-      optionName: finalName,
-      materialName: matSummary,
-      weightChi: calcResult.weightChi,
-      laborCost: calcResult.laborCost,
-      stoneCost: calcResult.stoneCost,
-      totalMetalCost: calcResult.totalMetalCost,
-      metalRawCost: calcResult.metalRawCost,
-      stonePrice: calcResult.stonePrice,
-      vat: calcIncludeVat ? (parseFloat(calcVat) || 10) : 0,
-      quotedPrice: calcResult.quotedPrice,
-      isSelected: options.length === 0,
-      materials: calcResult.materials,
-      stones: calcResult.stones,
-      stoneDescription: calcResult.stoneDescription,
-      note: 'Tính từ máy tính giá',
-    };
-
-    setOptions((prev) => [...prev, newOption]);
-    setCalcResult(null);
-    setCalcOptionName('');
-  };
-
-  // Build 1 QuoteOption từ 1 phần tử trong bảng gợi ý tự sinh — dùng chung cho thêm-từng-cái và
-  // thêm-hết. baseCount = số phương án đã có TRƯỚC khi thêm (đánh số "Phương án N" cho đúng).
-  const buildOptionFromGenerated = (opt: any, baseCount: number): QuoteOption | null => {
-    if (opt.quotedPrice == null) return null;
-    return {
-      optionName: opt.optionName || opt.materialName || `Phương án ${baseCount + 1}`,
-      materialName: opt.materialName,
-      weightChi: opt.weightChi,
-      laborCost: opt.laborCost,
-      stoneCost: opt.stoneCost,
-      totalMetalCost: opt.totalMetalCost,
-      metalRawCost: opt.metalRawCost,
-      stonePrice: opt.stonePrice,
-      vat: opt.vat,
-      quotedPrice: opt.quotedPrice,
-      isSelected: baseCount === 0,
-      materials: opt.materials,
-      stones: opt.stones,
-      stoneDescription: opt.stoneDescription,
-      note: 'Tính từ bảng gợi ý',
-    };
-  };
-
-  // Thêm 1 phương án từ bảng gợi ý tự sinh (VD: "Vàng 14K") thẳng vào danh sách báo giá —
-  // không cần bấm "Tính Giá Ngay" riêng cho từng tuổi vàng.
-  const handleAddGeneratedOption = (opt: any) => {
-    const newOption = buildOptionFromGenerated(opt, options.length);
-    if (!newOption) return;
-    setOptions((prev) => [...prev, newOption]);
-  };
-
-  // Thêm hết toàn bộ bảng gợi ý vào danh sách báo giá cùng lúc.
-  const handleAddAllGeneratedOptions = () => {
-    setOptions((prev) => {
-      const added = generatedOptions
-        .map((opt, i) => buildOptionFromGenerated(opt, prev.length + i))
-        .filter((o): o is QuoteOption => o !== null);
-      return [...prev, ...added];
-    });
-  };
-
   const handleSelectOption = (idx: number) => {
-    setOptions((prev) =>
-      prev.map((opt, i) => ({
+    setOptions((prev) => {
+      if (prev[idx]?.locked) return prev;
+      return prev.map((opt, i) => ({
         ...opt,
         isSelected: i === idx,
-      })),
-    );
+      }));
+    });
   };
 
   const handleRemoveOption = (idx: number) => {
     setOptions((prev) => {
-      const next = prev.filter((_, i) => i !== idx);
-      if (prev[idx]?.isSelected && next.length > 0) {
-        next[0].isSelected = true;
+      const removed = prev[idx];
+      let next = prev.filter((_, i) => i !== idx);
+      // Xóa phương án CHÍNH (không locked) thì xóa luôn cả cụm phương án đính kèm lồng trong card
+      // của nó (cùng groupId) — các phương án đính kèm không có ý nghĩa gì khi đứng riêng.
+      if (removed && !removed.locked && removed.groupId) {
+        next = next.filter((o) => !(o.locked && o.groupId === removed.groupId));
+      }
+      // Phương án bị xóa từng là giá chính — chuyển giá chính sang phương án CHỌN ĐƯỢC đầu tiên
+      // còn lại (bỏ qua option đính kèm/locked, vì đó không phải 1 lựa chọn hợp lệ).
+      if (removed?.isSelected) {
+        const fallback = next.find((o) => !o.locked);
+        if (fallback) fallback.isSelected = true;
       }
       return next;
     });
@@ -579,6 +554,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     .map((opt, idx) => ({ opt, idx }))
     .filter(({ opt }) => opt.quotedPrice != null);
 
+  // Phương án CHÍNH (không locked) hiện dạng card top-level; phương án đính kèm (locked) được
+  // lồng vào bên trong card của phương án chính CÙNG groupId, thay vì hiện dạng list rời bên dưới.
+  const primaryEntries = pricedOptions.filter(({ opt }) => !opt.locked);
+  const lockedByGroup = new Map<string, typeof pricedOptions>();
+  pricedOptions
+    .filter(({ opt }) => opt.locked)
+    .forEach((entry) => {
+      const gid = entry.opt.groupId;
+      const hasMatchingPrimary = !!gid && primaryEntries.some((p) => p.opt.groupId === gid);
+      const key = hasMatchingPrimary ? (gid as string) : `_ungrouped_${entry.idx}`;
+      if (!lockedByGroup.has(key)) lockedByGroup.set(key, []);
+      lockedByGroup.get(key)!.push(entry);
+    });
+
   return (
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '860px', width: '95%', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -607,7 +596,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Layers size={18} color="#d97706" />
                 <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Các Phương Án Báo Giá ({pricedOptions.length})
+                  Các Phương Án Báo Giá ({primaryEntries.length})
                 </h3>
               </div>
               <span style={{ fontSize: '11.5px', color: '#64748b' }}>
@@ -615,83 +604,140 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               </span>
             </div>
 
-            {pricedOptions.length === 0 ? (
+            {primaryEntries.length === 0 ? (
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
-                Chưa có phương án nào. Hãy dùng bảng máy tính bên dưới để tính và bấm <strong>"+ Thêm vào danh sách"</strong>.
+                Chưa có phương án nào. Hãy dùng bảng máy tính bên dưới và bấm <strong>"Tính Giá Ngay"</strong> — phương án sẽ tự hiện lên đây.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {pricedOptions.map(({ opt, idx }) => (
-                  <div
-                    key={idx}
-                    onClick={() => handleSelectOption(idx)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      background: opt.isSelected ? '#f0fdf4' : '#f8fafc',
-                      border: opt.isSelected ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                      <input
-                        type="radio"
-                        name="selectedOptionRadio"
-                        checked={!!opt.isSelected}
-                        onChange={() => handleSelectOption(idx)}
-                        style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }}
-                      />
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
-                          {opt.optionName || `Phương án ${idx + 1}`}
-                          {opt.isSelected && (
-                            <span style={{ marginLeft: '8px', background: '#16a34a', color: '#ffffff', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '20px' }}>
-                              ĐÃ CHỌN LÀM GIÁ CHÍNH
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                          {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
-                          {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
-                          {opt.vat != null ? ` · VAT ${opt.vat}%` : ''}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                      <strong style={{ fontSize: '16px', fontWeight: 900, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatCurrency(opt.quotedPrice)}
-                      </strong>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveOption(idx);
-                        }}
-                        title="Xóa phương án này"
+                {primaryEntries.map(({ opt, idx }) => {
+                  const children = opt.groupId ? lockedByGroup.get(opt.groupId) || [] : [];
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        borderRadius: '10px',
+                        background: opt.isSelected ? '#f0fdf4' : '#f8fafc',
+                        border: opt.isSelected ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div
+                        onClick={() => handleSelectOption(idx)}
                         style={{
-                          background: '#fee2e2',
-                          border: 'none',
-                          color: '#dc2626',
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '6px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          padding: '12px 14px',
                           cursor: 'pointer',
                         }}
                       >
-                        <Trash2 size={14} />
-                      </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                          <input
+                            type="radio"
+                            name="selectedOptionRadio"
+                            checked={!!opt.isSelected}
+                            onChange={() => handleSelectOption(idx)}
+                            style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }}
+                          />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                              {opt.optionName || `Phương án ${idx + 1}`}
+                              {opt.isSelected && (
+                                <span style={{ marginLeft: '8px', background: '#16a34a', color: '#ffffff', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '20px' }}>
+                                  ĐÃ CHỌN LÀM GIÁ CHÍNH
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                              {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
+                              {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
+                              {opt.vat != null ? ` · VAT ${opt.vat}%` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                          <strong style={{ fontSize: '16px', fontWeight: 900, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
+                            {formatCurrency(opt.quotedPrice)}
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveOption(idx);
+                            }}
+                            title="Xóa phương án này"
+                            style={{
+                              background: '#fee2e2',
+                              border: 'none',
+                              color: '#dc2626',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Phương án đính kèm (khác chất liệu Sale/tuổi vàng khác) — lồng trong card
+                          của phương án chính cùng cụm, chỉ để tham khảo, không có radio chọn. */}
+                      {children.length > 0 && (
+                        <div style={{ padding: '0 14px 12px 40px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
+                            Phương án đính kèm — chỉ tham khảo
+                          </span>
+                          {children.map(({ opt: childOpt, idx: childIdx }) => (
+                            <div
+                              key={childIdx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                                padding: '6px 10px',
+                                background: '#ffffff',
+                                border: '1px dashed #cbd5e1',
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {childOpt.optionName || childOpt.materialName}
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                <strong style={{ fontSize: '13px', fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
+                                  {formatCurrency(childOpt.quotedPrice)}
+                                </strong>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveOption(childIdx)}
+                                  title="Xóa phương án đính kèm này"
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#94a3b8',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -730,25 +776,29 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                     <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
                       Chất Liệu Chế Tác & Khối Lượng (Chỉ)
                     </label>
-                    <button
-                      type="button"
-                      onClick={addMaterialRow}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '11.5px',
-                        fontWeight: 800,
-                        color: '#0f172a',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Plus size={13} /> Thêm chất liệu
-                    </button>
+                    {/* Order không được đổi chất liệu Sale đã yêu cầu — modal này luôn xử lý 1 đơn
+                        có sẵn (selectedReq), nên khóa hẳn khả năng thêm dòng chất liệu mới. */}
+                    {!selectedReq && (
+                      <button
+                        type="button"
+                        onClick={addMaterialRow}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '11.5px',
+                          fontWeight: 800,
+                          color: '#0f172a',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Plus size={13} /> Thêm chất liệu
+                      </button>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -757,7 +807,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         key={row.id}
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: calcMaterialRows.length > 1 ? '1fr 140px 32px' : '1fr 140px',
+                          gridTemplateColumns: calcMaterialRows.length > 1 && !selectedReq ? '1fr 140px 32px' : '1fr 140px',
                           gap: '10px',
                           alignItems: 'center',
                         }}
@@ -768,14 +818,18 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           // dù <option> khớp giờ đã tồn tại (dropdown hiện trống dù value đúng).
                           key={dbMaterials.length}
                           value={row.materialId}
+                          disabled={!!selectedReq}
                           onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
+                          title={selectedReq ? 'Không thể đổi chất liệu Sale đã yêu cầu' : undefined}
                           style={{
                             padding: '8px 12px',
                             borderRadius: '8px',
                             border: '1px solid #cbd5e1',
                             fontSize: '13px',
                             fontWeight: 700,
-                            background: '#ffffff',
+                            background: selectedReq ? '#f1f5f9' : '#ffffff',
+                            color: selectedReq ? '#64748b' : undefined,
+                            cursor: selectedReq ? 'not-allowed' : 'pointer',
                           }}
                         >
                           {dbMaterials.map((mat) => (
@@ -813,7 +867,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           </span>
                         </div>
 
-                        {calcMaterialRows.length > 1 && (
+                        {calcMaterialRows.length > 1 && !selectedReq && (
                           <button
                             type="button"
                             onClick={() => removeMaterialRow(row.id)}
@@ -1033,150 +1087,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </button>
                 </div>
 
-                {/* 5. Kết quả tính thử & Nút Thêm vào danh sách */}
-                {calcResult && (
-                  <div style={{ background: '#ffffff', border: '1.5px solid #22c55e', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#334155' }}>Kết quả tính thử:</span>
-                      <strong style={{ fontSize: '20px', fontWeight: 900, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatCurrency(calcResult.quotedPrice)}
-                      </strong>
-                    </div>
-
-                    {/* Breakdown */}
-                    <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px', background: '#f8fafc', padding: '8px 10px', borderRadius: '8px' }}>
-                      {calcResult.breakdown && calcResult.breakdown.length > 1 ? (
-                        calcResult.breakdown.map((b: any, i: number) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>• {b.materialName} ({b.weightChi} chỉ):</span>
-                            <strong>{formatCurrency(b.cost)}</strong>
-                          </div>
-                        ))
-                      ) : null}
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Giá kim loại:</span>
-                        <strong>{formatCurrency(calcResult.totalMetalCost)}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Công chế tác:</span>
-                        <strong>{formatCurrency(calcResult.laborCost)}</strong>
-                      </div>
-                      {calcResult.stoneCost > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Giá đá (gồm lãi):</span>
-                          <strong>{formatCurrency(calcResult.stonePrice || calcResult.stoneCost)}</strong>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>VAT ({calcResult.vatRate || 10}%):</span>
-                        <strong>{formatCurrency(calcResult.vatAmount)}</strong>
-                      </div>
-                    </div>
-
-                    {/* Tên & Nút Thêm */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        value={calcOptionName}
-                        onChange={(e) => setCalcOptionName(e.target.value)}
-                        maxLength={100}
-                        placeholder="Tên phương án (VD: Phương án phối 2 màu, Vàng 18K...)"
-                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 600 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCalculatedOption}
-                        style={{
-                          background: '#16a34a',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '8px 16px',
-                          fontSize: '13px',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <Plus size={15} /> Thêm Vào Danh Sách Báo Giá
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. Bảng phương án gợi ý tự sinh (VD: đủ giá 10K/14K/18K/24K khi chọn vàng) —
-                    bấm "+ Thêm" ở phương án nào là đưa thẳng vào danh sách báo giá, khỏi phải sửa
-                    chất liệu rồi tính lại từng cái. */}
-                {generatedOptions.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-                        Phương án gợi ý
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleAddAllGeneratedOptions}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '5px',
-                          background: '#dcfce7', border: '1px solid #16a34a', borderRadius: '7px',
-                          padding: '5px 10px', fontSize: '11.5px', fontWeight: 800, color: '#16a34a',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Plus size={13} /> Thêm hết
-                      </button>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                      {generatedOptions.map((opt, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            background: opt.isSelected ? '#fffbeb' : '#f8fafc',
-                            border: opt.isSelected ? '1.5px solid #f59e0b' : '1px solid #e2e8f0',
-                            borderRadius: '10px',
-                            padding: '10px 12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '8px',
-                          }}
-                        >
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {(opt.materialName || opt.optionName || '').replace(/\s*\(Áp dụng[^)]*\)/i, '').trim()}
-                            </div>
-                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
-                              {formatCurrency(opt.quotedPrice)}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleAddGeneratedOption(opt)}
-                            title="Thêm phương án này vào danh sách báo giá"
-                            style={{
-                              flexShrink: 0,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '30px',
-                              height: '30px',
-                              borderRadius: '8px',
-                              border: '1px solid #16a34a',
-                              background: '#dcfce7',
-                              color: '#16a34a',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <Plus size={15} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>

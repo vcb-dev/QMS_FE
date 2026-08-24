@@ -99,11 +99,23 @@ export interface QuoteOption {
   stonePrice?: number;
   vat?: number;
   quotedPrice: number;
+  // Giá tính LẠI theo config hiện tại (giá kim loại/đá/tỷ lệ/VAT hôm nay) — chỉ có khi BE nhận
+  // withLivePrice=true (trang Quản Lý Sản Phẩm). null = không tính được (thiếu config), fallback
+  // hiển thị quotedPrice gốc. undefined = trang không yêu cầu tính live.
+  livePrice?: number | null;
   quotedDate?: string;
   isSelected?: boolean;
   // Trạng thái được chọn lưu ở BE (QuoteOption.selectionStatus) — SELECTED = đang dùng báo giá chính,
   // CLOSED = khách đã chốt đúng phương án này, NONE = không có gì đặc biệt (mặc định).
   selectionStatus?: 'NONE' | 'SELECTED' | 'CLOSED';
+  // true = Order không được chọn làm giá chính (PricingModal) — option Sale gửi kèm nhưng KHÁC
+  // chất liệu Sale thực sự yêu cầu (vd phương án so sánh tuổi vàng tự sinh lúc Sale tạo đơn). Vẫn
+  // hiển thị để tham khảo, chỉ khóa hành động chọn/thêm.
+  locked?: boolean;
+  // Gắn cụm cho các phương án đính kèm (locked) đi kèm ĐÚNG 1 phương án chính (locked=false) —
+  // cùng groupId = cùng 1 lần "Tính Giá Ngay" (hoặc cùng 1 yêu cầu Sale gửi lên), dùng để lồng
+  // hiển thị các phương án đính kèm bên trong card của phương án chính, không hiện dạng list rời.
+  groupId?: string;
   note?: string;
   materials?: QuoteOptionMaterial[];
   stones?: QuoteOptionStone[];
@@ -213,12 +225,16 @@ export interface LibraryPageProps {
   requests: QuoteRequest[];
   categories: ProductCategory[];
   materials: Material[];
+  currentRole: Role;
   onSelectReq: (id: string) => void;
-  selectedId?: string | null;
   totalCount?: number;
+  // Nút "Tải lại giá" góc phải — gọi lại API với withLivePrice=true để cập nhật giá theo config
+  // hiện tại (giá kim loại/đá vừa đổi không tự đẩy xuống FE, phải bấm tải lại).
+  onRefreshPrices?: () => void;
+  refreshing?: boolean;
 }
 
-export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT';
+export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT' | 'MOST_QUOTED';
 export type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 
 // 1 phương án báo giá (QuoteOption) đã "duyệt" (đơn cha ở status QUOTED/CLOSED) hiển thị như 1 sản
@@ -236,6 +252,8 @@ export interface ProductOptionCard {
   stoneDisplay: string;
   materialIds: string[];
   requestCreatedAt?: string;
+  // Số bản ghi bị gộp chung (cùng danh mục/chất liệu/khối lượng/đá) — 1 = không trùng ai
+  duplicateCount?: number;
 }
 
 export interface ProductSpecModalProps {
