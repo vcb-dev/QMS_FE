@@ -339,7 +339,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                   <Briefcase size={16} style={fieldIconStyle} />
                   <select value={role} onChange={(e) => setRole(e.target.value as any)} style={{ ...fieldInputStyle, cursor: 'pointer' }}>
                     <option value="SALE">Chuyên Viên Kinh Doanh (SALE)</option>
-                    <option value="PRICING">Chuyên Viên Báo Giá (PRICING)</option>
+                    <option value="ORDER">Chuyên Viên Báo Giá (ORDER)</option>
                     <option value="ADMIN">Quản Trị Hệ Thống (ADMIN)</option>
                   </select>
                 </div>
@@ -405,7 +405,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
-                    placeholder="Ví dụ: 123456"
+                    
                     maxLength={6}
                     style={{ ...fieldInputStyle, border: '1px solid #f0b429', color: '#92400e', fontWeight: 700, letterSpacing: '3px' }}
                   />
