@@ -109,7 +109,7 @@ export const VnGoldPriceTicker: React.FC = () => {
                   {cleanLabel(it.label)}
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', marginTop: '4px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {formatNumberVN(it.priceVnd)}
+                  {formatNumberVN(it.priceVnd)} <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginLeft: '2px' }}>VNĐ</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', fontSize: '11.5px', fontWeight: 800, color }}>
                   <Icon size={12} />

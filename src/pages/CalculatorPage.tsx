@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Calculator, CheckCircle2, RotateCcw, Copy, Check, Plus, Trash2 } from 'lucide-react';
-import { fetchMasterData, calculatePriceApi, calculatePriceMultiApi, generatePricingOptionsApi, fetchPricingConfig, fetchStones, fetchSilverMultipliers } from '../services/api';
+import { fetchMasterData, calculatePriceApi, calculatePriceMultiApi, generatePricingOptionsApi, fetchStones, fetchSilverMultipliers } from '../services/api';
 import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
@@ -20,7 +20,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   const isSale = currentRole === 'SALE';
 
   // Master Data from DB (Materials & Categories)
-  const [dbCategories, setDbCategories] = useState<{ id: string; name: string }[]>([]);
+  const [dbCategories, setDbCategories] = useState<{ id: string; name: string; laborCost?: number | null; vatRate?: number | null }[]>([]);
   const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string }[]>([]);
 
   // Form Input States
@@ -170,15 +170,13 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     });
   }, []);
 
-  // Load VAT chuẩn từ PricingConfig — Sale không được gọi endpoint này (403), chỉ ORDER/ADMIN mới fetch
+  // VAT chuẩn giờ nạp theo danh mục sản phẩm đang chọn (ProductCategory.vatRate) — không còn 1
+  // giá trị mặc định global (PricingConfig.defaultVatRate cũ). Đổi danh mục thì đổi luôn VAT gợi ý.
   useEffect(() => {
-    if (isSale) return;
-    fetchPricingConfig()
-      .then((config: any) => {
-        if (typeof config?.defaultVatRate === 'number') setVatPct(config.defaultVatRate);
-      })
-      .catch((err) => console.error('Lỗi tải cấu hình VAT chuẩn:', err));
-  }, [isSale]);
+    if (!categoryId) return;
+    const cat = dbCategories.find((c) => c.id === categoryId);
+    if (cat?.vatRate != null) setVatPct(Number(cat.vatRate));
+  }, [categoryId, dbCategories]);
 
   // Stone management handlers
   const addStoneRow = () => {
@@ -277,17 +275,23 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           setErrorMessage('Không nhận được giá hợp lệ từ hệ thống');
         }
 
-        const enhancedOptions = (Array.isArray(options) ? options : []).map((opt) => ({
-          ...opt,
-          weightChi: opt.weightChi != null ? opt.weightChi : w,
-          materials: singleRow.materialId
-            ? [{ materialId: singleRow.materialId, weightChi: w }]
-            : undefined,
-          stones:
-            stoneInputMode === 'table' && stoneRows.length > 0
-              ? stoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-              : undefined,
-        }));
+        const enhancedOptions = (Array.isArray(options) ? options : []).map((opt) => {
+          // BE sinh mỗi phương án so sánh cho 1 tuổi vàng KHÁC NHAU (materialName riêng từng cái) —
+          // phải tra đúng materialId theo materialName của TỪNG phương án, không được dùng chung
+          // singleRow.materialId (chất liệu Sale chọn ban đầu) cho mọi phương án, kẻo cả 4 phương
+          // án đều bị lưu nhầm chung 1 chất liệu trong DB dù giá và tên đã tính đúng riêng biệt.
+          const optMaterial = dbMaterials.find((m) => m.name === opt.materialName);
+          const materialId = optMaterial?.id || singleRow.materialId;
+          return {
+            ...opt,
+            weightChi: opt.weightChi != null ? opt.weightChi : w,
+            materials: materialId ? [{ materialId, weightChi: w }] : undefined,
+            stones:
+              stoneInputMode === 'table' && stoneRows.length > 0
+                ? stoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+                : undefined,
+          };
+        });
         setPriceOptions(enhancedOptions);
       } else {
         // Luồng NHIỀU chất liệu: Gọi API calculate-multi
@@ -568,8 +572,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               </label>
             )}
 
-            {/* Hệ số nhân Bạc — chọn muốn nhân với hệ số nào, hiện cho mọi role khi chất liệu là Bạc */}
-            {isSilverMaterial && (
+            {/* Hệ số nhân Bạc — chỉ ORDER/ADMIN được chọn, Sale luôn dùng mặc định (server ép, FE ẩn cho khỏi rối) */}
+            {isSilverMaterial && !isSale && (
               <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Hệ số nhân Bạc</label>
                 <select

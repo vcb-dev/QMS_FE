@@ -1,25 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, FileText, Wrench } from 'lucide-react';
+import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench } from 'lucide-react';
 import {
-  fetchPricingConfig,
-  updatePricingConfig,
   fetchStones,
   createStone,
   updateStonePrices,
   deleteStonesMany,
   importStonesExcel,
   fetchMasterData,
-  updateProductCategoryLaborCosts,
+  updateProductCategoriesBulk,
   createProductCategory,
   deleteProductCategoriesMany,
   fetchMetalPrices,
   updateMetalPrices,
+  createMaterial,
+  updateMaterial,
+  fetchPricingFormulas,
+  createPricingFormula,
+  updatePricingFormula,
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
-import type{GoldRatio, ProfitMargin, ConfigSnapshot, MetalPricesState, StoneItem, CategoryItem} from '../types';
+import type{MetalPricesState, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
 import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE} from "../constants/index";
 import {PRIMARY_BLUE,PRIMARY_DARK,thStyle,tdStyle,tdCenterStyle,tableHeadRowStyle,labelStyle, btnPrimaryStyle, btnSecondaryStyle, btnGhostSmallStyle, iconBtnStyle,pageBtnStyle, inputStyle, valueBoxStyle, suffixStyle, fieldErrorStyle } from '../styles/card';
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
+// Chặn thật sự ngay lúc gõ (không chỉ báo lỗi) — kẹp giá trị về đúng khoảng 0-100% (VAT/lợi nhuận,
+// công thức margin dùng (100-pct)/100 nên không được vượt 100)
+const clampPercent = (v: number): number => Math.min(100, Math.max(0, v));
+// % chất liệu (priceRatioPct) không bị chặn ở 100 — chất liệu có thể đắt hơn giá kim loại gốc
+const clampMaterialRatio = (v: number): number => Math.min(1000, Math.max(0, v));
+// Tiền VNĐ — chặn theo đúng sức chứa cột DB Decimal(14,2), tránh nhập nhầm số quá lớn gây lỗi lúc lưu
+const MAX_MONEY_VND = 999_999_999_999;
+const clampMoney = (v: number): number => Math.min(MAX_MONEY_VND, Math.max(0, v));
 
 // ==========================
 // Small shared components
@@ -86,7 +97,7 @@ const MoneyField: React.FC<{
         inputMode="numeric"
         autoFocus={autoFocus}
         value={formatNumberVN(value)}
-        onChange={(e) => onChange(parseFloat(e.target.value.replace(/\D/g, '')) || 0)}
+        onChange={(e) => onChange(clampMoney(parseFloat(e.target.value.replace(/\D/g, '')) || 0))}
         style={{ ...inputStyle, paddingRight: '34px', borderColor: error ? '#dc2626' : dirty ? '#f59e0b' : '#cbd5e1' }}
       />
       <span style={suffixStyle}>VNĐ</span>
@@ -108,9 +119,11 @@ const PercentField: React.FC<{
       <input
         type="number"
         className="pcp-num-input"
+        min={0}
+        max={100}
         step={step}
         value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onChange={(e) => onChange(clampPercent(parseFloat(e.target.value) || 0))}
         style={{ ...inputStyle, paddingRight: '26px', borderColor: error ? '#dc2626' : '#cbd5e1' }}
       />
       <span style={suffixStyle}>%</span>
@@ -130,15 +143,20 @@ export const PricingConfigPage: React.FC = () => {
 
   const [metalPrices, setMetalPrices] = useState<MetalPricesState>({ gold24kVnd: 0, silverVnd: 0, platinumVnd: 0 });
   const [initialMetalPrices, setInitialMetalPrices] = useState<MetalPricesState | null>(null);
-  const [defaultVatRate, setDefaultVatRate] = useState(10);
-  const [silverMultipliers, setSilverMultipliers] = useState<number[]>([2.5, 3]);
-  const [editingSilverIdx, setEditingSilverIdx] = useState<number[]>([]);
-  const [goldRatios, setGoldRatios] = useState<GoldRatio[]>([]);
-  const [editingGoldRatioIdx, setEditingGoldRatioIdx] = useState<number[]>([]);
-  const [profitMargins, setProfitMargins] = useState<ProfitMargin[]>([]);
-  const [editingMarginIdx, setEditingMarginIdx] = useState<number[]>([]);
-  // Snapshot dữ liệu gốc từ DB — dùng để so sánh, chỉ gửi lên BE field nào thực sự đổi
-  const [initialConfig, setInitialConfig] = useState<ConfigSnapshot | null>(null);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [initialMaterials, setInitialMaterials] = useState<Material[]>([]);
+  const [editingMaterialIds, setEditingMaterialIds] = useState<string[]>([]);
+  const [addingMaterial, setAddingMaterial] = useState(false);
+  const [newMaterial, setNewMaterial] = useState<{ name: string; priceRatioPct: string; pricingFormulaId: string }>({ name: '', priceRatioPct: '100', pricingFormulaId: '' });
+  const [materialError, setMaterialError] = useState<string | null>(null);
+  // Công thức tính lãi — gắn theo NHÓM (Material.pricingFormulaId), thay bảng lợi nhuận/hệ số
+  // nhân Bạc cũ vốn gom chung 1 JSON tách rời trong pricing_config
+  const [formulas, setFormulas] = useState<PricingFormula[]>([]);
+  const [initialFormulas, setInitialFormulas] = useState<PricingFormula[]>([]);
+  const [editingFormulaIds, setEditingFormulaIds] = useState<string[]>([]);
+  const [addingFormula, setAddingFormula] = useState(false);
+  const [newFormula, setNewFormula] = useState<{ name: string; formulaType: PricingFormulaType }>({ name: '', formulaType: 'MARGIN_TIERS' });
+  const [formulaError, setFormulaError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [initialCategories, setInitialCategories] = useState<CategoryItem[]>([]);
@@ -146,7 +164,7 @@ export const PricingConfigPage: React.FC = () => {
   const [pendingDeleteCategoryIds, setPendingDeleteCategoryIds] = useState<string[]>([]);
   const [addingCategory, setAddingCategory] = useState(false);
   const [categoryPage, setCategoryPage] = useState(1);
-  const [newCategory, setNewCategory] = useState<{ name: string; laborCost: string }>({ name: '', laborCost: '' });
+  const [newCategory, setNewCategory] = useState<{ name: string; laborCost: string; vatRate: string }>({ name: '', laborCost: '', vatRate: '10' });
 
   const [stones, setStones] = useState<StoneItem[]>([]);
   const [initialStones, setInitialStones] = useState<StoneItem[]>([]);
@@ -165,8 +183,8 @@ export const PricingConfigPage: React.FC = () => {
 
   const loadAll = () => {
     setLoading(true);
-    Promise.all([fetchPricingConfig(), fetchStones(), fetchMasterData(), fetchMetalPrices()])
-      .then(([config, stoneRows, master, metals]) => {
+    Promise.all([fetchStones(), fetchMasterData(), fetchMetalPrices(), fetchPricingFormulas()])
+      .then(([stoneRows, master, metals, formulaRows]) => {
         const metalSnapshot: MetalPricesState = {
           gold24kVnd: metals?.gold24kVnd || 0,
           silverVnd: metals?.silverVnd || 0,
@@ -174,22 +192,31 @@ export const PricingConfigPage: React.FC = () => {
         };
         setMetalPrices(metalSnapshot);
         setInitialMetalPrices(metalSnapshot);
-        const vat = config.defaultVatRate || 0;
-        const multipliers = Array.isArray(config.silverMultipliers) && config.silverMultipliers.length > 0 ? config.silverMultipliers : [2.5, 3];
-        const ratios = Array.isArray(config.goldRatios) ? config.goldRatios : [];
-        const margins = Array.isArray(config.profitMargins) ? config.profitMargins : [];
-        setDefaultVatRate(vat);
-        setSilverMultipliers(multipliers);
-        setGoldRatios(ratios);
-        setProfitMargins(margins);
-        setInitialConfig({ defaultVatRate: vat, silverMultipliers: multipliers, goldRatios: ratios, profitMargins: margins });
         const loadedStones = Array.isArray(stoneRows) ? stoneRows : [];
         setStones(loadedStones);
         setInitialStones(loadedStones);
         setPendingDeleteStoneIds([]);
-        const cats = Array.isArray(master?.categories) ? master.categories : [];
+        // Decimal từ Prisma có thể về dạng string qua JSON — ép vatRate về number ngay lúc load
+        const cats = (Array.isArray(master?.categories) ? master.categories : []).map((c: CategoryItem) => ({
+          ...c,
+          vatRate: c.vatRate != null ? Number(c.vatRate) : 10,
+        }));
         setCategories(cats);
         setInitialCategories(cats);
+        // Decimal từ Prisma có thể về dạng string qua JSON — ép về number ngay lúc load để mọi so
+        // sánh (dirty-check, validation range 0-100) chạy đúng, không phụ thuộc kiểu dữ liệu API trả.
+        const mats = (Array.isArray(master?.materials) ? master.materials : []).map((m: Material) => ({
+          ...m,
+          priceRatioPct: Number(m.priceRatioPct),
+        }));
+        setMaterials(mats);
+        setInitialMaterials(mats);
+        const loadedFormulas = Array.isArray(formulaRows) ? formulaRows : [];
+        setFormulas(loadedFormulas);
+        setInitialFormulas(loadedFormulas);
+        if (loadedFormulas.length > 0) {
+          setNewMaterial((s) => (s.pricingFormulaId ? s : { ...s, pricingFormulaId: loadedFormulas[0].id }));
+        }
       })
       .catch((err) => setError(err.message || 'Không thể tải cấu hình giá'))
       .finally(() => setLoading(false));
@@ -207,7 +234,7 @@ export const PricingConfigPage: React.FC = () => {
   const changedCategories = categories.filter((c) => {
     if (pendingDeleteCategoryIds.includes(c.id)) return false;
     const original = initialCategories.find((o) => o.id === c.id);
-    return original && (c.laborCost || 0) !== (original.laborCost || 0);
+    return original && ((c.laborCost || 0) !== (original.laborCost || 0) || (c.vatRate || 0) !== (original.vatRate || 0));
   });
 
   const changedStonePrices = stones.filter((s) => {
@@ -221,33 +248,36 @@ export const PricingConfigPage: React.FC = () => {
   const platinumPriceDirty = initialMetalPrices ? metalPrices.platinumVnd !== initialMetalPrices.platinumVnd : false;
   const metalPricesDirty = goldPriceDirty || silverPriceDirty || platinumPriceDirty;
 
-  const vatDirty = initialConfig ? defaultVatRate !== initialConfig.defaultVatRate : false;
-  const silverDirty = initialConfig ? JSON.stringify(silverMultipliers) !== JSON.stringify(initialConfig.silverMultipliers) : false;
-  const goldRatiosDirty = initialConfig ? JSON.stringify(goldRatios) !== JSON.stringify(initialConfig.goldRatios) : false;
-  const profitMarginsDirty = initialConfig ? JSON.stringify(profitMargins) !== JSON.stringify(initialConfig.profitMargins) : false;
   const categoriesDirty = changedCategories.length > 0 || pendingDeleteCategoryIds.length > 0;
   const stonesDirty = changedStonePrices.length > 0 || pendingDeleteStoneIds.length > 0;
 
-  const hasPendingChanges = metalPricesDirty || vatDirty || silverDirty || goldRatiosDirty || profitMarginsDirty || categoriesDirty || stonesDirty;
+  const changedMaterials = materials.filter((m) => {
+    const original = initialMaterials.find((o) => o.id === m.id);
+    return original && (original.priceRatioPct !== m.priceRatioPct || original.pricingFormulaId !== m.pricingFormulaId);
+  });
+  const materialsDirty = changedMaterials.length > 0;
+
+  const changedFormulas = formulas.filter((f) => {
+    const original = initialFormulas.find((o) => o.id === f.id);
+    return original && JSON.stringify(original.config) !== JSON.stringify(f.config);
+  });
+  const formulasDirty = changedFormulas.length > 0;
+
+  const hasPendingChanges = metalPricesDirty || categoriesDirty || stonesDirty || materialsDirty || formulasDirty;
 
   // Validation: số âm ở bất kỳ đâu, hoặc % vượt quá 100 — chặn nút Lưu
-  const vatError = defaultVatRate < 0 ? 'Không được âm' : defaultVatRate > 100 ? 'Tối đa 100%' : null;
   const marginPctError = (pct: number) => (pct < 0 ? 'Không được âm' : pct > 100 ? 'Tối đa 100%' : null);
   const hasValidationError =
-    !!vatError ||
-    silverMultipliers.some((v) => v < 0) ||
-    goldRatios.some((r) => r.applied < 0) ||
-    profitMargins.some((m) => !!marginPctError(parseFloat(m.margin) || 0));
+    categories.some((c) => !!marginPctError(c.vatRate || 0)) ||
+    materials.some((m) => m.priceRatioPct < 0 || m.priceRatioPct > 1000) ||
+    formulas.some((f) =>
+      f.formulaType === 'MULTIPLIER'
+        ? (f.config.multipliers || []).some((v) => v < 0)
+        : (f.config.tiers || []).some((t) => !!marginPctError(parseFloat(t.margin) || 0)),
+    );
 
   // 1 API call gộp cho từng loại field/thực thể nào thực sự thay đổi so với dữ liệu gốc đã tải
   const handleSaveConfig = async () => {
-    if (!initialConfig) return;
-    const payload: Partial<ConfigSnapshot> = {};
-    if (vatDirty) payload.defaultVatRate = defaultVatRate;
-    if (silverDirty) payload.silverMultipliers = silverMultipliers;
-    if (goldRatiosDirty) payload.goldRatios = goldRatios;
-    if (profitMarginsDirty) payload.profitMargins = profitMargins;
-
     const metalPayload: { gold24kVnd?: number; silverVnd?: number; platinumVnd?: number } = {};
     if (goldPriceDirty) metalPayload.gold24kVnd = metalPrices.gold24kVnd;
     if (silverPriceDirty) metalPayload.silverVnd = metalPrices.silverVnd;
@@ -263,20 +293,26 @@ export const PricingConfigPage: React.FC = () => {
     setError(null);
     try {
       await Promise.all([
-        Object.keys(payload).length > 0 ? updatePricingConfig(payload) : Promise.resolve(),
         metalPricesDirty ? updateMetalPrices(metalPayload) : Promise.resolve(),
         categoriesDirty
-          ? updateProductCategoryLaborCosts(changedCategories.map((c) => ({ id: c.id, laborCost: c.laborCost || 0 })))
+          ? updateProductCategoriesBulk(changedCategories.map((c) => ({ id: c.id, laborCost: c.laborCost || 0, vatRate: c.vatRate || 0 })))
           : Promise.resolve(),
         changedStonePrices.length > 0
           ? updateStonePrices(changedStonePrices.map((s) => ({ id: s.id, price: s.price })))
           : Promise.resolve(),
         pendingDeleteStoneIds.length > 0 ? deleteStonesMany(pendingDeleteStoneIds) : Promise.resolve(),
         pendingDeleteCategoryIds.length > 0 ? deleteProductCategoriesMany(pendingDeleteCategoryIds) : Promise.resolve(),
+        materialsDirty
+          ? Promise.all(changedMaterials.map((m) => updateMaterial(m.id, { priceRatioPct: m.priceRatioPct, pricingFormulaId: m.pricingFormulaId })))
+          : Promise.resolve(),
+        formulasDirty
+          ? Promise.all(changedFormulas.map((f) => updatePricingFormula(f.id, { config: f.config })))
+          : Promise.resolve(),
       ]);
 
       setInitialMetalPrices(metalPrices);
-      setInitialConfig({ defaultVatRate, silverMultipliers, goldRatios, profitMargins });
+      setInitialMaterials(materials);
+      setInitialFormulas(formulas);
       const remainingCategories = categories.filter((c) => !pendingDeleteCategoryIds.includes(c.id));
       setCategories(remainingCategories);
       setInitialCategories(remainingCategories);
@@ -285,9 +321,8 @@ export const PricingConfigPage: React.FC = () => {
       setStones(remainingStones);
       setInitialStones(remainingStones);
       setPendingDeleteStoneIds([]);
-      setEditingSilverIdx([]);
-      setEditingGoldRatioIdx([]);
-      setEditingMarginIdx([]);
+      setEditingFormulaIds([]);
+      setEditingMaterialIds([]);
       setEditingCategoryIds([]);
       setEditingStoneIds([]);
       setSaved(true);
@@ -305,23 +340,20 @@ export const PricingConfigPage: React.FC = () => {
   // Hủy bỏ toàn bộ thay đổi chưa lưu — về lại đúng dữ liệu gốc đã tải, đóng mọi ô đang sửa/đang thêm
   const handleCancelAll = () => {
     if (initialMetalPrices) setMetalPrices(initialMetalPrices);
-    if (initialConfig) {
-      setDefaultVatRate(initialConfig.defaultVatRate);
-      setSilverMultipliers(initialConfig.silverMultipliers);
-      setGoldRatios(initialConfig.goldRatios);
-      setProfitMargins(initialConfig.profitMargins);
-    }
     setCategories(initialCategories);
     setPendingDeleteCategoryIds([]);
     setStones(initialStones);
     setPendingDeleteStoneIds([]);
-    setEditingSilverIdx([]);
-    setEditingGoldRatioIdx([]);
-    setEditingMarginIdx([]);
+    setMaterials(initialMaterials);
+    setFormulas(initialFormulas);
+    setEditingFormulaIds([]);
+    setEditingMaterialIds([]);
     setEditingCategoryIds([]);
     setEditingStoneIds([]);
     setAddingCategory(false);
     setAddingStoneType(null);
+    setAddingMaterial(false);
+    setAddingFormula(false);
   };
 
   // Chỉ cập nhật local state — lưu xuống BE khi bấm nút "Lưu cấu hình" ở dưới
@@ -329,26 +361,77 @@ export const PricingConfigPage: React.FC = () => {
     setMetalPrices((prev) => ({ ...prev, [field]: val }));
   };
 
-  const updateSilverMultiplier = (idx: number, val: number) => {
-    setSilverMultipliers((prev) => prev.map((v, i) => (i === idx ? val : v)));
+  // Chỉ cập nhật local state — lưu xuống BE (PATCH /pricing-formulas/:id) khi bấm "Lưu cấu hình"
+  const updateFormulaConfig = (formulaId: string, config: PricingFormula['config']) => {
+    setFormulas((prev) => prev.map((f) => (f.id === formulaId ? { ...f, config } : f)));
   };
 
-  const removeSilverMultiplier = (idx: number) => {
-    setSilverMultipliers((prev) => prev.filter((_, i) => i !== idx));
-    setEditingSilverIdx((prev) => prev.filter((i) => i !== idx));
+  const updateMultiplier = (formulaId: string, idx: number, val: number) => {
+    const f = formulas.find((x) => x.id === formulaId);
+    if (!f) return;
+    const multipliers = [...(f.config.multipliers || [])];
+    multipliers[idx] = val;
+    updateFormulaConfig(formulaId, { ...f.config, multipliers });
   };
 
-  const addSilverMultiplier = () => {
-    setSilverMultipliers((prev) => {
-      const next = [...prev, 3];
-      setEditingSilverIdx((idxPrev) => [...idxPrev, next.length - 1]);
-      return next;
-    });
+  const removeMultiplier = (formulaId: string, idx: number) => {
+    const f = formulas.find((x) => x.id === formulaId);
+    if (!f) return;
+    updateFormulaConfig(formulaId, { ...f.config, multipliers: (f.config.multipliers || []).filter((_, i) => i !== idx) });
+  };
+
+  const addMultiplier = (formulaId: string) => {
+    const f = formulas.find((x) => x.id === formulaId);
+    if (!f) return;
+    updateFormulaConfig(formulaId, { ...f.config, multipliers: [...(f.config.multipliers || []), 3] });
+  };
+
+  const updateTier = (formulaId: string, idx: number, patch: Partial<MarginTier>) => {
+    const f = formulas.find((x) => x.id === formulaId);
+    if (!f) return;
+    const tiers = [...(f.config.tiers || [])];
+    tiers[idx] = { ...tiers[idx], ...patch };
+    updateFormulaConfig(formulaId, { ...f.config, tiers });
+  };
+
+  const removeTier = (formulaId: string, idx: number) => {
+    const f = formulas.find((x) => x.id === formulaId);
+    if (!f) return;
+    updateFormulaConfig(formulaId, { ...f.config, tiers: (f.config.tiers || []).filter((_, i) => i !== idx) });
+  };
+
+  const addTier = (formulaId: string) => {
+    const f = formulas.find((x) => x.id === formulaId);
+    if (!f) return;
+    updateFormulaConfig(formulaId, { ...f.config, tiers: [...(f.config.tiers || []), { maxCost: 0, divisor: 0.8, margin: '' }] });
+  };
+
+  // Thêm công thức mới lưu ngay (giống thêm chất liệu/đá) — không staged, tên là khóa định danh
+  const handleAddFormula = async () => {
+    setFormulaError(null);
+    if (!newFormula.name.trim()) {
+      setFormulaError('Vui lòng nhập tên công thức');
+      return;
+    }
+    try {
+      const config = newFormula.formulaType === 'MULTIPLIER' ? { multipliers: [3] } : { tiers: [{ maxCost: 0, divisor: 0.8, margin: '' }] };
+      const created = await createPricingFormula({ name: newFormula.name.trim(), formulaType: newFormula.formulaType, config });
+      setFormulas((prev) => [...prev, created]);
+      setInitialFormulas((prev) => [...prev, created]);
+      setNewFormula({ name: '', formulaType: 'MARGIN_TIERS' });
+      setAddingFormula(false);
+    } catch (err: any) {
+      setFormulaError(err.message || 'Không thể thêm công thức');
+    }
   };
 
   // Chỉ cập nhật local state — lưu xuống BE khi bấm nút "Lưu cấu hình" ở dưới
   const handleCategoryLaborCostChange = (id: string, laborCost: number) => {
     setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, laborCost } : c)));
+  };
+
+  const handleCategoryVatRateChange = (id: string, vatRate: number) => {
+    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, vatRate: clampPercent(vatRate) } : c)));
   };
 
   // Đánh dấu xóa (hoặc bỏ đánh dấu) — chưa xóa thật, chỉ xóa thật khi bấm "Lưu cấu hình"
@@ -365,49 +448,48 @@ export const PricingConfigPage: React.FC = () => {
     }
     try {
       const laborCost = parseFloat(newCategory.laborCost.replace(/\D/g, '')) || 0;
-      const created = await createProductCategory(newCategory.name.trim(), laborCost);
+      const vatRate = clampPercent(parseFloat(newCategory.vatRate) || 0);
+      const created = { ...(await createProductCategory(newCategory.name.trim(), laborCost, vatRate)), vatRate };
       setCategories((prev) => [...prev, created]);
       setInitialCategories((prev) => [...prev, created]);
-      setNewCategory({ name: '', laborCost: '' });
+      setNewCategory({ name: '', laborCost: '', vatRate: '10' });
       setAddingCategory(false);
     } catch (err: any) {
       setError(err.message || 'Không thể thêm danh mục sản phẩm');
     }
   };
 
-  const updateGoldRatio = (idx: number, patch: Partial<GoldRatio>) => {
-    setGoldRatios((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  // Chỉ cập nhật local state — lưu xuống BE (PATCH /materials/:id) khi bấm "Lưu cấu hình" ở dưới
+  const updateMaterialRatio = (id: string, priceRatioPct: number) => {
+    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, priceRatioPct } : m)));
   };
 
-  // Thêm bậc tuổi vàng mới — local-only, mở sẵn edit mode để nhập tên/tỷ lệ, gửi xuống BE gộp lúc bấm "Lưu cấu hình"
-  const addGoldRatio = () => {
-    setGoldRatios((prev) => {
-      const next = [...prev, { key: `new-${Date.now()}`, standard: 0, applied: 0, label: '' }];
-      setEditingGoldRatioIdx((idxPrev) => [...idxPrev, next.length - 1]);
-      return next;
-    });
+  const updateMaterialFormula = (id: string, pricingFormulaId: string) => {
+    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, pricingFormulaId } : m)));
   };
 
-  const removeGoldRatio = (idx: number) => {
-    setGoldRatios((prev) => prev.filter((_, i) => i !== idx));
-    setEditingGoldRatioIdx((prev) => prev.filter((i) => i !== idx));
-  };
-
-  const updateMargin = (idx: number, patch: Partial<ProfitMargin>) => {
-    setProfitMargins((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
-  };
-
-  const removeMargin = (idx: number) => {
-    setProfitMargins((prev) => prev.filter((_, i) => i !== idx));
-    setEditingMarginIdx((prev) => prev.filter((i) => i !== idx));
-  };
-
-  const addMargin = () => {
-    setProfitMargins((prev) => {
-      const next = [...prev, { maxCost: 0, divisor: 0.8, margin: '' }];
-      setEditingMarginIdx((idxPrev) => [...idxPrev, next.length - 1]);
-      return next;
-    });
+  // Thêm chất liệu mới lưu ngay (giống thêm đá/danh mục) — không staged, vì tên chất liệu là khóa
+  // định danh (unique) nên tạo mới cần phản hồi ngay để biết trùng tên hay không.
+  const handleAddMaterial = async () => {
+    setMaterialError(null);
+    const ratio = clampMaterialRatio(parseFloat(newMaterial.priceRatioPct) || 0);
+    if (!newMaterial.name.trim()) {
+      setMaterialError('Vui lòng nhập tên chất liệu');
+      return;
+    }
+    if (!newMaterial.pricingFormulaId) {
+      setMaterialError('Vui lòng chọn công thức tính lãi cho chất liệu');
+      return;
+    }
+    try {
+      const created = { ...(await createMaterial(newMaterial.name.trim(), ratio, newMaterial.pricingFormulaId)), priceRatioPct: ratio };
+      setMaterials((prev) => [...prev, created]);
+      setInitialMaterials((prev) => [...prev, created]);
+      setNewMaterial((s) => ({ name: '', priceRatioPct: '100', pricingFormulaId: s.pricingFormulaId }));
+      setAddingMaterial(false);
+    } catch (err: any) {
+      setMaterialError(err.message || 'Không thể thêm chất liệu');
+    }
   };
 
   const handleAddStone = async () => {
@@ -535,56 +617,94 @@ export const PricingConfigPage: React.FC = () => {
                 </div>
               </PanelSection>
 
-              {/* Bảng tỷ lệ vàng theo tuổi */}
+              {/* Chất liệu & % tính giá — % nhân với giá kim loại gốc lúc tính (vàng theo tuổi: vd 18K=75; Bạc/Bạch kim = 100) */}
               <PanelSection
-                title="Bảng tỷ lệ vàng theo tuổi"
-                action={<button type="button" onClick={addGoldRatio} style={btnGhostSmallStyle}><Plus size={12} /> Thêm tỷ lệ</button>}
+                title="Chất liệu & % tính giá"
+                action={<button type="button" onClick={() => { setMaterialError(null); setAddingMaterial(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm chất liệu</button>}
               >
+                {materialError && (
+                  <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px' }}>
+                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+                    <span>{materialError}</span>
+                  </div>
+                )}
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                     <thead>
                       <tr style={tableHeadRowStyle}>
-                        <th style={{ ...thStyle, width: '45%' }}>Tên loại vàng</th>
-                        <th style={{ ...thStyle, width: '35%' }}>Tỷ lệ áp dụng</th>
+                        <th style={{ ...thStyle, width: '30%' }}>Tên chất liệu</th>
+                        <th style={{ ...thStyle, width: '20%' }}>% tính giá</th>
+                        <th style={{ ...thStyle, width: '35%' }}>Công thức tính lãi</th>
                         <th style={{ ...thStyle, width: '90px', textAlign: 'center' }}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {goldRatios.map((r, idx) => {
-                        const original = initialConfig?.goldRatios[idx];
-                        const rowDirty = !original || JSON.stringify(original) !== JSON.stringify(r);
-                        const isEditing = editingGoldRatioIdx.includes(idx);
-                        const ratioError = r.applied < 0 ? 'Không được âm' : null;
+                      {materials.map((m) => {
+                        const original = initialMaterials.find((o) => o.id === m.id);
+                        const rowDirty = !!original && (original.priceRatioPct !== m.priceRatioPct || original.pricingFormulaId !== m.pricingFormulaId);
+                        const isEditing = editingMaterialIds.includes(m.id);
+                        const ratioError = m.priceRatioPct < 0 ? 'Không được âm' : m.priceRatioPct > 1000 ? 'Tối đa 1000%' : null;
+                        const formulaName = formulas.find((f) => f.id === m.pricingFormulaId)?.name || '—';
                         return (
-                          <tr key={r.key || idx} style={{ borderBottom: '1px solid #f1f5f9', background: rowDirty ? '#fffbeb' : undefined }}>
+                          <tr key={m.id} style={{ borderBottom: '1px solid #f1f5f9', background: rowDirty ? '#fffbeb' : undefined }}>
                             <td style={tdStyle}>
-                              {isEditing ? (
-                                <input value={r.label} onChange={(e) => updateGoldRatio(idx, { label: e.target.value })} style={inputStyle} placeholder="VD: 10K" />
-                              ) : (
-                                <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{r.label || '—'}</span>
-                              )}
+                              <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{m.name}</span>
                             </td>
                             <td style={tdStyle}>
                               {isEditing ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  <input type="number" className="pcp-num-input" step="0.001" value={r.applied} onChange={(e) => updateGoldRatio(idx, { applied: parseFloat(e.target.value) || 0 })} style={{ ...inputStyle, borderColor: ratioError ? '#dc2626' : '#cbd5e1' }} />
+                                  <input type="number" className="pcp-num-input" min={0} max={1000} step="0.001" value={m.priceRatioPct} onChange={(e) => updateMaterialRatio(m.id, clampMaterialRatio(parseFloat(e.target.value) || 0))} style={{ ...inputStyle, borderColor: ratioError ? '#dc2626' : '#cbd5e1' }} />
                                   {ratioError && <span style={fieldErrorStyle}>{ratioError}</span>}
                                 </div>
                               ) : (
-                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{r.applied}</span>
+                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{m.priceRatioPct}%</span>
+                              )}
+                            </td>
+                            <td style={tdStyle}>
+                              {isEditing ? (
+                                <select value={m.pricingFormulaId} onChange={(e) => updateMaterialFormula(m.id, e.target.value)} style={inputStyle}>
+                                  {formulas.map((f) => (
+                                    <option key={f.id} value={f.id}>{f.name}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{formulaName}</span>
                               )}
                             </td>
                             <td style={tdCenterStyle}>
                               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                <EditIconButton onClick={() => setEditingGoldRatioIdx((prev) => toggleInArray(prev, idx))} active={isEditing} />
-                                <DeleteIconButton onClick={() => removeGoldRatio(idx)} />
+                                <EditIconButton onClick={() => setEditingMaterialIds((prev) => toggleInArray(prev, m.id))} active={isEditing} />
                               </div>
                             </td>
                           </tr>
                         );
                       })}
-                      {goldRatios.length === 0 && (
-                        <tr><td colSpan={3} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có tỷ lệ nào</td></tr>
+                      {materials.length === 0 && (
+                        <tr><td colSpan={4} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có chất liệu nào</td></tr>
+                      )}
+                      {addingMaterial && (
+                        <tr className="pcp-add-row">
+                          <td style={tdStyle}><input autoFocus value={newMaterial.name} onChange={(e) => setNewMaterial((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="VD: Vàng 16K" /></td>
+                          <td style={tdStyle}><input type="number" className="pcp-num-input" min={0} max={1000} step="0.001" value={newMaterial.priceRatioPct} onChange={(e) => setNewMaterial((s) => ({ ...s, priceRatioPct: e.target.value }))} style={inputStyle} /></td>
+                          <td style={tdStyle}>
+                            <select value={newMaterial.pricingFormulaId} onChange={(e) => setNewMaterial((s) => ({ ...s, pricingFormulaId: e.target.value }))} style={inputStyle}>
+                              {formulas.length === 0 && <option value="">Chưa có công thức</option>}
+                              {formulas.map((f) => (
+                                <option key={f.id} value={f.id}>{f.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={tdCenterStyle}>
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                              <button type="button" onClick={handleAddMaterial} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Xác nhận thêm">
+                                <Check size={14} />
+                              </button>
+                              <button type="button" onClick={() => setAddingMaterial(false)} style={iconBtnStyle} className="pcp-icon-btn" title="Hủy">
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
                       )}
                     </tbody>
                   </table>
@@ -677,150 +797,166 @@ export const PricingConfigPage: React.FC = () => {
           {activeTab === 'RULES' && (
             <div className="pcp-rules-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '20px', alignItems: 'start', padding: '22px 0' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Cấu hình VAT — icon vuông chỉ mang tính trang trí, ô giá trị luôn mở sẵn để nhập */}
-              <RuleCard
-                title="Cấu hình VAT"
-                subtitle="Thuế giá trị gia tăng mặc định áp dụng cho tất cả sản phẩm."
-                action={
-                  <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexShrink: 0 }}>
-                    <FileText size={16} />
-                  </div>
-                }
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', maxWidth: '320px' }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>VAT mặc định (%)</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                    <input
-                      type="number"
-                      className="pcp-num-input"
-                      value={defaultVatRate}
-                      onChange={(e) => setDefaultVatRate(parseFloat(e.target.value) || 0)}
-                      style={{ width: '90px', border: 'none', outline: 'none', textAlign: 'right', fontSize: '15px', fontWeight: 800, color: vatDirty ? '#b45309' : '#0f172a', background: 'transparent', borderBottom: `1px solid ${vatError ? '#dc2626' : vatDirty ? '#f59e0b' : '#e5e7eb'}` }}
-                    />
-                    {vatError && <span style={fieldErrorStyle}>{vatError}</span>}
-                  </div>
-                </div>
-              </RuleCard>
+              {/* VAT giờ cấu hình theo từng danh mục sản phẩm — xem panel "Tiền công / VAT" bên phải */}
 
-              {/* Hệ số nhân Bạc */}
-              <RuleCard
-                title="Hệ số nhân Bạc"
-                subtitle="Các mức hệ số nhân dùng để tính giá bán cho trang sức Bạc."
-                action={<button type="button" onClick={addSilverMultiplier} style={btnGhostSmallStyle}><Plus size={12} /> Thêm hệ số</button>}
-              >
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                    <thead>
-                      <tr style={tableHeadRowStyle}>
-                        <th style={{ ...thStyle, width: '60px' }}>STT</th>
-                        <th style={thStyle}>Hệ số nhân</th>
-                        <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {silverMultipliers.map((mult, idx) => {
-                        const multError = mult < 0 ? 'Không được âm' : null;
-                        const isEditing = editingSilverIdx.includes(idx);
-                        return (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ ...tdStyle, color: '#94a3b8', fontWeight: 700 }}>{idx + 1}</td>
-                            <td style={tdStyle}>
-                              {isEditing ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  <input type="number" className="pcp-num-input" step="0.1" value={mult} onChange={(e) => updateSilverMultiplier(idx, parseFloat(e.target.value) || 0)} style={{ ...inputStyle, width: '100px', borderColor: multError ? '#dc2626' : '#cbd5e1' }} />
-                                  {multError && <span style={fieldErrorStyle}>{multError}</span>}
-                                </div>
-                              ) : (
-                                <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{mult}</span>
-                              )}
-                            </td>
-                            <td style={{ ...tdStyle, textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <EditIconButton onClick={() => setEditingSilverIdx((prev) => toggleInArray(prev, idx))} active={isEditing} />
-                                <DeleteIconButton onClick={() => removeSilverMultiplier(idx)} />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {silverMultipliers.length === 0 && (
-                        <tr><td colSpan={3} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có hệ số nào</td></tr>
-                      )}
-                    </tbody>
-                  </table>
+              {/* Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu (bảng bên tab Nguồn giá gốc)
+                  trỏ chung 1 công thức. Thêm kim loại/chất liệu mới chỉ cần trỏ tới công thức có
+                  sẵn hoặc tạo công thức mới ở đây — không cần sửa code. */}
+              {formulaError && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px' }}>
+                  <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <span>{formulaError}</span>
                 </div>
-              </RuleCard>
+              )}
+              {formulas.map((f) => {
+                const isEditing = editingFormulaIds.includes(f.id);
+                const usedByCount = materials.filter((m) => m.pricingFormulaId === f.id).length;
+                return (
+                  <RuleCard
+                    key={f.id}
+                    title={f.name}
+                    subtitle={
+                      (f.formulaType === 'MULTIPLIER'
+                        ? 'Nhân thẳng 1 hệ số cố định lên chi phí đã có VAT.'
+                        : 'Tra bậc lợi nhuận theo mốc chi phí sản xuất.') +
+                      ` Đang dùng bởi ${usedByCount} chất liệu.` +
+                      (f.isDefault ? ' • Mặc định tính lãi phần Đá.' : '')
+                    }
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => (f.formulaType === 'MULTIPLIER' ? addMultiplier(f.id) : addTier(f.id))}
+                        style={btnGhostSmallStyle}
+                      >
+                        <Plus size={12} /> {f.formulaType === 'MULTIPLIER' ? 'Thêm hệ số' : 'Thêm bậc'}
+                      </button>
+                    }
+                  >
+                    {f.formulaType === 'MULTIPLIER' ? (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                          <thead>
+                            <tr style={tableHeadRowStyle}>
+                              <th style={{ ...thStyle, width: '60px' }}>STT</th>
+                              <th style={thStyle}>Hệ số nhân</th>
+                              <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(f.config.multipliers || []).map((mult, idx) => {
+                              const multError = mult < 0 ? 'Không được âm' : null;
+                              return (
+                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ ...tdStyle, color: '#94a3b8', fontWeight: 700 }}>{idx + 1}</td>
+                                  <td style={tdStyle}>
+                                    {isEditing ? (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <input type="number" className="pcp-num-input" min={0} step="0.1" value={mult} onChange={(e) => updateMultiplier(f.id, idx, Math.max(0, parseFloat(e.target.value) || 0))} style={{ ...inputStyle, width: '100px', borderColor: multError ? '#dc2626' : '#cbd5e1' }} />
+                                        {multError && <span style={fieldErrorStyle}>{multError}</span>}
+                                      </div>
+                                    ) : (
+                                      <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{mult}</span>
+                                    )}
+                                  </td>
+                                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                      <EditIconButton onClick={() => setEditingFormulaIds((prev) => toggleInArray(prev, f.id))} active={isEditing} />
+                                      <DeleteIconButton onClick={() => removeMultiplier(f.id, idx)} />
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            {(f.config.multipliers || []).length === 0 && (
+                              <tr><td colSpan={3} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có hệ số nào</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                          <thead>
+                            <tr style={tableHeadRowStyle}>
+                              <th style={{ ...thStyle, width: '42%' }}>Chi phí tối đa (VNĐ)</th>
+                              <th style={{ ...thStyle, width: '38%' }}>Biên độ lợi nhuận (%)</th>
+                              <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(f.config.tiers || []).map((tier, idx) => {
+                              const marginPct = parseFloat(tier.margin) || 0;
+                              const pctError = marginPctError(marginPct);
+                              const isUnlimited = tier.maxCost >= UNLIMITED_MAX_COST;
+                              return (
+                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={tdStyle}>
+                                    {isEditing ? (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#6b7280', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                          <input type="checkbox" checked={isUnlimited} onChange={(e) => updateTier(f.id, idx, { maxCost: e.target.checked ? UNLIMITED_MAX_COST : 0 })} />
+                                          Không giới hạn
+                                        </label>
+                                        {!isUnlimited && <MoneyField value={tier.maxCost} onChange={(v) => updateTier(f.id, idx, { maxCost: v })} />}
+                                      </div>
+                                    ) : (
+                                      isUnlimited ? <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>Không giới hạn</span> : <ValueDisplay value={tier.maxCost} unit="VNĐ" />
+                                    )}
+                                  </td>
+                                  <td style={tdStyle}>
+                                    {isEditing ? (
+                                      <PercentField value={marginPct} onChange={(pct) => updateTier(f.id, idx, { margin: `${pct}%`, divisor: (100 - pct) / 100 })} error={pctError} width="140px" />
+                                    ) : (
+                                      <ValueDisplay value={marginPct} unit="%" />
+                                    )}
+                                  </td>
+                                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                      <EditIconButton onClick={() => setEditingFormulaIds((prev) => toggleInArray(prev, f.id))} active={isEditing} />
+                                      <DeleteIconButton onClick={() => removeTier(f.id, idx)} />
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            {(f.config.tiers || []).length === 0 && (
+                              <tr><td colSpan={3} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có bậc lợi nhuận nào</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </RuleCard>
+                );
+              })}
 
-              {/* Bảng lợi nhuận */}
-              <RuleCard
-                title="Bảng lợi nhuận (Margin)"
-                subtitle="Biên độ lợi nhuận áp dụng theo từng mốc chi phí sản xuất."
-                action={<button type="button" onClick={addMargin} style={btnGhostSmallStyle}><Plus size={12} /> Thêm bậc</button>}
-              >
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                    <thead>
-                      <tr style={tableHeadRowStyle}>
-                        <th style={{ ...thStyle, width: '42%' }}>Chi phí tối đa (VNĐ)</th>
-                        <th style={{ ...thStyle, width: '38%' }}>Biên độ lợi nhuận (%)</th>
-                        <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {profitMargins.map((m, idx) => {
-                        const original = initialConfig?.profitMargins[idx];
-                        const rowDirty = !original || JSON.stringify(original) !== JSON.stringify(m);
-                        const marginPct = parseFloat(m.margin) || 0;
-                        const pctError = marginPctError(marginPct);
-                        const isUnlimited = m.maxCost >= UNLIMITED_MAX_COST;
-                        const isEditing = editingMarginIdx.includes(idx);
-                        return (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: rowDirty ? '#fffbeb' : undefined }}>
-                            <td style={tdStyle}>
-                              {isEditing ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#6b7280', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                    <input type="checkbox" checked={isUnlimited} onChange={(e) => updateMargin(idx, { maxCost: e.target.checked ? UNLIMITED_MAX_COST : 0 })} />
-                                    Không giới hạn
-                                  </label>
-                                  {!isUnlimited && <MoneyField value={m.maxCost} onChange={(v) => updateMargin(idx, { maxCost: v })} />}
-                                </div>
-                              ) : (
-                                isUnlimited ? <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>Không giới hạn</span> : <ValueDisplay value={m.maxCost} unit="VNĐ" />
-                              )}
-                            </td>
-                            <td style={tdStyle}>
-                              {isEditing ? (
-                                <PercentField value={marginPct} onChange={(pct) => updateMargin(idx, { margin: `${pct}%`, divisor: (100 - pct) / 100 })} error={pctError} width="140px" />
-                              ) : (
-                                <ValueDisplay value={marginPct} unit="%" />
-                              )}
-                            </td>
-                            <td style={{ ...tdStyle, textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <EditIconButton onClick={() => setEditingMarginIdx((prev) => toggleInArray(prev, idx))} active={isEditing} />
-                                <DeleteIconButton onClick={() => removeMargin(idx)} />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {profitMargins.length === 0 && (
-                        <tr><td colSpan={3} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có bậc lợi nhuận nào</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+              {/* Thêm công thức mới — lưu ngay (giống thêm chất liệu/đá), sửa nội dung bên trong sau */}
+              <RuleCard title="Thêm công thức mới">
+                {addingFormula ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '360px' }}>
+                    <input autoFocus value={newFormula.name} onChange={(e) => setNewFormula((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="VD: Bậc lợi nhuận Bạch kim cao cấp" />
+                    <select value={newFormula.formulaType} onChange={(e) => setNewFormula((s) => ({ ...s, formulaType: e.target.value as PricingFormulaType }))} style={inputStyle}>
+                      <option value="MARGIN_TIERS">Bậc lợi nhuận theo chi phí</option>
+                      <option value="MULTIPLIER">Hệ số nhân cố định</option>
+                    </select>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button type="button" onClick={handleAddFormula} style={btnPrimaryStyle}><Check size={13} /> Thêm</button>
+                      <button type="button" onClick={() => setAddingFormula(false)} style={btnSecondaryStyle}><X size={13} /> Hủy</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => { setFormulaError(null); setAddingFormula(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm công thức</button>
+                )}
               </RuleCard>
             </div>
 
-            {/* Tiền công theo danh mục sản phẩm — panel riêng bên phải, gọn, giống ảnh mockup */}
+            {/* Tiền công / VAT theo danh mục sản phẩm — panel riêng bên phải, gọn, giống ảnh mockup */}
             <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Wrench size={15} style={{ color: '#64748b', flexShrink: 0 }} />
                   <div>
-                    <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Tiền công</h3>
+                    <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Tiền công / VAT</h3>
                     <p style={{ fontSize: '11px', color: '#94a3b8', margin: '2px 0 0' }}>Theo danh mục sản phẩm</p>
                   </div>
                 </div>
@@ -840,6 +976,7 @@ export const PricingConfigPage: React.FC = () => {
                       pendingDeleteIds={pendingDeleteCategoryIds}
                       editingIds={editingCategoryIds}
                       onLaborCostChange={handleCategoryLaborCostChange}
+                      onVatRateChange={handleCategoryVatRateChange}
                       onToggleDelete={handleToggleDeleteCategory}
                       onToggleEdit={(id) => setEditingCategoryIds((prev) => toggleInArray(prev, id))}
                       adding={addingCategory}
@@ -917,32 +1054,48 @@ const CategoryTable: React.FC<{
   pendingDeleteIds: string[];
   editingIds: string[];
   onLaborCostChange: (id: string, laborCost: number) => void;
+  onVatRateChange: (id: string, vatRate: number) => void;
   onToggleDelete: (id: string) => void;
   onToggleEdit: (id: string) => void;
   adding: boolean;
   onCloseAdd: () => void;
-  newCategory: { name: string; laborCost: string };
-  setNewCategory: React.Dispatch<React.SetStateAction<{ name: string; laborCost: string }>>;
+  newCategory: { name: string; laborCost: string; vatRate: string };
+  setNewCategory: React.Dispatch<React.SetStateAction<{ name: string; laborCost: string; vatRate: string }>>;
   onConfirmAdd: () => void;
-}> = ({ items, initialCategories, pendingDeleteIds, editingIds, onLaborCostChange, onToggleDelete, onToggleEdit, adding, onCloseAdd, newCategory, setNewCategory, onConfirmAdd }) => {
+}> = ({ items, initialCategories, pendingDeleteIds, editingIds, onLaborCostChange, onVatRateChange, onToggleDelete, onToggleEdit, adding, onCloseAdd, newCategory, setNewCategory, onConfirmAdd }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {items.map((c) => {
         const original = initialCategories.find((o) => o.id === c.id);
         const markedDelete = pendingDeleteIds.includes(c.id);
-        const isDirty = !markedDelete && !!original && (original.laborCost || 0) !== (c.laborCost || 0);
+        const isDirty = !markedDelete && !!original && ((original.laborCost || 0) !== (c.laborCost || 0) || (original.vatRate || 0) !== (c.vatRate || 0));
         const isEditing = editingIds.includes(c.id);
         return (
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '9px 0', minHeight: '38px', borderBottom: '1px solid #f1f5f9', background: markedDelete ? '#fef2f2' : isDirty ? '#fffbeb' : undefined }}>
-            <span style={{ fontSize: '12.5px', fontWeight: 700, color: markedDelete ? '#94a3b8' : '#334155', textDecoration: markedDelete ? 'line-through' : 'none' }}>{c.name}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-              {isEditing && !markedDelete ? (
-                <MoneyField value={c.laborCost || 0} onChange={(v) => onLaborCostChange(c.id, v)} width="120px" />
-              ) : (
-                <span style={{ ...valueBoxStyle, width: '120px', fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(c.laborCost || 0)}</span>
-              )}
-              <EditIconButton onClick={() => onToggleEdit(c.id)} active={isEditing} title={markedDelete ? undefined : (isEditing ? 'Đóng sửa' : 'Sửa')} />
-              <DeleteIconButton onClick={() => onToggleDelete(c.id)} marked={markedDelete} />
+          <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '9px 0', borderBottom: '1px solid #f1f5f9', background: markedDelete ? '#fef2f2' : isDirty ? '#fffbeb' : undefined }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: 700, color: markedDelete ? '#94a3b8' : '#334155', textDecoration: markedDelete ? 'line-through' : 'none' }}>{c.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                <EditIconButton onClick={() => onToggleEdit(c.id)} active={isEditing} title={markedDelete ? undefined : (isEditing ? 'Đóng sửa' : 'Sửa')} />
+                <DeleteIconButton onClick={() => onToggleDelete(c.id)} marked={markedDelete} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '9.5px', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Tiền công</label>
+                {isEditing && !markedDelete ? (
+                  <MoneyField value={c.laborCost || 0} onChange={(v) => onLaborCostChange(c.id, v)} width="100%" />
+                ) : (
+                  <span style={{ ...valueBoxStyle, fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(c.laborCost || 0)}</span>
+                )}
+              </div>
+              <div style={{ width: '70px', flexShrink: 0 }}>
+                <label style={{ fontSize: '9.5px', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '2px' }}>VAT</label>
+                {isEditing && !markedDelete ? (
+                  <PercentField value={c.vatRate || 0} onChange={(v) => onVatRateChange(c.id, v)} width="100%" />
+                ) : (
+                  <span style={{ ...valueBoxStyle, fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{c.vatRate || 0}%</span>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -953,7 +1106,10 @@ const CategoryTable: React.FC<{
       {adding && (
         <div className="pcp-add-row" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', borderRadius: '8px', marginTop: '8px' }}>
           <input autoFocus value={newCategory.name} onChange={(e) => setNewCategory((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="Tên danh mục" />
-          <MoneyField value={parseFloat(newCategory.laborCost) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, laborCost: String(v) }))} />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <MoneyField value={parseFloat(newCategory.laborCost) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, laborCost: String(v) }))} />
+            <PercentField value={parseFloat(newCategory.vatRate) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, vatRate: String(v) }))} width="90px" />
+          </div>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
             <button type="button" onClick={onConfirmAdd} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Xác nhận thêm">
               <Check size={14} />
