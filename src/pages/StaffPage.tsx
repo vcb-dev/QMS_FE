@@ -7,8 +7,28 @@ import { Pagination } from '../components/Pagination';
 import { formatDuration } from '../utils/currency';
 import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
 
+type ActionStat = { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] };
 
-
+// BE đếm riêng theo từng action code (VD CALCULATE_PRICE / CALCULATE_MULTI_MATERIAL_PRICE) —
+// gộp lại theo nhãn hiển thị (ACTION_LABEL) để 2 action cùng tên tiếng Việt không tách 2 dòng.
+const mergeActionsByLabel = (actions: ActionStat[]): ActionStat[] => {
+  const merged = new Map<string, ActionStat>();
+  for (const a of actions) {
+    const label = ACTION_LABEL[a.action] || a.action;
+    const existing = merged.get(label);
+    if (!existing) {
+      merged.set(label, { ...a, byActor: a.byActor.map((x) => ({ ...x })) });
+      continue;
+    }
+    existing.count += a.count;
+    for (const actor of a.byActor) {
+      const target = existing.byActor.find((x) => x.actorId === actor.actorId);
+      if (target) target.count += actor.count;
+      else existing.byActor.push({ ...actor });
+    }
+  }
+  return [...merged.values()].sort((x, y) => y.count - x.count);
+};
 
 export const StaffPage: React.FC = () => {
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -57,6 +77,8 @@ export const StaffPage: React.FC = () => {
   const deptStats = Array.from(byDept.entries()).sort((a, b) => b[1] - a[1]);
   const pendingUsers = users.filter((u) => !u.isApproved && u.role !== 'ADMIN');
   const activeListUsers = users.filter((u) => u.isApproved && u.role !== 'ADMIN').sort((a, b) => a.name.localeCompare(b.name));
+  // Tài khoản đã khóa (isActive=false) không còn thao tác — ẩn khỏi các bảng thống kê/hoạt động bên dưới
+  const lockedUserIds = new Set(users.filter((u) => !u.isActive).map((u) => u.id));
 
   const currentAccountList = accountTab === 'PENDING' ? pendingUsers : activeListUsers;
   const accountTotalPages = Math.max(1, Math.ceil(currentAccountList.length / accountPageSize));
@@ -101,8 +123,8 @@ export const StaffPage: React.FC = () => {
     }
   };
 
-  // Hiệu suất Sale — số yêu cầu đã tạo & đã chốt của từng Sale
-  const sales = users.filter((u) => u.role === 'SALE');
+  // Hiệu suất Sale — số yêu cầu đã tạo & đã chốt của từng Sale (bỏ tài khoản đã khóa)
+  const sales = users.filter((u) => u.role === 'SALE' && u.isActive);
   const saleStats = sales.map((sale) => {
     const created = quoteRequests.filter((r) => r.requesterId === sale.id);
     const total = created.length;
@@ -110,8 +132,8 @@ export const StaffPage: React.FC = () => {
     return { id: sale.id, name: sale.name, total, closed, closeRate: total > 0 ? (closed / total) * 100 : 0 };
   }).sort((a, b) => b.total - a.total);
 
-  // 2.2 Quản lý người báo giá — thời gian TB báo giá & TB xử lý của từng pricer
-  const pricers = users.filter((u) => u.role === 'ORDER');
+  // 2.2 Quản lý người báo giá — thời gian TB báo giá & TB xử lý của từng pricer (bỏ tài khoản đã khóa)
+  const pricers = users.filter((u) => u.role === 'ORDER' && u.isActive);
   const pricerStats = pricers.map((pricer) => {
     const handled = quoteRequests.filter((r) => r.assigneeId === pricer.id && r.acceptedAt);
     const quoteDurations: number[] = [];
@@ -446,7 +468,8 @@ export const StaffPage: React.FC = () => {
       
         {Object.keys(actionStats).length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Object.keys(actionStats).length}, 1fr)`, gap: '20px', marginTop: '14px' }}>
-            {Object.entries(actionStats).map(([role, actions]) => {
+            {Object.entries(actionStats).map(([role, rawActions]) => {
+              const actions = mergeActionsByLabel(rawActions);
               const maxCount = actions[0]?.count || 1;
               return (
                 <div key={role}>
@@ -474,7 +497,7 @@ export const StaffPage: React.FC = () => {
                           </div>
                           {isOpen && (
                             <div style={{ marginTop: '6px', padding: '8px 10px', background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {a.byActor.map((actor) => (
+                              {a.byActor.filter((actor) => !actor.actorId || !lockedUserIds.has(actor.actorId)).map((actor) => (
                                 <div key={actor.actorId || actor.actorName} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
                                   <span style={{ color: '#334155', fontWeight: 600 }}>{actor.actorName}</span>
                                   <span style={{ color: '#64748b', fontWeight: 700 }}>{actor.count} lần</span>

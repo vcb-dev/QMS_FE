@@ -29,6 +29,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   setStartDateFilter,
   endDateFilter,
   setEndDateFilter,
+  includeLocked,
+  setIncludeLocked,
   currentPage,
   setCurrentPage,
   pageSize,
@@ -43,7 +45,11 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onPricing,
   onReject,
   onReturn,
+  onResubmit,
+  onConfirmDirectPrice,
   onDelete,
+  onMarkClosed,
+  onManageOptions,
   onOpenCreate,
   onOpenExport,
   onResetFilters,
@@ -64,15 +70,27 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           
           <h1>Danh Sách Yêu Cầu Báo Giá</h1>
         </div>
-        {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
-          <button
-            className="primary-action"
-            onClick={onOpenCreate}
-            style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {currentRole === 'ADMIN' && setIncludeLocked && (
+            <button
+              className="tool-btn"
+              onClick={() => { setIncludeLocked(!includeLocked); setCurrentPage(1); }}
+              title="Yêu cầu đang chờ/xử lý bị ẩn vì người tạo hoặc người xử lý đã bị khóa tài khoản"
+              style={{ background: includeLocked ? '#fef3c7' : undefined, borderColor: includeLocked ? '#f59e0b' : undefined }}
+            >
+              {includeLocked ? 'Đang hiện yêu cầu bị khóa' : 'Hiện yêu cầu bị khóa'}
+            </button>
+          )}
+          {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
+            <button
+              className="primary-action"
+              onClick={onOpenCreate}
+              style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá
+            </button>
+          )}
+        </div>
       </div>
 
       <FilterBar
@@ -117,7 +135,11 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onPricing={onPricing}
           onReject={onReject}
           onReturn={onReturn}
+          onResubmit={onResubmit}
+          onConfirmDirectPrice={onConfirmDirectPrice}
           onDelete={onDelete}
+          onMarkClosed={onMarkClosed}
+          onManageOptions={onManageOptions}
         />
         <Pagination
           currentPage={currentPage}

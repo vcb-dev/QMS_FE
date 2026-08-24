@@ -50,6 +50,7 @@ export const RejectModal: React.FC<RejectModalProps> = ({ isOpen, onClose, onSub
                 rows={4}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
+                maxLength={500}
                 placeholder="Nhập lý do không thể báo giá (ví dụ: Thiếu thông tin số đo, xưởng hết phôi gỗ...)..."
               />
             </div>

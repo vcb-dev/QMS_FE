@@ -50,6 +50,7 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({ isOpen, onClose, onSub
                 rows={4}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
+                maxLength={500}
                 placeholder="Nhập lý do cần bổ sung (ví dụ: Ảnh mờ không rõ kiểu chấu đính đá, thiếu kích thước nhẫn...)..."
               />
             </div>

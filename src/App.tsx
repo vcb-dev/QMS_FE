@@ -12,6 +12,8 @@ import { CreateModal } from './components/CreateModal';
 import { PricingModal } from './components/PricingModal';
 import { RejectModal } from './components/RejectModal';
 import { ReturnModal } from './components/ReturnModal';
+import { MarkClosedModal } from './components/MarkClosedModal';
+import { ManageOptionsModal } from './components/ManageOptionsModal';
 import { ExportModal } from './components/ExportModal';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { NavProgressBar } from './components/NavProgressBar';
@@ -52,29 +54,37 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
+    includeLocked, setIncludeLocked,
     pageSize, setPageSize, totalRecords, totalPages, counts,
     loading, loadingMessage, listLoading, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
-    returnReqId, setReturnReqId, handleTabChange, handleResetFilters,
+    returnReqId, setReturnReqId, closeOptionReqId, setCloseOptionReqId,
+    manageOptionsReqId, setManageOptionsReqId, handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handlePricingSubmit, handleConfirmDirectQuote,
-    handleRejectSubmit, handleReturnSubmit, handleResubmitDirect, handleMarkClosed,
+    handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
+    handleMarkClosedClick, handleCloseOptionSubmit,
     handleDeleteOption,
     refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole);
 
-  // Socket /realtime — connect 1 lần suốt phiên (khác chat, connect theo từng DetailPage) để
-  // trang danh sách cũng nhận trạng thái mới ngay, không cần F5.
+  // Socket /realtime — 1 kết nối duy nhất suốt phiên đăng nhập (dùng chung cho cả Realtime trạng thái & Chat)
+  const [globalSocket, setGlobalSocket] = useState<any>(null);
+
   useEffect(() => {
+    if (!currentUser) return;
     const socket = connectRealtimeSocket();
+    setGlobalSocket(socket);
+
     const handleStatusChanged = () => refreshQuietly();
     socket.on(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
+
     return () => {
       socket.off(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
       socket.disconnect();
+      setGlobalSocket(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser?.id]);
 
   const getSidebarKey = () => {
     const p = location.pathname;
@@ -137,7 +147,8 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
           <Routes>
             <Route path="/" element={
               <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
-                onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate} />
+                onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate}
+                onFilterStatus={(status) => { setStatusSubFilter(status); setCurrentPage(1); navigate('/requests'); }} />
             } />
 
             <Route path="/requests" element={
@@ -152,6 +163,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 timeRangeFilter={timeRangeFilter} setTimeRangeFilter={setTimeRangeFilter}
                 startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
                 endDateFilter={endDateFilter} setEndDateFilter={setEndDateFilter}
+                includeLocked={includeLocked} setIncludeLocked={setIncludeLocked}
                 currentPage={currentPage} setCurrentPage={setCurrentPage}
                 pageSize={pageSize} setPageSize={setPageSize}
                 totalRecords={totalRecords} totalPages={totalPages}
@@ -166,7 +178,11 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onPricing={(id) => setPricingReqId(id)}
                 onReject={(id) => setRejectReqId(id)}
                 onReturn={(id) => setReturnReqId(id)}
+                onResubmit={handleResubmitDirect}
+                onConfirmDirectPrice={handleConfirmDirectQuote}
                 onDelete={handleDeleteRequest}
+                onMarkClosed={handleMarkClosedClick}
+                onManageOptions={(id) => setManageOptionsReqId(id)}
                 onOpenCreate={handleOpenCreate}
                 onOpenExport={() => setIsExportOpen(true)}
                 onResetFilters={() => { handleResetFilters(); setScopeFilter('ALL'); }}
@@ -177,15 +193,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
             <Route path="/requests/:id" element={
               <DetailPage
                 selectedReq={selectedReq} currentRole={currentRole} currentUser={currentUser!}
-                onEdit={handleOpenEdit} onAccept={handleAccept}
-                onPricing={(id) => setPricingReqId(id)}
-                onReject={(id) => setRejectReqId(id)}
-                onReturn={(id) => setReturnReqId(id)}
-                onResubmit={handleResubmitDirect}
-                onConfirmDirectPrice={handleConfirmDirectQuote}
-                onMarkClosed={handleMarkClosed}
-                onDelete={handleDeleteRequest}
-                onDeleteOption={handleDeleteOption}
+                socket={globalSocket}
               />
             } />
 
@@ -213,7 +221,8 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
             <Route path="*" element={
               <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
-                onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate} />
+                onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate}
+                onFilterStatus={(status) => { setStatusSubFilter(status); setCurrentPage(1); navigate('/requests'); }} />
             } />
           </Routes>
           </Suspense>
@@ -234,6 +243,22 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
       <ReturnModal isOpen={returnReqId !== null} onClose={() => setReturnReqId(null)}
         onSubmit={handleReturnSubmit} />
+
+      <MarkClosedModal
+        isOpen={closeOptionReqId !== null}
+        reqCode={requests.find((r) => r.id === closeOptionReqId)?.code}
+        options={(requests.find((r) => r.id === closeOptionReqId)?.options || []).filter((o) => o.quotedPrice != null)}
+        onClose={() => setCloseOptionReqId(null)}
+        onSubmit={handleCloseOptionSubmit}
+      />
+
+      <ManageOptionsModal
+        isOpen={manageOptionsReqId !== null}
+        reqCode={requests.find((r) => r.id === manageOptionsReqId)?.code}
+        options={(requests.find((r) => r.id === manageOptionsReqId)?.options || []).filter((o) => o.quotedPrice != null)}
+        onClose={() => setManageOptionsReqId(null)}
+        onDelete={(optionId) => manageOptionsReqId && handleDeleteOption(manageOptionsReqId, optionId)}
+      />
 
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)}
         categories={categories} materials={materials}

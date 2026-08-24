@@ -6,7 +6,6 @@ import {
   calculatePriceApi,
   calculatePriceMultiApi,
   generatePricingOptionsApi,
-  fetchPricingConfig,
   fetchStones,
   fetchSilverMultipliers,
 } from '../services/api';
@@ -65,7 +64,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string }[]>(initialMaterialsList);
   const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
   const [silverMultipliers, setSilverMultipliers] = useState<number[]>([]);
-  const [defaultVatRate, setDefaultVatRate] = useState<number>(PRICING_DEFAULTS.VAT_PCT);
+  // VAT giờ lấy theo danh mục sản phẩm của yêu cầu đang báo giá (ProductCategory.vatRate),
+  // không còn 1 giá trị mặc định global — fallback về PRICING_DEFAULTS nếu danh mục chưa cấu hình
+  const defaultVatRate = selectedReq?.category?.vatRate ?? PRICING_DEFAULTS.VAT_PCT;
 
   // 1. Danh sách các phương án báo giá hiện tại
   const [options, setOptions] = useState<QuoteOption[]>([]);
@@ -100,8 +101,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       fetchMasterData(),
       fetchStones(),
       fetchSilverMultipliers(),
-      fetchPricingConfig(),
-    ]).then(([mRes, sRes, silvRes, cfgRes]) => {
+    ]).then(([mRes, sRes, silvRes]) => {
       if (mRes.status === 'fulfilled' && mRes.value?.materials) {
         setDbMaterials(mRes.value.materials);
       }
@@ -111,10 +111,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       if (silvRes.status === 'fulfilled' && Array.isArray(silvRes.value)) {
         setSilverMultipliers(silvRes.value);
         if (silvRes.value.length > 0) setCalcSilverMultiplier(silvRes.value[0]);
-      }
-      if (cfgRes.status === 'fulfilled' && typeof cfgRes.value?.defaultVatRate === 'number') {
-        setDefaultVatRate(cfgRes.value.defaultVatRate);
-        setCalcVat(String(cfgRes.value.defaultVatRate));
       }
     });
   }, []);
@@ -192,6 +188,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     if (primaryOpt?.vat != null) {
       setCalcVat(String(primaryOpt.vat));
       setCalcIncludeVat(Number(primaryOpt.vat) > 0);
+    } else if (selectedReq.category?.vatRate != null) {
+      setCalcVat(String(selectedReq.category.vatRate));
     }
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
@@ -943,6 +941,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         type="text"
                         value={calcManualStoneName}
                         onChange={(e) => setCalcManualStoneName(e.target.value)}
+                        maxLength={200}
                         placeholder="Mô tả đá (VD: Kim cương 4.5 ly)"
                         style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
                       />
@@ -1080,6 +1079,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         type="text"
                         value={calcOptionName}
                         onChange={(e) => setCalcOptionName(e.target.value)}
+                        maxLength={100}
                         placeholder="Tên phương án (VD: Phương án phối 2 màu, Vàng 18K...)"
                         style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 600 }}
                       />

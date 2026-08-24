@@ -28,6 +28,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [timeRangeFilter, setTimeRangeFilter] = useState<string>('ALL');
   const [startDateFilter, setStartDateFilter] = useState<string>('');
   const [endDateFilter, setEndDateFilter] = useState<string>('');
+  // Chỉ ADMIN dùng — hiện lại các yêu cầu PENDING/PROCESSING đang bị ẩn do người tạo/xử lý bị khóa
+  const [includeLocked, setIncludeLocked] = useState<boolean>(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -66,6 +68,11 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [pricingReqId, setPricingReqId] = useState<string | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [returnReqId, setReturnReqId] = useState<string | null>(null);
+  // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
+  // (chỉ mở popup khi có >1 phương án đã báo giá — 1 phương án thì chốt thẳng, không cần hỏi).
+  const [closeOptionReqId, setCloseOptionReqId] = useState<string | null>(null);
+  // Yêu cầu đang mở popup quản lý (xóa bớt) các phương án giá nháp — ORDER/ADMIN, lúc đang xử lý.
+  const [manageOptionsReqId, setManageOptionsReqId] = useState<string | null>(null);
 
   // `loading`: chỉ dùng cho các thao tác ghi dữ liệu (blocking overlay che toàn màn hình)
   // `listLoading`: dùng cho việc load/refresh danh sách khi chuyển tab, đổi bộ lọc (thanh tiến trình mỏng, không chặn UI)
@@ -74,8 +81,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [listLoading, setListLoading] = useState<boolean>(Boolean(currentUser));
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
-  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser });
-  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser };
+  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked });
+  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
   // Đếm request để bỏ qua response trả về trễ (race condition khi chuyển tab/lọc liên tục)
   const requestIdRef = useRef(0);
@@ -93,7 +100,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
   // 2. Load Quote Requests dùng ref để đọc state mới nhất
   const loadData = async (showLoading = true) => {
-    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser } = filterRef.current;
+    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked } = filterRef.current;
     if (!currentUser) return;
 
     const myRequestId = ++requestIdRef.current;
@@ -106,7 +113,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       if (currentFilter === 'PENDING' ) targetStatus = 'PENDING';
       else if (currentFilter === 'PROCESSING' ) targetStatus = 'PROCESSING';
       else if (currentFilter === 'NEED_MORE_INFO') targetStatus = 'NEED_MORE_INFO';
-      else if (currentFilter === 'QUOTED'  || currentFilter === 'LIBRARY') targetStatus = 'QUOTED';
+      else if (currentFilter === 'QUOTED') targetStatus = 'QUOTED';
       else if (currentFilter === 'REJECTED') targetStatus = 'REJECTED';
       else if (currentFilter === 'CLOSED') targetStatus = 'CLOSED';
       else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter as import('../types').QuoteStatus;
@@ -129,6 +136,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
         startDate: startDateFilter || undefined,
         endDate: endDateFilter || undefined,
         includeCounts,
+        includeLocked,
       });
 
       // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)
@@ -210,6 +218,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     timeRangeFilter,
     startDateFilter,
     endDateFilter,
+    includeLocked,
   ]);
 
   useEffect(() => {
@@ -457,6 +466,25 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     }
   };
 
+  // Bấm "Đánh Dấu Đã Chốt" từ danh sách — nếu yêu cầu có nhiều hơn 1 phương án đã báo giá,
+  // mở popup cho Sale chọn đúng phương án khách chốt thay vì để BE tự suy ra; chỉ 1 phương án
+  // thì chốt thẳng luôn, không cần hỏi lại.
+  const handleMarkClosedClick = (id: string) => {
+    const target = requests.find((r) => r.id === id);
+    const pricedOptionsCount = (target?.options || []).filter((o) => o.quotedPrice != null).length;
+    if (pricedOptionsCount > 1) {
+      setCloseOptionReqId(id);
+    } else {
+      handleMarkClosed(id);
+    }
+  };
+
+  const handleCloseOptionSubmit = async (optionId: string) => {
+    if (!closeOptionReqId) return;
+    await handleMarkClosed(closeOptionReqId, optionId);
+    setCloseOptionReqId(null);
+  };
+
   const handleDeleteOption = async (id: string, optionId: string) => {
     setLoadingMessage('Đang xóa phương án báo giá...');
     setLoading(true);
@@ -503,6 +531,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     setStartDateFilter,
     endDateFilter,
     setEndDateFilter,
+    includeLocked,
+    setIncludeLocked,
     currentPage,
     setCurrentPage,
     pageSize,
@@ -523,6 +553,10 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     setRejectReqId,
     returnReqId,
     setReturnReqId,
+    closeOptionReqId,
+    setCloseOptionReqId,
+    manageOptionsReqId,
+    setManageOptionsReqId,
     handleTabChange,
     handleResetFilters,
     handleOpenCreate,
@@ -537,6 +571,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     handleReturnSubmit,
     handleResubmitDirect,
     handleMarkClosed,
+    handleMarkClosedClick,
+    handleCloseOptionSubmit,
     handleDeleteOption,
     refreshQuietly: () => loadData(false),
   };

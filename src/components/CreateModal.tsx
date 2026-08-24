@@ -332,8 +332,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         const createdCust = await createCustomer({
           name: newCustomerName.trim() || 'Khách lẻ',
           phone: newCustomerPhone.trim() || undefined,
-          province: newCustomerProvince || undefined,
-          ward: newCustomerWard || undefined,
+          provinceId: newCustomerProvince || undefined,
+          wardId: newCustomerWard || undefined,
           address: newCustomerAddress.trim() || undefined,
         });
 
@@ -516,6 +516,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                           className="form-control"
                           placeholder="Để trống sẽ lưu là &quot;Khách lẻ&quot;"
                           value={newCustomerName}
+                          maxLength={100}
                           onChange={(e) => setNewCustomerName(e.target.value)}
                         />
                       </div>
@@ -526,6 +527,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                           className="form-control"
                           placeholder="Ví dụ: 0987654321"
                           value={newCustomerPhone}
+                          maxLength={15}
                           onChange={(e) => setNewCustomerPhone(e.target.value)}
                         />
                       </div>
@@ -570,6 +572,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             className="form-control"
                             placeholder={!newCustomerProvince ? 'Chọn Tỉnh/TP trước...' : 'Nhập Phường / Xã...'}
                             value={newCustomerWard}
+                            maxLength={100}
                             onChange={(e) => setNewCustomerWard(e.target.value)}
                             disabled={!newCustomerProvince}
                           />
@@ -584,6 +587,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         className="form-control"
                         placeholder="Ví dụ: 123 Nguyễn Trãi"
                         value={newCustomerAddress}
+                        maxLength={200}
                         onChange={(e) => setNewCustomerAddress(e.target.value)}
                       />
                     </div>
@@ -921,6 +925,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   className="form-control"
                   placeholder="VD: Ni tay 12, 18cm..."
                   value={customerMeasurements}
+                  maxLength={200}
                   onChange={(e) => setCustomerMeasurements(e.target.value)}
                 />
               </div>
