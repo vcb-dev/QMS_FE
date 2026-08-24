@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { ChatMessage, FilterOptions, User, QuoteRequest } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE ;
 
 // Configured Axios Client with default withCredentials: true
 export const api = axios.create({
@@ -216,7 +216,7 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   }
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -230,9 +230,10 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.startDate) params.startDate = filter.startDate;
   if (filter?.endDate) params.endDate = filter.endDate;
   if (filter?.lite) params.lite = true;
+  if (filter?.includeLocked) params.includeLocked = true;
 
   try {
-    const res = await api.get('/quote-requests', { params });
+    const res = await dedupedGet('/quote-requests', params);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải danh sách báo giá');
@@ -259,7 +260,7 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
 
 export async function fetchQuoteRequestById(id: string): Promise<QuoteRequest> {
   try {
-    const res = await api.get(`/quote-requests/${id}`);
+    const res = await dedupedGet(`/quote-requests/${id}`);
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể tải chi tiết yêu cầu báo giá');
@@ -328,7 +329,7 @@ export async function fetchWards(provinceIdOrName?: string) {
   }
 }
 
-export async function createCustomer(payload: { name: string; phone?: string; address?: string; province?: string; ward?: string; note?: string }) {
+export async function createCustomer(payload: { name: string; phone?: string; address?: string; province?: string; ward?: string; provinceId?: string; wardId?: string; note?: string }) {
   try {
     const res = await api.post('/customers', payload);
     return res.data;
@@ -402,8 +403,9 @@ export async function acceptQuoteRequest(id: string, version: number) {
 
 // BE UpdateQuoteStatusDto không còn nhận quotedPrice/vat cấp ngoài (đã dồn hết vào options[]),
 // và QuoteOptionItemDto chỉ nhận đúng tập field cố định — options[] gửi lên phải lọc bỏ các field
-// hiển thị-only (materialName, stoneDescription...) kẻo NestJS whitelist reject. isSelected được
-// giữ lại có chủ đích — BE dùng để set QuoteOption.selectionStatus.
+// hiển thị-only (materialName...) kẻo NestJS whitelist reject. isSelected/stoneDescription được
+// giữ lại có chủ đích — BE dùng isSelected để set QuoteOption.selectionStatus, stoneDescription
+// để lưu tên đá lúc Order nhập tay tổng tiền đá (không chọn từ danh mục Stone).
 function sanitizeQuoteOption(
   opt: any,
   fallbackMaterials?: { materialId: string; weightChi: number }[],
@@ -451,6 +453,10 @@ function sanitizeQuoteOption(
 
   if (typeof opt.note === 'string' && opt.note.trim()) {
     clean.note = opt.note.trim();
+  }
+
+  if (typeof opt.stoneDescription === 'string' && opt.stoneDescription.trim()) {
+    clean.stoneDescription = opt.stoneDescription.trim();
   }
 
   // Sanitize materials: ONLY materialId and weightChi (number)
@@ -541,15 +547,6 @@ export async function deleteQuoteOption(id: string, optionId: string) {
   }
 }
 
-export async function fetchPricingConfig() {
-  try {
-    const res = await dedupedGet('/pricing-config');
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải cấu hình tính giá');
-  }
-}
-
 export async function fetchVnGoldPrice() {
   try {
     const res = await dedupedGet('/vn-gold-price');
@@ -577,12 +574,51 @@ export async function updateMetalPrices(payload: { gold24kVnd?: number; silverVn
   }
 }
 
-export async function updatePricingConfig(payload: any) {
+// % tính giá (priceRatioPct) và công thức tính lãi (pricingFormulaId) giờ nằm thẳng trên chất liệu
+export async function createMaterial(name: string, priceRatioPct: number, pricingFormulaId: string) {
   try {
-    const res = await api.put('/pricing-config', payload);
+    const res = await api.post('/materials', { name, priceRatioPct, pricingFormulaId });
     return res.data;
   } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật cấu hình tính giá');
+    throw new Error(err.response?.data?.message || 'Không thể thêm chất liệu');
+  }
+}
+
+export async function updateMaterial(id: string, patch: { name?: string; priceRatioPct?: number; pricingFormulaId?: string }) {
+  try {
+    const res = await api.patch(`/materials/${id}`, patch);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật chất liệu');
+  }
+}
+
+// Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu dùng chung 1 công thức (thay bảng lợi
+// nhuận/hệ số nhân Bạc cũ vốn gom chung 1 JSON tách rời trong pricing-config)
+export async function fetchPricingFormulas() {
+  try {
+    const res = await dedupedGet('/pricing-formulas');
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể tải công thức tính lãi');
+  }
+}
+
+export async function createPricingFormula(payload: { name: string; formulaType: 'MARGIN_TIERS' | 'MULTIPLIER'; config: any; isDefault?: boolean }) {
+  try {
+    const res = await api.post('/pricing-formulas', payload);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể thêm công thức tính lãi');
+  }
+}
+
+export async function updatePricingFormula(id: string, patch: { name?: string; config?: any; isDefault?: boolean }) {
+  try {
+    const res = await api.patch(`/pricing-formulas/${id}`, patch);
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật công thức tính lãi');
   }
 }
 
@@ -715,18 +751,18 @@ export async function fetchSilverMultipliers(): Promise<number[]> {
   }
 }
 
-export async function updateProductCategoryLaborCosts(items: { id: string; laborCost: number }[]) {
+export async function updateProductCategoriesBulk(items: { id: string; laborCost?: number; vatRate?: number }[]) {
   try {
-    const res = await api.patch('/product-categories/labor-costs', { items });
+    const res = await api.patch('/product-categories/bulk', { items });
     return res.data;
   } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật tiền công danh mục');
+    throw new Error(err.response?.data?.message || 'Không thể cập nhật tiền công/VAT danh mục');
   }
 }
 
-export async function createProductCategory(name: string, laborCost?: number) {
+export async function createProductCategory(name: string, laborCost?: number, vatRate?: number) {
   try {
-    const res = await api.post('/product-categories', { name, laborCost });
+    const res = await api.post('/product-categories', { name, laborCost, vatRate });
     return res.data;
   } catch (err: any) {
     throw new Error(err.response?.data?.message || 'Không thể thêm danh mục sản phẩm');

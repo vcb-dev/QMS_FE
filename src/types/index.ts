@@ -27,12 +27,20 @@ export interface User {
 export interface Material {
   id: string;
   name: string;
+  // % dùng nhân với giá kim loại gốc lúc tính giá (vàng theo tuổi: vd 18K=75; Bạc/Bạch kim = 100)
+  priceRatioPct: number;
+  // Công thức tính lãi chất liệu này dùng — nhiều chất liệu có thể trỏ chung 1 công thức
+  pricingFormulaId: string;
+  pricingFormula?: PricingFormula;
 }
 
 export interface ProductCategory {
   id: string;
   name: string;
   laborCost?: number | null;
+  // VAT chuẩn theo danh mục sản phẩm — thay cho pricing_config.defaultVatRate cũ (1 giá trị
+  // global duy nhất), mỗi danh mục có thể có mức VAT riêng, giống hệt laborCost
+  vatRate?: number | null;
 }
 
 export interface Customer {
@@ -91,6 +99,7 @@ export interface QuoteOption {
   stonePrice?: number;
   vat?: number;
   quotedPrice: number;
+  quotedDate?: string;
   isSelected?: boolean;
   // Trạng thái được chọn lưu ở BE (QuoteOption.selectionStatus) — SELECTED = đang dùng báo giá chính,
   // CLOSED = khách đã chốt đúng phương án này, NONE = không có gì đặc biệt (mặc định).
@@ -185,22 +194,18 @@ export interface DashboardPageProps {
   currentRole: Role;
   onSelectReq: (id: string) => void;
   onOpenCreateModal?: () => void;
+  // Bấm vào 1 ô trạng thái trong "Số lượng yêu cầu theo trạng thái" (SALE) — điều hướng sang
+  // trang danh sách và lọc sẵn theo đúng trạng thái đó.
+  onFilterStatus?: (status: string) => void;
 }
 
+// Trang chi tiết chỉ để xem — mọi thao tác đổi trạng thái/dữ liệu (tiếp nhận, báo giá, từ chối,
+// trả lại, sửa, xóa, đánh dấu chốt...) thực hiện từ bảng danh sách (QuoteTable), không phải ở đây.
 export interface DetailPageProps {
   selectedReq: QuoteRequest | null;
   currentRole: Role;
   currentUser: User;
-  onEdit: (req: QuoteRequest) => void;
-  onAccept: (id: string, version: number) => void;
-  onPricing: (id: string) => void;
-  onReject: (id: string) => void;
-  onReturn?: (id: string) => void;
-  onResubmit?: (id: string) => void;
-  onConfirmDirectPrice?: (id: string, price: number) => Promise<void>;
-  onMarkClosed?: (id: string, optionId?: string) => void;
-  onDelete?: (id: string) => void;
-  onDeleteOption?: (id: string, optionId: string) => void;
+  socket?: import('socket.io-client').Socket | null;
 }
 
 
@@ -216,6 +221,29 @@ export interface LibraryPageProps {
 export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT';
 export type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 
+// 1 phương án báo giá (QuoteOption) đã "duyệt" (đơn cha ở status QUOTED/CLOSED) hiển thị như 1 sản
+// phẩm riêng trên trang Quản Lý Sản Phẩm — khác với QuoteRequest (1 đơn có thể có nhiều phương án).
+export interface ProductOptionCard {
+  key: string;
+  requestId: string;
+  code: string;
+  categoryId?: string;
+  images?: QuoteRequestImage[];
+  option: QuoteOption;
+  productName: string;
+  matStr: string;
+  weightDisplay: string | null;
+  stoneDisplay: string;
+  materialIds: string[];
+  requestCreatedAt?: string;
+}
+
+export interface ProductSpecModalProps {
+  item: ProductOptionCard;
+  onClose: () => void;
+  onViewRequest: () => void;
+}
+
 export interface LoginPageProps {
   currentUser: User | null;
   onLoginSuccess: (user: User) => void;
@@ -223,17 +251,22 @@ export interface LoginPageProps {
 
 export type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
 
-export type GoldRatio = { key: string; standard: number; applied: number; label: string };
-export type ProfitMargin = { maxCost: number; divisor: number; margin: string };
-export type StoneItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
-export type CategoryItem = { id: string; name: string; laborCost?: number | null };
-export type MetalPricesState = { gold24kVnd: number; silverVnd: number; platinumVnd: number };
-export type ConfigSnapshot = {
-  defaultVatRate: number;
-  silverMultipliers: number[];
-  goldRatios: GoldRatio[];
-  profitMargins: ProfitMargin[];
+export type MarginTier = { maxCost: number; divisor: number; margin: string };
+export type PricingFormulaType = 'MARGIN_TIERS' | 'MULTIPLIER';
+// Công thức tính lãi gắn theo NHÓM chất liệu (Material.pricingFormulaId) — MARGIN_TIERS dùng
+// `config.tiers`, MULTIPLIER dùng `config.multipliers`. Thay cho bảng lợi nhuận/hệ số nhân Bạc
+// cũ từng gom chung 1 JSON tách rời trong pricing_config.
+export type PricingFormula = {
+  id: string;
+  name: string;
+  formulaType: PricingFormulaType;
+  config: { tiers?: MarginTier[]; multipliers?: number[] };
+  isDefault: boolean;
+  updatedAt?: string;
 };
+export type StoneItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
+export type CategoryItem = { id: string; name: string; laborCost?: number | null; vatRate?: number | null };
+export type MetalPricesState = { gold24kVnd: number; silverVnd: number; platinumVnd: number };
 
 
 export interface RequestsPageProps {
@@ -259,6 +292,8 @@ export interface RequestsPageProps {
   setStartDateFilter: (v: string) => void;
   endDateFilter: string;
   setEndDateFilter: (v: string) => void;
+  includeLocked?: boolean;
+  setIncludeLocked?: (v: boolean) => void;
   currentPage: number;
   setCurrentPage: (v: number) => void;
   pageSize: number;
@@ -273,7 +308,11 @@ export interface RequestsPageProps {
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
   onReturn: (id: string) => void;
+  onResubmit?: (id: string) => void;
+  onConfirmDirectPrice?: (id: string, price: number) => void;
   onDelete?: (id: string) => void;
+  onMarkClosed?: (id: string) => void;
+  onManageOptions?: (id: string) => void;
   onOpenCreate: () => void;
   onOpenExport: () => void;
   onResetFilters: () => void;
