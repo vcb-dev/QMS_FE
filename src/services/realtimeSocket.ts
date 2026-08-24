@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { getStoredToken } from './api';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE ;
 const SOCKET_BASE_URL = API_BASE.replace(/\/api\/?$/, '');
 
 // Cùng namespace gốc "/" với chat (RealtimeGateway giờ gộp cả 2) — chỉ khác vòng đời: cái này
