@@ -1,10 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import type { SortModeLibrary, LibraryPageProps, TimeRange } from '../types';
+import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard } from '../types';
 import { Search } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { formatCurrency } from '../utils/currency';
+import { ProductSpecModal } from '../components/ProductSpecModal';
 
+const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> = {
+  CLOSED: { label: 'Đã chốt', bg: '#dcfce7', color: '#15803d' },
+  SELECTED: { label: 'Đang chọn', bg: '#e2e8f0', color: '#475569' },
+};
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   requests,
@@ -20,13 +25,61 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(UI_CONSTANTS.PRODUCT_LIBRARY.DEFAULT_PAGE_SIZE);
+  const [detailItem, setDetailItem] = useState<ProductOptionCard | null>(null);
 
-  // Filter completed or quoted requests
-  const quotedRequests = useMemo(() => {
-    return requests.filter((r) => r.status === 'QUOTED' || r.status === 'CLOSED' || (r.quotedPrice && Number(r.quotedPrice) > 0));
+  // Mỗi phương án báo giá (QuoteOption) là 1 "sản phẩm" riêng — 1 đơn có nhiều phương án thì ra
+  // nhiều thẻ. Chỉ lấy phương án thuộc đơn đã QUOTED/CLOSED: completeQuote (BE) xóa sạch & ghi đè
+  // toàn bộ options bằng đúng bộ ORDER gửi lên khi duyệt, nên option còn tồn tại trên đơn ở 2 status
+  // này chắc chắn đã qua ORDER — phương án Sale tự tạo (quick-quote, đơn còn PROCESSING) chưa duyệt
+  // sẽ không có mặt ở đây.
+  const productOptions = useMemo<ProductOptionCard[]>(() => {
+    const items: ProductOptionCard[] = [];
+    for (const r of requests) {
+      if (r.status !== 'QUOTED' && r.status !== 'CLOSED') continue;
+      const catName = r.category?.name || '';
+
+      for (const o of r.options || []) {
+        if (o.quotedPrice == null) continue;
+
+        const matStr =
+          o.materials && o.materials.length > 0
+            ? o.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
+            : o.materialName || 'Chưa rõ chất liệu';
+
+        const weightVal = o.weightChi;
+        const weightDisplay = weightVal != null && Number(weightVal) > 0 ? `${weightVal} chỉ` : null;
+
+        let stoneDisplay = 'Không đính đá';
+        if (o.stones && o.stones.length > 0) {
+          const totalStones = o.stones.reduce((sum, s) => sum + (s.quantity || 1), 0);
+          const names = o.stones.map((s) => `${s.quantity}v ${s.stone?.name || s.stoneName || 'đá'}`).join(', ');
+          stoneDisplay = `${totalStones} viên (${names})`;
+        } else if (o.stoneDescription) {
+          stoneDisplay = o.stoneDescription;
+        } else if (o.stoneCost && Number(o.stoneCost) > 0) {
+          stoneDisplay = `Đá trị giá ${formatCurrency(Number(o.stoneCost))}`;
+        }
+
+        items.push({
+          key: `${r.id}:${o.id}`,
+          requestId: r.id,
+          code: r.code,
+          categoryId: r.categoryId,
+          images: r.images,
+          option: o,
+          productName: `${catName} ${matStr}`.trim() || 'Sản phẩm chế tác',
+          matStr,
+          weightDisplay,
+          stoneDisplay,
+          materialIds: (o.materials || []).map((m) => m.materialId).filter(Boolean),
+          requestCreatedAt: r.createdAt,
+        });
+      }
+    }
+    return items;
   }, [requests]);
 
-  const filteredRequests = useMemo(() => {
+  const filteredOptions = useMemo(() => {
     const now = new Date();
     let rangeCutoff: Date | null = null;
     if (timeRange === 'TODAY') rangeCutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -35,44 +88,42 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       rangeCutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
     } else if (timeRange === 'THIS_MONTH') rangeCutoff = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const list = quotedRequests.filter((r) => {
+    const list = productOptions.filter((item) => {
       const query = searchTerm.trim().toLowerCase();
-      const codeMatch = (r.code || r.id).toLowerCase().includes(query);
-      const nameMatch = (r.productName || '').toLowerCase().includes(query);
+      const codeMatch = item.code.toLowerCase().includes(query);
+      const nameMatch = item.productName.toLowerCase().includes(query);
       const searchOk = !query || codeMatch || nameMatch;
 
-      const catOk = selectedCat === 'ALL' || r.categoryId === selectedCat || r.category?.id === selectedCat;
+      const catOk = selectedCat === 'ALL' || item.categoryId === selectedCat;
 
-      const matOk = selectedMat === 'ALL'
-        || r.material?.id === selectedMat
-        || (r.materials || []).some((m) => m.id === selectedMat);
+      const matOk = selectedMat === 'ALL' || item.materialIds.includes(selectedMat);
 
-      const refDate = r.quotedDate || r.createdAt;
+      const refDate = item.option.quotedDate || item.requestCreatedAt;
       const timeOk = !rangeCutoff || (refDate ? new Date(refDate) >= rangeCutoff : false);
 
       return searchOk && catOk && matOk && timeOk;
     });
 
     return list.sort((a, b) => {
-      if (sortMode === 'PRICE_DESC') return (Number(b.quotedPrice) || 0) - (Number(a.quotedPrice) || 0);
-      if (sortMode === 'PRICE_ASC') return (Number(a.quotedPrice) || 0) - (Number(b.quotedPrice) || 0);
-      const dateA = new Date(a.quotedDate || a.createdAt || 0).getTime();
-      const dateB = new Date(b.quotedDate || b.createdAt || 0).getTime();
+      if (sortMode === 'PRICE_DESC') return (Number(b.option.quotedPrice) || 0) - (Number(a.option.quotedPrice) || 0);
+      if (sortMode === 'PRICE_ASC') return (Number(a.option.quotedPrice) || 0) - (Number(b.option.quotedPrice) || 0);
+      const dateA = new Date(a.option.quotedDate || a.requestCreatedAt || 0).getTime();
+      const dateB = new Date(b.option.quotedDate || b.requestCreatedAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [quotedRequests, searchTerm, selectedCat, selectedMat, sortMode, timeRange]);
+  }, [productOptions, searchTerm, selectedCat, selectedMat, sortMode, timeRange]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedCat, selectedMat, sortMode, timeRange]);
 
-  const totalItems = filteredRequests.length;
+  const totalItems = filteredOptions.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
-  const pagedRequests = useMemo(() => {
+  const pagedOptions = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredRequests.slice(start, start + pageSize);
-  }, [filteredRequests, currentPage, pageSize]);
+    return filteredOptions.slice(start, start + pageSize);
+  }, [filteredOptions, currentPage, pageSize]);
 
   const formatVND = (num?: number | string | null) => {
     const val = num ? Number(num) : 0;
@@ -209,44 +260,17 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
       {/* Product Cards Grid: 4 Columns */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '16px' }}>
-        {pagedRequests.length > 0 ? (
-          pagedRequests.map((r, idx) => {
-            const isSelected = r.id === selectedId;
-            const rawImgUrl = r.images && r.images.length > 0 ? r.images[0].imageUrl : null;
+        {pagedOptions.length > 0 ? (
+          pagedOptions.map((item, idx) => {
+            const isSelected = item.requestId === selectedId;
+            const rawImgUrl = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
             const imgUrl = rawImgUrl || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
-
-            // Tìm option chính / được chọn để lấy đúng thông số chi tiết
-            const activeOpt =
-              r.options?.find((o) => o.selectionStatus === 'CLOSED') ||
-              r.options?.find((o) => o.selectionStatus === 'SELECTED') ||
-              r.options?.[0];
-
-            // "Vàng Trắng 18K" cũ là placeholder demo, hiện SAI cho mọi sản phẩm khi thiếu data thật.
-            const matStr =
-              activeOpt?.materials && activeOpt.materials.length > 0
-                ? activeOpt.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
-                : activeOpt?.materialName || (r.materials && r.materials.length > 0
-                  ? r.materials.map((m) => m.name).join(', ')
-                  : r.material ? r.material.name : 'Chưa rõ chất liệu');
-
-            const weightVal = activeOpt?.weightChi ?? (r as any).weightChi;
-            const weightDisplay = weightVal != null && Number(weightVal) > 0 ? `${weightVal} chỉ` : null;
-
-            let stoneDisplay = 'Không đính đá';
-            if (activeOpt?.stones && activeOpt.stones.length > 0) {
-              const totalStones = activeOpt.stones.reduce((sum, s) => sum + (s.quantity || 1), 0);
-              const names = activeOpt.stones.map((s) => `${s.quantity}v ${s.stone?.name || s.stoneName || 'đá'}`).join(', ');
-              stoneDisplay = `${totalStones} viên (${names})`;
-            } else if (activeOpt?.stoneDescription) {
-              stoneDisplay = activeOpt.stoneDescription;
-            } else if (activeOpt?.stoneCost && Number(activeOpt.stoneCost) > 0) {
-              stoneDisplay = `Đá trị giá ${formatCurrency(Number(activeOpt.stoneCost))}`;
-            }
+            const tag = item.option.selectionStatus ? STATUS_TAG[item.option.selectionStatus] : undefined;
 
             return (
               <div
-                key={r.id}
-                onClick={() => onSelectReq(r.id)}
+                key={item.key}
+                onClick={() => setDetailItem(item)}
                 style={{
                   background: '#ffffff',
                   border: isSelected ? '2px solid #2563eb' : '1px solid #e2e8f0',
@@ -295,6 +319,23 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       #{(currentPage - 1) * pageSize + idx + 1}
                     </span>
                   )}
+                  {tag && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        left: '8px',
+                        background: tag.bg,
+                        color: tag.color,
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                      }}
+                    >
+                      {tag.label}
+                    </span>
+                  )}
                   <span
                     style={{
                       position: 'absolute',
@@ -310,31 +351,31 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       fontVariantNumeric: 'tabular-nums',
                     }}
                   >
-                    {r.code}
+                    {item.code}
                   </span>
                 </div>
 
                 {/* Body Details */}
                 <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-                  <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.productName}>
-                    {r.productName}
+                  <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.productName}>
+                    {item.productName}
                   </h3>
 
                   <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a', marginTop: '1px' }}>
-                    {formatVND(r.quotedPrice)}
+                    {formatVND(item.option.quotedPrice)}
                   </div>
 
                   <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px', lineHeight: '1.4' }}>
                     <div>
-                      <strong style={{ color: '#64748b' }}>Chất liệu:</strong> {matStr}
+                      <strong style={{ color: '#64748b' }}>Chất liệu:</strong> {item.matStr}
                     </div>
-                    {weightDisplay && (
+                    {item.weightDisplay && (
                       <div>
-                        <strong style={{ color: '#64748b' }}>Khối lượng:</strong> <span style={{ fontWeight: 700, color: '#0f172a' }}>{weightDisplay}</span>
+                        <strong style={{ color: '#64748b' }}>Khối lượng:</strong> <span style={{ fontWeight: 700, color: '#0f172a' }}>{item.weightDisplay}</span>
                       </div>
                     )}
                     <div>
-                      <strong style={{ color: '#64748b' }}>Đá quý:</strong> <span style={{ color: stoneDisplay === 'Không đính đá' ? '#94a3b8' : '#0f172a', fontWeight: stoneDisplay === 'Không đính đá' ? 500 : 700 }}>{stoneDisplay}</span>
+                      <strong style={{ color: '#64748b' }}>Đá quý:</strong> <span style={{ color: item.stoneDisplay === 'Không đính đá' ? '#94a3b8' : '#0f172a', fontWeight: item.stoneDisplay === 'Không đính đá' ? 500 : 700 }}>{item.stoneDisplay}</span>
                     </div>
                   </div>
                 </div>
@@ -360,6 +401,18 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             onPageSizeChange={setPageSize}
           />
         </div>
+      )}
+
+      {detailItem && (
+        <ProductSpecModal
+          item={detailItem}
+          onClose={() => setDetailItem(null)}
+          onViewRequest={() => {
+            const requestId = detailItem.requestId;
+            setDetailItem(null);
+            onSelectReq(requestId);
+          }}
+        />
       )}
     </div>
   );
