@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, Role, User } from '../types';
-import { Edit, Inbox, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, Trash2, X } from 'lucide-react';
+import { Edit, Inbox, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, Trash2, X, Layers } from 'lucide-react';
 import { formatCurrency, formatDuration as formatDurationMs } from '../utils/currency';
 import { STATUS_BADGE_META } from '../constants';
 
@@ -16,7 +16,11 @@ interface QuoteTableProps {
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
   onReturn?: (id: string) => void;
+  onResubmit?: (id: string) => void;
+  onConfirmDirectPrice?: (id: string, price: number) => void;
   onDelete?: (id: string) => void;
+  onMarkClosed?: (id: string) => void;
+  onManageOptions?: (id: string) => void;
 }
 
 export const QuoteTable: React.FC<QuoteTableProps> = ({
@@ -30,7 +34,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onPricing,
   onReject,
   onReturn,
+  onResubmit,
+  onConfirmDirectPrice,
   onDelete,
+  onMarkClosed,
+  onManageOptions,
 }) => {
   // Ảnh sản phẩm đang bấm xem zoom — null = không mở lightbox
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -260,8 +268,54 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     );
   };
 
-  const renderStatusCell = (r: QuoteRequest) => {
+  const renderStatusCell = (r: QuoteRequest, isMyReq: boolean) => {
     if (currentRole === 'SALE') {
+      if (isMyReq && r.status === 'PENDING') {
+        return (
+          <StatusDropdown
+            current="PENDING"
+            options={[
+              { value: 'EDIT', label: 'Sửa yêu cầu', icon: <Edit size={13} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+            ]}
+            onChange={(val) => {
+              if (val === 'EDIT') onEdit(r);
+            }}
+          />
+        );
+      }
+
+      if (isMyReq && r.status === 'NEED_MORE_INFO') {
+        return (
+          <StatusDropdown
+            current="NEED_MORE_INFO"
+            options={[
+              { value: 'EDIT', label: 'Sửa / Bổ sung', icon: <Edit size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
+              ...(onResubmit
+                ? [{ value: 'RESUBMIT', label: 'Gửi lại (không sửa gì)', icon: <RotateCcw size={13} />, color: '#b45309', bg: '#fffbeb', border: '#fde68a' }]
+                : []),
+            ]}
+            onChange={(val) => {
+              if (val === 'EDIT') onEdit(r);
+              else if (val === 'RESUBMIT' && onResubmit) onResubmit(r.id);
+            }}
+          />
+        );
+      }
+
+      if (isMyReq && r.status === 'QUOTED' && onMarkClosed) {
+        return (
+          <StatusDropdown
+            current="QUOTED"
+            options={[
+              { value: 'CLOSED', label: 'Đánh Dấu Đã Chốt', icon: <Award size={13} />, color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
+            ]}
+            onChange={(val) => {
+              if (val === 'CLOSED') onMarkClosed(r.id);
+            }}
+          />
+        );
+      }
+
       switch (r.status) {
         case 'PENDING':
           return (
@@ -305,6 +359,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     }
 
     // ORDER / ADMIN Role: Custom Icon Dropdown
+    const quotedPriceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
+    // Sale đã tự ước tính giá lúc tạo yêu cầu (qua Calculator) — cho phép ORDER/ADMIN chốt nhanh
+    // đúng giá đó thành báo giá chính thức, khỏi phải mở lại form Báo Giá đầy đủ.
+    const confirmDirectOption = onConfirmDirectPrice && quotedPriceVal > 0
+      ? [{ value: 'CONFIRM_DIRECT', label: 'Xác nhận giá tạm tính (nhanh)', icon: <CheckCircle size={13} />, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' }]
+      : [];
+
     if (r.status === 'PENDING') {
       return (
         <StatusDropdown
@@ -312,9 +373,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           options={[
             { value: 'PENDING',       label: 'Yêu cầu mới',            icon: <FilePlus size={13} />,    color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
             { value: 'PROCESSING',    label: 'Tiếp nhận (Đang xử lý)', icon: <Clock size={13} />,       color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+            ...confirmDirectOption,
           ]}
           onChange={(val) => {
             if (val === 'PROCESSING') onAccept(r.id, r.version);
+            else if (val === 'CONFIRM_DIRECT' && onConfirmDirectPrice) onConfirmDirectPrice(r.id, quotedPriceVal);
           }}
         />
       );
@@ -338,11 +401,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           options={[
             { value: 'PROCESSING',    label: 'Đang xử lý',             icon: <Clock size={13} />,       color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
             { value: 'QUOTED',        label: 'Chốt giá (Đã báo giá)',   icon: <CheckCircle size={13} />, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+            ...confirmDirectOption,
             { value: 'NEED_MORE_INFO',label: 'Trả lại Sale (Cần bổ sung)', icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
             { value: 'REJECTED',      label: 'Từ chối hẳn',             icon: <XCircle size={13} />,    color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
           ]}
           onChange={(val) => {
             if (val === 'QUOTED') onPricing(r.id);
+            else if (val === 'CONFIRM_DIRECT' && onConfirmDirectPrice) onConfirmDirectPrice(r.id, quotedPriceVal);
             else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
             else if (val === 'REJECTED') onReject(r.id);
           }}
@@ -441,6 +506,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               : r.material ? [r.material.name] : ['---'];
 
             const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
+            const pricedOptionsCount = (r.options || []).filter((o) => o.quotedPrice != null).length;
 
             const formattedPrice = priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có';
 
@@ -458,7 +524,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 <td style={{ color: '#64748b', fontSize: '11px' }}>
                   {r.createdAt ? new Date(r.createdAt).toISOString().replace('T', ' ').substring(0, 16) : '---'}
                 </td>
-                <td>{renderStatusCell(r)}</td>
+                <td>{renderStatusCell(r, isMyReq)}</td>
                 {!isCompactView && (
                   <td>
                     <strong style={{ color: '#0f172a' }}>{displayCustomerName}</strong>
@@ -470,17 +536,38 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </span>
                 </td>
                 <td>
-                  <img
-                    src={r.images && r.images.length > 0 ? r.images[0].imageUrl : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36'}
-                    className="thumb-img"
-                    alt="SP"
-                    style={{ cursor: 'zoom-in' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setZoomScale(1);
-                      setZoomedImage(r.images && r.images.length > 0 ? r.images[0].imageUrl : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36');
-                    }}
-                  />
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={r.images && r.images.length > 0 ? r.images[0].imageUrl : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36'}
+                      className="thumb-img"
+                      alt="SP"
+                      style={{ cursor: 'zoom-in' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setZoomScale(1);
+                        setZoomedImage(r.images && r.images.length > 0 ? r.images[0].imageUrl : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36');
+                      }}
+                    />
+                    {r.images && r.images.length > 1 && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: '-2px',
+                          right: '-2px',
+                          background: '#0f172a',
+                          color: '#ffffff',
+                          fontSize: '9.5px',
+                          fontWeight: 800,
+                          padding: '1px 4px',
+                          borderRadius: '4px',
+                          border: '1px solid #ffffff',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        +{r.images.length - 1}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td>
                   {(() => {
@@ -603,35 +690,10 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </span>
                 </td>
                 <td style={{ textAlign: 'center' }}>
-                  {/* SALE Role Permissions */}
+                  {/* SALE Role Permissions — thao tác đổi trạng thái/sửa đã dồn vào dropdown ở cột Trạng Thái */}
                   {currentRole === 'SALE' && (
                     <>
-                      {(r.status === 'PENDING' || r.status === 'NEED_MORE_INFO') && isMyReq ? (
-                        <button
-                          className="tool-btn"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '5px 12px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '11.5px',
-                            fontWeight: 700,
-                            background: r.status === 'NEED_MORE_INFO' ? 'linear-gradient(135deg, #ea580c, #c2410c)' : 'linear-gradient(135deg, #2563eb, #4f46e5)',
-                            color: 'white',
-                            boxShadow: '0 3px 8px rgba(234, 88, 12, 0.35)',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(r);
-                          }}
-                        >
-                          <Edit size={12} /> {r.status === 'NEED_MORE_INFO' ? 'Sửa / Bổ Sung' : 'Sửa YC'}
-                        </button>
-                      ) : r.status === 'PENDING' ? (
+                      {r.status === 'PENDING' ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
                           Chờ tiếp nhận
                         </span>
@@ -645,7 +707,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
                   {/* ORDER Role Permissions — cùng kiểu tối giản như bên SALE: chỉ nút thao tác được, còn lại "Đã khóa" */}
                   {currentRole === 'ORDER' && (
-                    <>
+                    <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
                       {r.status === 'PENDING' ? (
                         <button
                           className="tool-btn"
@@ -658,22 +720,34 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                           <Inbox size={12} /> Tiếp nhận
                         </button>
                       ) : r.status === 'PROCESSING' ? (
-                        <button
-                          className="tool-btn"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#10b981', color: 'white', border: 'none', borderRadius: '8px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onPricing(r.id);
-                          }}
-                        >
-                          <DollarSign size={12} /> Báo Giá
-                        </button>
+                        <>
+                          <button
+                            className="tool-btn"
+                            style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#10b981', color: 'white', border: 'none', borderRadius: '8px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onPricing(r.id);
+                            }}
+                          >
+                            <DollarSign size={12} /> Báo Giá
+                          </button>
+                          {onManageOptions && pricedOptionsCount > 1 && (
+                            <button
+                              className="tool-btn"
+                              title="Xóa bớt phương án giá nháp không cần dùng"
+                              style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                              onClick={(e) => { e.stopPropagation(); onManageOptions(r.id); }}
+                            >
+                              <Layers size={12} /> Quản Lý PA ({pricedOptionsCount})
+                            </button>
+                          )}
+                        </>
                       ) : (
                         <span style={{ fontSize: '11px', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <Lock size={12} /> Đã khóa
                         </span>
                       )}
-                    </>
+                    </div>
                   )}
 
                   {/* ADMIN — toàn quyền: luôn có Sửa + Xóa bất kể trạng thái, cộng thêm thao tác nghiệp vụ theo trạng thái hiện tại */}
@@ -695,6 +769,16 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                           onClick={(e) => { e.stopPropagation(); onPricing(r.id); }}
                         >
                           <DollarSign size={12} /> Báo Giá
+                        </button>
+                      )}
+                      {r.status === 'PROCESSING' && onManageOptions && pricedOptionsCount > 1 && (
+                        <button
+                          className="tool-btn"
+                          title="Xóa bớt phương án giá nháp không cần dùng"
+                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                          onClick={(e) => { e.stopPropagation(); onManageOptions(r.id); }}
+                        >
+                          <Layers size={12} /> Quản Lý PA ({pricedOptionsCount})
                         </button>
                       )}
                       <button

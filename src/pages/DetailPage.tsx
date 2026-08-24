@@ -2,10 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { QuoteRequest, DetailPageProps } from '../types';
 import {
   ArrowLeft,
-  Printer,
-  Edit,
-  Inbox,
-  DollarSign,
   XCircle,
   RotateCcw,
   FilePlus,
@@ -23,38 +19,32 @@ import {
   Ruler,
   Target,
   Award,
+  Scale,
+  Sparkles,
   Copy,
   Check,
   HelpCircle,
-  Trash2,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
+import { cleanOptionLabel, stripAppliedPct } from '../utils/quoteOption';
 import { ChatPopup } from '../components/ChatPopup';
-import { connectChatSocket } from '../services/socket';
+import { ImageLightbox } from '../components/ImageLightbox';
 import { CHAT_EVENTS } from '../constants/chatEvents';
-import type { Socket } from 'socket.io-client';
-
-
+import { REALTIME_EVENTS } from '../constants/realtimeEvents';
 
 export const DetailPage: React.FC<DetailPageProps> = ({
   selectedReq: initialSelectedReq,
   currentRole,
   currentUser,
-  onEdit,
-  onAccept,
-  onPricing,
-  onReject,
-  onReturn,
-  onResubmit,
-  onConfirmDirectPrice,
-  onMarkClosed,
-  onDelete,
-  onDeleteOption,
+  socket,
 }) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -73,13 +63,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     if (!id) return;
     if (initialSelectedReq && (initialSelectedReq.id === id || initialSelectedReq.code === id)) {
       setLoadedReq(initialSelectedReq);
-      return;
     }
     let isMounted = true;
-    setIsFetchingDetail(true);
+    if (!initialSelectedReq || (initialSelectedReq.id !== id && initialSelectedReq.code !== id)) {
+      setIsFetchingDetail(true);
+    }
     fetchQuoteRequestById(id)
       .then((data) => {
-        if (isMounted) {
+        if (isMounted && data) {
           setLoadedReq(data);
         }
       })
@@ -96,11 +87,29 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     };
   }, [id, initialSelectedReq?.id, initialSelectedReq?.code]);
 
+  const rawImages = selectedReq?.images || [];
+  const imagesList =
+    rawImages.length > 0
+      ? rawImages
+          .map((img: any) => (typeof img === 'string' ? img : img.imageUrl))
+          .filter(Boolean)
+      : [UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE];
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const currentImageIdx = Math.min(activeImageIndex, Math.max(0, imagesList.length - 1));
+  const mainImageUrl = imagesList[currentImageIdx] || imagesList[0];
+
   const [copiedOptIdx, setCopiedOptIdx] = useState<number | null>(null);
   const [copiedAllOpt, setCopiedAllOpt] = useState(false);
 
-  const [chatSocket, setChatSocket] = useState<Socket | null>(null);
+  // Reset về ảnh đầu tiên khi chuyển sang đơn khác
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [selectedReq?.id]);
+
+  // Xem ảnh phóng to — logic zoom/pan/phím tắt dùng chung ở <ImageLightbox>, ở đây chỉ giữ cờ mở/đóng
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const isChatOpenRef = useRef(isChatOpen);
@@ -108,23 +117,42 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     isChatOpenRef.current = isChatOpen;
   }, [isChatOpen]);
 
-  // Chat chỉ dành cho đúng 2 người liên quan tới yêu cầu (requester + assignee) — không phải cứ có
-  // assigneeId là bất kỳ ai xem trang chi tiết (VD ADMIN xem hộ) cũng được tự nối socket + join room.
-  // Tính null-safe (selectedReq có thể chưa tải xong ở lần render đầu) để dùng được ngay trong effect
-  // bên dưới lẫn trong điều kiện render ChatPopup phía cuối component.
+  // 1. Tự động cập nhật dữ liệu trang chi tiết khi có sự kiện Realtime (Status thay đổi / Option bị xóa...)
+  useEffect(() => {
+    if (!socket) return;
+    const handleStatusChanged = (data: { quoteRequestId: string; status: string }) => {
+      const currentReqId = selectedReq?.id || id;
+      if (data.quoteRequestId === currentReqId || data.quoteRequestId === id) {
+        if (id) {
+          fetchQuoteRequestById(id)
+            .then((fresh) => setLoadedReq(fresh))
+            .catch(() => {});
+        }
+      }
+    };
+    socket.on(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
+    return () => {
+      socket.off(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
+    };
+  }, [socket, id, selectedReq?.id]);
+
+  // Chat chỉ dành cho đúng 2 người liên quan tới yêu cầu (requester + assignee)
   const isChatParticipant =
     !!selectedReq &&
     (currentUser.id === selectedReq.requesterId || currentUser.id === selectedReq.assigneeId);
 
+  // 2. Chat phòng: Join room và lắng nghe tin nhắn mới qua socket dùng chung
   useEffect(() => {
-    if (!selectedReq?.id || !selectedReq?.assigneeId || !isChatParticipant) return;
+    if (!socket || !selectedReq?.id || !selectedReq?.assigneeId || !isChatParticipant) return;
 
-    const socket = connectChatSocket();
-    setChatSocket(socket);
-
-    socket.on('connect', () => {
+    const joinRoom = () => {
       socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: selectedReq.id });
-    });
+    };
+
+    if (socket.connected) {
+      joinRoom();
+    }
+    socket.on('connect', joinRoom);
 
     fetchChatMessages(selectedReq.id)
       .then((res) => setChatUnreadCount(res.unreadCount))
@@ -137,26 +165,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     socket.on(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage);
 
     return () => {
+      socket.off('connect', joinRoom);
       socket.off(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage);
-      socket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedReq?.id, selectedReq?.assigneeId, isChatParticipant]);
-
-  // Chọn phương án báo giá chỉ là thao tác xem/so sánh tại chỗ (không gọi API) —
-  // phương án được chọn chỉ ghi xuống DB khi Sale bấm "Đánh Dấu Đã Chốt".
-  const [localSelectedOptId, setLocalSelectedOptId] = useState<string | null>(null);
-  useEffect(() => {
-    const opts = selectedReq?.options || [];
-    const closed = opts.find((o) => o.selectionStatus === 'CLOSED');
-    const selected = opts.find((o) => o.selectionStatus === 'SELECTED');
-    setLocalSelectedOptId((closed || selected)?.id || null);
-  }, [selectedReq?.id]);
-
-  // Nhãn bỏ phần "(Áp dụng X%)" cho gọn — số % vẫn dùng để tính giá, chỉ ẩn khỏi UI/copy
-  const stripAppliedPct = (s: string) => (s || '').replace(/\s*\(Áp dụng[^)]*\)/gi, '').trim();
-  const cleanOptionLabel = (opt: { materialName?: string; optionName: string }) =>
-    stripAppliedPct(opt.materialName || opt.optionName || '');
+  }, [socket, selectedReq?.id, selectedReq?.assigneeId, isChatParticipant]);
 
   const handleCopyOptionPrice = (idx: number, opt: { optionName: string; materialName?: string; quotedPrice: number }) => {
     const text = `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}`;
@@ -215,21 +227,21 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   // khỏi đếm số/danh sách/copy-hết — chỉ phương án đã tính giá thật mới coi là 1 phương án báo giá.
   const pricedOptions = selectedReq.options?.filter((o) => o.quotedPrice != null) || [];
 
-  // Phương án đã chốt (hoặc đang được chọn) — dùng để hiện chi tiết cấu thành giá cho ORDER/ADMIN,
-  // kể cả sau khi đã CLOSED (lúc đó card "Các Phương Án Báo Giá" bị ẩn, chỉ còn giá cuối).
-  // Chưa chọn phương án nào (localSelectedOptId null) thì fallback về option có giá mới nhất —
-  // khớp với cách BE tự suy ra quotedPrice (pickPrimaryOption: CLOSED > SELECTED > giá mới nhất).
+  // Phương án đã chốt (hoặc đang được chọn trong DB) — dùng để hiện chi tiết cấu thành giá cho ORDER/ADMIN
   const finalOption =
-    selectedReq.options?.find((o) => o.id === localSelectedOptId) ||
+    selectedReq.options?.find((o) => o.selectionStatus === 'CLOSED' || o.selectionStatus === 'SELECTED') ||
     pricedOptions[pricedOptions.length - 1] ||
     selectedReq.options?.[0] ||
     null;
 
-  const imagesList = selectedReq.images && selectedReq.images.length > 0
-    ? selectedReq.images.map((img) => img.imageUrl)
-    : [UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE];
-
-  const mainImageUrl = imagesList[activeImageIndex] || imagesList[0];
+  // Tên phương án đang được tính vào TỔNG BÁO GIÁ CHỐT ở sidebar — dùng để tạo liên kết
+  // trực quan giữa số tiền ở sidebar và dòng phương án tương ứng trong "Các Phương Án Báo Giá".
+  const finalOptionIndexInList = pricedOptions.findIndex((o) => o.id === finalOption?.id);
+  const finalOptionLabel = finalOption
+    ? cleanOptionLabel(finalOption) ||
+      stripAppliedPct(finalOption.optionName) ||
+      (finalOptionIndexInList >= 0 ? `Phương án ${finalOptionIndexInList + 1}` : '')
+    : '';
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -294,13 +306,6 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     ? diffDays(selectedReq.acceptedAt || selectedReq.createdAt, selectedReq.updatedAt)
     : null;
 
-  const isMyReq =
-    currentRole === 'ORDER'
-      ? selectedReq.assignee?.id === currentUser.id || selectedReq.assignee?.email === currentUser.email
-      : selectedReq.createdBy?.id === currentUser.id ||
-        selectedReq.requester?.id === currentUser.id ||
-        selectedReq.requester?.email === currentUser.email;
-
   // Đọc chất liệu từ phương án đang hiển thị (finalOption) — không lấy field cấp request
   // (selectedReq.materials/material chỉ là bản tóm tắt của phương án đại diện, có thể trống nếu
   // phương án đó chưa gắn chất liệu). "Vàng Trắng 18K" cũ là placeholder demo, hiện SAI cho mọi đơn
@@ -356,247 +361,9 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
         </div>
 
-        {/* Top Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              padding: '9px 16px',
-              fontSize: '13px',
-              fontWeight: 700,
-              color: '#334155',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Printer size={15} /> In Báo Giá
-          </button>
-
-          {/* SALE actions */}
-          {currentRole === 'SALE' && isMyReq && (
-            <>
-              {(selectedReq.status === 'PENDING' || selectedReq.status === 'NEED_MORE_INFO') && (
-                <button
-                  type="button"
-                  onClick={() => onEdit(selectedReq)}
-                  style={{
-                    background: '#2563eb',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '9px 18px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
-                  }}
-                >
-                  <Edit size={15} /> Sửa Yêu Cầu
-                </button>
-              )}
-
-              {(selectedReq.status === 'QUOTED' ) && onMarkClosed && (
-                <button
-                  type="button"
-                  onClick={() => onMarkClosed(selectedReq.id, localSelectedOptId || undefined)}
-                  style={{
-                    background: '#7c3aed',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '9px 18px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 6px rgba(124, 58, 237, 0.3)',
-                  }}
-                >
-                  <Award size={15} /> Đánh Dấu Đã Chốt
-                </button>
-              )}
-
-              {selectedReq.status === 'NEED_MORE_INFO' && onResubmit && (
-                <button
-                  type="button"
-                  onClick={() => onResubmit(selectedReq.id)}
-                  style={{
-                    background: '#ea580c',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '9px 18px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 6px rgba(234, 88, 12, 0.3)',
-                  }}
-                >
-                  <RotateCcw size={15} /> Gửi Lại Yêu Cầu
-                </button>
-              )}
-            </>
-          )}
-
-          {/* ORDER / ADMIN actions */}
-          {(currentRole === 'ORDER' || currentRole === 'ADMIN') && (
-            <>
-              {(selectedReq.status === 'PENDING') && (
-                <button
-                  type="button"
-                  onClick={() => onAccept(selectedReq.id, selectedReq.version)}
-                  style={{
-                    background: '#d97706',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '9px 18px',
-                    fontSize: '13px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 6px rgba(217, 119, 6, 0.3)',
-                  }}
-                >
-                  <Inbox size={16} /> Tiếp Nhận Yêu Cầu
-                </button>
-              )}
-
-              {(selectedReq.status === 'PROCESSING' ) && (
-                <>
-                  {onReturn && (
-                    <button
-                      type="button"
-                      onClick={() => onReturn(selectedReq.id)}
-                      style={{
-                        background: '#ffffff',
-                        border: '1px solid #fed7aa',
-                        borderRadius: '8px',
-                        padding: '9px 16px',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#c2410c',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <RotateCcw size={15} /> Trả Lại Sale
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => onReject(selectedReq.id)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #fecdd3',
-                      borderRadius: '8px',
-                      padding: '9px 16px',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      color: '#be123c',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <XCircle size={15} /> Từ Chối
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onPricing(selectedReq.id)}
-                    style={{
-                      background: selectedReq.quotedPrice ? '#0f172a' : '#16a34a',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '9px 20px',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.25)',
-                    }}
-                  >
-                    <DollarSign size={16} /> {selectedReq.quotedPrice ? 'Nhập / Đổi Giá Khác' : 'Nhập Báo Giá'}
-                  </button>
-                </>
-              )}
-            </>
-          )}
-
-          {/* ADMIN — toàn quyền: luôn có Sửa + Xóa bất kể trạng thái */}
-          {currentRole === 'ADMIN' && (
-            <>
-              <button
-                type="button"
-                onClick={() => onEdit(selectedReq)}
-                style={{
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '9px 18px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
-                }}
-              >
-                <Edit size={15} /> Sửa Yêu Cầu
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm(`Xóa hẳn yêu cầu ${selectedReq.code || selectedReq.id}? Không thể hoàn tác.`)) {
-                    onDelete?.(selectedReq.id);
-                    onBack();
-                  }
-                }}
-                style={{
-                  background: '#fff1f2',
-                  color: '#be123c',
-                  border: '1px solid #fecdd3',
-                  borderRadius: '8px',
-                  padding: '9px 18px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Trash2 size={15} /> Xóa Yêu Cầu
-              </button>
-            </>
-          )}
-        </div>
+        {/* Trang chi tiết chỉ để xem — mọi thao tác đổi trạng thái (tiếp nhận/báo giá/từ chối/
+            trả lại/sửa/xóa/đánh dấu chốt) đã chuyển hết ra bảng danh sách, không còn nút nào ở
+            đây gọi API thay đổi dữ liệu nữa. */}
       </div>
 
       {/* Main 2-Column Content Grid */}
@@ -651,7 +418,21 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '20px' }}>
               {/* Image Preview & Thumbnails */}
               <div>
-                <div style={{ width: '100%', height: '220px', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '230px',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    cursor: 'zoom-in',
+                    position: 'relative',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  }}
+                  onClick={() => setLightboxOpen(true)}
+                  title="Bấm để xem ảnh phóng to"
+                >
                   <img
                     src={mainImageUrl}
                     alt=""
@@ -659,26 +440,149 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                       e.currentTarget.onerror = null;
                       e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                     }}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transition: 'transform 0.25s ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                   />
+
+                  {imagesList.length > 1 && (
+                    <>
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: '10px',
+                          right: '10px',
+                          background: 'rgba(15, 23, 42, 0.85)',
+                          backdropFilter: 'blur(4px)',
+                          color: '#ffffff',
+                          fontSize: '12.5px',
+                          fontWeight: 800,
+                          padding: '5px 12px',
+                          borderRadius: '20px',
+                          border: '1px solid rgba(255,255,255,0.25)',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        <ImageIcon size={13} /> {currentImageIdx + 1} / {imagesList.length}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : imagesList.length - 1));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'rgba(15, 23, 42, 0.65)',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '30px',
+                          height: '30px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                          transition: 'background 0.15s ease, transform 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)';
+                          e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)';
+                          e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                        }}
+                        title="Ảnh trước"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIndex((prev) => (prev < imagesList.length - 1 ? prev + 1 : 0));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'rgba(15, 23, 42, 0.65)',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '30px',
+                          height: '30px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                          transition: 'background 0.15s ease, transform 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)';
+                          e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)';
+                          e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                        }}
+                        title="Ảnh kế tiếp"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {imagesList.length > 1 && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px', overflowX: 'auto' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
                     {imagesList.map((url, idx) => (
                       <img
                         key={idx}
                         src={url}
                         alt=""
                         onClick={() => setActiveImageIndex(idx)}
+                        onDoubleClick={() => {
+                          setActiveImageIndex(idx);
+                          setLightboxOpen(true);
+                        }}
                         style={{
-                          width: '50px',
-                          height: '50px',
+                          width: '52px',
+                          height: '52px',
                           borderRadius: '8px',
                           objectFit: 'cover',
-                          border: activeImageIndex === idx ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          border: currentImageIdx === idx ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                          boxShadow: currentImageIdx === idx ? '0 0 0 2px rgba(37,99,235,0.25)' : 'none',
                           cursor: 'pointer',
+                          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                          flexShrink: 0,
                         }}
+                        onMouseEnter={(e) => {
+                          if (currentImageIdx !== idx) e.currentTarget.style.borderColor = '#94a3b8';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentImageIdx !== idx) e.currentTarget.style.borderColor = '#cbd5e1';
+                        }}
+                        title={`Xem ảnh ${idx + 1}`}
                       />
                     ))}
                   </div>
@@ -705,14 +609,27 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     stoneDisplay = 'Có đính đá';
                   }
 
+                  const hasCloseRate = selectedReq.closeRatePct !== undefined && selectedReq.closeRatePct !== null;
+
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+                      {/* Chất liệu & thông số đá quý có độ dài nội dung biến thiên mạnh (VD danh sách
+                          nhiều viên đá) — span nguyên hàng để không tạo khoảng trắng thừa so với ô 2 cột. */}
+                      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
                         <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <Gem size={14} color="#d97706" /> CHẤT LIỆU
                         </span>
                         <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
                           {materialsList.join(', ')}
+                        </strong>
+                      </div>
+
+                      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Sparkles size={14} color="#059669" /> THÔNG SỐ ĐÁ QUÝ
+                        </span>
+                        <strong style={{ fontSize: '13px', color: stoneDisplay === 'Không đính đá' ? '#64748b' : '#0f172a', marginTop: '4px', display: 'block' }}>
+                          {stoneDisplay}
                         </strong>
                       </div>
 
@@ -727,19 +644,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
                       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
                         <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Layers size={14} color="#8b5cf6" /> KHỐI LƯỢNG (CHỈ)
+                          <Scale size={14} color="#8b5cf6" /> KHỐI LƯỢNG (CHỈ)
                         </span>
                         <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
                           {weightDisplay}
-                        </strong>
-                      </div>
-
-                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Award size={14} color="#059669" /> THÔNG SỐ ĐÁ QUÝ
-                        </span>
-                        <strong style={{ fontSize: '13px', color: stoneDisplay === 'Không đính đá' ? '#64748b' : '#0f172a', marginTop: '4px', display: 'block' }}>
-                          {stoneDisplay}
                         </strong>
                       </div>
 
@@ -756,8 +664,17 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                         <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <Target size={14} color="#ea580c" /> TỶ LỆ CHỐT DỰ KIẾN
                         </span>
-                        <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
-                          {selectedReq.closeRatePct !== undefined && selectedReq.closeRatePct !== null ? `${selectedReq.closeRatePct}%` : '---'}
+                        <strong
+                          style={{
+                            fontSize: '13px',
+                            color: hasCloseRate ? '#0f172a' : '#94a3b8',
+                            fontStyle: hasCloseRate ? 'normal' : 'italic',
+                            marginTop: '4px',
+                            display: 'block',
+                          }}
+                          title={hasCloseRate ? undefined : 'Sale chưa nhập tỷ lệ chốt dự kiến cho yêu cầu này'}
+                        >
+                          {hasCloseRate ? `${selectedReq.closeRatePct}%` : 'Chưa xác định'}
                         </strong>
                       </div>
                     </div>
@@ -806,7 +723,6 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {pricedOptions.map((opt, idx) => {
-                  const isSelected = opt.id === localSelectedOptId;
                   const price = opt.quotedPrice ? formatCurrency(Number(opt.quotedPrice)) : '---';
                   const label = cleanOptionLabel(opt) || stripAppliedPct(opt.optionName) || `Phương án ${idx + 1}`;
 
@@ -814,7 +730,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   // thường không có (VD: option tạo qua "Nhập/Đổi Giá Khác" chỉ có tên "Phương án N").
                   const optMaterial =
                     opt.materials && opt.materials.length > 0
-                      ? opt.materials.map((m) => m.materialName).filter(Boolean).join(', ')
+                      ? opt.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
                       : opt.materialName || '';
 
                   const optWeight = opt.weightChi != null && Number(opt.weightChi) > 0 ? `${opt.weightChi} chỉ` : null;
@@ -827,23 +743,11 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     optStones = `Đá ${formatCurrency(Number(opt.stoneCost))}`;
                   }
 
-                  const isFinalStatus = selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'  ;
-
-                  // Chọn phương án ("ĐÃ CHỌN") chỉ có ý nghĩa lúc Sale sắp chốt với khách (status QUOTED) —
-                  // phương án chọn chỉ ghi xuống DB cùng lúc bấm "Đánh Dấu Đã Chốt" (xem markClosed ở BE).
-                  // Ngoài lúc đó (VD ORDER/ADMIN đang xem các phương án nháp lúc PROCESSING), click không có
-                  // tác dụng gì nên không cho bấm, tránh hiểu lầm là đã chọn thật.
-                  const canSelectOption = currentRole === 'SALE' && selectedReq.status === 'QUOTED';
-                  const canDeleteOption =
-                    (currentRole === 'ORDER' || currentRole === 'ADMIN') &&
-                    !isFinalStatus &&
-                    !!onDeleteOption &&
-                    pricedOptions.length > 1;
+                  const isFinalStatus = selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED';
 
                   return (
                     <div
                       key={opt.id || idx}
-                      onClick={() => canSelectOption && opt.id && setLocalSelectedOptId(opt.id)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -851,20 +755,13 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                         gap: '12px',
                         padding: '12px 14px',
                         borderRadius: '10px',
-                        cursor: canSelectOption ? 'pointer' : 'default',
-                        background: isSelected ? '#f0fdf4' : '#ffffff',
-                        border: isSelected ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
-                        transition: 'all 0.15s ease',
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
                       }}
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
                           {label}
-                          {isSelected && (
-                            <span style={{ background: '#16a34a', color: '#ffffff', borderRadius: '20px', padding: '1px 8px', fontSize: '10px', fontWeight: 800 }}>
-                              ĐÃ CHỌN
-                            </span>
-                          )}
                         </span>
                         {(optMaterial || optWeight || optStones) && (
                           <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
@@ -894,38 +791,11 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                             Chưa duyệt
                           </span>
                         )}
-                        {canDeleteOption && (
-                          <button
-                            type="button"
-                            title="Xóa phương án này"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (opt.id && confirm(`Xóa "${label}" khỏi danh sách đề xuất?`)) {
-                                onDeleteOption!(selectedReq.id, opt.id);
-                              }
-                            }}
-                            style={{
-                              flexShrink: 0,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '26px',
-                              height: '26px',
-                              borderRadius: '7px',
-                              border: '1px solid #fecdd3',
-                              background: '#ffffff',
-                              color: '#be123c',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        )}
                         {isFinalStatus && opt.quotedPrice != null && (
                           <button
                             type="button"
-                            title="Copy giá"
-                            onClick={(e) => { e.stopPropagation(); handleCopyOptionPrice(idx, opt); }}
+                            title={`Copy dòng chữ: "${label}: ${price}"`}
+                            onClick={() => handleCopyOptionPrice(idx, opt)}
                             style={{
                               flexShrink: 0,
                               display: 'flex',
@@ -994,7 +864,27 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 {priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có giá chốt'}
               </div>
 
-              
+              {/* Liên kết trực quan tới dòng phương án tương ứng trong "Các Phương Án Báo Giá" —
+                  tránh để 2 con số giống nhau nằm 2 nơi cách xa mà không có gì nối chúng lại. */}
+              {finalOptionLabel && priceVal > 0 && selectedReq.status !== 'PENDING' && selectedReq.status !== 'CLOSED' && (
+                <div
+                  style={{
+                    marginTop: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#16a34a',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '20px',
+                    padding: '2px 10px',
+                  }}
+                >
+                  <Layers size={11} /> Theo {finalOptionLabel}
+                </div>
+              )}
 
               {/* Sale chỉ cần biết có VAT hay không, không cần xem % chi tiết (ORDER/ADMIN mới xem chi tiết bên dưới) */}
               {currentRole === 'SALE' && finalOption && finalOption.vat != null && (
@@ -1106,36 +996,6 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 </div>
               )}
 
-              {(currentRole === 'ORDER' || currentRole === 'ADMIN') &&
-               (selectedReq.status === 'PENDING' || selectedReq.status === 'PROCESSING' ) &&
-               priceVal > 0 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    onConfirmDirectPrice
-                      ? onConfirmDirectPrice(selectedReq.id, priceVal)
-                      : onPricing(selectedReq.id)
-                  }
-                  style={{
-                    width: '100%',
-                    background: '#dcfce7',
-                    color: '#15803d',
-                    border: '1px solid #86efac',
-                    borderRadius: '10px',
-                    padding: '13px 16px',
-                    fontSize: '13.5px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginTop: '14px',
-                  }}
-                >
-                  <CheckCircle size={18} /> Xác Nhận Báo Giá Này
-                </button>
-              )}
             </div>
           </div>
 
@@ -1169,6 +1029,24 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               </div>
 
               <div style={{ height: '1px', background: '#f1f5f9' }} />
+
+              {/* Ngày mong muốn nhận hàng là mối quan tâm của khách hàng, không phải dữ liệu xử lý
+                  nội bộ — nhóm chung với thông tin khách hàng ở trên thay vì kẹp giữa các mốc thời
+                  gian nội bộ bên dưới. */}
+              <div>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>NGÀY MONG MUỐN NHẬN HÀNG</span>
+                <div style={{ fontWeight: 800, color: '#e11d48', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar size={15} /> {selectedReq.desiredDate || selectedReq.desiredLeadTime || 'Gấp trong 3 ngày'}
+                </div>
+              </div>
+
+              {/* Ranh giới rõ ràng hơn giữa mối quan tâm của khách hàng (trên) và dữ liệu xử lý nội
+                  bộ (dưới) — nhãn nhóm riêng thay vì chỉ 1 divider mảnh như giữa các field cùng nhóm. */}
+              <div style={{ marginTop: '4px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Xử Lý Nội Bộ
+                </span>
+              </div>
 
               <div>
                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>NGƯỜI TẠO YÊU CẦU</span>
@@ -1224,27 +1102,27 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   </div>
                 </>
               )}
-
-              <div style={{ height: '1px', background: '#f1f5f9' }} />
-
-              <div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>NGÀY MONG MUỐN NHẬN HÀNG</span>
-                <div style={{ fontWeight: 800, color: '#e11d48', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Calendar size={15} /> {selectedReq.desiredDate || selectedReq.desiredLeadTime || 'Gấp trong 3 ngày'}
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {selectedReq.assigneeId && isChatParticipant && chatSocket && (
+      {lightboxOpen && (
+        <ImageLightbox
+          images={imagesList}
+          activeIndex={currentImageIdx}
+          onIndexChange={setActiveImageIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+
+      {selectedReq.assigneeId && isChatParticipant && socket && (
         <ChatPopup
           key={selectedReq.id}
           quoteRequestId={selectedReq.id}
           currentUserId={currentUser.id}
           currentUserName={currentUser.name}
-          socket={chatSocket}
+          socket={socket}
           unreadCount={chatUnreadCount}
           onOpenChange={(open) => { setIsChatOpen(open); if (open) setChatUnreadCount(0); }}
         />

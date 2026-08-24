@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageCircle, X, Send, Image as ImageIcon } from 'lucide-react';
 import type { ChatMessage, ChatPopupProps } from '../types';
 import { fetchChatMessages, uploadChatImage } from '../services/api';
 import { CHAT_EVENTS } from '../constants/chatEvents';
+import { ImageLightbox } from './ImageLightbox';
 
 export const ChatPopup: React.FC<ChatPopupProps> = ({
   quoteRequestId,
@@ -19,6 +21,9 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
   const [connected, setConnected] = useState(socket.connected);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Xem ảnh phóng to — logic zoom/pan/ESC dùng chung ở <ImageLightbox>, ở đây chỉ giữ ảnh đang xem
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   // Theo dõi trạng thái kết nối
   useEffect(() => {
@@ -193,18 +198,31 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <>
+      {zoomedImage && (
+        <ImageLightbox
+          images={[zoomedImage]}
+          activeIndex={0}
+          onIndexChange={() => {}}
+          onClose={() => setZoomedImage(null)}
+        />
+      )}
+
+      {/* Nút Chat nổi luôn bám cố định theo góc phải màn hình */}
       <button
         type="button"
         onClick={toggleOpen}
         style={{
-          position: 'fixed', bottom: '24px', right: '24px', zIndex: 900,
+          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9990,
           width: '54px', height: '54px', borderRadius: '50%',
           background: '#2563eb', color: '#ffffff', border: 'none',
           boxShadow: '0 6px 16px rgba(37,99,235,0.4)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
         }}
+        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         title={connected ? 'Trao đổi với Sale/Order' : 'Không thể kết nối'}
       >
         <MessageCircle size={24} style={{ opacity: connected ? 1 : 0.5 }} />
@@ -220,9 +238,10 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
         )}
       </button>
 
+      {/* Khung Chat Popup luôn cố định góc phải màn hình */}
       {isOpen && (
         <div style={{
-          position: 'fixed', bottom: '90px', right: '24px', zIndex: 900,
+          position: 'fixed', bottom: '90px', right: '24px', zIndex: 9990,
           width: '340px', height: '440px', background: '#ffffff',
           borderRadius: '14px', boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -260,7 +279,24 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
                     border: isFailed ? '1px solid #f87171' : 'none',
                   }}>
                     {m.imageUrl && (
-                      <img src={m.imageUrl} alt="Ảnh đính kèm" style={{ maxWidth: '180px', borderRadius: '8px', marginBottom: m.content ? '6px' : 0 }} />
+                      <img
+                        src={m.imageUrl}
+                        alt="Ảnh đính kèm"
+                        onClick={() => setZoomedImage(m.imageUrl)}
+                        style={{
+                          maxWidth: '180px',
+                          maxHeight: '180px',
+                          borderRadius: '8px',
+                          marginBottom: m.content ? '6px' : 0,
+                          cursor: 'zoom-in',
+                          objectFit: 'cover',
+                          display: 'block',
+                          transition: 'transform 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        title="Bấm để xem phóng to"
+                      />
                     )}
                     {m.content}
                   </div>
@@ -303,6 +339,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
               placeholder={connected ? 'Nhắn gì đó...' : 'Đang kết nối...'}
+              maxLength={2000}
               disabled={!connected}
               style={{ flex: 1, border: '1px solid #cbd5e1', borderRadius: '20px', padding: '8px 14px', fontSize: '13px', outline: 'none', opacity: connected ? 1 : 0.6 }}
             />
@@ -317,6 +354,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body
   );
 };
