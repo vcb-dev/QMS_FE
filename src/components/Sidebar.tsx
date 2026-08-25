@@ -173,37 +173,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
       </nav>
-
-      {/* Bottom Role Card matching screenshot */}
-      <div
-        style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '12px',
-          padding: '14px 16px',
-          marginTop: 'auto',
-        }}
-      >
-        <span
-          style={{
-            fontSize: '10px',
-            fontWeight: 800,
-            color: '#64748b',
-            letterSpacing: '0.8px',
-            textTransform: 'uppercase',
-            display: 'block',
-          }}
-        >
-          CURRENT ROLE
-        </span>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginTop: '4px' }}>
-          {currentRole === 'SALE'
-            ? 'Sale - Cửa hàng'
-            : currentRole === 'ORDER'
-            ? 'Order - Xưởng chế tác'
-            : 'Admin - Quản trị'}
-        </div>
-      </div>
     </aside>
   );
 };

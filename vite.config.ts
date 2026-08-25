@@ -18,5 +18,19 @@ export default defineConfig(({ mode }) => {
           },
         }
       : undefined,
+    build: {
+      rollupOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              { name: 'vendor-react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/ },
+              { name: 'vendor-charts', test: /node_modules[\\/](recharts|d3-[a-z-]+|victory-vendor)[\\/]/ },
+              { name: 'vendor-network', test: /node_modules[\\/](axios|socket\.io-client)[\\/]/ },
+              { name: 'vendor-icons', test: /node_modules[\\/]lucide-react[\\/]/ },
+            ],
+          },
+        },
+      },
+    },
   }
 })

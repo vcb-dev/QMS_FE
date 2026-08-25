@@ -6,6 +6,7 @@ import type { QuoteRequest, StaffUser} from '../types';
 import { Pagination } from '../components/Pagination';
 import { formatDuration } from '../utils/currency';
 import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
+import { StatCard } from '../components/StatCard';
 
 type ActionStat = { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] };
 
@@ -33,7 +34,6 @@ const mergeActionsByLabel = (actions: ActionStat[]): ActionStat[] => {
 export const StaffPage: React.FC = () => {
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [accountTab, setAccountTab] = useState<'PENDING' | 'ACTIVE'>('PENDING');
@@ -47,7 +47,6 @@ export const StaffPage: React.FC = () => {
   }, [accountTab]);
 
   useEffect(() => {
-    setLoading(true);
     Promise.all([
       getAllUsersApi(),
       fetchQuoteRequests({ timeRange: 'ALL', limit: 1000, lite: true }),
@@ -59,8 +58,7 @@ export const StaffPage: React.FC = () => {
         setActionStats(stats || {});
         setError(null);
       })
-      .catch((err) => setError(err.message || 'Không thể tải dữ liệu nhân viên'))
-      .finally(() => setLoading(false));
+      .catch((err) => setError(err.message || 'Không thể tải dữ liệu nhân viên'));
   }, []);
 
   // 2.1 Thống kê người dùng
@@ -167,9 +165,6 @@ export const StaffPage: React.FC = () => {
     };
   }).sort((a, b) => b.totalHandled - a.totalHandled);
 
-  if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu nhân viên...</div>;
-  }
   if (error) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}> {error}</div>;
   }
@@ -187,30 +182,20 @@ export const StaffPage: React.FC = () => {
 
       {/* 2.1 Thống kê người dùng */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-            <Users size={14} /> Tổng người dùng
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>{totalUsers}</div>
-        </div>
+        <StatCard icon={<Users size={14} />} label="Tổng người dùng" value={totalUsers} />
         <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
           <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Sale / Order</div>
           <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', marginTop: '8px' }}>
             {byRole.SALE} <span style={{ color: '#cbd5e1', fontWeight: 700 }}>/</span> {byRole.ORDER}
           </div>
         </div>
-        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase' }}>
-            <UserCheck size={14} /> Đã duyệt
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: '#15803d', marginTop: '6px' }}>{totalUsers - pendingCount}</div>
-        </div>
-        <div style={{ background: pendingCount > 0 ? '#fff7ed' : '#ffffff', border: `1px solid ${pendingCount > 0 ? '#fed7aa' : '#e2e8f0'}`, borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 800, color: pendingCount > 0 ? '#c2410c' : '#64748b', textTransform: 'uppercase' }}>
-            <UserX size={14} /> Chờ duyệt
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: pendingCount > 0 ? '#c2410c' : '#0f172a', marginTop: '6px' }}>{pendingCount}</div>
-        </div>
+        <StatCard icon={<UserCheck size={14} />} label="Đã duyệt" value={totalUsers - pendingCount} tone="success" />
+        <StatCard
+          icon={<UserX size={14} />}
+          label="Chờ duyệt"
+          value={pendingCount}
+          tone={pendingCount > 0 ? 'warning' : 'default'}
+        />
       </div>
 
       {/* Quản lý tài khoản — 2 tab: chờ duyệt / đang hoạt động */}

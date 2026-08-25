@@ -1,17 +1,30 @@
 import React from 'react';
 import type { QuoteRequest ,DashboardPageProps} from '../types';
-import { ArrowRight, Calendar, FilePlus, Clock, CheckCircle, XCircle, RotateCcw, Award } from 'lucide-react';
+import { ArrowRight, Calendar } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { UI_CONSTANTS, STATUS_CHART_META } from '../constants';
+import { StatusPill } from '../components/StatusPill';
+import { ChartTooltip } from '../components/ChartTooltip';
+import { DistributionPieCard } from '../components/DistributionPieCard';
+import { cardStyle } from '../styles/card';
 import { fetchQuoteRequests, fetchQuoteRequestStats } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { SaleStatusStatsGrid } from '../components/SaleStatusStatsGrid';
 
+// Bảng màu cho biểu đồ phân bố (danh mục/chất liệu) — hằng số tĩnh, đặt ở scope file để
+// không bị cấp phát lại mỗi lần component render (tránh cảnh báo thiếu dependency ở useMemo).
+const CATEGORY_COLORS = ['#2563eb', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#0ea5e9', '#ec4899', '#84cc16'];
 
+const PRICE_RANGES = [
+  { label: '< 5tr', min: 0, max: 5_000_000 },
+  { label: '5-15tr', min: 5_000_000, max: 15_000_000 },
+  { label: '15-30tr', min: 15_000_000, max: 30_000_000 },
+  { label: '> 30tr', min: 30_000_000, max: Infinity },
+];
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   requests: initialRequests,
@@ -389,85 +402,64 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     );
   };
 
-  // 1.1 Biểu đồ theo Sale (Admin Analytics) — số yêu cầu đã tạo & đã chốt của từng Sale
-  const saleStatsData = React.useMemo(() => {
-    const map = new Map<string, { name: string; total: number; closed: number }>();
-    apiRequests.forEach((r) => {
-      const name = r.requester?.name || r.createdBy?.name || 'Chưa rõ';
-      if (!map.has(name)) map.set(name, { name, total: 0, closed: 0 });
-      const b = map.get(name)!;
-      b.total += 1;
-      if (r.status === 'CLOSED') b.closed += 1;
-    });
-    return Array.from(map.values())
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 8);
-  }, [apiRequests]);
+  // 1.1-1.2 Biểu đồ theo Sale + phân bố sản phẩm (danh mục/chất liệu/khoảng giá) — Admin Analytics.
+  // Gộp chung 1 lượt duyệt apiRequests thay vì 4 useMemo riêng, mỗi cái tự forEach lại toàn bộ mảng.
+  const { saleStatsData, categoryDistribution, materialDistribution, priceRangeDistribution } = React.useMemo(() => {
+    const saleMap = new Map<string, { name: string; total: number; closed: number }>();
+    const categoryMap = new Map<string, number>();
+    const materialMap = new Map<string, number>();
+    const priceBuckets = PRICE_RANGES.map((r) => ({ label: r.label, value: 0 }));
 
-  // 1.2 Biểu đồ phân bố sản phẩm (Admin Analytics) — theo danh mục & theo khoảng giá đã báo
-  const CATEGORY_COLORS = ['#2563eb', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#0ea5e9', '#ec4899', '#84cc16'];
-
-  const categoryDistribution = React.useMemo(() => {
-    const map = new Map<string, number>();
     apiRequests.forEach((r) => {
-      const name = r.category?.name || 'Chưa phân loại';
-      map.set(name, (map.get(name) || 0) + 1);
-    });
-    return Array.from(map.entries())
-      .map(([name, value], idx) => ({ name, value, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-  }, [apiRequests]);
+      const saleName = r.requester?.name || r.createdBy?.name || 'Chưa rõ';
+      if (!saleMap.has(saleName)) saleMap.set(saleName, { name: saleName, total: 0, closed: 0 });
+      const saleBucket = saleMap.get(saleName)!;
+      saleBucket.total += 1;
+      if (r.status === 'CLOSED') saleBucket.closed += 1;
 
-  const materialDistribution = React.useMemo(() => {
-    const map = new Map<string, number>();
-    apiRequests.forEach((r) => {
-      const names = r.materials && r.materials.length > 0
+      const catName = r.category?.name || 'Chưa phân loại';
+      categoryMap.set(catName, (categoryMap.get(catName) || 0) + 1);
+
+      const matNames = r.materials && r.materials.length > 0
         ? r.materials.map((m) => m.name)
         : r.material ? [r.material.name] : ['Chưa rõ'];
-      names.forEach((name) => map.set(name, (map.get(name) || 0) + 1));
-    });
-    return Array.from(map.entries())
-      .map(([name, value], idx) => ({ name, value, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-  }, [apiRequests]);
+      matNames.forEach((name) => materialMap.set(name, (materialMap.get(name) || 0) + 1));
 
-  const priceRangeDistribution = React.useMemo(() => {
-    const ranges = [
-      { label: '< 5tr', min: 0, max: 5_000_000 },
-      { label: '5-15tr', min: 5_000_000, max: 15_000_000 },
-      { label: '15-30tr', min: 15_000_000, max: 30_000_000 },
-      { label: '> 30tr', min: 30_000_000, max: Infinity },
-    ];
-    const buckets = ranges.map((r) => ({ label: r.label, value: 0 }));
-    apiRequests.forEach((r) => {
       const price = r.quotedPrice ? Number(r.quotedPrice) : null;
-      if (price === null || price <= 0) return;
-      const idx = ranges.findIndex((rg) => price >= rg.min && price < rg.max);
-      if (idx >= 0) buckets[idx].value += 1;
+      if (price !== null && price > 0) {
+        const idx = PRICE_RANGES.findIndex((rg) => price >= rg.min && price < rg.max);
+        if (idx >= 0) priceBuckets[idx].value += 1;
+      }
     });
-    return buckets;
+
+    return {
+      saleStatsData: Array.from(saleMap.values())
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 8),
+      categoryDistribution: Array.from(categoryMap.entries())
+        .map(([name, value], idx) => ({ name, value, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8),
+      materialDistribution: Array.from(materialMap.entries())
+        .map(([name, value], idx) => ({ name, value, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8),
+      priceRangeDistribution: priceBuckets,
+    };
   }, [apiRequests]);
 
-  const getStatusPill = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return <span className="status-pill new" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}><FilePlus size={12} /> MỚI TẠO</span>;
-      case 'PROCESSING':
-        return <span className="status-pill process" style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}><Clock size={12} /> ĐANG XỬ LÝ</span>;
-      case 'QUOTED':
-        return <span className="status-pill done" style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}><CheckCircle size={12} /> ĐÃ BÁO GIÁ</span>;
-      case 'REJECTED':
-        return <span className="status-pill reject" style={{ background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}><XCircle size={12} /> TỪ CHỐI</span>;
-      case 'NEED_MORE_INFO':
-        return <span className="status-pill process" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }}><RotateCcw size={12} /> CẦN BỔ SUNG</span>;
-      case 'CLOSED':
-        return <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }}><Award size={12} /> ĐÃ CHỐT</span>;
-      default:
-        return <span className="status-pill new">{status}</span>;
-    }
+  const STATUS_PILL_LABELS: Record<string, string> = {
+    PENDING: 'MỚI TẠO',
+    PROCESSING: 'ĐANG XỬ LÝ',
+    QUOTED: 'ĐÃ BÁO GIÁ',
+    REJECTED: 'TỪ CHỐI',
+    NEED_MORE_INFO: 'CẦN BỔ SUNG',
+    CLOSED: 'ĐÃ CHỐT',
   };
+
+  const getStatusPill = (status: string) => (
+    <StatusPill status={status} label={STATUS_PILL_LABELS[status] || status} iconSize={12} />
+  );
 
   const formatDateLabel = (dateStr?: string) => {
     if (!dateStr) return 'Gần đây';
@@ -539,7 +531,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 2. KPI tổng hợp + Doanh thu — chỉ Admin xem */}
       {currentRole === 'ADMIN' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+          <div style={cardStyle}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Tổng số yêu cầu
             </div>
@@ -550,7 +542,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               {renderChangeBadge(kpiStats.total, prevKpiStats?.total, false)}
             </div>
           </div>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+          <div style={cardStyle}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Tỷ lệ chốt trung bình
             </div>
@@ -561,7 +553,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               {renderPointChangeBadge(kpiStats.closeRate, prevKpiStats?.closeRate)}
             </div>
           </div>
-          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+          <div style={{ ...cardStyle, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Doanh thu đã chốt
             </div>
@@ -572,7 +564,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               {renderChangeBadge(revenueStats.closedRevenue, prevRevenueStats?.closedRevenue, false)}
             </div>
           </div>
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+          <div style={cardStyle}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Giá trị đơn đã báo giá (chưa chốt)
             </div>
@@ -617,10 +609,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           const d = payload[0];
           const pct = counts.total > 0 ? ((d.value / counts.total) * 100).toFixed(1) : '0';
           return (
-            <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+            <ChartTooltip>
               <div style={{ color: d.payload.fill, marginBottom: 2 }}>● {d.name}</div>
               <div>{d.value} yêu cầu <span style={{ color: '#94a3b8' }}>({pct}%)</span></div>
-            </div>
+            </ChartTooltip>
           );
         };
 
@@ -630,7 +622,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           if (chartStatusFilter === 'ALL') {
             return (
-              <div style={{ background: '#0f172a', color: '#fff', padding: '10px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.25)', minWidth: '150px' }}>
+              <ChartTooltip padding="10px 14px" minWidth="150px">
                 <div style={{ fontSize: 12, color: '#94a3b8', borderBottom: '1px solid #334155', paddingBottom: 4, marginBottom: 6 }}>
                   {label}
                 </div>
@@ -645,18 +637,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <div style={{ color: '#f87171' }}>● Từ chối: {dataItem.rejected}</div>
                   <div style={{ color: '#a78bfa' }}>● Đã chốt: {dataItem.closed}</div>
                 </div>
-              </div>
+              </ChartTooltip>
             );
           }
 
           const selectedVal = dataItem.value;
           return (
-            <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+            <ChartTooltip>
               <div style={{ color: '#94a3b8', marginBottom: 2 }}>{label}</div>
               <div style={{ color: getStatusColor(chartStatusFilter) }}>
                 ● {getStatusLabel(chartStatusFilter)}: {selectedVal} yêu cầu
               </div>
-            </div>
+            </ChartTooltip>
           );
         };
 
@@ -664,7 +656,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', opacity: loadingStats ? 0.5 : 1, transition: 'opacity 0.15s ease', pointerEvents: loadingStats ? 'none' : 'auto' }}>
 
             {/* Donut Chart */}
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            <div style={cardStyle}>
               <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0' }}>
                 Phân bố trạng thái yêu cầu
               </h2>
@@ -711,7 +703,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             {/* Bar Chart - Timeline Comparison */}
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            <div style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <div>
                   <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
@@ -796,7 +788,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 1.1 Biểu đồ theo Sale — chỉ Admin xem, số yêu cầu tạo & đã chốt của từng Sale */}
       {currentRole === 'ADMIN' && saleStatsData.length > 0 && (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+        <div style={cardStyle}>
           <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
             Hiệu suất theo Sale
           </h2>
@@ -825,12 +817,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   const d = payload[0].payload;
                   const closeRate = d.total > 0 ? ((d.closed / d.total) * 100).toFixed(1) : '0';
                   return (
-                    <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                    <ChartTooltip>
                       <div style={{ color: '#94a3b8', marginBottom: 2 }}>{label}</div>
                       <div style={{ color: '#38bdf8' }}>● Đã tạo: {d.total}</div>
                       <div style={{ color: '#22c55e' }}>● Đã chốt: {d.closed}</div>
                       <div style={{ color: '#94a3b8', marginTop: 2 }}>Tỷ lệ chốt: {closeRate}%</div>
-                    </div>
+                    </ChartTooltip>
                   );
                 }}
                 cursor={{ fill: '#f8fafc' }}
@@ -845,126 +837,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 1.2 Biểu đồ phân bố sản phẩm — chỉ Admin xem, theo danh mục & khoảng giá */}
       {currentRole === 'ADMIN' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-          {/* Phân bố theo danh mục */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
-              Phân bố theo danh mục
-            </h2>
-            <span style={{ fontSize: '11px', color: '#64748b' }}>Top 8 danh mục nhiều yêu cầu nhất</span>
+          <DistributionPieCard title="Phân bố theo danh mục" subtitle="Top 8 danh mục nhiều yêu cầu nhất" data={categoryDistribution} />
 
-            {categoryDistribution.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-                <div style={{ width: 120, height: 120, flexShrink: 0 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={32}
-                        outerRadius={56}
-                        paddingAngle={2}
-                        dataKey="value"
-                        isAnimationActive={true}
-                        animationDuration={600}
-                      >
-                        {categoryDistribution.map((entry, index) => (
-                          <Cell key={index} fill={entry.fill} stroke="none" />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        content={({ active, payload }: any) => {
-                          if (!active || !payload?.length) return null;
-                          const d = payload[0];
-                          return (
-                            <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                              <div style={{ color: d.payload.fill }}>● {d.name}</div>
-                              <div>{d.value} yêu cầu</div>
-                            </div>
-                          );
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                  {categoryDistribution.slice(0, 5).map((d, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 3, background: d.fill, flexShrink: 0 }} />
-                        <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
-                      </div>
-                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#0f172a', flexShrink: 0 }}>{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Chưa có dữ liệu</div>
-            )}
-          </div>
-
-          {/* Phân bố theo chất liệu */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
-              Phân bố theo chất liệu
-            </h2>
-            <span style={{ fontSize: '11px', color: '#64748b' }}>Top 8 chất liệu nhiều yêu cầu nhất</span>
-
-            {materialDistribution.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-                <div style={{ width: 120, height: 120, flexShrink: 0 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={materialDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={32}
-                        outerRadius={56}
-                        paddingAngle={2}
-                        dataKey="value"
-                        isAnimationActive={true}
-                        animationDuration={600}
-                      >
-                        {materialDistribution.map((entry, index) => (
-                          <Cell key={index} fill={entry.fill} stroke="none" />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        content={({ active, payload }: any) => {
-                          if (!active || !payload?.length) return null;
-                          const d = payload[0];
-                          return (
-                            <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                              <div style={{ color: d.payload.fill }}>● {d.name}</div>
-                              <div>{d.value} yêu cầu</div>
-                            </div>
-                          );
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                  {materialDistribution.slice(0, 5).map((d, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 3, background: d.fill, flexShrink: 0 }} />
-                        <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
-                      </div>
-                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#0f172a', flexShrink: 0 }}>{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Chưa có dữ liệu</div>
-            )}
-          </div>
+          <DistributionPieCard title="Phân bố theo chất liệu" subtitle="Top 8 chất liệu nhiều yêu cầu nhất" data={materialDistribution} />
 
           {/* Phân bố theo khoảng giá */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+          <div style={cardStyle}>
             <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
               Phân bố theo khoảng giá
             </h2>
@@ -979,10 +857,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   content={({ active, payload, label }: any) => {
                     if (!active || !payload?.length) return null;
                     return (
-                      <div style={{ background: '#0f172a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                      <ChartTooltip>
                         <div style={{ color: '#94a3b8' }}>{label}</div>
                         <div style={{ color: '#2563eb' }}>● {payload[0].value} đơn</div>
-                      </div>
+                      </ChartTooltip>
                     );
                   }}
                   cursor={{ fill: '#f8fafc' }}
@@ -1000,7 +878,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {currentRole !== 'ADMIN' && (
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '18px' }}>
         {/* Left 2/3: Yêu cầu gần đây */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+        <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
               Yêu cầu gần đây
@@ -1093,7 +971,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Right 1/3: Sản phẩm nổi bật */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+        <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
               Sản phẩm nổi bật

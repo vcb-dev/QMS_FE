@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { connectRealtimeSocket } from './services/realtimeSocket';
 import { REALTIME_EVENTS } from './constants/realtimeEvents';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
@@ -8,17 +8,19 @@ import type { Role, User } from './types';
 
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
-import { CreateModal } from './components/CreateModal';
-import { PricingModal } from './components/PricingModal';
-import { RejectModal } from './components/RejectModal';
-import { ReturnModal } from './components/ReturnModal';
-import { MarkClosedModal } from './components/MarkClosedModal';
-import { ManageOptionsModal } from './components/ManageOptionsModal';
-import { ExportModal } from './components/ExportModal';
-import { LoadingOverlay } from './components/LoadingOverlay';
 import { NavProgressBar } from './components/NavProgressBar';
 
 import { LoginPage } from './pages/LoginPage';
+
+// Global modals: lazy-loaded và chỉ mount khi mở, tránh chạy hook/effect của cả 7 modal
+// trên mỗi lần AppShell render khi người dùng chỉ đang duyệt bảng danh sách.
+const CreateModal = lazy(() => import('./components/CreateModal').then((m) => ({ default: m.CreateModal })));
+const PricingModal = lazy(() => import('./components/PricingModal').then((m) => ({ default: m.PricingModal })));
+const RejectModal = lazy(() => import('./components/RejectModal').then((m) => ({ default: m.RejectModal })));
+const ReturnModal = lazy(() => import('./components/ReturnModal').then((m) => ({ default: m.ReturnModal })));
+const MarkClosedModal = lazy(() => import('./components/MarkClosedModal').then((m) => ({ default: m.MarkClosedModal })));
+const ManageOptionsModal = lazy(() => import('./components/ManageOptionsModal').then((m) => ({ default: m.ManageOptionsModal })));
+const ExportModal = lazy(() => import('./components/ExportModal').then((m) => ({ default: m.ExportModal })));
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const RequestsPage = lazy(() => import('./pages/RequestsPage').then((m) => ({ default: m.RequestsPage })));
@@ -28,6 +30,7 @@ const DetailPage = lazy(() => import('./pages/DetailPage').then((m) => ({ defaul
 const StaffPage = lazy(() => import('./pages/StaffPage').then((m) => ({ default: m.StaffPage })));
 const CustomersPage = lazy(() => import('./pages/CustomersPage').then((m) => ({ default: m.CustomersPage })));
 const PricingConfigPage = lazy(() => import('./pages/PricingConfigPage').then((m) => ({ default: m.PricingConfigPage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 
 import './index.css';
 
@@ -49,24 +52,43 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
   const location = useLocation();
 
   const {
-    requests, categories, materials, customers, selectedId, setSelectedId,
+    requests, categories, materials, selectedId, setSelectedId,
     selectedReq, pricingReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     includeLocked, setIncludeLocked,
     pageSize, setPageSize, totalRecords, totalPages, counts,
-    loading, loadingMessage, listLoading, isCreateOpen, setIsCreateOpen, editingReq,
+    listLoading, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
     returnReqId, setReturnReqId, closeOptionReqId, setCloseOptionReqId,
     manageOptionsReqId, setManageOptionsReqId, handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
-    handlePricingSubmit, handleConfirmDirectQuote,
+    handlePricingSubmit,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
     handleMarkClosedClick, handleCloseOptionSubmit,
     handleDeleteOption,
     refreshQuietly, refreshList,
   } = useQuoteRequests(currentUser, currentRole);
+
+  // Chỉ tính lại khi requests hoặc id popup đang mở thay đổi — tránh find()+filter() mỗi lần
+  // AppShell render (VD gõ tìm kiếm, đổi trang) dù 2 popup này thường đang đóng.
+  const closeOptionTarget = useMemo(
+    () => requests.find((r) => r.id === closeOptionReqId),
+    [requests, closeOptionReqId],
+  );
+  const closeOptionPricedOptions = useMemo(
+    () => (closeOptionTarget?.options || []).filter((o) => o.quotedPrice != null),
+    [closeOptionTarget],
+  );
+  const manageOptionsTarget = useMemo(
+    () => requests.find((r) => r.id === manageOptionsReqId),
+    [requests, manageOptionsReqId],
+  );
+  const manageOptionsPricedOptions = useMemo(
+    () => (manageOptionsTarget?.options || []).filter((o) => o.quotedPrice != null),
+    [manageOptionsTarget],
+  );
 
   // Socket /realtime — 1 kết nối duy nhất suốt phiên đăng nhập (dùng chung cho cả Realtime trạng thái & Chat)
   const [globalSocket, setGlobalSocket] = useState<any>(null);
@@ -117,6 +139,15 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     navigate(`/requests/${id}`);
   };
 
+  // "Xem thêm" từ search tổng ở Header (mục Yêu Cầu) — nhảy qua trang Danh Sách với đúng từ khóa,
+  // bỏ giới hạn "chỉ đơn của tôi" (ownerFilter) để search tổng không bị bó hẹp phạm vi.
+  const handleSearchRequestsFromHeader = (query: string) => {
+    setSearchTerm(query);
+    setOwnerFilter('ALL');
+    setCurrentPage(1);
+    navigate('/requests');
+  };
+
   return (
     <div
       className={`mac-window ${currentRole === 'ORDER' ? 'order-mode-active' : ''}`}
@@ -132,7 +163,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
         isOpen={isSidebarOpen}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'visible', minWidth: 0 }}>
         <Header
           user={currentUser!}
           currentRole={currentRole}
@@ -140,10 +171,12 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
           onOpenCreateModal={handleOpenCreate}
           onLogout={handleLogout}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          onSelectReq={handleOpenDetail}
+          onSearchRequests={handleSearchRequestsFromHeader}
         />
 
         <main className="content page-transition" key={location.pathname} style={{ flex: 1, overflowY: 'auto' }}>
-          <Suspense fallback={<LoadingOverlay show message="Đang tải..." />}>
+          <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={
               <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
@@ -179,7 +212,6 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
                 onReject={(id) => setRejectReqId(id)}
                 onReturn={(id) => setReturnReqId(id)}
                 onResubmit={handleResubmitDirect}
-                onConfirmDirectPrice={handleConfirmDirectQuote}
                 onDelete={handleDeleteRequest}
                 onMarkClosed={handleMarkClosedClick}
                 onManageOptions={(id) => setManageOptionsReqId(id)}
@@ -221,61 +253,72 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
               currentRole === 'ORDER' || currentRole === 'ADMIN' ? <PricingConfigPage /> : <Navigate to="/" replace />
             } />
 
-            <Route path="*" element={
-              <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
-                onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate}
-                onFilterStatus={(status) => { setStatusSubFilter(status); setCurrentPage(1); navigate('/requests'); }} />
-            } />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
           </Suspense>
         </main>
       </div>
 
-      {/* Global Modals */}
-      <CreateModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)}
-        onSubmit={handleCreateOrUpdateSubmit} categories={categories} materials={materials}
-        customers={customers} onRefreshCustomers={async () => {}} editingReq={editingReq}
-        saleName={currentUser!.name} calculatorData={calculatorData} />
+      {/* Global Modals — chỉ mount khi đang mở (state !== null / true) */}
+      <Suspense fallback={null}>
+        {isCreateOpen && (
+          <CreateModal isOpen onClose={() => setIsCreateOpen(false)}
+            onSubmit={handleCreateOrUpdateSubmit} categories={categories} materials={materials}
+            editingReq={editingReq}
+            saleName={currentUser!.name} calculatorData={calculatorData} />
+        )}
 
-      <PricingModal isOpen={pricingReqId !== null} onClose={() => setPricingReqId(null)}
-        onSubmit={handlePricingSubmit} selectedReq={pricingReq} currentRole={currentRole} materials={materials} />
+        {pricingReqId !== null && (
+          <PricingModal isOpen onClose={() => setPricingReqId(null)}
+            onSubmit={handlePricingSubmit} selectedReq={pricingReq} currentRole={currentRole} materials={materials} />
+        )}
 
-      <RejectModal isOpen={rejectReqId !== null} onClose={() => setRejectReqId(null)}
-        onSubmit={handleRejectSubmit} />
+        {rejectReqId !== null && (
+          <RejectModal isOpen onClose={() => setRejectReqId(null)}
+            onSubmit={handleRejectSubmit} />
+        )}
 
-      <ReturnModal isOpen={returnReqId !== null} onClose={() => setReturnReqId(null)}
-        onSubmit={handleReturnSubmit} />
+        {returnReqId !== null && (
+          <ReturnModal isOpen onClose={() => setReturnReqId(null)}
+            onSubmit={handleReturnSubmit} />
+        )}
 
-      <MarkClosedModal
-        isOpen={closeOptionReqId !== null}
-        reqCode={requests.find((r) => r.id === closeOptionReqId)?.code}
-        options={(requests.find((r) => r.id === closeOptionReqId)?.options || []).filter((o) => o.quotedPrice != null)}
-        onClose={() => setCloseOptionReqId(null)}
-        onSubmit={handleCloseOptionSubmit}
-      />
+        {closeOptionReqId !== null && (
+          <MarkClosedModal
+            isOpen
+            reqCode={closeOptionTarget?.code}
+            options={closeOptionPricedOptions}
+            onClose={() => setCloseOptionReqId(null)}
+            onSubmit={handleCloseOptionSubmit}
+          />
+        )}
 
-      <ManageOptionsModal
-        isOpen={manageOptionsReqId !== null}
-        reqCode={requests.find((r) => r.id === manageOptionsReqId)?.code}
-        options={(requests.find((r) => r.id === manageOptionsReqId)?.options || []).filter((o) => o.quotedPrice != null)}
-        onClose={() => setManageOptionsReqId(null)}
-        onDelete={(optionId) => manageOptionsReqId && handleDeleteOption(manageOptionsReqId, optionId)}
-      />
+        {manageOptionsReqId !== null && (
+          <ManageOptionsModal
+            isOpen
+            reqCode={manageOptionsTarget?.code}
+            options={manageOptionsPricedOptions}
+            onClose={() => setManageOptionsReqId(null)}
+            onDelete={(optionId) => manageOptionsReqId && handleDeleteOption(manageOptionsReqId, optionId)}
+          />
+        )}
 
-      <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)}
-        categories={categories} materials={materials}
-        initialFilters={{
-          status: statusSubFilter,
-          categoryId: categoryFilter,
-          materialId: materialFilter,
-          ownerId: ownerFilter === 'MY_REQ' ? currentUser.id : undefined,
-          timeRange: timeRangeFilter,
-          startDate: startDateFilter,
-          endDate: endDateFilter,
-          search: searchTerm,
-        }} />
+        {isExportOpen && (
+          <ExportModal isOpen onClose={() => setIsExportOpen(false)}
+            categories={categories} materials={materials}
+            initialFilters={{
+              status: statusSubFilter,
+              categoryId: categoryFilter,
+              materialId: materialFilter,
+              ownerId: ownerFilter === 'MY_REQ' ? currentUser.id : undefined,
+              timeRange: timeRangeFilter,
+              startDate: startDateFilter,
+              endDate: endDateFilter,
+              search: searchTerm,
+            }} />
+        )}
+      </Suspense>
 
-      <LoadingOverlay show={loading} message={loadingMessage} />
       <NavProgressBar show={listLoading} />
     </div>
   );

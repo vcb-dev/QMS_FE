@@ -10,31 +10,8 @@ import {
 } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
-
-type StoneCatalogItem = {
-  id: string;
-  stoneType: 'MAIN' | 'SIDE';
-  name: string;
-  cut?: string;
-  size?: string;
-  price: number;
-};
-
-type MaterialRow = {
-  id: string;
-  materialId: string;
-  materialName: string;
-  weightChi: string;
-};
-
-type StoneRow = {
-  id: string;
-  stoneKind: 'MAIN' | 'SIDE' | '';
-  stoneId: string;
-  type: string;
-  qty: number;
-  pricePerUnit: number;
-};
+import type { StoneCatalogItem, StoneRow } from '../types';
+import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -73,7 +50,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   // 2. Khối máy tính để tạo phương án mới
   const [showCalculator, setShowCalculator] = useState(true);
-  const [calcMaterialRows, setCalcMaterialRows] = useState<MaterialRow[]>([]);
+  // State + CRUD của chất liệu/đá dùng chung với CalculatorPage qua hook này (xem
+  // hooks/useMaterialStoneRows.ts) — alias lại tên cũ (calcMaterialRows/calcStoneRows...) để không
+  // phải sửa lại toàn bộ chỗ dùng bên dưới.
+  const {
+    materialRows: calcMaterialRows,
+    setMaterialRows: setCalcMaterialRows,
+    addMaterialRow,
+    updateMaterialRow,
+    removeMaterialRow,
+    stoneRows: calcStoneRows,
+    setStoneRows: setCalcStoneRows,
+    addStoneRow,
+    updateStoneRow,
+    removeStoneRow,
+    stonePricePerUnit,
+    stoneName,
+  } = useMaterialStoneRows(dbMaterials, stoneCatalog);
   const [calcLaborCost, setCalcLaborCost] = useState<string>(String(PRICING_DEFAULTS.LABOR_COST));
   const [calcVat, setCalcVat] = useState<string>(String(PRICING_DEFAULTS.VAT_PCT));
   const [calcIncludeVat, setCalcIncludeVat] = useState<boolean>(true);
@@ -81,7 +74,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   // Đá đính
   const [calcStoneMode, setCalcStoneMode] = useState<'catalog' | 'manual'>('catalog');
-  const [calcStoneRows, setCalcStoneRows] = useState<StoneRow[]>([]);
   const [calcManualStoneName, setCalcManualStoneName] = useState('');
   const [calcManualStonePrice, setCalcManualStonePrice] = useState('');
 
@@ -208,11 +200,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       setCalcStoneRows(
         primaryOpt.stones.map((s: any, idx: number) => ({
           id: `stone_${idx}_${Date.now()}`,
-          stoneKind: s.stone?.stoneType || '',
+          stoneType: s.stone?.stoneType || '',
           stoneId: s.stoneId,
-          type: s.stoneName || s.stone?.name || '',
           qty: s.quantity || 1,
-          pricePerUnit: s.price || s.stone?.price || 0,
         })),
       );
       setCalcStoneMode('catalog');
@@ -227,7 +217,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     setCalcError(null);
-  }, [isOpen, selectedReq, dbMaterials, defaultVatRate]);
+  }, [isOpen, selectedReq, dbMaterials, defaultVatRate, setCalcMaterialRows, setCalcStoneRows]);
 
   // Đổi chất liệu/khối lượng/đá hoặc tiền công/VAT sau khi đã bấm "Tính Giá Ngay" — chỉ xóa lỗi cũ.
   // Kết quả tính đã được thêm thẳng vào "Các Phương Án Báo Giá" ngay khi tính xong (xem
@@ -238,73 +228,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   }, [calcMaterialRows, calcSilverMultiplier, calcStoneRows, calcStoneMode, calcManualStonePrice, calcManualStoneName, calcLaborCost, calcVat, calcIncludeVat]);
 
   if (!isOpen) return null;
-
-  const addMaterialRow = () => {
-    const first = dbMaterials[0];
-    setCalcMaterialRows((prev) => [
-      ...prev,
-      {
-        id: `m_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        materialId: first?.id || '',
-        materialName: first?.name || '',
-        weightChi: '1.0',
-      },
-    ]);
-  };
-
-  const updateMaterialRow = (id: string, patch: Partial<MaterialRow>) => {
-    setCalcMaterialRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const updated = { ...r, ...patch };
-        if (patch.weightChi !== undefined) {
-          const num = parseFloat(patch.weightChi);
-          if (!isNaN(num) && num < 0) updated.weightChi = '0';
-        }
-        if (patch.materialId && dbMaterials.length > 0) {
-          const found = dbMaterials.find((m) => m.id === patch.materialId);
-          if (found) updated.materialName = found.name;
-        }
-        return updated;
-      }),
-    );
-  };
-
-  const removeMaterialRow = (id: string) => {
-    if (calcMaterialRows.length <= 1) return;
-    setCalcMaterialRows((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  const addStoneRow = () => {
-    setCalcStoneRows((prev) => [
-      ...prev,
-      { id: `s_${Date.now()}`, stoneKind: '', stoneId: '', type: '', qty: 1, pricePerUnit: 0 },
-    ]);
-  };
-
-  const updateStoneRow = (id: string, patch: Partial<StoneRow>) => {
-    setCalcStoneRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const updated = { ...r, ...patch };
-        if (patch.qty !== undefined) {
-          updated.qty = Math.max(1, patch.qty);
-        }
-        if (patch.stoneId && stoneCatalog.length > 0) {
-          const found = stoneCatalog.find((s) => s.id === patch.stoneId);
-          if (found) {
-            updated.type = found.name;
-            updated.pricePerUnit = found.price;
-          }
-        }
-        return updated;
-      }),
-    );
-  };
-
-  const removeStoneRow = (id: string) => {
-    setCalcStoneRows((prev) => prev.filter((r) => r.id !== id));
-  };
 
   // Gộp thẳng phương án mới tính được vào "Các Phương Án Báo Giá" — không còn bước xem trước/bấm
   // "Thêm" thủ công nữa. Phương án trùng giá với phương án đã có bị bỏ qua (không có ý nghĩa so
@@ -350,7 +273,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       if (calcStoneMode === 'manual') {
         totalStoneCost = parseFloat(calcManualStonePrice) || 0;
       } else {
-        totalStoneCost = calcStoneRows.reduce((sum, r) => sum + r.qty * r.pricePerUnit, 0);
+        totalStoneCost = calcStoneRows.reduce((sum, r) => sum + r.qty * stonePricePerUnit(r.stoneId), 0);
       }
 
       if (validRows.length === 1) {
@@ -366,7 +289,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         const stoneDesc =
           calcStoneMode === 'manual'
             ? calcManualStoneName
-            : calcStoneRows.map((r) => r.type).join(', ');
+            : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', ');
 
         const fixedMaterialId = single.materialId || single.id;
 
@@ -465,7 +388,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             stoneDescription:
               calcStoneMode === 'manual'
                 ? calcManualStoneName
-                : calcStoneRows.map((r) => r.type).join(', '),
+                : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', '),
             note: 'Tính từ máy tính giá',
           },
         ]);
@@ -480,10 +403,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   const handleSelectOption = (idx: number) => {
     setOptions((prev) => {
-      if (prev[idx]?.locked) return prev;
-      return prev.map((opt, i) => ({
+      const chosen = prev[idx];
+      if (chosen?.locked) return prev;
+      // Order chọn 1 phương án Order TỰ TÍNH (không thuộc cụm 'sale') thay cho giá Sale đề xuất —
+      // giá Sale coi như bị thay thế hẳn, bỏ luôn khỏi danh sách (không gửi kèm lên BE nữa) thay vì
+      // giữ lại làm hàng đính kèm, tránh lưu dư 2 phương án cho cùng 1 yêu cầu khi Xác Nhận.
+      const base = chosen && chosen.groupId !== 'sale'
+        ? prev.filter((o) => o.groupId !== 'sale')
+        : prev;
+      return base.map((opt) => ({
         ...opt,
-        isSelected: i === idx,
+        isSelected: opt === chosen,
       }));
     });
   };
@@ -1013,8 +943,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       {calcStoneRows.map((sRow) => (
                         <div key={sRow.id} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 70px 28px', gap: '8px', alignItems: 'center' }}>
                           <select
-                            value={sRow.stoneKind}
-                            onChange={(e) => updateStoneRow(sRow.id, { stoneKind: e.target.value as StoneRow['stoneKind'], stoneId: '', type: '', pricePerUnit: 0 })}
+                            value={sRow.stoneType}
+                            onChange={(e) => updateStoneRow(sRow.id, { stoneType: e.target.value as StoneRow['stoneType'], stoneId: '' })}
                             style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px' }}
                           >
                             <option value="">Loại đá</option>
@@ -1023,12 +953,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           </select>
                           <select
                             value={sRow.stoneId}
-                            disabled={!sRow.stoneKind}
+                            disabled={!sRow.stoneType}
                             onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
-                            style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: sRow.stoneKind ? '#ffffff' : '#f1f5f9' }}
+                            style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: sRow.stoneType ? '#ffffff' : '#f1f5f9' }}
                           >
                             <option value="">-- Chọn sản phẩm --</option>
-                            {stoneCatalog.filter((s) => s.stoneType === sRow.stoneKind).map((s) => (
+                            {stoneCatalog.filter((s) => s.stoneType === sRow.stoneType).map((s) => (
                               <option key={s.id} value={s.id}>{s.name} ({formatCurrency(s.price)})</option>
                             ))}
                           </select>

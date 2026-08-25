@@ -2,8 +2,40 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
-import { X, UserPlus, Users, Upload, Search, PlusCircle } from 'lucide-react';
+import { X, Upload, PlusCircle } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
+import { CustomerSelectorSection } from './CustomerSelectorSection';
+
+// Chip "✓ tên" cho chất liệu/đá đã chọn — 2 chỗ trước đây tự viết lặp lại y hệt, chỉ khác điều
+// kiện ẩn nút xóa (material dựa vào calculatorData.materials/materialType, stone dựa cả object).
+const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle?: string }> = ({ label, onRemove, removeTitle }) => (
+  <span
+    style={{
+      background: '#eff6ff',
+      border: '1px solid #bfdbfe',
+      color: '#1d4ed8',
+      padding: '4px 10px',
+      borderRadius: '16px',
+      fontSize: '11.5px',
+      fontWeight: 700,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+    }}
+  >
+    ✓ {label}
+    {onRemove && (
+      <button
+        type="button"
+        onClick={onRemove}
+        style={{ background: 'transparent', border: 'none', color: '#1d4ed8', cursor: 'pointer', padding: 0, fontSize: '12px', lineHeight: 1, fontWeight: 800 }}
+        title={removeTitle}
+      >
+        ✕
+      </button>
+    )}
+  </span>
+);
 
 export const CreateModal: React.FC<CreateModalProps> = ({
   isOpen,
@@ -11,8 +43,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   onSubmit,
   categories,
   materials,
-  customers,
-  onRefreshCustomers,
   editingReq,
   saleName,
   calculatorData,
@@ -21,6 +51,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  // Đọc trong callback debounce bên dưới — dùng ref để luôn lấy giá trị mới nhất, tránh closure
+  // cũ ghi đè lựa chọn khách hàng của người dùng nếu response search về trễ sau khi đã chọn tay.
+  const selectedCustomerIdRef = useRef(selectedCustomerId);
+  selectedCustomerIdRef.current = selectedCustomerId;
 
   // New Customer Fields
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -35,7 +69,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   // Lazy Customer Search
   const [customerSearch, setCustomerSearch] = useState('');
-  const [customerList, setCustomerList] = useState<Customer[]>(customers);
+  const [customerList, setCustomerList] = useState<Customer[]>([]);
   const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
 
   // Operational Fields
@@ -140,7 +174,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   useEffect(() => {
     if (editingReq) {
       setIsNewCustomerMode(false);
-      setSelectedCustomerId(editingReq.customer?.id || (customers[0]?.id || ''));
+      setSelectedCustomerId(editingReq.customer?.id || '');
       setSelectedCategoryId(editingReq.category?.id || (categories[0]?.id || ''));
       setNewCategoryName('');
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
@@ -159,7 +193,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setNewCustomerProvince('');
       setNewCustomerWard('');
       setNewCategoryName('');
-      if (customers.length > 0) setSelectedCustomerId(customers[0].id);
 
       if (calculatorData) {
         if (calculatorData.categoryId) {
@@ -236,7 +269,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setCustomerMeasurements(calculatorData?.note || '');
       setImageUrls([]);
     }
-  }, [editingReq, categories, customers, isOpen, calculatorData, materials, stoneOptionsAll]);
+  }, [editingReq, categories, isOpen, calculatorData, materials, stoneOptionsAll]);
 
   // Load Provinces on Modal Open
   useEffect(() => {
@@ -274,7 +307,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       searchCustomers(customerSearch)
         .then((res) => {
           setCustomerList(res);
-          if (res.length > 0 && !selectedCustomerId) {
+          if (res.length > 0 && !selectedCustomerIdRef.current) {
             setSelectedCustomerId(res[0].id);
           }
         })
@@ -283,12 +316,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     }, 300);
     return () => clearTimeout(timer);
   }, [customerSearch, isOpen, isNewCustomerMode]);
-
-  // Bấm "Tạo khách hàng mới" từ ô tìm kiếm sẽ chuyển sang form nhập, giữ nguyên tên vừa gõ
-  const handleStartNewCustomerFromSearch = () => {
-    setNewCustomerName(customerSearch.trim());
-    setIsNewCustomerMode(true);
-  };
 
   if (!isOpen) return null;
 
@@ -368,7 +395,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         setCustomerList((prev) => [createdCust, ...prev]);
         setSelectedCustomerId(createdCust.id);
         setIsNewCustomerMode(false);
-        onRefreshCustomers().catch(() => {});
       } else if (!finalCustomerId) {
         // Không chọn khách có sẵn cũng không bắt buộc gõ tên — tự tạo "Khách lẻ" nếu để trống hẳn.
         const createdCust = await createCustomer({
@@ -377,7 +403,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         finalCustomerId = createdCust.id;
         setCustomerList((prev) => [createdCust, ...prev]);
         setSelectedCustomerId(createdCust.id);
-        onRefreshCustomers().catch(() => {});
       }
 
       await onSubmit({
@@ -440,185 +465,28 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </h3>
 
               {/* Customer Section */}
-              <div className="form-group">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label className="form-label">
-                    {isNewCustomerMode ? 'Thông Tin Khách Hàng Mới' : 'Thông Tin Khách Hàng'}
-                  </label>
-                  {isNewCustomerMode && (
-                    <button
-                      type="button"
-                      onClick={() => setIsNewCustomerMode(false)}
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        color: '#64748b',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Users size={12} /> ← Chọn khách hàng có sẵn
-                    </button>
-                  )}
-                </div>
-
-                {!isNewCustomerMode ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ position: 'relative' }}>
-                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Gõ tìm tên hoặc SĐT khách hàng..."
-                        value={customerSearch}
-                        onChange={(e) => setCustomerSearch(e.target.value)}
-                        style={{ paddingLeft: '30px', fontSize: '12px' }}
-                      />
-                    </div>
-                    <select
-                      className="form-control"
-                      value={selectedCustomerId}
-                      onChange={(e) => setSelectedCustomerId(e.target.value)}
-                    >
-                      {customerList.map((cust) => {
-                        const fullAddr = [cust.address, cust.ward, cust.province].filter(Boolean).join(', ');
-                        return (
-                          <option key={cust.id} value={cust.id}>
-                            {cust.name} {cust.phone ? `(${cust.phone})` : ''} {fullAddr ? `- ${fullAddr}` : ''}
-                          </option>
-                        );
-                      })}
-                      {customerList.length === 0 && <option value="">Không tìm thấy khách hàng nào</option>}
-                    </select>
-
-                    {!customerSearchLoading && customerList.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={handleStartNewCustomerFromSearch}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          border: '1.5px dashed #10b981',
-                          background: '#f0fdf4',
-                          color: '#15803d',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <UserPlus size={13} />
-                        {customerSearch.trim()
-                          ? `Không tìm thấy — Tạo khách hàng mới "${customerSearch.trim()}"`
-                          : 'Chưa có trong hệ thống? Tạo khách hàng mới'}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{
-                    background: '#f8fafc',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '10px',
-                    padding: '14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                  }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Tên Khách Hàng</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Để trống sẽ lưu là &quot;Khách lẻ&quot;"
-                          value={newCustomerName}
-                          maxLength={100}
-                          onChange={(e) => setNewCustomerName(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Số Điện Thoại</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Ví dụ: 0987654321"
-                          value={newCustomerPhone}
-                          maxLength={15}
-                          onChange={(e) => setNewCustomerPhone(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Tỉnh / Thành Phố</label>
-                        <select
-                          className="form-control"
-                          value={newCustomerProvince}
-                          onChange={(e) => setNewCustomerProvince(e.target.value)}
-                        >
-                          <option value="">-- Chọn Tỉnh / Thành Phố --</option>
-                          {provinces.map((p) => (
-                            <option key={p.id} value={p.name}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Xã / Phường / Huyện</label>
-                        {wards.length > 0 ? (
-                          <select
-                            className="form-control"
-                            value={newCustomerWard}
-                            onChange={(e) => setNewCustomerWard(e.target.value)}
-                            disabled={!newCustomerProvince}
-                          >
-                            <option value="">-- Chọn Xã / Phường --</option>
-                            {wards.map((w: any) => (
-                              <option key={w.id} value={w.districtName ? `${w.name} (${w.districtName})` : w.name}>
-                                {w.name} {w.districtName ? `(${w.districtName})` : ''}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder={!newCustomerProvince ? 'Chọn Tỉnh/TP trước...' : 'Nhập Phường / Xã...'}
-                            value={newCustomerWard}
-                            maxLength={100}
-                            onChange={(e) => setNewCustomerWard(e.target.value)}
-                            disabled={!newCustomerProvince}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Địa Chỉ Cụ Thể (Số nhà, tên đường...)</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Ví dụ: 123 Nguyễn Trãi"
-                        value={newCustomerAddress}
-                        maxLength={200}
-                        onChange={(e) => setNewCustomerAddress(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <CustomerSelectorSection
+                isNewCustomerMode={isNewCustomerMode}
+                setIsNewCustomerMode={setIsNewCustomerMode}
+                customerSearch={customerSearch}
+                setCustomerSearch={setCustomerSearch}
+                customerList={customerList}
+                customerSearchLoading={customerSearchLoading}
+                selectedCustomerId={selectedCustomerId}
+                setSelectedCustomerId={setSelectedCustomerId}
+                newCustomerName={newCustomerName}
+                setNewCustomerName={setNewCustomerName}
+                newCustomerPhone={newCustomerPhone}
+                setNewCustomerPhone={setNewCustomerPhone}
+                newCustomerAddress={newCustomerAddress}
+                setNewCustomerAddress={setNewCustomerAddress}
+                newCustomerProvince={newCustomerProvince}
+                setNewCustomerProvince={setNewCustomerProvince}
+                newCustomerWard={newCustomerWard}
+                setNewCustomerWard={setNewCustomerWard}
+                provinces={provinces}
+                wards={wards}
+              />
 
               {/* Sale Name & Department */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -749,42 +617,16 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       const mat = materials.find((m) => m.id === mId);
                       if (!mat) return null;
                       return (
-                        <span
+                        <SelectedChip
                           key={mId}
-                          style={{
-                            background: '#eff6ff',
-                            border: '1px solid #bfdbfe',
-                            color: '#1d4ed8',
-                            padding: '4px 10px',
-                            borderRadius: '16px',
-                            fontSize: '11.5px',
-                            fontWeight: 700,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
-                        >
-                          ✓ {mat.name}
-                          {!(calculatorData?.materials?.length || calculatorData?.materialType) && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedMaterialIds(selectedMaterialIds.filter((id) => id !== mId))}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#1d4ed8',
-                                cursor: 'pointer',
-                                padding: 0,
-                                fontSize: '12px',
-                                lineHeight: 1,
-                                fontWeight: 800,
-                              }}
-                              title="Xóa chất liệu này"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </span>
+                          label={mat.name}
+                          removeTitle="Xóa chất liệu này"
+                          onRemove={
+                            !(calculatorData?.materials?.length || calculatorData?.materialType)
+                              ? () => setSelectedMaterialIds(selectedMaterialIds.filter((id) => id !== mId))
+                              : undefined
+                          }
+                        />
                       );
                     })}
                   </div>
@@ -902,42 +744,12 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       const stone = stoneOptionsAll.find((s) => s.id === sId);
                       if (!stone) return null;
                       return (
-                        <span
+                        <SelectedChip
                           key={sId}
-                          style={{
-                            background: '#eff6ff',
-                            border: '1px solid #bfdbfe',
-                            color: '#1d4ed8',
-                            padding: '4px 10px',
-                            borderRadius: '16px',
-                            fontSize: '11.5px',
-                            fontWeight: 700,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
-                        >
-                          ✓ {stone.name}
-                          {!calculatorData && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedStoneIds(selectedStoneIds.filter((id) => id !== sId))}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#1d4ed8',
-                                cursor: 'pointer',
-                                padding: 0,
-                                fontSize: '12px',
-                                lineHeight: 1,
-                                fontWeight: 800,
-                              }}
-                              title="Xóa đá này"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </span>
+                          label={stone.name}
+                          removeTitle="Xóa đá này"
+                          onRemove={!calculatorData ? () => setSelectedStoneIds(selectedStoneIds.filter((id) => id !== sId)) : undefined}
+                        />
                       );
                     })}
                   </div>

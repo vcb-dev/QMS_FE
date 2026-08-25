@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard } from '../types';
 import { Search, RefreshCw } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
@@ -12,6 +13,20 @@ const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> =
   SELECTED: { label: 'Đang chọn', bg: '#e2e8f0', color: '#475569' },
 };
 
+// 4 dropdown lọc dùng chung style này, chỉ khác minWidth — cùng cách FilterBar.tsx đã làm.
+const selectStyle = (minWidth: string): React.CSSProperties => ({
+  background: '#f8fafc',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  padding: '7px 12px',
+  fontSize: '12.5px',
+  fontWeight: 700,
+  color: '#0f172a',
+  outline: 'none',
+  cursor: 'pointer',
+  minWidth,
+});
+
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   requests,
   categories,
@@ -21,7 +36,10 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   onRefreshPrices,
   refreshing,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  // Seed từ khóa ban đầu từ URL (?q=...) khi nhảy tới đây từ "Xem thêm" ở search tổng Header —
+  // chỉ đọc 1 lần lúc mount, sau đó searchTerm là state nội bộ bình thường như cũ.
+  const [searchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
   const [selectedCat, setSelectedCat] = useState('ALL');
   const [selectedMat, setSelectedMat] = useState('ALL');
   const [sortMode, setSortMode] = useState<SortModeLibrary>('PRICE_DESC');
@@ -197,22 +215,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       {/* Filter Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '10px', flexWrap: 'wrap' }}>
         {/* Category Dropdown */}
-        <select
-          value={selectedCat}
-          onChange={(e) => setSelectedCat(e.target.value)}
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderRadius: '8px',
-            padding: '7px 12px',
-            fontSize: '12.5px',
-            fontWeight: 700,
-            color: '#0f172a',
-            outline: 'none',
-            cursor: 'pointer',
-            minWidth: '160px',
-          }}
-        >
+        <select value={selectedCat} onChange={(e) => setSelectedCat(e.target.value)} style={selectStyle('160px')}>
           <option value="ALL">Tất cả danh mục</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
@@ -220,22 +223,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         </select>
 
         {/* Material Dropdown */}
-        <select
-          value={selectedMat}
-          onChange={(e) => setSelectedMat(e.target.value)}
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderRadius: '8px',
-            padding: '7px 12px',
-            fontSize: '12.5px',
-            fontWeight: 700,
-            color: '#0f172a',
-            outline: 'none',
-            cursor: 'pointer',
-            minWidth: '160px',
-          }}
-        >
+        <select value={selectedMat} onChange={(e) => setSelectedMat(e.target.value)} style={selectStyle('160px')}>
           <option value="ALL">Tất cả chất liệu</option>
           {materials.map((m) => (
             <option key={m.id} value={m.id}>{m.name}</option>
@@ -243,22 +231,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         </select>
 
         {/* Time Range Dropdown */}
-        <select
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderRadius: '8px',
-            padding: '7px 12px',
-            fontSize: '12.5px',
-            fontWeight: 700,
-            color: '#0f172a',
-            outline: 'none',
-            cursor: 'pointer',
-            minWidth: '140px',
-          }}
-        >
+        <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)} style={selectStyle('140px')}>
           <option value="ALL">Mọi thời gian</option>
           <option value="TODAY">Hôm nay</option>
           <option value="THIS_WEEK">Tuần này</option>
@@ -266,22 +239,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         </select>
 
         {/* Sort Dropdown */}
-        <select
-          value={sortMode}
-          onChange={(e) => setSortMode(e.target.value as SortModeLibrary)}
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderRadius: '8px',
-            padding: '7px 12px',
-            fontSize: '12.5px',
-            fontWeight: 700,
-            color: '#0f172a',
-            outline: 'none',
-            cursor: 'pointer',
-            minWidth: '150px',
-          }}
-        >
+        <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortModeLibrary)} style={selectStyle('150px')}>
           <option value="PRICE_DESC">Giá cao nhất</option>
           <option value="PRICE_ASC">Giá thấp nhất</option>
           <option value="RECENT">Mới nhất</option>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench } from 'lucide-react';
+import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench, Coins, Layers, Gem, PlusCircle, TrendingUp, Percent, History, type LucideIcon } from 'lucide-react';
+import { MetalPriceHistoryModal } from '../components/MetalPriceHistoryModal';
 import {
   fetchStones,
   createStone,
@@ -10,8 +11,10 @@ import {
   updateProductCategoriesBulk,
   createProductCategory,
   deleteProductCategoriesMany,
-  fetchMetalPrices,
-  updateMetalPrices,
+  fetchBaseMetals,
+  createBaseMetal,
+  setBaseMetalActive,
+  updateBaseMetalPrice,
   createMaterial,
   updateMaterial,
   fetchPricingFormulas,
@@ -19,7 +22,7 @@ import {
   updatePricingFormula,
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
-import type{MetalPricesState, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
+import type{BaseMetal, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
 import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE} from "../constants/index";
 import {PRIMARY_BLUE,PRIMARY_DARK,thStyle,tdStyle,tdCenterStyle,tableHeadRowStyle,labelStyle, btnPrimaryStyle, btnSecondaryStyle, btnGhostSmallStyle, iconBtnStyle,pageBtnStyle, inputStyle, valueBoxStyle, suffixStyle, fieldErrorStyle } from '../styles/card';
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -36,27 +39,27 @@ const clampMoney = (v: number): number => Math.min(MAX_MONEY_VND, Math.max(0, v)
 // Small shared components
 // ==========================
 
-const SectionHeader: React.FC<{ title: string; action?: React.ReactNode }> = ({ title, action }) => (
+const SectionHeader: React.FC<{ title: string; action?: React.ReactNode; icon?: LucideIcon }> = ({ title, action, icon: Icon }) => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0f172a', flexShrink: 0 }} />
+      {Icon ? <Icon size={15} style={{ color: '#0f172a', flexShrink: 0 }} /> : <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0f172a', flexShrink: 0 }} />}
       <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0, wordBreak: 'keep-all' }}>{title}</h3>
     </div>
     {action}
   </div>
 );
 
-const PanelSection: React.FC<{ title: string; action?: React.ReactNode; children: React.ReactNode; first?: boolean }> = ({ title, action, children, first }) => (
+const PanelSection: React.FC<{ title: string; action?: React.ReactNode; children: React.ReactNode; first?: boolean; icon?: LucideIcon }> = ({ title, action, children, first, icon }) => (
   <div style={{ padding: '22px 0', borderTop: first ? 'none' : '1px solid #e5e7eb' }}>
-    <SectionHeader title={title} action={action} />
+    <SectionHeader title={title} action={action} icon={icon} />
     {children}
   </div>
 );
 
 // Thẻ khung viền riêng cho từng mục ở tab "Quy tắc tính giá bán" — chỉ dùng trong tab này, không đụng PanelSection (tab Nguồn giá gốc)
-const RuleCard: React.FC<{ title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode }> = ({ title, subtitle, action, children }) => (
+const RuleCard: React.FC<{ title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode; icon?: LucideIcon }> = ({ title, subtitle, action, children, icon }) => (
   <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '18px' }}>
-    <SectionHeader title={title} action={action} />
+    <SectionHeader title={title} action={action} icon={icon} />
     {subtitle && <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: '-6px 0 12px 0' }}>{subtitle}</p>}
     {children}
   </div>
@@ -74,6 +77,26 @@ const DeleteIconButton: React.FC<{ onClick: () => void; marked?: boolean; title?
   </button>
 );
 
+// Banner lỗi màu đỏ dùng chung — 4 chỗ trong trang này trước đây tự viết lặp lại y hệt.
+const ErrorBanner: React.FC<{ message: string; style?: React.CSSProperties }> = ({ message, style }) => (
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px', ...style }}>
+    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+    <span>{message}</span>
+  </div>
+);
+
+// Cặp nút Check/X "Xác nhận thêm / Hủy" dùng chung cho hàng "thêm mới" — 3 chỗ trước đây tự viết lặp lại y hệt.
+const ConfirmCancelButtons: React.FC<{ onConfirm: () => void; onCancel: () => void; justify?: 'center' | 'flex-end' }> = ({ onConfirm, onCancel, justify = 'center' }) => (
+  <div style={{ display: 'flex', gap: '10px', justifyContent: justify }}>
+    <button type="button" onClick={onConfirm} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Xác nhận thêm">
+      <Check size={14} />
+    </button>
+    <button type="button" onClick={onCancel} style={iconBtnStyle} className="pcp-icon-btn" title="Hủy">
+      <X size={14} />
+    </button>
+  </div>
+);
+
 const ValueDisplay: React.FC<{ value: number; unit?: string; dirty?: boolean }> = ({ value, unit, dirty }) => (
   <div style={{ ...valueBoxStyle, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
     <span style={{ fontWeight: 800, fontSize: '12.5px', color: dirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(value)}</span>
@@ -81,7 +104,52 @@ const ValueDisplay: React.FC<{ value: number; unit?: string; dirty?: boolean }> 
   </div>
 );
 
-// Input tiền tệ dùng chung — tự format dấu chấm ngăn cách nghìn, hiện suffix "₫"/"VNĐ", báo lỗi inline
+// Input số dùng chung cho cả 2 biến thể tiền/phần trăm — cùng khung ngoài (cột + lỗi inline) và vị
+// trí suffix, chỉ khác cách nhập/định dạng/kẹp giá trị. MoneyField/PercentField bên dưới là 2 lớp vỏ
+// mỏng giữ nguyên API cũ (props/behavior y hệt trước) để không phải đổi lại ~12 chỗ đang gọi.
+const NumberField: React.FC<{
+  value: number;
+  onChange: (v: number) => void;
+  error?: string | null;
+  dirty?: boolean;
+  width?: string;
+  autoFocus?: boolean;
+  suffix: string;
+  suffixWidth: string;
+  inputType: 'text-money' | 'number-percent';
+  step?: string;
+  clamp: (v: number) => number;
+}> = ({ value, onChange, error, dirty, width, autoFocus, suffix, suffixWidth, inputType, step, clamp }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: width || '100%' }}>
+    <div style={{ position: 'relative' }}>
+      {inputType === 'text-money' ? (
+        <input
+          type="text"
+          inputMode="numeric"
+          autoFocus={autoFocus}
+          value={formatNumberVN(value)}
+          onChange={(e) => onChange(clamp(parseFloat(e.target.value.replace(/\D/g, '')) || 0))}
+          style={{ ...inputStyle, paddingRight: suffixWidth, borderColor: error ? '#dc2626' : dirty ? '#f59e0b' : '#cbd5e1' }}
+        />
+      ) : (
+        <input
+          type="number"
+          className="pcp-num-input"
+          min={0}
+          max={100}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(clamp(parseFloat(e.target.value) || 0))}
+          style={{ ...inputStyle, paddingRight: suffixWidth, borderColor: error ? '#dc2626' : '#cbd5e1' }}
+        />
+      )}
+      <span style={suffixStyle}>{suffix}</span>
+    </div>
+    {error && <span style={fieldErrorStyle}>{error}</span>}
+  </div>
+);
+
+// Input tiền tệ dùng chung — tự format dấu chấm ngăn cách nghìn, hiện suffix "VNĐ", báo lỗi inline
 const MoneyField: React.FC<{
   value: number;
   onChange: (v: number) => void;
@@ -90,20 +158,18 @@ const MoneyField: React.FC<{
   width?: string;
   autoFocus?: boolean;
 }> = ({ value, onChange, error, dirty, width, autoFocus }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: width || '100%' }}>
-    <div style={{ position: 'relative' }}>
-      <input
-        type="text"
-        inputMode="numeric"
-        autoFocus={autoFocus}
-        value={formatNumberVN(value)}
-        onChange={(e) => onChange(clampMoney(parseFloat(e.target.value.replace(/\D/g, '')) || 0))}
-        style={{ ...inputStyle, paddingRight: '34px', borderColor: error ? '#dc2626' : dirty ? '#f59e0b' : '#cbd5e1' }}
-      />
-      <span style={suffixStyle}>VNĐ</span>
-    </div>
-    {error && <span style={fieldErrorStyle}>{error}</span>}
-  </div>
+  <NumberField
+    value={value}
+    onChange={onChange}
+    error={error}
+    dirty={dirty}
+    width={width}
+    autoFocus={autoFocus}
+    suffix="VNĐ"
+    suffixWidth="34px"
+    inputType="text-money"
+    clamp={clampMoney}
+  />
 );
 
 // Input phần trăm dùng chung — hiện suffix "%", báo lỗi inline
@@ -114,26 +180,20 @@ const PercentField: React.FC<{
   width?: string;
   step?: string;
 }> = ({ value, onChange, error, width, step }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: width || '100%' }}>
-    <div style={{ position: 'relative' }}>
-      <input
-        type="number"
-        className="pcp-num-input"
-        min={0}
-        max={100}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(clampPercent(parseFloat(e.target.value) || 0))}
-        style={{ ...inputStyle, paddingRight: '26px', borderColor: error ? '#dc2626' : '#cbd5e1' }}
-      />
-      <span style={suffixStyle}>%</span>
-    </div>
-    {error && <span style={fieldErrorStyle}>{error}</span>}
-  </div>
+  <NumberField
+    value={value}
+    onChange={onChange}
+    error={error}
+    width={width}
+    step={step}
+    suffix="%"
+    suffixWidth="26px"
+    inputType="number-percent"
+    clamp={clampPercent}
+  />
 );
 
 export const PricingConfigPage: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -141,13 +201,17 @@ export const PricingConfigPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'SOURCE' | 'RULES'>('SOURCE');
 
-  const [metalPrices, setMetalPrices] = useState<MetalPricesState>({ gold24kVnd: 0, silverVnd: 0, platinumVnd: 0 });
-  const [initialMetalPrices, setInitialMetalPrices] = useState<MetalPricesState | null>(null);
+  const [baseMetals, setBaseMetals] = useState<BaseMetal[]>([]);
+  const [initialBaseMetals, setInitialBaseMetals] = useState<BaseMetal[]>([]);
+  const [addingBaseMetal, setAddingBaseMetal] = useState(false);
+  const [newBaseMetalName, setNewBaseMetalName] = useState('');
+  const [baseMetalError, setBaseMetalError] = useState<string | null>(null);
+  const [showMetalHistory, setShowMetalHistory] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [initialMaterials, setInitialMaterials] = useState<Material[]>([]);
   const [editingMaterialIds, setEditingMaterialIds] = useState<string[]>([]);
   const [addingMaterial, setAddingMaterial] = useState(false);
-  const [newMaterial, setNewMaterial] = useState<{ name: string; priceRatioPct: string; pricingFormulaId: string }>({ name: '', priceRatioPct: '100', pricingFormulaId: '' });
+  const [newMaterial, setNewMaterial] = useState<{ name: string; priceRatioPct: string; pricingFormulaId: string; baseMetalId: string }>({ name: '', priceRatioPct: '100', pricingFormulaId: '', baseMetalId: '' });
   const [materialError, setMaterialError] = useState<string | null>(null);
   // Công thức tính lãi — gắn theo NHÓM (Material.pricingFormulaId), thay bảng lợi nhuận/hệ số
   // nhân Bạc cũ vốn gom chung 1 JSON tách rời trong pricing_config
@@ -182,16 +246,11 @@ export const PricingConfigPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadAll = () => {
-    setLoading(true);
-    Promise.all([fetchStones(), fetchMasterData(), fetchMetalPrices(), fetchPricingFormulas()])
+    Promise.all([fetchStones(), fetchMasterData(), fetchBaseMetals(), fetchPricingFormulas()])
       .then(([stoneRows, master, metals, formulaRows]) => {
-        const metalSnapshot: MetalPricesState = {
-          gold24kVnd: metals?.gold24kVnd || 0,
-          silverVnd: metals?.silverVnd || 0,
-          platinumVnd: metals?.platinumVnd || 0,
-        };
-        setMetalPrices(metalSnapshot);
-        setInitialMetalPrices(metalSnapshot);
+        const metalList: BaseMetal[] = Array.isArray(metals) ? metals : [];
+        setBaseMetals(metalList);
+        setInitialBaseMetals(metalList);
         const loadedStones = Array.isArray(stoneRows) ? stoneRows : [];
         setStones(loadedStones);
         setInitialStones(loadedStones);
@@ -218,8 +277,7 @@ export const PricingConfigPage: React.FC = () => {
           setNewMaterial((s) => (s.pricingFormulaId ? s : { ...s, pricingFormulaId: loadedFormulas[0].id }));
         }
       })
-      .catch((err) => setError(err.message || 'Không thể tải cấu hình giá'))
-      .finally(() => setLoading(false));
+      .catch((err) => setError(err.message || 'Không thể tải cấu hình giá'));
   };
 
   useEffect(() => {
@@ -243,17 +301,18 @@ export const PricingConfigPage: React.FC = () => {
     return original && original.price !== s.price;
   });
 
-  const goldPriceDirty = initialMetalPrices ? metalPrices.gold24kVnd !== initialMetalPrices.gold24kVnd : false;
-  const silverPriceDirty = initialMetalPrices ? metalPrices.silverVnd !== initialMetalPrices.silverVnd : false;
-  const platinumPriceDirty = initialMetalPrices ? metalPrices.platinumVnd !== initialMetalPrices.platinumVnd : false;
-  const metalPricesDirty = goldPriceDirty || silverPriceDirty || platinumPriceDirty;
+  const changedBaseMetals = baseMetals.filter((m) => {
+    const original = initialBaseMetals.find((o) => o.id === m.id);
+    return original && original.priceVnd !== m.priceVnd;
+  });
+  const metalPricesDirty = changedBaseMetals.length > 0;
 
   const categoriesDirty = changedCategories.length > 0 || pendingDeleteCategoryIds.length > 0;
   const stonesDirty = changedStonePrices.length > 0 || pendingDeleteStoneIds.length > 0;
 
   const changedMaterials = materials.filter((m) => {
     const original = initialMaterials.find((o) => o.id === m.id);
-    return original && (original.priceRatioPct !== m.priceRatioPct || original.pricingFormulaId !== m.pricingFormulaId);
+    return original && (original.priceRatioPct !== m.priceRatioPct || original.pricingFormulaId !== m.pricingFormulaId || original.baseMetalId !== m.baseMetalId);
   });
   const materialsDirty = changedMaterials.length > 0;
 
@@ -278,11 +337,6 @@ export const PricingConfigPage: React.FC = () => {
 
   // 1 API call gộp cho từng loại field/thực thể nào thực sự thay đổi so với dữ liệu gốc đã tải
   const handleSaveConfig = async () => {
-    const metalPayload: { gold24kVnd?: number; silverVnd?: number; platinumVnd?: number } = {};
-    if (goldPriceDirty) metalPayload.gold24kVnd = metalPrices.gold24kVnd;
-    if (silverPriceDirty) metalPayload.silverVnd = metalPrices.silverVnd;
-    if (platinumPriceDirty) metalPayload.platinumVnd = metalPrices.platinumVnd;
-
     if (!hasPendingChanges) {
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
@@ -293,7 +347,9 @@ export const PricingConfigPage: React.FC = () => {
     setError(null);
     try {
       await Promise.all([
-        metalPricesDirty ? updateMetalPrices(metalPayload) : Promise.resolve(),
+        metalPricesDirty
+          ? Promise.all(changedBaseMetals.map((m) => updateBaseMetalPrice(m.id, m.priceVnd)))
+          : Promise.resolve(),
         categoriesDirty
           ? updateProductCategoriesBulk(changedCategories.map((c) => ({ id: c.id, laborCost: c.laborCost || 0, vatRate: c.vatRate || 0 })))
           : Promise.resolve(),
@@ -303,14 +359,14 @@ export const PricingConfigPage: React.FC = () => {
         pendingDeleteStoneIds.length > 0 ? deleteStonesMany(pendingDeleteStoneIds) : Promise.resolve(),
         pendingDeleteCategoryIds.length > 0 ? deleteProductCategoriesMany(pendingDeleteCategoryIds) : Promise.resolve(),
         materialsDirty
-          ? Promise.all(changedMaterials.map((m) => updateMaterial(m.id, { priceRatioPct: m.priceRatioPct, pricingFormulaId: m.pricingFormulaId })))
+          ? Promise.all(changedMaterials.map((m) => updateMaterial(m.id, { priceRatioPct: m.priceRatioPct, pricingFormulaId: m.pricingFormulaId, baseMetalId: m.baseMetalId })))
           : Promise.resolve(),
         formulasDirty
           ? Promise.all(changedFormulas.map((f) => updatePricingFormula(f.id, { config: f.config })))
           : Promise.resolve(),
       ]);
 
-      setInitialMetalPrices(metalPrices);
+      setInitialBaseMetals(baseMetals);
       setInitialMaterials(materials);
       setInitialFormulas(formulas);
       const remainingCategories = categories.filter((c) => !pendingDeleteCategoryIds.includes(c.id));
@@ -339,7 +395,7 @@ export const PricingConfigPage: React.FC = () => {
 
   // Hủy bỏ toàn bộ thay đổi chưa lưu — về lại đúng dữ liệu gốc đã tải, đóng mọi ô đang sửa/đang thêm
   const handleCancelAll = () => {
-    if (initialMetalPrices) setMetalPrices(initialMetalPrices);
+    setBaseMetals(initialBaseMetals);
     setCategories(initialCategories);
     setPendingDeleteCategoryIds([]);
     setStones(initialStones);
@@ -354,11 +410,6 @@ export const PricingConfigPage: React.FC = () => {
     setAddingStoneType(null);
     setAddingMaterial(false);
     setAddingFormula(false);
-  };
-
-  // Chỉ cập nhật local state — lưu xuống BE khi bấm nút "Lưu cấu hình" ở dưới
-  const updateMetalPrice = (field: keyof MetalPricesState, val: number) => {
-    setMetalPrices((prev) => ({ ...prev, [field]: val }));
   };
 
   // Chỉ cập nhật local state — lưu xuống BE (PATCH /pricing-formulas/:id) khi bấm "Lưu cấu hình"
@@ -460,12 +511,43 @@ export const PricingConfigPage: React.FC = () => {
   };
 
   // Chỉ cập nhật local state — lưu xuống BE (PATCH /materials/:id) khi bấm "Lưu cấu hình" ở dưới
+  const updateBaseMetalPriceLocal = (id: string, priceVnd: number) => {
+    setBaseMetals((prev) => prev.map((m) => (m.id === id ? { ...m, priceVnd } : m)));
+  };
+
+  const handleAddBaseMetal = async () => {
+    setBaseMetalError(null);
+    if (!newBaseMetalName.trim()) {
+      setBaseMetalError('Vui lòng nhập tên kim loại gốc');
+      return;
+    }
+    try {
+      const created = await createBaseMetal(newBaseMetalName.trim());
+      setBaseMetals((prev) => [...prev, created]);
+      setInitialBaseMetals((prev) => [...prev, created]);
+      setNewBaseMetalName('');
+      setAddingBaseMetal(false);
+    } catch (err: any) {
+      setBaseMetalError(err.message || 'Không thể thêm kim loại gốc');
+    }
+  };
+
+  const handleToggleBaseMetalActive = async (id: string, isActive: boolean) => {
+    await setBaseMetalActive(id, isActive);
+    setBaseMetals((prev) => prev.map((m) => (m.id === id ? { ...m, isActive } : m)));
+    setInitialBaseMetals((prev) => prev.map((m) => (m.id === id ? { ...m, isActive } : m)));
+  };
+
   const updateMaterialRatio = (id: string, priceRatioPct: number) => {
     setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, priceRatioPct } : m)));
   };
 
   const updateMaterialFormula = (id: string, pricingFormulaId: string) => {
     setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, pricingFormulaId } : m)));
+  };
+
+  const updateMaterialBaseMetal = (id: string, baseMetalId: string) => {
+    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, baseMetalId: baseMetalId || null } : m)));
   };
 
   // Thêm chất liệu mới lưu ngay (giống thêm đá/danh mục) — không staged, vì tên chất liệu là khóa
@@ -482,10 +564,10 @@ export const PricingConfigPage: React.FC = () => {
       return;
     }
     try {
-      const created = { ...(await createMaterial(newMaterial.name.trim(), ratio, newMaterial.pricingFormulaId)), priceRatioPct: ratio };
+      const created = { ...(await createMaterial(newMaterial.name.trim(), ratio, newMaterial.pricingFormulaId, newMaterial.baseMetalId || undefined)), priceRatioPct: ratio };
       setMaterials((prev) => [...prev, created]);
       setInitialMaterials((prev) => [...prev, created]);
-      setNewMaterial((s) => ({ name: '', priceRatioPct: '100', pricingFormulaId: s.pricingFormulaId }));
+      setNewMaterial((s) => ({ name: '', priceRatioPct: '100', pricingFormulaId: s.pricingFormulaId, baseMetalId: s.baseMetalId }));
       setAddingMaterial(false);
     } catch (err: any) {
       setMaterialError(err.message || 'Không thể thêm chất liệu');
@@ -545,10 +627,6 @@ export const PricingConfigPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <div style={{ padding: '30px', color: '#64748b', fontSize: '13px' }}>Đang tải cấu hình...</div>;
-  }
-
   const mainStones = stones.filter((s) => s.stoneType === 'MAIN');
   const sideStones = stones.filter((s) => s.stoneType === 'SIDE');
 
@@ -573,12 +651,7 @@ export const PricingConfigPage: React.FC = () => {
         @media (max-width: 760px) { .pcp-rules-grid { grid-template-columns: 1fr !important; } }
       `}</style>
 
-      {error && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px', marginBottom: '14px' }}>
-          <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} style={{ marginBottom: '14px' }} />}
 
       {/* Panel duy nhất — header + tabs + nội dung + footer sticky, giống mockup */}
       <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px' }}>
@@ -599,42 +672,64 @@ export const PricingConfigPage: React.FC = () => {
         <div style={{ padding: '0 22px' }}>
           {activeTab === 'SOURCE' && (
             <>
-              {/* Giá kim loại quý — luôn mở sẵn để sửa, không cần bấm bút chì */}
-              <PanelSection first title="Giá kim loại quý (VNĐ/chỉ)">
+              {/* Giá kim loại quý — danh sách ĐỘNG, thêm kim loại mới không cần sửa code */}
+              <PanelSection
+                first
+                title="Giá kim loại quý (VNĐ/chỉ)"
+                icon={Coins}
+                action={
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => setShowMetalHistory(true)} style={btnGhostSmallStyle}><History size={12} /> Lịch sử giá</button>
+                    <button type="button" onClick={() => { setBaseMetalError(null); setAddingBaseMetal(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm kim loại</button>
+                  </div>
+                }
+              >
+                {baseMetalError && <ErrorBanner message={baseMetalError} style={{ marginBottom: '12px' }} />}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px' }}>
-                  <div>
-                    <label style={labelStyle}>Vàng 24K</label>
-                    <MoneyField value={metalPrices.gold24kVnd} onChange={(v) => updateMetalPrice('gold24kVnd', v)} dirty={goldPriceDirty} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Bạc</label>
-                    <MoneyField value={metalPrices.silverVnd} onChange={(v) => updateMetalPrice('silverVnd', v)} dirty={silverPriceDirty} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Bạch kim</label>
-                    <MoneyField value={metalPrices.platinumVnd} onChange={(v) => updateMetalPrice('platinumVnd', v)} dirty={platinumPriceDirty} />
-                  </div>
+                  {baseMetals.map((m) => {
+                    const original = initialBaseMetals.find((o) => o.id === m.id);
+                    const dirty = !!original && original.priceVnd !== m.priceVnd;
+                    return (
+                      <div key={m.id} style={{ opacity: m.isActive ? 1 : 0.5 }}>
+                        <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }} title={m.isActive ? 'Đang dùng — bỏ tích để ngừng dùng' : 'Đã ngừng dùng — tích để bật lại'}>
+                          <input
+                            type="checkbox"
+                            checked={m.isActive}
+                            onChange={() => handleToggleBaseMetalActive(m.id, !m.isActive)}
+                          />
+                          {m.name}{m.isDefault ? ' (mặc định)' : ''}
+                        </label>
+                        <MoneyField value={m.priceVnd} onChange={(v) => updateBaseMetalPriceLocal(m.id, v)} dirty={dirty} />
+                      </div>
+                    );
+                  })}
+                  {addingBaseMetal && (
+                    <div>
+                      <label style={labelStyle}>Kim loại mới</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input autoFocus value={newBaseMetalName} onChange={(e) => setNewBaseMetalName(e.target.value)} style={inputStyle} placeholder="VD: Titanium" />
+                        <ConfirmCancelButtons onConfirm={handleAddBaseMetal} onCancel={() => setAddingBaseMetal(false)} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </PanelSection>
 
               {/* Chất liệu & % tính giá — % nhân với giá kim loại gốc lúc tính (vàng theo tuổi: vd 18K=75; Bạc/Bạch kim = 100) */}
               <PanelSection
                 title="Chất liệu & % tính giá"
+                icon={Layers}
                 action={<button type="button" onClick={() => { setMaterialError(null); setAddingMaterial(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm chất liệu</button>}
               >
-                {materialError && (
-                  <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px' }}>
-                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
-                    <span>{materialError}</span>
-                  </div>
-                )}
+                {materialError && <ErrorBanner message={materialError} style={{ marginBottom: '12px' }} />}
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                     <thead>
                       <tr style={tableHeadRowStyle}>
-                        <th style={{ ...thStyle, width: '30%' }}>Tên chất liệu</th>
-                        <th style={{ ...thStyle, width: '20%' }}>% tính giá</th>
-                        <th style={{ ...thStyle, width: '35%' }}>Công thức tính lãi</th>
+                        <th style={{ ...thStyle, width: '24%' }}>Tên chất liệu</th>
+                        <th style={{ ...thStyle, width: '18%' }}>Kim loại gốc</th>
+                        <th style={{ ...thStyle, width: '16%' }}>% tính giá</th>
+                        <th style={{ ...thStyle, width: '32%' }}>Công thức tính lãi</th>
                         <th style={{ ...thStyle, width: '90px', textAlign: 'center' }}>Thao tác</th>
                       </tr>
                     </thead>
@@ -649,6 +744,18 @@ export const PricingConfigPage: React.FC = () => {
                           <tr key={m.id} style={{ borderBottom: '1px solid #f1f5f9', background: rowDirty ? '#fffbeb' : undefined }}>
                             <td style={tdStyle}>
                               <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{m.name}</span>
+                            </td>
+                            <td style={tdStyle}>
+                              {isEditing ? (
+                                <select value={m.baseMetalId || ''} onChange={(e) => updateMaterialBaseMetal(m.id, e.target.value)} style={inputStyle}>
+                                  <option value="">— Phi kim loại —</option>
+                                  {baseMetals.filter((bm) => bm.isActive).map((bm) => (
+                                    <option key={bm.id} value={bm.id}>{bm.name}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{m.baseMetal?.name || '— Phi kim loại —'}</span>
+                              )}
                             </td>
                             <td style={tdStyle}>
                               {isEditing ? (
@@ -680,11 +787,19 @@ export const PricingConfigPage: React.FC = () => {
                         );
                       })}
                       {materials.length === 0 && (
-                        <tr><td colSpan={4} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có chất liệu nào</td></tr>
+                        <tr><td colSpan={5} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có chất liệu nào</td></tr>
                       )}
                       {addingMaterial && (
                         <tr className="pcp-add-row">
                           <td style={tdStyle}><input autoFocus value={newMaterial.name} onChange={(e) => setNewMaterial((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="VD: Vàng 16K" /></td>
+                          <td style={tdStyle}>
+                            <select value={newMaterial.baseMetalId} onChange={(e) => setNewMaterial((s) => ({ ...s, baseMetalId: e.target.value }))} style={inputStyle}>
+                              <option value="">— Phi kim loại —</option>
+                              {baseMetals.filter((bm) => bm.isActive).map((bm) => (
+                                <option key={bm.id} value={bm.id}>{bm.name}</option>
+                              ))}
+                            </select>
+                          </td>
                           <td style={tdStyle}><input type="number" className="pcp-num-input" min={0} max={1000} step="0.001" value={newMaterial.priceRatioPct} onChange={(e) => setNewMaterial((s) => ({ ...s, priceRatioPct: e.target.value }))} style={inputStyle} /></td>
                           <td style={tdStyle}>
                             <select value={newMaterial.pricingFormulaId} onChange={(e) => setNewMaterial((s) => ({ ...s, pricingFormulaId: e.target.value }))} style={inputStyle}>
@@ -695,14 +810,7 @@ export const PricingConfigPage: React.FC = () => {
                             </select>
                           </td>
                           <td style={tdCenterStyle}>
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                              <button type="button" onClick={handleAddMaterial} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Xác nhận thêm">
-                                <Check size={14} />
-                              </button>
-                              <button type="button" onClick={() => setAddingMaterial(false)} style={iconBtnStyle} className="pcp-icon-btn" title="Hủy">
-                                <X size={14} />
-                              </button>
-                            </div>
+                            <ConfirmCancelButtons onConfirm={handleAddMaterial} onCancel={() => setAddingMaterial(false)} />
                           </td>
                         </tr>
                       )}
@@ -714,6 +822,7 @@ export const PricingConfigPage: React.FC = () => {
               {/* Quản lý bảng giá đá */}
               <PanelSection
                 title="Quản lý bảng giá đá"
+                icon={Gem}
                 action={
                   <>
                     <input
@@ -734,16 +843,13 @@ export const PricingConfigPage: React.FC = () => {
                       }}
                     />
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importing} style={{ ...btnGhostSmallStyle, opacity: importing ? 0.6 : 1 }}>
-                      {importing ? <Loader2 size={12} className="pcp-spin" /> : <Upload size={12} />} Import Excel
+                      {importing ? <Loader2 size={12} className="pcp-spin" /> : <Upload size={12} />} Nhập Excel
                     </button>
                   </>
                 }
               >
                 {stoneError && (
-                  <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px', whiteSpace: 'pre-line', maxHeight: '160px', overflowY: 'auto' }}>
-                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
-                    <span>{stoneError}</span>
-                  </div>
+                  <ErrorBanner message={stoneError} style={{ marginBottom: '12px', whiteSpace: 'pre-line', maxHeight: '160px', overflowY: 'auto' }} />
                 )}
                 {importResult && <div style={{ marginBottom: '12px', color: '#16a34a', fontSize: '12px', fontWeight: 700 }}>{importResult}</div>}
 
@@ -795,19 +901,14 @@ export const PricingConfigPage: React.FC = () => {
           )}
 
           {activeTab === 'RULES' && (
-            <div className="pcp-rules-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '20px', alignItems: 'start', padding: '22px 0' }}>
+            <div className="pcp-rules-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(280px, 2fr)', gap: '20px', alignItems: 'start', padding: '22px 0' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* VAT giờ cấu hình theo từng danh mục sản phẩm — xem panel "Tiền công / VAT" bên phải */}
 
               {/* Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu (bảng bên tab Nguồn giá gốc)
                   trỏ chung 1 công thức. Thêm kim loại/chất liệu mới chỉ cần trỏ tới công thức có
                   sẵn hoặc tạo công thức mới ở đây — không cần sửa code. */}
-              {formulaError && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px' }}>
-                  <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
-                  <span>{formulaError}</span>
-                </div>
-              )}
+              {formulaError && <ErrorBanner message={formulaError} />}
               {formulas.map((f) => {
                 const isEditing = editingFormulaIds.includes(f.id);
                 const usedByCount = materials.filter((m) => m.pricingFormulaId === f.id).length;
@@ -815,6 +916,7 @@ export const PricingConfigPage: React.FC = () => {
                   <RuleCard
                     key={f.id}
                     title={f.name}
+                    icon={f.formulaType === 'MULTIPLIER' ? Percent : TrendingUp}
                     subtitle={
                       (f.formulaType === 'MULTIPLIER'
                         ? 'Nhân thẳng 1 hệ số cố định lên chi phí đã có VAT.'
@@ -931,7 +1033,7 @@ export const PricingConfigPage: React.FC = () => {
               })}
 
               {/* Thêm công thức mới — lưu ngay (giống thêm chất liệu/đá), sửa nội dung bên trong sau */}
-              <RuleCard title="Thêm công thức mới">
+              <RuleCard title="Thêm công thức mới" icon={PlusCircle}>
                 {addingFormula ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '360px' }}>
                     <input autoFocus value={newFormula.name} onChange={(e) => setNewFormula((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="VD: Bậc lợi nhuận Bạch kim cao cấp" />
@@ -1040,6 +1142,8 @@ export const PricingConfigPage: React.FC = () => {
           <span>{toast.message}</span>
         </div>
       )}
+
+      <MetalPriceHistoryModal isOpen={showMetalHistory} onClose={() => setShowMetalHistory(false)} />
     </div>
   );
 };
@@ -1085,7 +1189,7 @@ const CategoryTable: React.FC<{
                 {isEditing && !markedDelete ? (
                   <MoneyField value={c.laborCost || 0} onChange={(v) => onLaborCostChange(c.id, v)} width="100%" />
                 ) : (
-                  <span style={{ ...valueBoxStyle, fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(c.laborCost || 0)}</span>
+                  <span style={{ ...valueBoxStyle, display: 'block', width: '100%', boxSizing: 'border-box', fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(c.laborCost || 0)}</span>
                 )}
               </div>
               <div style={{ width: '70px', flexShrink: 0 }}>
@@ -1110,14 +1214,7 @@ const CategoryTable: React.FC<{
             <MoneyField value={parseFloat(newCategory.laborCost) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, laborCost: String(v) }))} />
             <PercentField value={parseFloat(newCategory.vatRate) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, vatRate: String(v) }))} width="90px" />
           </div>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={onConfirmAdd} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Xác nhận thêm">
-              <Check size={14} />
-            </button>
-            <button type="button" onClick={onCloseAdd} style={iconBtnStyle} className="pcp-icon-btn" title="Hủy">
-              <X size={14} />
-            </button>
-          </div>
+          <ConfirmCancelButtons onConfirm={onConfirmAdd} onCancel={onCloseAdd} justify="flex-end" />
         </div>
       )}
     </div>
@@ -1203,14 +1300,7 @@ const StoneGroupTable: React.FC<{
                 <td style={tdStyle}><input value={newStone.size} onChange={(e) => setNewStone((s) => ({ ...s, size: e.target.value }))} style={inputStyle} placeholder="Size" /></td>
                 <td style={tdStyle}><MoneyField value={parseFloat(newStone.price) || 0} onChange={(v) => setNewStone((s) => ({ ...s, price: String(v) }))} width="160px" /></td>
                 <td style={tdCenterStyle}>
-                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                    <button type="button" onClick={onConfirmAdd} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Xác nhận thêm">
-                      <Check size={14} />
-                    </button>
-                    <button type="button" onClick={onCloseAdd} style={iconBtnStyle} className="pcp-icon-btn" title="Hủy">
-                      <X size={14} />
-                    </button>
-                  </div>
+                  <ConfirmCancelButtons onConfirm={onConfirmAdd} onCancel={onCloseAdd} />
                 </td>
               </tr>
             )}

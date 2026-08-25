@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Customer, Material, ProductCategory, QuoteRequest, Role, User, StatusCounts } from '../types';
+import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts } from '../types';
 import {
   fetchQuoteRequests,
   fetchMasterData,
@@ -50,7 +50,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [customers] = useState<Customer[]>([]);
 
   const getInitialSelectedId = () => {
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/requests/')) {
@@ -287,27 +286,41 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     setIsCreateOpen(true);
   };
 
-  const handleCreateOrUpdateSubmit = async (payload: any) => {
-    setLoadingMessage('Đang lưu yêu cầu...');
+  // Khuôn dùng chung cho các action ghi dữ liệu bên dưới — "gọi API, setSelectedId theo kết quả,
+  // đánh dấu cần refresh counts, reload danh sách, báo lỗi nếu fail". bumpCounts=false cho action
+  // không đổi số lượng/trạng thái đếm được (VD chọn phương án hiển thị, không đổi status).
+  const runAction = async (
+    loadingMsg: string,
+    errorPrefix: string,
+    action: () => Promise<QuoteRequest>,
+    opts?: { bumpCounts?: boolean; onSuccess?: (updated: QuoteRequest) => void },
+  ) => {
+    setLoadingMessage(loadingMsg);
     setLoading(true);
     try {
+      const updated = await action();
+      setSelectedId(updated.id);
+      if (opts?.bumpCounts !== false) needCountsRef.current = true;
+      opts?.onSuccess?.(updated);
+      await loadData(false);
+    } catch (err: any) {
+      alert(`${errorPrefix}: ${err.message || 'Lỗi hệ thống'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateOrUpdateSubmit = async (payload: any) => {
+    await runAction('Đang lưu yêu cầu...', 'Không thể lưu yêu cầu', async () => {
       if (editingReq) {
         let updated = await updateQuoteRequest(editingReq.id, payload);
         if (editingReq.status === 'NEED_MORE_INFO') {
           updated = await resubmitQuoteRequest(editingReq.id);
         }
-        setSelectedId(updated.id);
-      } else {
-        const created = await createQuoteRequest(payload);
-        setSelectedId(created.id);
+        return updated;
       }
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Không thể lưu yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+      return createQuoteRequest(payload);
+    });
   };
 
   const handleDeleteRequest = async (id: string) => {
@@ -326,18 +339,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   };
 
   const handleAccept = async (id: string, version: number) => {
-    setLoadingMessage('Đang tiếp nhận đơn...');
-    setLoading(true);
-    try {
-      const updated = await acceptQuoteRequest(id, version);
-      setSelectedId(updated.id);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Không thể tiếp nhận: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction('Đang tiếp nhận đơn...', 'Không thể tiếp nhận', () => acceptQuoteRequest(id, version));
   };
 
   const handlePricingSubmit = async (
@@ -352,119 +354,40 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     },
   ) => {
     if (!pricingReqId) return;
-    setLoadingMessage('Đang cập nhật báo giá...');
-    setLoading(true);
-    try {
-      const updated = await completeQuoteRequest(pricingReqId, quotedPrice, vat, options, extras);
-      setSelectedId(updated.id);
-      setPricingReqId(null);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Không thể báo giá: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConfirmDirectQuote = async (id: string, price: number) => {
-    setLoadingMessage('Đang xác nhận báo giá...');
-    setLoading(true);
-    try {
-      // BE bắt buộc options[].quotedPrice khi chuyển sang ĐÃ BÁO GIÁ — gửi lại nguyên các phương
-      // án đang có (không gửi rỗng, kẻo BE báo lỗi thiếu giá dù đang hiện rõ giá trên màn hình,
-      // và tránh xóa mất các phương án khác nếu request đã có sẵn nhiều phương án).
-      const target = requests.find((r) => r.id === id);
-      const existingOptions = target?.options && target.options.length > 0 ? target.options : undefined;
-      const updated = await completeQuoteRequest(id, price, 10, existingOptions);
-      setSelectedId(updated.id);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Không thể xác nhận báo giá: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction(
+      'Đang cập nhật báo giá...',
+      'Không thể báo giá',
+      () => completeQuoteRequest(pricingReqId, quotedPrice, vat, options, extras),
+      { onSuccess: () => setPricingReqId(null) },
+    );
   };
 
   const handleSelectOption = async (quoteId: string, optionId: string) => {
-    setLoadingMessage('Đang cập nhật phương án...');
-    setLoading(true);
-    try {
-      const updated = await selectQuoteOption(quoteId, optionId);
-      setSelectedId(updated.id);
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Lỗi chọn phương án: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction('Đang cập nhật phương án...', 'Lỗi chọn phương án', () => selectQuoteOption(quoteId, optionId), { bumpCounts: false });
   };
 
   const handleRejectSubmit = async (reason: string) => {
     if (!rejectReqId) return;
-    setLoadingMessage('Đang từ chối yêu cầu...');
-    setLoading(true);
-    try {
-      const updated = await rejectQuoteRequest(rejectReqId, reason);
-      setSelectedId(updated.id);
-      setRejectReqId(null);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Không thể từ chối: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction('Đang từ chối yêu cầu...', 'Không thể từ chối', () => rejectQuoteRequest(rejectReqId, reason), {
+      onSuccess: () => setRejectReqId(null),
+    });
   };
 
   const handleReturnSubmit = async (reason: string) => {
     if (!returnReqId) return;
-    setLoadingMessage('Đang trả lại yêu cầu...');
-    setLoading(true);
-    try {
-      const updated = await returnQuoteRequest(returnReqId, reason);
-      setSelectedId(updated.id);
-      setReturnReqId(null);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Không thể trả lại: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction('Đang trả lại yêu cầu...', 'Không thể trả lại', () => returnQuoteRequest(returnReqId, reason), {
+      onSuccess: () => setReturnReqId(null),
+    });
   };
 
   const handleResubmitDirect = async (id: string) => {
     const target = requests.find((r) => r.id === id);
     if (!target) return;
-    setLoadingMessage('Đang gửi lại yêu cầu...');
-    setLoading(true);
-    try {
-      const updated = await resubmitQuoteRequest(id);
-      setSelectedId(updated.id);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Lỗi gửi lại yêu cầu: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction('Đang gửi lại yêu cầu...', 'Lỗi gửi lại yêu cầu', () => resubmitQuoteRequest(id));
   };
 
   const handleMarkClosed = async (id: string, optionId?: string) => {
-    setLoadingMessage('Đang đánh dấu Đã chốt...');
-    setLoading(true);
-    try {
-      const updated = await markQuoteClosed(id, optionId);
-      setSelectedId(updated.id);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Lỗi đánh dấu Đã chốt: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction('Đang đánh dấu Đã chốt...', 'Lỗi đánh dấu Đã chốt', () => markQuoteClosed(id, optionId));
   };
 
   // Bấm "Đánh Dấu Đã Chốt" từ danh sách — nếu yêu cầu có nhiều hơn 1 phương án đã báo giá,
@@ -487,18 +410,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   };
 
   const handleDeleteOption = async (id: string, optionId: string) => {
-    setLoadingMessage('Đang xóa phương án báo giá...');
-    setLoading(true);
-    try {
-      const updated = await deleteQuoteOption(id, optionId);
-      setSelectedId(updated.id);
-      needCountsRef.current = true;
-      await loadData(false);
-    } catch (err: any) {
-      alert(`Lỗi xóa phương án báo giá: ${err.message || 'Lỗi hệ thống'}`);
-    } finally {
-      setLoading(false);
-    }
+    await runAction('Đang xóa phương án báo giá...', 'Lỗi xóa phương án báo giá', () => deleteQuoteOption(id, optionId));
   };
 
   const selectedReq =
@@ -516,7 +428,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     requests,
     categories,
     materials,
-    customers,
     selectedId,
     setSelectedId,
     selectedReq,
@@ -573,7 +484,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     handleDeleteRequest,
     handleAccept,
     handlePricingSubmit,
-    handleConfirmDirectQuote,
     handleSelectOption,
     handleRejectSubmit,
     handleReturnSubmit,

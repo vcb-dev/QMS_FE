@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOption, CalculatePriceResult } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE ;
@@ -27,6 +27,20 @@ function dedupedGet(url: string, params?: Record<string, any>) {
     inFlightGetRequests.set(key, pending);
   }
   return pending;
+}
+
+// Khuôn try/catch dùng chung cho phần lớn hàm gọi API dưới đây — đều theo đúng khuôn "gọi axios,
+// trả res.data, lỗi thì ném Error với message BE trả về (hoặc fallback)". Hàm nào có xử lý đặc biệt
+// (login lưu session, export tải file, import Excel có errors[], fetchProvinces/fetchWards nuốt lỗi
+// trả mảng rỗng, fetchMasterData cache + trả rỗng khi lỗi, fetchSilverMultipliers biến đổi res.data
+// trước khi trả...) giữ nguyên try/catch riêng, không ép qua đây.
+async function apiCall(promise: Promise<{ data: any }>, fallbackMsg: string): Promise<any> {
+  try {
+    const res = await promise;
+    return res.data;
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || fallbackMsg);
+  }
 }
 
 export function getCookie(name: string): string | null {
@@ -148,75 +162,35 @@ export async function loginApi(email: string, password: string, remember: boolea
 }
 
 export async function registerApi(payload: { name: string; email: string; password: string; role?: string }): Promise<{ user: User; message: string }> {
-  try {
-    const res = await api.post('/auth/register', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại');
-  }
+  return apiCall(api.post('/auth/register', payload), 'Đăng ký không thành công. Vui lòng kiểm tra lại');
 }
 
 export async function getAuditStatsApi(): Promise<Record<string, { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] }[]>> {
-  try {
-    const res = await api.get('/audit-log/stats');
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể lấy thống kê hành động');
-  }
+  return apiCall(api.get('/audit-log/stats'), 'Không thể lấy thống kê hành động');
 }
 
 export async function getAllUsersApi(): Promise<any[]> {
-  try {
-    const res = await api.get('/users');
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể lấy danh sách người dùng');
-  }
+  return apiCall(api.get('/users'), 'Không thể lấy danh sách người dùng');
 }
 
 export async function approveUserApi(userId: string, role?: string): Promise<User> {
-  try {
-    const res = await api.patch(`/users/${userId}/approve`, { role });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể phê duyệt tài khoản');
-  }
+  return apiCall(api.patch(`/users/${userId}/approve`, { role }), 'Không thể phê duyệt tài khoản');
 }
 
 export async function setUserActiveApi(userId: string, isActive: boolean): Promise<User> {
-  try {
-    const res = await api.patch(`/users/${userId}/active`, { isActive });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật trạng thái tài khoản');
-  }
+  return apiCall(api.patch(`/users/${userId}/active`, { isActive }), 'Không thể cập nhật trạng thái tài khoản');
 }
 
 export async function rejectUserApi(userId: string): Promise<{ message: string }> {
-  try {
-    const res = await api.delete(`/users/${userId}/reject`);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể từ chối tài khoản');
-  }
+  return apiCall(api.delete(`/users/${userId}/reject`), 'Không thể từ chối tài khoản');
 }
 
 export async function forgotPasswordApi(email: string): Promise<{ message: string; otp?: string }> {
-  try {
-    const res = await api.post('/auth/forgot-password', { email });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể gửi yêu cầu đặt lại mật khẩu');
-  }
+  return apiCall(api.post('/auth/forgot-password', { email }), 'Không thể gửi yêu cầu đặt lại mật khẩu');
 }
 
 export async function resetPasswordApi(payload: { email: string; otp: string; newPassword: string }): Promise<{ message: string }> {
-  try {
-    const res = await api.post('/auth/reset-password', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
-  }
+  return apiCall(api.post('/auth/reset-password', payload), 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
 }
 
 export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; withLivePrice?: boolean }) {
@@ -236,12 +210,7 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.includeLocked) params.includeLocked = true;
   if (filter?.withLivePrice) params.withLivePrice = true;
 
-  try {
-    const res = await dedupedGet('/quote-requests', params);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải danh sách báo giá');
-  }
+  return apiCall(dedupedGet('/quote-requests', params), 'Không thể tải danh sách báo giá');
 }
 
 export async function fetchQuoteRequestStats(filter?: { timeRange?: string; startDate?: string; endDate?: string; status?: string; categoryId?: string; materialId?: string; ownerId?: string }) {
@@ -254,21 +223,12 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
   if (filter?.materialId && filter.materialId !== 'ALL') params.materialId = filter.materialId;
   if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
 
-  try {
-    const res = await api.get('/quote-requests/stats', { params });
-    return res.data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải số liệu tổng hợp');
-  }
+  const data = await apiCall(api.get('/quote-requests/stats', { params }), 'Không thể tải số liệu tổng hợp');
+  return data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
 }
 
 export async function fetchQuoteRequestById(id: string): Promise<QuoteRequest> {
-  try {
-    const res = await dedupedGet(`/quote-requests/${id}`);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải chi tiết yêu cầu báo giá');
-  }
+  return apiCall(dedupedGet(`/quote-requests/${id}`), 'Không thể tải chi tiết yêu cầu báo giá');
 }
 
 let masterDataCachePromise: Promise<{ categories: any[]; materials: any[]; customers: any[] }> | null = null;
@@ -300,14 +260,7 @@ export async function fetchMasterData() {
 }
 
 export async function searchCustomers(search?: string) {
-  try {
-    const res = await api.get('/customers', {
-      params: search ? { search } : undefined,
-    });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tìm kiếm khách hàng');
-  }
+  return apiCall(api.get('/customers', { params: search ? { search } : undefined }), 'Không thể tìm kiếm khách hàng');
 }
 
 export async function fetchProvinces() {
@@ -334,12 +287,7 @@ export async function fetchWards(provinceIdOrName?: string) {
 }
 
 export async function createCustomer(payload: { name: string; phone?: string; address?: string; province?: string; ward?: string; provinceId?: string; wardId?: string; note?: string }) {
-  try {
-    const res = await api.post('/customers', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi tạo thông tin khách hàng mới');
-  }
+  return apiCall(api.post('/customers', payload), 'Lỗi khi tạo thông tin khách hàng mới');
 }
 
 // CreateQuoteRequestDto/UpdateQuoteRequestDto không có field quotedPrice cấp ngoài, và options[]
@@ -353,30 +301,15 @@ function sanitizeQuoteRequestPayload(payload: any) {
 }
 
 export async function createQuoteRequest(payload: any) {
-  try {
-    const res = await api.post('/quote-requests', sanitizeQuoteRequestPayload(payload));
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi tạo yêu cầu báo giá');
-  }
+  return apiCall(api.post('/quote-requests', sanitizeQuoteRequestPayload(payload)), 'Lỗi khi tạo yêu cầu báo giá');
 }
 
 export async function deleteQuoteRequest(id: string) {
-  try {
-    const res = await api.delete(`/quote-requests/${id}`);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi xóa yêu cầu báo giá');
-  }
+  return apiCall(api.delete(`/quote-requests/${id}`), 'Lỗi khi xóa yêu cầu báo giá');
 }
 
 export async function updateQuoteRequest(id: string, payload: any) {
-  try {
-    const res = await api.patch(`/quote-requests/${id}`, sanitizeQuoteRequestPayload(payload));
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật yêu cầu báo giá');
-  }
+  return apiCall(api.patch(`/quote-requests/${id}`, sanitizeQuoteRequestPayload(payload)), 'Lỗi khi cập nhật yêu cầu báo giá');
 }
 
 export async function changeQuoteStatus(id: string, payload: {
@@ -393,12 +326,7 @@ export async function changeQuoteStatus(id: string, payload: {
   manualStonePrice?: number;
   stones?: { stoneId: string; quantity: number }[];
 }) {
-  try {
-    const res = await api.patch(`/quote-requests/${id}/status`, payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái yêu cầu');
-  }
+  return apiCall(api.patch(`/quote-requests/${id}/status`, payload), 'Lỗi khi cập nhật trạng thái yêu cầu');
 }
 
 export async function acceptQuoteRequest(id: string, version: number) {
@@ -543,87 +471,57 @@ export async function markQuoteClosed(id: string, optionId?: string) {
 }
 
 export async function deleteQuoteOption(id: string, optionId: string) {
-  try {
-    const res = await api.delete(`/quote-requests/${id}/options/${optionId}`);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể xóa phương án báo giá');
-  }
+  return apiCall(api.delete(`/quote-requests/${id}/options/${optionId}`), 'Không thể xóa phương án báo giá');
 }
 
 export async function fetchVnGoldPrice() {
-  try {
-    const res = await dedupedGet('/vn-gold-price');
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải giá vàng thị trường tham khảo');
-  }
+  return apiCall(dedupedGet('/vn-gold-price'), 'Không thể tải giá vàng thị trường tham khảo');
 }
 
-export async function fetchMetalPrices() {
-  try {
-    const res = await dedupedGet('/metal-prices');
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải giá vàng & bạc trực tuyến');
-  }
+export async function fetchBaseMetals() {
+  return apiCall(dedupedGet('/metal-prices'), 'Không thể tải giá kim loại gốc');
 }
 
-export async function updateMetalPrices(payload: { gold24kVnd?: number; silverVnd?: number; platinumVnd?: number }) {
-  try {
-    const res = await api.post('/metal-prices', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật giá vàng & bạc');
-  }
+export async function fetchBaseMetalHistory(baseMetalId?: string, limit?: number) {
+  const params: Record<string, any> = {};
+  if (baseMetalId) params.baseMetalId = baseMetalId;
+  if (limit) params.limit = limit;
+  return apiCall(dedupedGet('/metal-prices/history', params), 'Không thể tải lịch sử giá kim loại');
+}
+
+export async function createBaseMetal(name: string) {
+  return apiCall(api.post('/metal-prices', { name }), 'Không thể thêm kim loại gốc');
+}
+
+export async function setBaseMetalActive(id: string, isActive: boolean) {
+  return apiCall(api.patch(`/metal-prices/${id}/active`, { isActive }), 'Không thể đổi trạng thái kim loại gốc');
+}
+
+export async function updateBaseMetalPrice(id: string, priceVnd: number) {
+  return apiCall(api.patch(`/metal-prices/${id}/price`, { priceVnd }), 'Không thể cập nhật giá kim loại');
 }
 
 // % tính giá (priceRatioPct) và công thức tính lãi (pricingFormulaId) giờ nằm thẳng trên chất liệu
-export async function createMaterial(name: string, priceRatioPct: number, pricingFormulaId: string) {
-  try {
-    const res = await api.post('/materials', { name, priceRatioPct, pricingFormulaId });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể thêm chất liệu');
-  }
+export async function createMaterial(name: string, priceRatioPct: number, pricingFormulaId: string, baseMetalId?: string) {
+  return apiCall(api.post('/materials', { name, priceRatioPct, pricingFormulaId, baseMetalId }), 'Không thể thêm chất liệu');
 }
 
-export async function updateMaterial(id: string, patch: { name?: string; priceRatioPct?: number; pricingFormulaId?: string }) {
-  try {
-    const res = await api.patch(`/materials/${id}`, patch);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật chất liệu');
-  }
+export async function updateMaterial(id: string, patch: { name?: string; priceRatioPct?: number; pricingFormulaId?: string; baseMetalId?: string | null }) {
+  return apiCall(api.patch(`/materials/${id}`, patch), 'Không thể cập nhật chất liệu');
 }
 
 // Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu dùng chung 1 công thức (thay bảng lợi
 // nhuận/hệ số nhân Bạc cũ vốn gom chung 1 JSON tách rời trong pricing-config)
 export async function fetchPricingFormulas() {
-  try {
-    const res = await dedupedGet('/pricing-formulas');
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải công thức tính lãi');
-  }
+  return apiCall(dedupedGet('/pricing-formulas'), 'Không thể tải công thức tính lãi');
 }
 
 export async function createPricingFormula(payload: { name: string; formulaType: 'MARGIN_TIERS' | 'MULTIPLIER'; config: any; isDefault?: boolean }) {
-  try {
-    const res = await api.post('/pricing-formulas', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể thêm công thức tính lãi');
-  }
+  return apiCall(api.post('/pricing-formulas', payload), 'Không thể thêm công thức tính lãi');
 }
 
 export async function updatePricingFormula(id: string, patch: { name?: string; config?: any; isDefault?: boolean }) {
-  try {
-    const res = await api.patch(`/pricing-formulas/${id}`, patch);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật công thức tính lãi');
-  }
+  return apiCall(api.patch(`/pricing-formulas/${id}`, patch), 'Không thể cập nhật công thức tính lãi');
 }
 
 export async function calculatePriceApi(payload: {
@@ -635,13 +533,8 @@ export async function calculatePriceApi(payload: {
   includeVat?: boolean;
   categoryId?: string;
   silverMultiplier?: number;
-}) {
-  try {
-    const res = await api.post('/quote-options/calculate', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi tính giá từ hệ thống');
-  }
+}): Promise<CalculatePriceResult> {
+  return apiCall(api.post('/quote-options/calculate', payload), 'Lỗi khi tính giá từ hệ thống');
 }
 
 export interface CalculateMultiResult {
@@ -665,48 +558,23 @@ export async function calculatePriceMultiApi(payload: {
   manualStonePrice?: number;
   stones?: { stoneId: string; quantity: number }[];
 }): Promise<CalculateMultiResult> {
-  try {
-    const res = await api.post('/quote-options/calculate-multi', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tính giá nhiều chất liệu');
-  }
+  return apiCall(api.post('/quote-options/calculate-multi', payload), 'Không thể tính giá nhiều chất liệu');
 }
 
 export async function fetchStones(stoneType?: 'MAIN' | 'SIDE') {
-  try {
-    const res = await dedupedGet('/stones', stoneType ? { stoneType } : undefined);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải danh mục đá');
-  }
+  return apiCall(dedupedGet('/stones', stoneType ? { stoneType } : undefined), 'Không thể tải danh mục đá');
 }
 
 export async function createStone(payload: { stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number }) {
-  try {
-    const res = await api.post('/stones', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể thêm đá mới');
-  }
+  return apiCall(api.post('/stones', payload), 'Không thể thêm đá mới');
 }
 
 export async function updateStonePrices(items: { id: string; price: number }[]) {
-  try {
-    const res = await api.patch('/stones/prices', { items });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật giá đá');
-  }
+  return apiCall(api.patch('/stones/prices', { items }), 'Không thể cập nhật giá đá');
 }
 
 export async function deleteStonesMany(ids: string[]) {
-  try {
-    const res = await api.post('/stones/delete-many', { ids });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể xóa đá');
-  }
+  return apiCall(api.post('/stones/delete-many', { ids }), 'Không thể xóa đá');
 }
 
 export async function importStonesExcel(file: File) {
@@ -737,13 +605,8 @@ export async function generatePricingOptionsApi(payload: {
   manualBasePrice?: number;
   categoryId?: string;
   silverMultiplier?: number;
-}) {
-  try {
-    const res = await api.post('/quote-options/generate-options', payload);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Lỗi khi tính danh sách phương án báo giá từ Backend');
-  }
+}): Promise<QuoteOption[]> {
+  return apiCall(api.post('/quote-options/generate-options', payload), 'Lỗi khi tính danh sách phương án báo giá từ Backend');
 }
 
 export async function fetchSilverMultipliers(): Promise<number[]> {
@@ -756,21 +619,11 @@ export async function fetchSilverMultipliers(): Promise<number[]> {
 }
 
 export async function updateProductCategoriesBulk(items: { id: string; laborCost?: number; vatRate?: number }[]) {
-  try {
-    const res = await api.patch('/product-categories/bulk', { items });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể cập nhật tiền công/VAT danh mục');
-  }
+  return apiCall(api.patch('/product-categories/bulk', { items }), 'Không thể cập nhật tiền công/VAT danh mục');
 }
 
 export async function createProductCategory(name: string, laborCost?: number, vatRate?: number) {
-  try {
-    const res = await api.post('/product-categories', { name, laborCost, vatRate });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể thêm danh mục sản phẩm');
-  }
+  return apiCall(api.post('/product-categories', { name, laborCost, vatRate }), 'Không thể thêm danh mục sản phẩm');
 }
 
 export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { categoryId?: string; materialId?: string; ownerId?: string; timeRange?: string; startDate?: string; endDate?: string; fields?: string[] }) {
@@ -806,32 +659,18 @@ export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { cat
 }
 
 export async function deleteProductCategoriesMany(ids: string[]) {
-  try {
-    const res = await api.post('/product-categories/delete-many', { ids });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể xóa danh mục sản phẩm');
-  }
+  return apiCall(api.post('/product-categories/delete-many', { ids }), 'Không thể xóa danh mục sản phẩm');
 }
 
 export async function fetchChatMessages(quoteRequestId: string): Promise<{ messages: ChatMessage[]; unreadCount: number }> {
-  try {
-    const res = await api.get(`/quote-chat/${quoteRequestId}/messages`);
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải lịch sử trò chuyện');
-  }
+  return apiCall(api.get(`/quote-chat/${quoteRequestId}/messages`), 'Không thể tải lịch sử trò chuyện');
 }
 
 export async function uploadChatImage(quoteRequestId: string, file: File): Promise<{ imageUrl: string }> {
   const formData = new FormData();
   formData.append('file', file);
-  try {
-    const res = await api.post(`/quote-chat/${quoteRequestId}/upload-image`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return res.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || 'Không thể tải ảnh lên');
-  }
+  return apiCall(
+    api.post(`/quote-chat/${quoteRequestId}/upload-image`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    'Không thể tải ảnh lên',
+  );
 }

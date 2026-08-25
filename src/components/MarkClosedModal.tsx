@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Award, Check } from 'lucide-react';
 import type { QuoteOption } from '../types';
 import { formatCurrency } from '../utils/currency';
-import { cleanOptionLabel, stripAppliedPct } from '../utils/quoteOption';
+import { getOptionLabel, getOptionSummary } from '../utils/quoteOption';
 
 interface MarkClosedModalProps {
   isOpen: boolean;
@@ -52,24 +52,9 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {options.map((opt, idx) => {
-              const label = cleanOptionLabel(opt) || stripAppliedPct(opt.optionName) || `Phương án ${idx + 1}`;
+              const label = getOptionLabel(opt, idx);
+              const summary = getOptionSummary(opt);
               const isChosen = opt.id === selectedId;
-
-              // Chỉ mỗi tên "Phương án N" không đủ để Sale phân biệt — cần thêm chất liệu/khối
-              // lượng/đá giống hệt bảng phương án cũ, nếu không dễ chọn nhầm phương án.
-              const optMaterial =
-                opt.materials && opt.materials.length > 0
-                  ? opt.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
-                  : opt.materialName || '';
-              const optWeight = opt.weightChi != null && Number(opt.weightChi) > 0 ? `${opt.weightChi} chỉ` : null;
-              let optStones = '';
-              if (opt.stones && opt.stones.length > 0) {
-                optStones = opt.stones.map((s) => `${s.quantity}v ${s.stoneName || s.stone?.name || 'đá'}`).join(', ');
-              } else if (opt.stoneDescription) {
-                optStones = opt.stoneDescription;
-              } else if (opt.stoneCost && Number(opt.stoneCost) > 0) {
-                optStones = `Đá ${formatCurrency(Number(opt.stoneCost))}`;
-              }
 
               return (
                 <button
@@ -91,13 +76,9 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
                 >
                   <span style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                     <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>{label}</span>
-                    {(optMaterial || optWeight || optStones) && (
+                    {summary && (
                       <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
-                        {optMaterial ? `Chất liệu: ${optMaterial}` : ''}
-                        {optMaterial && (optWeight || optStones) ? ' · ' : ''}
-                        {optWeight ? `KL: ${optWeight}` : ''}
-                        {optWeight && optStones ? ' · ' : ''}
-                        {optStones ? `Đá: ${optStones}` : ''}
+                        {summary}
                       </span>
                     )}
                   </span>

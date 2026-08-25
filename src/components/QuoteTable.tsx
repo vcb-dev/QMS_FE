@@ -1,27 +1,116 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { QuoteRequest, Role, User } from '../types';
-import { Edit, Inbox, DollarSign, Lock, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, Trash2, X, Layers } from 'lucide-react';
+import type { QuoteRequest, RequestsPageProps } from '../types';
+import { Edit, Inbox, DollarSign, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, Trash2, X, Layers } from 'lucide-react';
 import { formatCurrency, formatDuration as formatDurationMs } from '../utils/currency';
 import { STATUS_BADGE_META } from '../constants';
 
-interface QuoteTableProps {
-  requests: QuoteRequest[];
+// Các field dưới trùng nguyên xi kiểu dữ liệu với RequestsPageProps (types/index.ts) — Pick thẳng
+// thay vì khai tay lại. 3 field còn lại khai riêng vì lệch với nguồn: onSelect khác tên onSelectReq,
+// selectedId/onReturn lệch optional/required so với RequestsPageProps.
+type QuoteTableProps = Pick<
+  RequestsPageProps,
+  | 'requests'
+  | 'currentRole'
+  | 'currentUser'
+  | 'onEdit'
+  | 'onAccept'
+  | 'onPricing'
+  | 'onReject'
+  | 'onResubmit'
+  | 'onDelete'
+  | 'onMarkClosed'
+  | 'onManageOptions'
+> & {
   selectedId: string | null;
-  currentRole: Role;
-  currentUser: User;
   onSelect: (id: string) => void;
-  onEdit: (req: QuoteRequest) => void;
+  onReturn?: (id: string) => void;
+};
+
+const actionBtnStyle: React.CSSProperties = { padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, border: 'none', borderRadius: '8px' };
+
+// Nút hành động ORDER/ADMIN cho 1 dòng yêu cầu — 2 khối trước đây gần như byte-identical (Tiếp
+// nhận/Báo Giá/Quản Lý PA giống hệt nhau), ADMIN chỉ khác ở chỗ luôn có Sửa+Xóa và không bao giờ
+// khóa (ORDER thì khóa khi trạng thái không phải PENDING/PROCESSING).
+const RequestActionButtons: React.FC<{
+  r: QuoteRequest;
+  role: 'ORDER' | 'ADMIN';
+  pricedOptionsCount: number;
   onAccept: (id: string, version: number) => void;
   onPricing: (id: string) => void;
-  onReject: (id: string) => void;
-  onReturn?: (id: string) => void;
-  onResubmit?: (id: string) => void;
-  onConfirmDirectPrice?: (id: string, price: number) => void;
-  onDelete?: (id: string) => void;
-  onMarkClosed?: (id: string) => void;
   onManageOptions?: (id: string) => void;
-}
+  onEdit: (req: QuoteRequest) => void;
+  onDelete?: (id: string) => void;
+}> = ({ r, role, pricedOptionsCount, onAccept, onPricing, onManageOptions, onEdit, onDelete }) => {
+  const acceptBtn = (
+    <button
+      className="tool-btn"
+      style={{ ...actionBtnStyle, background: '#f59e0b', color: 'white' }}
+      onClick={(e) => { e.stopPropagation(); onAccept(r.id, r.version); }}
+    >
+      <Inbox size={12} /> Tiếp nhận
+    </button>
+  );
+
+  const pricingBtn = (
+    <button
+      className="tool-btn"
+      style={{ ...actionBtnStyle, background: '#10b981', color: 'white' }}
+      onClick={(e) => { e.stopPropagation(); onPricing(r.id); }}
+    >
+      <DollarSign size={12} /> Báo Giá
+    </button>
+  );
+
+  const manageBtn = r.status === 'PROCESSING' && onManageOptions && pricedOptionsCount > 1 && (
+    <button
+      className="tool-btn"
+      title="Xóa bớt phương án giá nháp không cần dùng"
+      style={{ ...actionBtnStyle, background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1' }}
+      onClick={(e) => { e.stopPropagation(); onManageOptions(r.id); }}
+    >
+      <Layers size={12} /> Quản Lý PA ({pricedOptionsCount})
+    </button>
+  );
+
+  if (role === 'ORDER') {
+    return (
+      <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {r.status === 'PENDING' ? acceptBtn : r.status === 'PROCESSING' ? (
+          <>
+            {pricingBtn}
+            {manageBtn}
+          </>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+      {r.status === 'PENDING' && acceptBtn}
+      {r.status === 'PROCESSING' && pricingBtn}
+      {manageBtn}
+      <button
+        className="tool-btn"
+        style={{ ...actionBtnStyle, background: '#2563eb', color: 'white' }}
+        onClick={(e) => { e.stopPropagation(); onEdit(r); }}
+      >
+        <Edit size={12} /> Sửa
+      </button>
+      <button
+        className="tool-btn"
+        style={{ ...actionBtnStyle, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (confirm(`Xóa hẳn yêu cầu ${r.code || r.id}? Không thể hoàn tác.`)) onDelete?.(r.id);
+        }}
+      >
+        <Trash2 size={12} /> Xóa
+      </button>
+    </div>
+  );
+};
 
 export const QuoteTable: React.FC<QuoteTableProps> = ({
   requests,
@@ -35,7 +124,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onReject,
   onReturn,
   onResubmit,
-  onConfirmDirectPrice,
   onDelete,
   onMarkClosed,
   onManageOptions,
@@ -307,7 +395,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           <StatusDropdown
             current="QUOTED"
             options={[
-              { value: 'CLOSED', label: 'Đánh Dấu Đã Chốt', icon: <Award size={13} />, color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
+              { value: 'CLOSED', ...STATUS_META.CLOSED, label: 'Đánh Dấu Đã Chốt' },
             ]}
             onChange={(val) => {
               if (val === 'CLOSED') onMarkClosed(r.id);
@@ -359,25 +447,16 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     }
 
     // ORDER / ADMIN Role: Custom Icon Dropdown
-    const quotedPriceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
-    // Sale đã tự ước tính giá lúc tạo yêu cầu (qua Calculator) — cho phép ORDER/ADMIN chốt nhanh
-    // đúng giá đó thành báo giá chính thức, khỏi phải mở lại form Báo Giá đầy đủ.
-    const confirmDirectOption = onConfirmDirectPrice && quotedPriceVal > 0
-      ? [{ value: 'CONFIRM_DIRECT', label: 'Xác nhận giá tạm tính (nhanh)', icon: <CheckCircle size={13} />, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' }]
-      : [];
-
     if (r.status === 'PENDING') {
       return (
         <StatusDropdown
           current="PENDING"
           options={[
-            { value: 'PENDING',       label: 'Yêu cầu mới',            icon: <FilePlus size={13} />,    color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
-            { value: 'PROCESSING',    label: 'Tiếp nhận (Đang xử lý)', icon: <Clock size={13} />,       color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-            ...confirmDirectOption,
+            { value: 'PENDING',       ...STATUS_META.PENDING,    label: 'Yêu cầu mới' },
+            { value: 'PROCESSING',    ...STATUS_META.PROCESSING, label: 'Tiếp nhận (Đang xử lý)' },
           ]}
           onChange={(val) => {
             if (val === 'PROCESSING') onAccept(r.id, r.version);
-            else if (val === 'CONFIRM_DIRECT' && onConfirmDirectPrice) onConfirmDirectPrice(r.id, quotedPriceVal);
           }}
         />
       );
@@ -399,15 +478,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
         <StatusDropdown
           current="PROCESSING"
           options={[
-            { value: 'PROCESSING',    label: 'Đang xử lý',             icon: <Clock size={13} />,       color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-            { value: 'QUOTED',        label: 'Chốt giá (Đã báo giá)',   icon: <CheckCircle size={13} />, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
-            ...confirmDirectOption,
-            { value: 'NEED_MORE_INFO',label: 'Trả lại Sale (Cần bổ sung)', icon: <RotateCcw size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
-            { value: 'REJECTED',      label: 'Từ chối hẳn',             icon: <XCircle size={13} />,    color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+            { value: 'PROCESSING',    ...STATUS_META.PROCESSING },
+            { value: 'QUOTED',        ...STATUS_META.QUOTED,        label: 'Chốt giá (Đã báo giá)' },
+            { value: 'NEED_MORE_INFO',...STATUS_META.NEED_MORE_INFO, label: 'Trả lại Sale (Cần bổ sung)' },
+            { value: 'REJECTED',      ...STATUS_META.REJECTED,      label: 'Từ chối hẳn' },
           ]}
           onChange={(val) => {
             if (val === 'QUOTED') onPricing(r.id);
-            else if (val === 'CONFIRM_DIRECT' && onConfirmDirectPrice) onConfirmDirectPrice(r.id, quotedPriceVal);
             else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
             else if (val === 'REJECTED') onReject(r.id);
           }}
@@ -693,112 +770,26 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   {/* SALE Role Permissions — thao tác đổi trạng thái/sửa đã dồn vào dropdown ở cột Trạng Thái */}
                   {currentRole === 'SALE' && (
                     <>
-                      {r.status === 'PENDING' ? (
+                      {r.status === 'PENDING' && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
                           Chờ tiếp nhận
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Lock size={12} /> Đã khóa
                         </span>
                       )}
                     </>
                   )}
 
-                  {/* ORDER Role Permissions — cùng kiểu tối giản như bên SALE: chỉ nút thao tác được, còn lại "Đã khóa" */}
-                  {currentRole === 'ORDER' && (
-                    <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                      {r.status === 'PENDING' ? (
-                        <button
-                          className="tool-btn"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAccept(r.id, r.version);
-                          }}
-                        >
-                          <Inbox size={12} /> Tiếp nhận
-                        </button>
-                      ) : r.status === 'PROCESSING' ? (
-                        <>
-                          <button
-                            className="tool-btn"
-                            style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#10b981', color: 'white', border: 'none', borderRadius: '8px' }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onPricing(r.id);
-                            }}
-                          >
-                            <DollarSign size={12} /> Báo Giá
-                          </button>
-                          {onManageOptions && pricedOptionsCount > 1 && (
-                            <button
-                              className="tool-btn"
-                              title="Xóa bớt phương án giá nháp không cần dùng"
-                              style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px' }}
-                              onClick={(e) => { e.stopPropagation(); onManageOptions(r.id); }}
-                            >
-                              <Layers size={12} /> Quản Lý PA ({pricedOptionsCount})
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Lock size={12} /> Đã khóa
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ADMIN — toàn quyền: luôn có Sửa + Xóa bất kể trạng thái, cộng thêm thao tác nghiệp vụ theo trạng thái hiện tại */}
-                  {currentRole === 'ADMIN' && (
-                    <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                      {r.status === 'PENDING' && (
-                        <button
-                          className="tool-btn"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px' }}
-                          onClick={(e) => { e.stopPropagation(); onAccept(r.id, r.version); }}
-                        >
-                          <Inbox size={12} /> Tiếp nhận
-                        </button>
-                      )}
-                      {r.status === 'PROCESSING' && (
-                        <button
-                          className="tool-btn"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#10b981', color: 'white', border: 'none', borderRadius: '8px' }}
-                          onClick={(e) => { e.stopPropagation(); onPricing(r.id); }}
-                        >
-                          <DollarSign size={12} /> Báo Giá
-                        </button>
-                      )}
-                      {r.status === 'PROCESSING' && onManageOptions && pricedOptionsCount > 1 && (
-                        <button
-                          className="tool-btn"
-                          title="Xóa bớt phương án giá nháp không cần dùng"
-                          style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px' }}
-                          onClick={(e) => { e.stopPropagation(); onManageOptions(r.id); }}
-                        >
-                          <Layers size={12} /> Quản Lý PA ({pricedOptionsCount})
-                        </button>
-                      )}
-                      <button
-                        className="tool-btn"
-                        style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px' }}
-                        onClick={(e) => { e.stopPropagation(); onEdit(r); }}
-                      >
-                        <Edit size={12} /> Sửa
-                      </button>
-                      <button
-                        className="tool-btn"
-                        style={{ padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', borderRadius: '8px' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`Xóa hẳn yêu cầu ${r.code || r.id}? Không thể hoàn tác.`)) onDelete?.(r.id);
-                        }}
-                      >
-                        <Trash2 size={12} /> Xóa
-                      </button>
-                    </div>
+                  {/* ORDER/ADMIN Role Permissions — logic dùng chung nằm trong RequestActionButtons */}
+                  {(currentRole === 'ORDER' || currentRole === 'ADMIN') && (
+                    <RequestActionButtons
+                      r={r}
+                      role={currentRole}
+                      pricedOptionsCount={pricedOptionsCount}
+                      onAccept={onAccept}
+                      onPricing={onPricing}
+                      onManageOptions={onManageOptions}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                    />
                   )}
                 </td>
               </tr>

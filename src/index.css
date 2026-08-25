@@ -259,7 +259,7 @@ body {
   padding: 0 16px 16px 16px !important;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 240px;
   min-width: 240px;
   flex-shrink: 0;

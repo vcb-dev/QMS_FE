@@ -4,9 +4,6 @@ import {
   ArrowLeft,
   XCircle,
   RotateCcw,
-  FilePlus,
-  Clock,
-  CheckCircle,
   Building2,
   Calendar,
   Layers,
@@ -18,7 +15,6 @@ import {
   Tag,
   Ruler,
   Target,
-  Award,
   Scale,
   Sparkles,
   Copy,
@@ -31,14 +27,61 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
-import { LoadingOverlay } from '../components/LoadingOverlay';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { cleanOptionLabel, stripAppliedPct } from '../utils/quoteOption';
 import { ChatPopup } from '../components/ChatPopup';
 import { ImageLightbox } from '../components/ImageLightbox';
+import { StatusPill } from '../components/StatusPill';
+import { NotFoundPage } from './NotFoundPage';
+import { SpecBadge } from '../components/SpecBadge';
+import { SpecRow } from '../components/SpecRow';
+import { cardStyle } from '../styles/card';
+import { OptionCard } from '../components/OptionCard';
 import { CHAT_EVENTS } from '../constants/chatEvents';
 import { REALTIME_EVENTS } from '../constants/realtimeEvents';
+
+// Nút chuyển ảnh trước/kế tiếp trên lightbox — 2 nút chỉ khác chiều (trái/phải), icon, và hướng
+// chỉnh index, còn lại (style/hover) y hệt nhau.
+const ImageNavButton: React.FC<{
+  direction: 'prev' | 'next';
+  title: string;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}> = ({ direction, title, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      position: 'absolute',
+      [direction === 'prev' ? 'left' : 'right']: '8px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      background: 'rgba(15, 23, 42, 0.65)',
+      color: '#ffffff',
+      border: 'none',
+      borderRadius: '50%',
+      width: '30px',
+      height: '30px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+      transition: 'background 0.15s ease, transform 0.15s ease',
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)';
+      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)';
+      e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+    }}
+    title={title}
+  >
+    {direction === 'prev' ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+  </button>
+);
 
 export const DetailPage: React.FC<DetailPageProps> = ({
   selectedReq: initialSelectedReq,
@@ -51,7 +94,6 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   const onBack = () => navigate('/requests');
 
   const [loadedReq, setLoadedReq] = useState<QuoteRequest | null>(null);
-  const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
   // Đảm bảo record được chọn luôn khớp chính xác với ID trên đường dẫn URL khi F5/reload
   const selectedReq =
@@ -65,9 +107,6 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       setLoadedReq(initialSelectedReq);
     }
     let isMounted = true;
-    if (!initialSelectedReq || (initialSelectedReq.id !== id && initialSelectedReq.code !== id)) {
-      setIsFetchingDetail(true);
-    }
     fetchQuoteRequestById(id)
       .then((data) => {
         if (isMounted && data) {
@@ -76,11 +115,6 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       })
       .catch((err) => {
         console.error('Không thể tải chi tiết yêu cầu:', err);
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsFetchingDetail(false);
-        }
       });
     return () => {
       isMounted = false;
@@ -188,37 +222,17 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     }).catch(() => {});
   };
 
-  if (isFetchingDetail && !selectedReq) {
-    return <LoadingOverlay show message="Đang tải thông tin chi tiết yêu cầu báo giá..." />;
-  }
-
   if (!selectedReq) {
     return (
-      <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Không tìm thấy thông tin yêu cầu</h2>
-        <button
-          type="button"
-          onClick={onBack}
-          style={{
-            marginTop: '16px',
-            background: '#0f172a',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 20px',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <ArrowLeft size={16} /> Quay lại danh sách
-        </button>
-      </div>
+      <NotFoundPage
+        title="Không tìm thấy yêu cầu báo giá"
+        description="Yêu cầu báo giá này không tồn tại trên hệ thống, đã bị xóa hoặc bạn không có quyền truy cập."
+        backTo="/requests"
+        backLabel="Quay lại danh sách"
+      />
     );
   }
+
 
   // Price calculations
   const priceVal = selectedReq.quotedPrice ? Number(selectedReq.quotedPrice) : 0;
@@ -243,48 +257,23 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       (finalOptionIndexInList >= 0 ? `Phương án ${finalOptionIndexInList + 1}` : '')
     : '';
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return (
-          <span className="status-pill new" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}>
-            <FilePlus size={14} /> YÊU CẦU MỚI
-          </span>
-        );
-      case 'PROCESSING':
-        return (
-          <span className="status-pill process" style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}>
-            <Clock size={14} /> ĐANG XỬ LÝ
-          </span>
-        );
-      case 'QUOTED':
-        return (
-          <span className="status-pill done" style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}>
-            <CheckCircle size={14} /> ĐÃ BÁO GIÁ
-          </span>
-        );
-      case 'REJECTED':
-        return (
-          <span className="status-pill reject" style={{ background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}>
-            <XCircle size={14} /> BỊ TỪ CHỐI
-          </span>
-        );
-      case 'NEED_MORE_INFO':
-        return (
-          <span className="status-pill process" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5', padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}>
-            <RotateCcw size={14} /> CẦN BỔ SUNG
-          </span>
-        );
-      case 'CLOSED':
-        return (
-          <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe', padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}>
-            <Award size={14} /> ĐÃ CHỐT ĐƠN
-          </span>
-        );
-      default:
-        return <span className="status-pill new">{status}</span>;
-    }
+  const STATUS_BADGE_LABELS: Record<string, string> = {
+    PENDING: 'YÊU CẦU MỚI',
+    PROCESSING: 'ĐANG XỬ LÝ',
+    QUOTED: 'ĐÃ BÁO GIÁ',
+    REJECTED: 'BỊ TỪ CHỐI',
+    NEED_MORE_INFO: 'CẦN BỔ SUNG',
+    CLOSED: 'ĐÃ CHỐT ĐƠN',
   };
+
+  const getStatusBadge = (status: string) => (
+    <StatusPill
+      status={status}
+      label={STATUS_BADGE_LABELS[status] || status}
+      iconSize={14}
+      style={{ padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}
+    />
+  );
 
   const diffDays = (from?: string, to?: string): string | null => {
     if (!from || !to) return null;
@@ -410,7 +399,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
 
           {/* Product Overview Card & Gallery */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+          <div style={cardStyle}>
             <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', margin: '0 0 16px 0' }}>
               {selectedReq.productName || 'Sản phẩm mẫu'}
             </h2>
@@ -475,79 +464,23 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                         <ImageIcon size={13} /> {currentImageIdx + 1} / {imagesList.length}
                       </span>
 
-                      <button
-                        type="button"
+                      <ImageNavButton
+                        direction="prev"
+                        title="Ảnh trước"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : imagesList.length - 1));
                         }}
-                        style={{
-                          position: 'absolute',
-                          left: '8px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'rgba(15, 23, 42, 0.65)',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '30px',
-                          height: '30px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                          transition: 'background 0.15s ease, transform 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                        }}
-                        title="Ảnh trước"
-                      >
-                        <ChevronLeft size={18} />
-                      </button>
+                      />
 
-                      <button
-                        type="button"
+                      <ImageNavButton
+                        direction="next"
+                        title="Ảnh kế tiếp"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActiveImageIndex((prev) => (prev < imagesList.length - 1 ? prev + 1 : 0));
                         }}
-                        style={{
-                          position: 'absolute',
-                          right: '8px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'rgba(15, 23, 42, 0.65)',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '30px',
-                          height: '30px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                          transition: 'background 0.15s ease, transform 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                        }}
-                        title="Ảnh kế tiếp"
-                      >
-                        <ChevronRight size={18} />
-                      </button>
+                      />
                     </>
                   )}
                 </div>
@@ -615,68 +548,33 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       {/* Chất liệu & thông số đá quý có độ dài nội dung biến thiên mạnh (VD danh sách
                           nhiều viên đá) — span nguyên hàng để không tạo khoảng trắng thừa so với ô 2 cột. */}
-                      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Gem size={14} color="#d97706" /> CHẤT LIỆU
-                        </span>
-                        <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
-                          {materialsList.join(', ')}
-                        </strong>
-                      </div>
+                      <SpecBadge fullWidth icon={<Gem size={14} color="#d97706" />} label="CHẤT LIỆU" value={materialsList.join(', ')} />
 
-                      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Sparkles size={14} color="#059669" /> THÔNG SỐ ĐÁ QUÝ
-                        </span>
-                        <strong style={{ fontSize: '13px', color: stoneDisplay === 'Không đính đá' ? '#64748b' : '#0f172a', marginTop: '4px', display: 'block' }}>
-                          {stoneDisplay}
-                        </strong>
-                      </div>
+                      <SpecBadge
+                        fullWidth
+                        icon={<Sparkles size={14} color="#059669" />}
+                        label="THÔNG SỐ ĐÁ QUÝ"
+                        value={stoneDisplay}
+                        valueStyle={{ color: stoneDisplay === 'Không đính đá' ? '#64748b' : '#0f172a' }}
+                      />
 
-                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Tag size={14} color="#2563eb" /> DANH MỤC
-                        </span>
-                        <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
-                          {selectedReq.category?.name || 'Chưa phân loại'}
-                        </strong>
-                      </div>
+                      <SpecBadge icon={<Tag size={14} color="#2563eb" />} label="DANH MỤC" value={selectedReq.category?.name || 'Chưa phân loại'} />
 
-                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Scale size={14} color="#8b5cf6" /> KHỐI LƯỢNG (CHỈ)
-                        </span>
-                        <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
-                          {weightDisplay}
-                        </strong>
-                      </div>
+                      <SpecBadge icon={<Scale size={14} color="#8b5cf6" />} label="KHỐI LƯỢNG (CHỈ)" value={weightDisplay} />
 
-                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Ruler size={14} color="#16a34a" /> SỐ ĐO KÍCH THƯỚC
-                        </span>
-                        <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block' }}>
-                          {selectedReq.customerMeasurements || 'Theo yêu cầu tiêu chuẩn'}
-                        </strong>
-                      </div>
+                      <SpecBadge
+                        icon={<Ruler size={14} color="#16a34a" />}
+                        label="SỐ ĐO KÍCH THƯỚC"
+                        value={selectedReq.customerMeasurements || 'Theo yêu cầu tiêu chuẩn'}
+                      />
 
-                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                        <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Target size={14} color="#ea580c" /> TỶ LỆ CHỐT DỰ KIẾN
-                        </span>
-                        <strong
-                          style={{
-                            fontSize: '13px',
-                            color: hasCloseRate ? '#0f172a' : '#94a3b8',
-                            fontStyle: hasCloseRate ? 'normal' : 'italic',
-                            marginTop: '4px',
-                            display: 'block',
-                          }}
-                          title={hasCloseRate ? undefined : 'Sale chưa nhập tỷ lệ chốt dự kiến cho yêu cầu này'}
-                        >
-                          {hasCloseRate ? `${selectedReq.closeRatePct}%` : 'Chưa xác định'}
-                        </strong>
-                      </div>
+                      <SpecBadge
+                        icon={<Target size={14} color="#ea580c" />}
+                        label="TỶ LỆ CHỐT DỰ KIẾN"
+                        value={hasCloseRate ? `${selectedReq.closeRatePct}%` : 'Chưa xác định'}
+                        valueStyle={{ color: hasCloseRate ? '#0f172a' : '#94a3b8', fontStyle: hasCloseRate ? 'normal' : 'italic' }}
+                        title={hasCloseRate ? undefined : 'Sale chưa nhập tỷ lệ chốt dự kiến cho yêu cầu này'}
+                      />
                     </div>
                   );
                 })()}
@@ -698,7 +596,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               đã chốt với khách (CLOSED) thì thôi, chỉ còn giá cuối. Ẩn ở PENDING vì lúc đó "option"
               (nếu có) chỉ là giá Sale tự ước tính lúc tạo yêu cầu qua Calculator, chưa ai duyệt. */}
           {selectedReq.status !== 'CLOSED' && selectedReq.status !== 'PENDING' && pricedOptions.length > 0 && (
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            <div style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Layers size={18} color="#d97706" /> Các Phương Án Báo Giá ({pricedOptions.length})
@@ -722,101 +620,16 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {pricedOptions.map((opt, idx) => {
-                  const price = opt.quotedPrice ? formatCurrency(Number(opt.quotedPrice)) : '---';
-                  const label = cleanOptionLabel(opt) || stripAppliedPct(opt.optionName) || `Phương án ${idx + 1}`;
-
-                  // Chất liệu đọc từ materials[] có cấu trúc trước — optionName/materialName tóm tắt
-                  // thường không có (VD: option tạo qua "Nhập/Đổi Giá Khác" chỉ có tên "Phương án N").
-                  const optMaterial =
-                    opt.materials && opt.materials.length > 0
-                      ? opt.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
-                      : opt.materialName || '';
-
-                  const optWeight = opt.weightChi != null && Number(opt.weightChi) > 0 ? `${opt.weightChi} chỉ` : null;
-                  let optStones = '';
-                  if (opt.stones && opt.stones.length > 0) {
-                    optStones = opt.stones.map((s) => `${s.quantity}v ${s.stoneName || s.stone?.name || 'đá'}`).join(', ');
-                  } else if (opt.stoneDescription) {
-                    optStones = opt.stoneDescription;
-                  } else if (opt.stoneCost && Number(opt.stoneCost) > 0) {
-                    optStones = `Đá ${formatCurrency(Number(opt.stoneCost))}`;
-                  }
-
-                  const isFinalStatus = selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED';
-
-                  return (
-                    <div
-                      key={opt.id || idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        padding: '12px 14px',
-                        borderRadius: '10px',
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
-                          {label}
-                        </span>
-                        {(optMaterial || optWeight || optStones) && (
-                          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
-                            {optMaterial ? `Chất liệu: ${optMaterial}` : ''}
-                            {optMaterial && (optWeight || optStones) ? ' · ' : ''}
-                            {optWeight ? `KL: ${optWeight}` : ''}
-                            {optWeight && optStones ? ' · ' : ''}
-                            {optStones ? `Đá: ${optStones}` : ''}
-                          </span>
-                        )}
-                      </div>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                        <strong
-                          style={{
-                            fontSize: '15px',
-                            fontWeight: 900,
-                            color: isFinalStatus ? '#16a34a' : '#94a3b8',
-                            fontStyle: isFinalStatus ? 'normal' : 'italic',
-                            opacity: isFinalStatus ? 1 : 0.8,
-                          }}
-                        >
-                          {price}
-                        </strong>
-                        {!isFinalStatus && (
-                          <span style={{ fontSize: '10px', color: '#ea580c', background: '#fff7ed', border: '1px solid #ffedd5', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
-                            Chưa duyệt
-                          </span>
-                        )}
-                        {isFinalStatus && opt.quotedPrice != null && (
-                          <button
-                            type="button"
-                            title={`Copy dòng chữ: "${label}: ${price}"`}
-                            onClick={() => handleCopyOptionPrice(idx, opt)}
-                            style={{
-                              flexShrink: 0,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '26px',
-                              height: '26px',
-                              borderRadius: '7px',
-                              border: '1px solid #cbd5e1',
-                              background: copiedOptIdx === idx ? '#dcfce7' : '#ffffff',
-                              color: copiedOptIdx === idx ? '#16a34a' : '#475569',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {copiedOptIdx === idx ? <Check size={12} /> : <Copy size={12} />}
-                          </button>
-                        )}
-                      </span>
-                    </div>
-                  );
-                })}
+                {pricedOptions.map((opt, idx) => (
+                  <OptionCard
+                    key={opt.id || idx}
+                    opt={opt}
+                    idx={idx}
+                    isFinalStatus={selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'}
+                    copied={copiedOptIdx === idx}
+                    onCopy={() => handleCopyOptionPrice(idx, opt)}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -909,82 +722,60 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     </div>
                   ) : null}
                   {finalOption.materialName && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                      <span>Chất liệu</span><strong style={{ color: '#0f172a', textAlign: 'right' }}>{finalOption.materialName}</strong>
-                    </div>
+                    <SpecRow label="Chất liệu" value={finalOption.materialName} valueStyle={{ textAlign: 'right' }} />
                   )}
                   {finalOption.weightChi != null && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                      <span>Tổng khối lượng</span><strong style={{ color: '#0f172a' }}>{finalOption.weightChi} chỉ</strong>
-                    </div>
+                    <SpecRow label="Tổng khối lượng" value={`${finalOption.weightChi} chỉ`} />
                   )}
                   {finalOption.totalMetalCost != null && finalOption.metalRawCost != null && finalOption.vat != null ? (
                     <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                        <span>Giá kim loại (giá gốc)</span>
-                        <strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.metalRawCost))}</strong>
-                      </div>
+                      <SpecRow label="Giá kim loại (giá gốc)" value={formatCurrency(Number(finalOption.metalRawCost))} />
                       {finalOption.laborCost != null && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                          <span>Công chế tác</span>
-                          <strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.laborCost))}</strong>
-                        </div>
+                        <SpecRow label="Công chế tác" value={formatCurrency(Number(finalOption.laborCost))} />
                       )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                        <span>VAT kim loại</span>
-                        <strong style={{ color: '#0f172a' }}>
-                          {formatCurrency((Number(finalOption.metalRawCost) + Number(finalOption.laborCost || 0)) * (Number(finalOption.vat) / 100))}
-                        </strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ color: '#15803d', fontWeight: 700 }}>Tiền lãi kim loại</span>
-                        <strong style={{ color: '#15803d' }}>
-                          {formatCurrency(
-                            Number(finalOption.totalMetalCost)
-                              - (Number(finalOption.metalRawCost) + Number(finalOption.laborCost || 0)) * (1 + Number(finalOption.vat) / 100),
-                          )}
-                        </strong>
-                      </div>
+                      <SpecRow
+                        label="VAT kim loại"
+                        value={formatCurrency((Number(finalOption.metalRawCost) + Number(finalOption.laborCost || 0)) * (Number(finalOption.vat) / 100))}
+                      />
+                      <SpecRow
+                        label="Tiền lãi kim loại"
+                        labelStyle={{ color: '#15803d', fontWeight: 700 }}
+                        valueStyle={{ color: '#15803d' }}
+                        value={formatCurrency(
+                          Number(finalOption.totalMetalCost)
+                            - (Number(finalOption.metalRawCost) + Number(finalOption.laborCost || 0)) * (1 + Number(finalOption.vat) / 100),
+                        )}
+                      />
                     </>
                   ) : finalOption.totalMetalCost != null && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                      <span>Giá kim loại {finalOption.stonePrice != null && '(đã gồm công, lãi, VAT)'}</span>
-                      <strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.totalMetalCost))}</strong>
-                    </div>
+                    <SpecRow
+                      label={<>Giá kim loại {finalOption.stonePrice != null && '(đã gồm công, lãi, VAT)'}</>}
+                      value={formatCurrency(Number(finalOption.totalMetalCost))}
+                    />
                   )}
                   <div style={{ borderTop: '1px dashed #e2e8f0', margin: '4px 0' }} />
                   {finalOption.stonePrice != null && finalOption.stoneCost != null && finalOption.vat != null ? (
                     <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                        <span>Đá quý (giá gốc)</span>
-                        <strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.stoneCost))}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                        <span>VAT đá quý</span>
-                        <strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.stoneCost) * (Number(finalOption.vat) / 100))}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ color: '#15803d', fontWeight: 700 }}>Tiền lãi đá quý</span>
-                        <strong style={{ color: '#15803d' }}>
-                          {formatCurrency(Number(finalOption.stonePrice) - Number(finalOption.stoneCost) * (1 + Number(finalOption.vat) / 100))}
-                        </strong>
-                      </div>
+                      <SpecRow label="Đá quý (giá gốc)" value={formatCurrency(Number(finalOption.stoneCost))} />
+                      <SpecRow label="VAT đá quý" value={formatCurrency(Number(finalOption.stoneCost) * (Number(finalOption.vat) / 100))} />
+                      <SpecRow
+                        label="Tiền lãi đá quý"
+                        labelStyle={{ color: '#15803d', fontWeight: 700 }}
+                        valueStyle={{ color: '#15803d' }}
+                        value={formatCurrency(Number(finalOption.stonePrice) - Number(finalOption.stoneCost) * (1 + Number(finalOption.vat) / 100))}
+                      />
                     </>
                   ) : (finalOption.stonePrice != null || finalOption.stoneCost != null) && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                      <span>Tiền đá {finalOption.stonePrice != null && '(đã tính lãi)'}</span>
-                      <strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.stonePrice ?? finalOption.stoneCost))}</strong>
-                    </div>
+                    <SpecRow
+                      label={<>Tiền đá {finalOption.stonePrice != null && '(đã tính lãi)'}</>}
+                      value={formatCurrency(Number(finalOption.stonePrice ?? finalOption.stoneCost))}
+                    />
                   )}
                   {finalOption.totalMetalCost == null && finalOption.laborCost != null && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                      <span>Tiền công</span><strong style={{ color: '#0f172a' }}>{formatCurrency(Number(finalOption.laborCost))}</strong>
-                    </div>
+                    <SpecRow label="Tiền công" value={formatCurrency(Number(finalOption.laborCost))} />
                   )}
                   {finalOption.totalMetalCost == null && finalOption.vat != null && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-                      <span>VAT</span><strong style={{ color: '#0f172a' }}>{finalOption.vat}%</strong>
-                    </div>
+                    <SpecRow label="VAT" value={`${finalOption.vat}%`} />
                   )}
                   {finalOption.totalMetalCost != null && finalOption.metalRawCost == null && (finalOption.laborCost != null || finalOption.vat != null) && (
                     <div style={{ fontSize: '10.5px', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>
@@ -1000,7 +791,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
 
           {/* Customer & Request Meta Card */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+          <div style={cardStyle}>
             <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 14px 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
               Thông Tin Đơn Yêu Cầu
             </h3>
@@ -1018,12 +809,12 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 )}
                 {selectedReq.customer?.province && (
                   <div style={{ fontSize: '12px', color: '#475569', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Building2 size={13} color="#1d4ed8" /> Tỉnh/TP: {selectedReq.customer.province}
+                    <Building2 size={13} color="#1d4ed8" /> Tỉnh/TP: {selectedReq.customer.province.name}
                   </div>
                 )}
                 {(selectedReq.customer?.address || selectedReq.customer?.ward) && (
                   <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <MapPin size={13} color="#ea580c" /> Địa chỉ: {[selectedReq.customer?.address, selectedReq.customer?.ward].filter(Boolean).join(', ')}
+                    <MapPin size={13} color="#ea580c" /> Địa chỉ: {[selectedReq.customer?.address, selectedReq.customer?.ward?.name].filter(Boolean).join(', ')}
                   </div>
                 )}
               </div>

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X, RotateCcw } from 'lucide-react';
+import React from 'react';
+import { RotateCcw } from 'lucide-react';
+import { ReasonPromptModal } from './ReasonPromptModal';
 
 interface ReturnModalProps {
   isOpen: boolean;
@@ -7,63 +8,21 @@ interface ReturnModalProps {
   onSubmit: (reason: string) => Promise<void>;
 }
 
-export const ReturnModal: React.FC<ReturnModalProps> = ({ isOpen, onClose, onSubmit }) => {
-  const [reason, setReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reason.trim()) {
-      alert('BẮT BUỘC nhập lý do trả lại để Sale biết đường bổ sung!');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await onSubmit(reason.trim());
-      onClose();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi trả lại yêu cầu');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="modal-backdrop show">
-      <div className="modal-card" style={{ maxWidth: '500px' }}>
-        <div className="modal-header" style={{ background: '#ea580c' }}>
-          <h2>Trả Lại Yêu Cầu Cho Sale (Cần Bổ Sung)</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            <div className="form-group">
-              <label className="form-label">Lý do trả lại bổ sung thông tin <span className="req">* (Bắt buộc)</span></label>
-              <textarea
-                className="form-control"
-                rows={4}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                maxLength={500}
-                placeholder="Nhập lý do cần bổ sung (ví dụ: Ảnh mờ không rõ kiểu chấu đính đá, thiếu kích thước nhẫn...)..."
-              />
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="tool-btn" onClick={onClose}>Hủy</button>
-            <button type="submit" className="btn-insp btn-insp-primary" style={{ background: '#ea580c' }} disabled={submitting}>
-              <RotateCcw size={16} /> Trả Lại Cho Sale
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+export const ReturnModal: React.FC<ReturnModalProps> = ({ isOpen, onClose, onSubmit }) => (
+  <ReasonPromptModal
+    isOpen={isOpen}
+    onClose={onClose}
+    onSubmit={onSubmit}
+    headerColor="#ea580c"
+    title="Trả Lại Yêu Cầu Cho Sale (Cần Bổ Sung)"
+    label="Lý do trả lại bổ sung thông tin"
+    requiredNote="* (Bắt buộc)"
+    placeholder="Nhập lý do cần bổ sung (ví dụ: Ảnh mờ không rõ kiểu chấu đính đá, thiếu kích thước nhẫn...)..."
+    validationMsg="BẮT BUỘC nhập lý do trả lại để Sale biết đường bổ sung!"
+    errorFallbackMsg="Lỗi trả lại yêu cầu"
+    submitButtonClassName="btn-insp btn-insp-primary"
+    submitButtonStyle={{ background: '#ea580c' }}
+    submitIcon={<RotateCcw size={16} />}
+    submitLabel="Trả Lại Cho Sale"
+  />
+);

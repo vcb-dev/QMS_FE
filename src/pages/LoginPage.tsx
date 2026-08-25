@@ -10,8 +10,34 @@ import { DevQuickLoginAccounts } from '../components/DevQuickLoginAccounts';
 import { COMPANY_LOGO_URL, BACKGROUND_IMAGE_URL } from '../constants';
 import {backLinkStyle, fieldLabelStyle,fieldIconStyle,fieldInputStyle,goldButtonStyle} from '../styles/card';
 
-// Style dùng chung cho input trên nền thẻ sáng màu
-
+// Khối "nhãn + icon + input" dùng chung cho 8/10 field trong 4 form đăng nhập/đăng ký/quên-đặt lại
+// mật khẩu — trước đây lặp lại y hệt cấu trúc DOM này ở từng form. Field có nút hiện/ẩn mật khẩu
+// hoặc dùng <select> thay <input> giữ nguyên JSX riêng, không ép qua đây.
+const LabeledIconField: React.FC<{
+  label: string;
+  icon: React.ReactNode;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  maxLength?: number;
+  inputStyle?: React.CSSProperties;
+}> = ({ label, icon, type = 'text', value, onChange, placeholder, maxLength, inputStyle }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <label style={fieldLabelStyle}>{label}</label>
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      {icon}
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        style={{ ...fieldInputStyle, ...inputStyle }}
+      />
+    </div>
+  </div>
+);
 
 export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSuccess }) => {
   const navigate = useNavigate();
@@ -241,19 +267,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
               <DevQuickLoginAccounts currentEmail={email} onSelect={selectAccount} />
 
               <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={fieldLabelStyle}>Tên đăng nhập</label>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <UserIcon size={16} style={fieldIconStyle} />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Nhập tên đăng nhập (email)"
-                      style={fieldInputStyle}
-                    />
-                  </div>
-                </div>
+                <LabeledIconField
+                  label="Tên đăng nhập"
+                  icon={<UserIcon size={16} style={fieldIconStyle} />}
+                  type="email"
+                  value={email}
+                  onChange={setEmail}
+                  placeholder="Nhập tên đăng nhập (email)"
+                />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -310,29 +331,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 2. REGISTER FORM */}
           {mode === 'register' && (
             <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Họ Và Tên</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <UserIcon size={16} style={fieldIconStyle} />
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ví dụ: Nguyễn Văn A" style={fieldInputStyle} />
-                </div>
-              </div>
+              <LabeledIconField label="Họ Và Tên" icon={<UserIcon size={16} style={fieldIconStyle} />} value={name} onChange={setName} placeholder="Ví dụ: Nguyễn Văn A" />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Email Công Việc</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Mail size={16} style={fieldIconStyle} />
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@vcb.vn" style={fieldInputStyle} />
-                </div>
-              </div>
+              <LabeledIconField label="Email Công Việc" icon={<Mail size={16} style={fieldIconStyle} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Mật Khẩu (Khởi tạo)</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Lock size={16} style={fieldIconStyle} />
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Nhập tối thiểu 6 ký tự" style={fieldInputStyle} />
-                </div>
-              </div>
+              <LabeledIconField
+                label="Mật Khẩu (Khởi tạo)"
+                icon={<Lock size={16} style={fieldIconStyle} />}
+                type="password"
+                value={password}
+                onChange={setPassword}
+                placeholder="Nhập tối thiểu 6 ký tự"
+              />
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={fieldLabelStyle}>Vai Trò Trong Hệ Thống</label>
@@ -363,13 +373,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                 Nhập email tài khoản của bạn. Hệ thống sẽ cấp mã xác thực OTP (6 chữ số) để đặt lại mật khẩu mới.
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Email Đã Đăng Ký</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Mail size={16} style={fieldIconStyle} />
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@vcb.vn" style={fieldInputStyle} />
-                </div>
-              </div>
+              <LabeledIconField label="Email Đã Đăng Ký" icon={<Mail size={16} style={fieldIconStyle} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
 
               <button type="submit" disabled={loading} style={goldButtonStyle}>
                 <KeyRound size={18} />
@@ -389,36 +393,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                 Nhập mã OTP 6 chữ số vừa nhận được và thiết lập mật khẩu mới của bạn.
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Email</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Mail size={16} style={fieldIconStyle} />
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@vcb.vn" style={fieldInputStyle} />
-                </div>
-              </div>
+              <LabeledIconField label="Email" icon={<Mail size={16} style={fieldIconStyle} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Mã Xác Thực OTP (6 chữ số)</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <KeyRound size={16} style={{ ...fieldIconStyle, color: '#d97706' }} />
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    
-                    maxLength={6}
-                    style={{ ...fieldInputStyle, border: '1px solid #f0b429', color: '#92400e', fontWeight: 700, letterSpacing: '3px' }}
-                  />
-                </div>
-              </div>
+              <LabeledIconField
+                label="Mã Xác Thực OTP (6 chữ số)"
+                icon={<KeyRound size={16} style={{ ...fieldIconStyle, color: '#d97706' }} />}
+                value={otp}
+                onChange={setOtp}
+                maxLength={6}
+                inputStyle={{ border: '1px solid #f0b429', color: '#92400e', fontWeight: 700, letterSpacing: '3px' }}
+              />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Mật Khẩu Mới</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Lock size={16} style={fieldIconStyle} />
-                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Nhập tối thiểu 6 ký tự" style={fieldInputStyle} />
-                </div>
-              </div>
+              <LabeledIconField
+                label="Mật Khẩu Mới"
+                icon={<Lock size={16} style={fieldIconStyle} />}
+                type="password"
+                value={newPassword}
+                onChange={setNewPassword}
+                placeholder="Nhập tối thiểu 6 ký tự"
+              />
 
               <button
                 type="submit"

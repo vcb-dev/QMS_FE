@@ -5,12 +5,12 @@ import type { QuoteRequest, Customer, SortMode } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { Pagination } from '../components/Pagination';
 import { STATUS_BADGE_META as STATUS_META } from '../constants';
+import { StatCard } from '../components/StatCard';
 
 
 export const CustomersPage: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('TOP_SPEND');
@@ -19,7 +19,6 @@ export const CustomersPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(12);
 
   useEffect(() => {
-    setLoading(true);
     Promise.all([
       searchCustomers(),
       fetchQuoteRequests({ timeRange: 'ALL', limit: 1000, lite: true }),
@@ -29,8 +28,7 @@ export const CustomersPage: React.FC = () => {
         setQuoteRequests(quoteRes?.data || []);
         setError(null);
       })
-      .catch((err) => setError(err.message || 'Không thể tải dữ liệu khách hàng'))
-      .finally(() => setLoading(false));
+      .catch((err) => setError(err.message || 'Không thể tải dữ liệu khách hàng'));
   }, []);
 
   const customerStats = useMemo(() => {
@@ -92,9 +90,6 @@ export const CustomersPage: React.FC = () => {
 
   const totalClosedValueAll = customerStats.reduce((sum, s) => sum + s.closedValue, 0);
 
-  if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu khách hàng...</div>;
-  }
   if (error) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}>{error}</div>;
   }
@@ -111,18 +106,8 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-            <Users size={14} /> Tổng khách hàng
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>{customers.length}</div>
-        </div>
-        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase' }}>
-            <TrendingUp size={14} /> Tổng giá trị đã chốt
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: '#15803d', marginTop: '6px' }}>{formatCurrency(totalClosedValueAll)}</div>
-        </div>
+        <StatCard icon={<Users size={14} />} label="Tổng khách hàng" value={customers.length} />
+        <StatCard icon={<TrendingUp size={14} />} label="Tổng giá trị đã chốt" value={formatCurrency(totalClosedValueAll)} tone="success" />
       </div>
 
       <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
@@ -174,7 +159,7 @@ export const CustomersPage: React.FC = () => {
                       <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>{s.customer.name}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '11px', color: '#64748b' }}>
                         {s.customer.phone && <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Phone size={11} /> {s.customer.phone}</span>}
-                        {s.customer.province && <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><MapPin size={11} /> {s.customer.province}</span>}
+                        {s.customer.province && <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><MapPin size={11} /> {s.customer.province.name}</span>}
                       </div>
                     </div>
                     <div style={{ fontSize: '12.5px', color: '#334155' }}>

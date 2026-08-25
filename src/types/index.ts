@@ -24,11 +24,38 @@ export interface User {
   };
 }
 
+export interface BaseMetal {
+  id: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+  priceVnd: number;
+  changePct: number | null;
+  updatedAt: string | null;
+  updatedByName: string | null;
+}
+
+export interface BaseMetalPriceHistoryItem {
+  id: string;
+  baseMetalId: string;
+  baseMetalName: string;
+  priceVnd: number;
+  changePct: number | null;
+  isActive: boolean;
+  updatedById: string | null;
+  updatedByName: string | null;
+  createdAt: string;
+  source: string | null;
+}
+
 export interface Material {
   id: string;
   name: string;
   // % dùng nhân với giá kim loại gốc lúc tính giá (vàng theo tuổi: vd 18K=75; Bạc/Bạch kim = 100)
   priceRatioPct: number;
+  // Kim loại gốc dùng để tra giá thị trường — undefined/null = phi kim loại (đá/phụ kiện)
+  baseMetalId?: string | null;
+  baseMetal?: { id: string; name: string; isDefault: boolean } | null;
   // Công thức tính lãi chất liệu này dùng — nhiều chất liệu có thể trỏ chung 1 công thức
   pricingFormulaId: string;
   pricingFormula?: PricingFormula;
@@ -48,8 +75,8 @@ export interface Customer {
   name: string;
   phone?: string;
   address?: string;
-  province?: string;
-  ward?: string;
+  province?: { id: string; name: string; code?: string };
+  ward?: { id: string; name: string; code?: string; districtName?: string };
   note?: string;
 }
 
@@ -197,6 +224,27 @@ export type CalcResult = {
   breakdown?: { materialId: string; materialName: string; weightChi: number; cost: number }[];
 };
 
+// Response của POST /quote-options/calculate — khớp PricingCalculationResult (BE
+// quote-requests/dto/calculate-price.dto.ts). Role SALE chỉ nhận materialNameOrKey/quotedPrice
+// (BE tự cắt bớt phần cấu thành giá), các field còn lại optional để phản ánh đúng thực tế đó.
+export type CalculatePriceResult = {
+  materialNameOrKey: string;
+  quotedPrice: number;
+  metalPricePerChi?: number;
+  totalMetalCost?: number;
+  metalRawCost?: number;
+  laborCost?: number;
+  stoneCost?: number;
+  stonePrice?: number;
+  stoneMarginLabel?: string;
+  totalProductionCost?: number;
+  profitMarginDivisor?: number;
+  profitMarginLabel?: string;
+  subtotalPrice?: number;
+  vatRate?: number;
+  vatAmount?: number;
+};
+
 
 export type SortMode = 'RECENT' | 'TOP_SPEND' | 'MOST_ORDERS';
 
@@ -256,6 +304,15 @@ export interface ProductOptionCard {
   duplicateCount?: number;
 }
 
+// Kết quả "Sản phẩm" trong dropdown search tổng ở Header — rút gọn từ các option đã có giá
+// (QUOTED/CLOSED) của các đơn khớp search, KHÔNG phải toàn bộ ProductOptionCard của Thư Viện.
+export interface HeaderSearchProduct {
+  key: string;
+  requestId: string;
+  productName: string;
+  price: number | null;
+}
+
 export interface ProductSpecModalProps {
   item: ProductOptionCard;
   onClose: () => void;
@@ -284,7 +341,6 @@ export type PricingFormula = {
 };
 export type StoneItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
 export type CategoryItem = { id: string; name: string; laborCost?: number | null; vatRate?: number | null };
-export type MetalPricesState = { gold24kVnd: number; silverVnd: number; platinumVnd: number };
 
 
 export interface RequestsPageProps {
@@ -327,7 +383,6 @@ export interface RequestsPageProps {
   onReject: (id: string) => void;
   onReturn: (id: string) => void;
   onResubmit?: (id: string) => void;
-  onConfirmDirectPrice?: (id: string, price: number) => void;
   onDelete?: (id: string) => void;
   onMarkClosed?: (id: string) => void;
   onManageOptions?: (id: string) => void;
@@ -354,8 +409,6 @@ export interface CreateModalProps {
   onSubmit: (payload: any) => Promise<void>;
   categories: ProductCategory[];
   materials: Material[];
-  customers: Customer[];
-  onRefreshCustomers: () => Promise<void>;
   editingReq: QuoteRequest | null;
   saleName: string;
   calculatorData?: {

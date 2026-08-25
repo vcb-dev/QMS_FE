@@ -5,8 +5,9 @@ import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
-import type {CalculatorPageProps, MaterialRow, StoneRow,StoneCatalogItem,CalcResult} from '../types';
+import type {CalculatorPageProps, StoneRow,StoneCatalogItem,CalcResult} from '../types';
 import {cardStyle, cardTitleStyle} from '../styles/card';
+import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 
 export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   currentRole,
@@ -14,18 +15,34 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 }) => {
   // Metal Prices hook (giá Vàng/Bạc/Bạch kim luôn đọc trực tiếp từ DB qua BE) — đây là giá GỐC dùng để tính.
   // Sửa giá gốc giờ làm ở trang "Cấu hình giá" (PricingConfigPage), không tùy chỉnh trực tiếp ở đây nữa.
-  const { prices, formatted } = useMetalPrices();
+  const { baseMetals } = useMetalPrices();
 
   // SALE không thấy khối giá tham khảo thị trường
   const isSale = currentRole === 'SALE';
 
   // Master Data from DB (Materials & Categories)
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; laborCost?: number | null; vatRate?: number | null }[]>([]);
-  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string }[]>([]);
+  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetal?: { id: string; name: string } | null }[]>([]);
+  // Danh mục đá (đá chủ/đá tấm) lấy từ bảng Stone trong DB — khai báo sớm vì useMaterialStoneRows
+  // cần đọc stoneCatalog để tra đơn giá/tên đá.
+  const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
 
   // Form Input States
   const [categoryId, setCategoryId] = useState('');
-  const [materialRows, setMaterialRows] = useState<MaterialRow[]>([
+  // State + CRUD của materialRows/stoneRows dùng chung với PricingModal qua hook này (xem
+  // hooks/useMaterialStoneRows.ts) — trước đây 2 file tự viết riêng cùng 1 logic add/update/remove.
+  const {
+    materialRows,
+    setMaterialRows,
+    addMaterialRow,
+    updateMaterialRow,
+    removeMaterialRow,
+    stoneRows,
+    addStoneRow,
+    updateStoneRow,
+    removeStoneRow,
+    stonePricePerUnit,
+  } = useMaterialStoneRows(dbMaterials, stoneCatalog, [
     { id: '1', materialId: '', materialName: '', weightChi: PRICING_DEFAULTS.WEIGHT_CHI },
   ]);
   // Tiền công/VAT: ORDER/ADMIN sửa trực tiếp cho báo giá đang tính, không cần bước "Cấu hình" riêng
@@ -35,10 +52,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   // Sale chỉ chọn CÓ/KHÔNG cộng VAT, không tự set mức % (mức % luôn theo cấu hình chuẩn ORDER/ADMIN)
   const [includeVat, setIncludeVat] = useState<boolean>(true);
 
-  // Bạc dùng quy tắc riêng (giá vốn × hệ số nhân) — kiểm tra xem trong các dòng có Bạc không
-  const isSilverMaterial = materialRows.some(
-    (m) => (/BẠC|SILVER|925/i.test(m.materialName)) && !/BẠCH/i.test(m.materialName),
-  );
+  // Bạc dùng quy tắc riêng (giá vốn × hệ số nhân) — tra qua baseMetal.name của material ĐÃ CHỌN
+  // (dbMaterials, từ dropdown thật), không đoán qua regex tên chất liệu nữa.
+  const isSilverMaterial = materialRows.some((row) => {
+    const mat = dbMaterials.find((dm) => dm.id === row.materialId);
+    return mat?.baseMetal?.name === 'Bạc';
+  });
   // Hệ số nhân Bạc — danh sách lấy từ cấu hình, người dùng chọn muốn nhân với hệ số nào lúc tính giá
   const [silverMultipliers, setSilverMultipliers] = useState<number[]>([]);
   const [selectedSilverMultiplier, setSelectedSilverMultiplier] = useState<number>(3);
@@ -46,45 +65,6 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   // nếu không sẽ tính 2 lần: 1 lần với default lúc mount, 1 lần nữa khi master data/silver-multipliers tới
   const [initialDataReady, setInitialDataReady] = useState(false);
 
-  // Material management handlers
-  const addMaterialRow = () => {
-    const first = dbMaterials[0];
-    setMaterialRows((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        materialId: first?.id || '',
-        materialName: first?.name || '',
-        weightChi: '1.0',
-      },
-    ]);
-  };
-
-  const updateMaterialRow = (id: string, patch: Partial<MaterialRow>) => {
-    setMaterialRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const updated = { ...r, ...patch };
-        if (patch.weightChi !== undefined) {
-          const num = parseFloat(patch.weightChi);
-          if (!isNaN(num) && num < 0) updated.weightChi = '0';
-        }
-        if (patch.materialId && dbMaterials.length > 0) {
-          const found = dbMaterials.find((m) => m.id === patch.materialId);
-          if (found) updated.materialName = found.name;
-        }
-        return updated;
-      }),
-    );
-  };
-
-  const removeMaterialRow = (id: string) => {
-    if (materialRows.length <= 1) return;
-    setMaterialRows((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  // Stone Rows State - Starts empty
-  const [stoneRows, setStoneRows] = useState<StoneRow[]>([]);
   // 2 phương thức nhập giá đá theo mục 3.1: nhập tổng trực tiếp, hoặc tính từ bảng đá (mặc định)
   const [stoneInputMode, setStoneInputMode] = useState<'table' | 'total'>('table');
   const [manualStoneTotal, setManualStoneTotal] = useState<number>(0);
@@ -126,8 +106,6 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     }).catch(() => {});
   };
 
-  // Danh mục đá (đá chủ/đá tấm) lấy từ bảng Stone trong DB
-  const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
   useEffect(() => {
     fetchStones()
       .then((rows: StoneCatalogItem[]) => setStoneCatalog(Array.isArray(rows) ? rows : []))
@@ -178,34 +156,6 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     if (cat?.vatRate != null) setVatPct(Number(cat.vatRate));
   }, [categoryId, dbCategories]);
 
-  // Stone management handlers
-  const addStoneRow = () => {
-    setStoneRows((prev) => [
-      ...prev,
-      { id: Date.now().toString(), stoneType: '', stoneId: '', qty: 1 },
-    ]);
-  };
-
-  const updateStoneRow = (id: string, patch: Partial<StoneRow>) => {
-    setStoneRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const updated = { ...r, ...patch };
-        if (patch.qty !== undefined) {
-          updated.qty = Math.max(1, patch.qty);
-        }
-        return updated;
-      }),
-    );
-  };
-
-  const removeStoneRow = (id: string) => {
-    setStoneRows((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  // Đơn giá/viên luôn lấy từ cấu hình catalog đá trong DB (không cho sửa tay) — tra theo stoneId đã chọn
-  const stonePricePerUnit = (stoneId: string) => stoneCatalog.find((s) => s.id === stoneId)?.price || 0;
-
   const totalStoneCost = stoneInputMode === 'total'
     ? (manualStoneTotal || 0)
     : stoneRows.reduce((sum, r) => sum + r.qty * stonePricePerUnit(r.stoneId), 0);
@@ -239,7 +189,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
         // Luồng 1 chất liệu: Gọi calculate 5 bước + sinh phương án so sánh
         const singleRow = validRows[0];
         const w = parseFloat(singleRow.weightChi) || 0;
-        const isSingleSilver = (/BẠC|SILVER|925/i.test(singleRow.materialName)) && !/BẠCH/i.test(singleRow.materialName);
+        const singleMat = dbMaterials.find((dm) => dm.id === singleRow.materialId);
+        const isSingleSilver = singleMat?.baseMetal?.name === 'Bạc';
 
         const [res, options] = await Promise.all([
           calculatePriceApi({
@@ -268,7 +219,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
         if (res && typeof res.quotedPrice === 'number' && Number.isFinite(res.quotedPrice)) {
           setQuotedPrice(res.quotedPrice);
-          setCalcResult(res);
+          // BE chỉ trả đủ cấu thành giá (totalMetalCost/laborCost/...) cho ORDER/ADMIN — Sale nhận
+          // bản rút gọn chỉ có materialNameOrKey/quotedPrice. Khối JSX đọc các field đầy đủ này đã
+          // tự khóa sau guard currentRole==='ORDER'||'ADMIN' nên an toàn ở runtime dù type khai optional.
+          setCalcResult(res as CalcResult);
         } else {
           setQuotedPrice(null);
           setCalcResult(null);
@@ -381,7 +335,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDataReady, materialRows, laborCost, vatPct, includeVat, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal, prices.gold24kVnd, prices.silverVnd, prices.platinumVnd]);
+  }, [initialDataReady, materialRows, laborCost, vatPct, includeVat, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal, baseMetals]);
 
   // Nút "Tính giá ngay" / "Tính lại giá" — bấm để tính ngay, khỏi chờ debounce
   const handleCalculate = () => {
@@ -593,39 +547,19 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 Sửa giá gốc làm ở trang "Cấu hình giá" (PricingConfigPage), không tùy chỉnh trực tiếp ở đây nữa. */}
             {!isSale && (
               <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
-                {/* Giá Vàng 24K */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                    GIÁ VÀNG 24K (GOLD)
-                  </span>
-                  <strong style={{ fontSize: '19px', fontWeight: 900, color: '#b45309', letterSpacing: '0.3px', fontVariantNumeric: 'tabular-nums' }}>
-                    {formatted.gold24k} <span style={{ fontSize: '14px', fontWeight: 700 }}>đ/chỉ</span>
-                  </strong>
-                </div>
-
-                <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />
-
-                {/* Giá Bạc */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                    GIÁ BẠC (SILVER)
-                  </span>
-                  <strong style={{ fontSize: '19px', fontWeight: 900, color: '#334155', letterSpacing: '0.3px', fontVariantNumeric: 'tabular-nums' }}>
-                    {formatted.silver} <span style={{ fontSize: '14px', fontWeight: 700 }}>đ/chỉ</span>
-                  </strong>
-                </div>
-
-                <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />
-
-                {/* Giá Bạch kim */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                    GIÁ BẠCH KIM (PLATINUM)
-                  </span>
-                  <strong style={{ fontSize: '19px', fontWeight: 900, color: '#115e59', letterSpacing: '0.3px', fontVariantNumeric: 'tabular-nums' }}>
-                    {formatted.platinum} <span style={{ fontSize: '14px', fontWeight: 700 }}>đ/chỉ</span>
-                  </strong>
-                </div>
+                {baseMetals.map((m, idx) => (
+                  <React.Fragment key={m.id}>
+                    {idx > 0 && <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                        GIÁ {m.name.toUpperCase()}
+                      </span>
+                      <strong style={{ fontSize: '19px', fontWeight: 900, color: '#334155', letterSpacing: '0.3px', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatNumberVN(m.priceVnd)} <span style={{ fontSize: '14px', fontWeight: 700 }}>đ/chỉ</span>
+                      </strong>
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
             )}
           </div>
