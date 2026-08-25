@@ -80,6 +80,20 @@ export interface Customer {
   note?: string;
 }
 
+export interface CustomerStatRow {
+  customer: Customer;
+  totalOrders: number;
+  totalClosed: number;
+  closedValue: number;
+  lastOrder: string | null;
+}
+
+export interface CustomerStatsResponse {
+  data: CustomerStatRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+  totalClosedValueAll: number;
+}
+
 export interface QuoteRequestImage {
   id: string;
   imageUrl: string;
@@ -189,6 +203,7 @@ export interface FilterOptions {
   search?: string;
   page?: number;
   limit?: number;
+  customerId?: string;
 }
 export interface CalculatorPageProps {
   currentRole?: Role;
@@ -259,6 +274,21 @@ export interface DashboardPageProps {
   onFilterStatus?: (status: string) => void;
 }
 
+export interface DashboardTimelineBucket {
+  key: string; label: string;
+  pending: number; processing: number; needMoreInfo: number;
+  quoted: number; rejected: number; closed: number; total: number;
+}
+
+export interface DashboardChartsResponse {
+  timeline: DashboardTimelineBucket[];
+  saleStats: { id: string; name: string; total: number; closed: number }[];
+  categoryDistribution: { name: string; value: number }[];
+  materialDistribution: { name: string; value: number }[];
+  priceRangeDistribution: { label: string; value: number }[];
+  featuredProducts: { key: string; productName: string; price: number; images?: QuoteRequestImage[] }[];
+}
+
 // Trang chi tiết chỉ để xem — mọi thao tác đổi trạng thái/dữ liệu (tiếp nhận, báo giá, từ chối,
 // trả lại, sửa, xóa, đánh dấu chốt...) thực hiện từ bảng danh sách (QuoteTable), không phải ở đây.
 export interface DetailPageProps {
@@ -270,16 +300,10 @@ export interface DetailPageProps {
 
 
 export interface LibraryPageProps {
-  requests: QuoteRequest[];
   categories: ProductCategory[];
   materials: Material[];
   currentRole: Role;
   onSelectReq: (id: string) => void;
-  totalCount?: number;
-  // Nút "Tải lại giá" góc phải — gọi lại API với withLivePrice=true để cập nhật giá theo config
-  // hiện tại (giá kim loại/đá vừa đổi không tự đẩy xuống FE, phải bấm tải lại).
-  onRefreshPrices?: () => void;
-  refreshing?: boolean;
 }
 
 export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT' | 'MOST_QUOTED';
@@ -302,6 +326,11 @@ export interface ProductOptionCard {
   requestCreatedAt?: string;
   // Số bản ghi bị gộp chung (cùng danh mục/chất liệu/khối lượng/đá) — 1 = không trùng ai
   duplicateCount?: number;
+}
+
+export interface LibraryProductsResponse {
+  data: ProductOptionCard[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
 // Kết quả "Sản phẩm" trong dropdown search tổng ở Header — rút gọn từ các option đã có giá
@@ -401,6 +430,18 @@ export interface StaffUser {
   isActive: boolean;
   department?: { id: string; name: string } | null;
   createdAt: string;
+}
+
+export interface UserStatsResponse {
+  totalUsers: number;
+  byRole: { SALE: number; ORDER: number; ADMIN: number };
+  byDept: { name: string; count: number }[];
+  pendingCount: number;
+}
+
+export interface StaffPerformanceResponse {
+  saleStats: { id: string; name: string; total: number; closed: number; closeRate: number }[];
+  pricerStats: { id: string; name: string; totalHandled: number; avgQuoteMs: number | null; avgProcessMs: number | null }[];
 }
 
 export interface CreateModalProps {

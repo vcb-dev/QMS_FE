@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOption, CalculatePriceResult } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOption, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE ;
@@ -173,6 +173,14 @@ export async function getAllUsersApi(): Promise<any[]> {
   return apiCall(api.get('/users'), 'Không thể lấy danh sách người dùng');
 }
 
+export async function getUserStatsApi(): Promise<UserStatsResponse> {
+  return apiCall(api.get('/users/stats'), 'Không thể lấy thống kê người dùng');
+}
+
+export async function getStaffPerformanceApi(): Promise<StaffPerformanceResponse> {
+  return apiCall(api.get('/quote-requests/staff-performance'), 'Không thể lấy hiệu suất nhân viên');
+}
+
 export async function approveUserApi(userId: string, role?: string): Promise<User> {
   return apiCall(api.patch(`/users/${userId}/approve`, { role }), 'Không thể phê duyệt tài khoản');
 }
@@ -193,10 +201,11 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   return apiCall(api.post('/auth/reset-password', payload), 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; withLivePrice?: boolean }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; withLivePrice?: boolean }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
+  if (filter?.customerId) params.customerId = filter.customerId;
   if (filter?.categoryId && filter.categoryId !== 'ALL') params.categoryId = filter.categoryId;
   if (filter?.materialId && filter.materialId !== 'ALL') params.materialId = filter.materialId;
   if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
@@ -225,6 +234,14 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
 
   const data = await apiCall(api.get('/quote-requests/stats', { params }), 'Không thể tải số liệu tổng hợp');
   return data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
+}
+
+export async function fetchDashboardCharts(filter?: { timeRange?: string; startDate?: string; endDate?: string }): Promise<DashboardChartsResponse> {
+  const params: Record<string, any> = {};
+  if (filter?.timeRange) params.timeRange = filter.timeRange;
+  if (filter?.startDate) params.startDate = filter.startDate;
+  if (filter?.endDate) params.endDate = filter.endDate;
+  return apiCall(api.get('/quote-requests/dashboard-charts', { params }), 'Không thể lấy dữ liệu biểu đồ Dashboard');
 }
 
 export async function fetchQuoteRequestById(id: string): Promise<QuoteRequest> {
@@ -261,6 +278,10 @@ export async function fetchMasterData() {
 
 export async function searchCustomers(search?: string) {
   return apiCall(api.get('/customers', { params: search ? { search } : undefined }), 'Không thể tìm kiếm khách hàng');
+}
+
+export async function fetchCustomerStats(params: { search?: string; sortMode?: string; page?: number; limit?: number }): Promise<CustomerStatsResponse> {
+  return apiCall(api.get('/customers/stats', { params }), 'Không thể lấy thống kê khách hàng');
 }
 
 export async function fetchProvinces() {
@@ -624,6 +645,19 @@ export async function updateProductCategoriesBulk(items: { id: string; laborCost
 
 export async function createProductCategory(name: string, laborCost?: number, vatRate?: number) {
   return apiCall(api.post('/product-categories', { name, laborCost, vatRate }), 'Không thể thêm danh mục sản phẩm');
+}
+
+export async function fetchLibraryProducts(params: {
+  search?: string;
+  categoryId?: string;
+  materialId?: string;
+  timeRange?: string;
+  sortMode?: string;
+  withLivePrice?: string;
+  page?: number;
+  limit?: number;
+}): Promise<LibraryProductsResponse> {
+  return apiCall(api.get('/quote-requests/library-products', { params }), 'Không thể lấy danh sách sản phẩm');
 }
 
 export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { categoryId?: string; materialId?: string; ownerId?: string; timeRange?: string; startDate?: string; endDate?: string; fields?: string[] }) {

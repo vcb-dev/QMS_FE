@@ -1,6 +1,5 @@
 import React from 'react';
 import { RotateCcw, Home, ShieldAlert, Copy, Check, ChevronDown, ChevronUp, Bug } from 'lucide-react';
-import { COMPANY_LOGO_URL } from '../constants';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;

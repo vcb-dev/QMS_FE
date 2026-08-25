@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity } from 'lucide-react';
-import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi } from '../services/api';
-import { fetchQuoteRequests } from '../services/api';
-import type { QuoteRequest, StaffUser} from '../types';
+import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
+import type { StaffUser, UserStatsResponse, StaffPerformanceResponse } from '../types';
 import { Pagination } from '../components/Pagination';
 import { formatDuration } from '../utils/currency';
 import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
@@ -33,7 +32,8 @@ const mergeActionsByLabel = (actions: ActionStat[]): ActionStat[] => {
 
 export const StaffPage: React.FC = () => {
   const [users, setUsers] = useState<StaffUser[]>([]);
-  const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>([]);
+  const [userStats, setUserStats] = useState<UserStatsResponse | null>(null);
+  const [performance, setPerformance] = useState<StaffPerformanceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [accountTab, setAccountTab] = useState<'PENDING' | 'ACTIVE'>('PENDING');
@@ -49,30 +49,20 @@ export const StaffPage: React.FC = () => {
   useEffect(() => {
     Promise.all([
       getAllUsersApi(),
-      fetchQuoteRequests({ timeRange: 'ALL', limit: 1000, lite: true }),
+      getUserStatsApi(),
+      getStaffPerformanceApi(),
       getAuditStatsApi().catch(() => ({})),
     ])
-      .then(([userList, quoteRes, stats]) => {
+      .then(([userList, stats, perf, auditStats]) => {
         setUsers(userList || []);
-        setQuoteRequests(quoteRes?.data || []);
-        setActionStats(stats || {});
+        setUserStats(stats);
+        setPerformance(perf);
+        setActionStats(auditStats || {});
         setError(null);
       })
       .catch((err) => setError(err.message || 'Không thể tải dữ liệu nhân viên'));
   }, []);
 
-  // 2.1 Thống kê người dùng
-  const totalUsers = users.length;
-  const byRole = { SALE: 0, ORDER: 0, ADMIN: 0 };
-  const byDept = new Map<string, number>();
-  let pendingCount = 0;
-  users.forEach((u) => {
-    if (u.role in byRole) byRole[u.role as keyof typeof byRole] += 1;
-    const deptName = u.department?.name || 'Chưa gán bộ phận';
-    byDept.set(deptName, (byDept.get(deptName) || 0) + 1);
-    if (!u.isApproved) pendingCount += 1;
-  });
-  const deptStats = Array.from(byDept.entries()).sort((a, b) => b[1] - a[1]);
   const pendingUsers = users.filter((u) => !u.isApproved && u.role !== 'ADMIN');
   const activeListUsers = users.filter((u) => u.isApproved && u.role !== 'ADMIN').sort((a, b) => a.name.localeCompare(b.name));
   // Tài khoản đã khóa (isActive=false) không còn thao tác — ẩn khỏi các bảng thống kê/hoạt động bên dưới
@@ -121,49 +111,12 @@ export const StaffPage: React.FC = () => {
     }
   };
 
-  // Hiệu suất Sale — số yêu cầu đã tạo & đã chốt của từng Sale (bỏ tài khoản đã khóa)
-  const sales = users.filter((u) => u.role === 'SALE' && u.isActive);
-  const saleStats = sales.map((sale) => {
-    const created = quoteRequests.filter((r) => r.requesterId === sale.id);
-    const total = created.length;
-    const closed = created.filter((r) => r.status === 'CLOSED').length;
-    return { id: sale.id, name: sale.name, total, closed, closeRate: total > 0 ? (closed / total) * 100 : 0 };
-  }).sort((a, b) => b.total - a.total);
-
-  // 2.2 Quản lý người báo giá — thời gian TB báo giá & TB xử lý của từng pricer (bỏ tài khoản đã khóa)
-  const pricers = users.filter((u) => u.role === 'ORDER' && u.isActive);
-  const pricerStats = pricers.map((pricer) => {
-    const handled = quoteRequests.filter((r) => r.assigneeId === pricer.id && r.acceptedAt);
-    const quoteDurations: number[] = [];
-    const processDurations: number[] = [];
-
-    handled.forEach((r) => {
-      const acceptedMs = new Date(r.acceptedAt!).getTime();
-      if (r.quotedDate) {
-        const dur = new Date(r.quotedDate).getTime() - acceptedMs;
-        if (dur >= 0) {
-          quoteDurations.push(dur);
-          processDurations.push(dur);
-        }
-      } else if (r.returnedAt) {
-        const dur = new Date(r.returnedAt).getTime() - acceptedMs;
-        if (dur >= 0) processDurations.push(dur);
-      } else if (r.status === 'REJECTED' && r.updatedAt) {
-        const dur = new Date(r.updatedAt).getTime() - acceptedMs;
-        if (dur >= 0) processDurations.push(dur);
-      }
-    });
-
-    const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : null);
-
-    return {
-      id: pricer.id,
-      name: pricer.name,
-      totalHandled: handled.length,
-      avgQuoteMs: avg(quoteDurations),
-      avgProcessMs: avg(processDurations),
-    };
-  }).sort((a, b) => b.totalHandled - a.totalHandled);
+  const totalUsers = userStats?.totalUsers || 0;
+  const byRole = userStats?.byRole || { SALE: 0, ORDER: 0, ADMIN: 0 };
+  const pendingCount = userStats?.pendingCount || 0;
+  const deptStats = (userStats?.byDept || []).map((d) => [d.name, d.count] as [string, number]);
+  const saleStats = performance?.saleStats || [];
+  const pricerStats = performance?.pricerStats || [];
 
   if (error) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}> {error}</div>;
@@ -356,7 +309,7 @@ export const StaffPage: React.FC = () => {
               <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '12.5px', color: '#334155', fontWeight: 600, width: '160px', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                 <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', height: '10px', overflow: 'hidden' }}>
-                  <div style={{ width: `${(count / totalUsers) * 100}%`, background: '#2563eb', height: '100%', borderRadius: '6px' }} />
+                  <div style={{ width: `${(count / (totalUsers || 1)) * 100}%`, background: '#2563eb', height: '100%', borderRadius: '6px' }} />
                 </div>
                 <span style={{ fontSize: '12.5px', fontWeight: 900, color: '#0f172a', width: '24px', textAlign: 'right', flexShrink: 0 }}>{count}</span>
               </div>

@@ -1,94 +1,88 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Users, TrendingUp, ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react';
-import { searchCustomers, fetchQuoteRequests } from '../services/api';
-import type { QuoteRequest, Customer, SortMode } from '../types';
+import { fetchCustomerStats, fetchQuoteRequests } from '../services/api';
+import type { CustomerStatRow, SortMode, QuoteRequest } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { Pagination } from '../components/Pagination';
 import { STATUS_BADGE_META as STATUS_META } from '../constants';
 import { StatCard } from '../components/StatCard';
 
-
 export const CustomersPage: React.FC = () => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>([]);
+  const [rows, setRows] = useState<CustomerStatRow[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalClosedValueAll, setTotalClosedValueAll] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('TOP_SPEND');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
+  const [loading, setLoading] = useState(false);
+
+  // Lazy cache for orders per customer
+  const [customerOrders, setCustomerOrders] = useState<
+    Record<string, { loading: boolean; data: QuoteRequest[]; error?: string }>
+  >({});
 
   useEffect(() => {
-    Promise.all([
-      searchCustomers(),
-      fetchQuoteRequests({ timeRange: 'ALL', limit: 1000, lite: true }),
-    ])
-      .then(([customerList, quoteRes]) => {
-        setCustomers(customerList || []);
-        setQuoteRequests(quoteRes?.data || []);
-        setError(null);
-      })
-      .catch((err) => setError(err.message || 'Không thể tải dữ liệu khách hàng'));
-  }, []);
-
-  const customerStats = useMemo(() => {
-    const map = new Map<string, QuoteRequest[]>();
-    quoteRequests.forEach((r) => {
-      const cid = r.customerId;
-      if (!cid) return;
-      if (!map.has(cid)) map.set(cid, []);
-      map.get(cid)!.push(r);
-    });
-
-    return customers.map((c) => {
-      const orders = map.get(c.id) || [];
-      const closedOrders = orders.filter((o) => o.status === 'CLOSED');
-      const closedValue = closedOrders.reduce((sum, o) => sum + (o.quotedPrice ? Number(o.quotedPrice) : 0), 0);
-      const lastOrder = orders.reduce<string | null>((latest, o) => {
-        if (!o.createdAt) return latest;
-        if (!latest || new Date(o.createdAt) > new Date(latest)) return o.createdAt;
-        return latest;
-      }, null);
-
-      return {
-        customer: c,
-        orders,
-        totalOrders: orders.length,
-        totalClosed: closedOrders.length,
-        closedValue,
-        lastOrder,
-      };
-    });
-  }, [customers, quoteRequests]);
-
-  const filteredSorted = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    let list = customerStats.filter((s) => {
-      if (!query) return true;
-      return s.customer.name.toLowerCase().includes(query) || (s.customer.phone || '').includes(query);
-    });
-
-    list = [...list].sort((a, b) => {
-      if (sortMode === 'TOP_SPEND') return b.closedValue - a.closedValue;
-      if (sortMode === 'MOST_ORDERS') return b.totalOrders - a.totalOrders;
-      // RECENT — khách có đơn gần nhất lên đầu, khách chưa có đơn xuống cuối
-      if (!a.lastOrder && !b.lastOrder) return 0;
-      if (!a.lastOrder) return 1;
-      if (!b.lastOrder) return -1;
-      return new Date(b.lastOrder).getTime() - new Date(a.lastOrder).getTime();
-    });
-
-    return list;
-  }, [customerStats, searchTerm, sortMode]);
+    const t = setTimeout(() => setSearchTerm(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, sortMode]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
-  const pagedList = filteredSorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => {
+    setLoading(true);
+    fetchCustomerStats({
+      search: searchTerm || undefined,
+      sortMode,
+      page: currentPage,
+      limit: pageSize,
+    })
+      .then((res) => {
+        setRows(res.data);
+        setTotalItems(res.meta.total);
+        setTotalClosedValueAll(res.totalClosedValueAll);
+        setError(null);
+      })
+      .catch((err) => setError(err.message || 'Không thể tải dữ liệu khách hàng'))
+      .finally(() => setLoading(false));
+  }, [searchTerm, sortMode, currentPage, pageSize]);
 
-  const totalClosedValueAll = customerStats.reduce((sum, s) => sum + s.closedValue, 0);
+  const handleToggleExpand = (customerId: string) => {
+    if (expandedId === customerId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(customerId);
+
+    // If orders for this customer haven't been fetched yet, fetch them lazily
+    if (!customerOrders[customerId]?.data && !customerOrders[customerId]?.loading) {
+      setCustomerOrders((prev) => ({
+        ...prev,
+        [customerId]: { loading: true, data: [] },
+      }));
+
+      fetchQuoteRequests({ customerId, limit: 100 })
+        .then((res) => {
+          setCustomerOrders((prev) => ({
+            ...prev,
+            [customerId]: { loading: false, data: res?.data || [] },
+          }));
+        })
+        .catch((err) => {
+          setCustomerOrders((prev) => ({
+            ...prev,
+            [customerId]: { loading: false, data: [], error: err.message || 'Lỗi khi tải danh sách đơn' },
+          }));
+        });
+    }
+  };
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   if (error) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}>{error}</div>;
@@ -106,7 +100,7 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <StatCard icon={<Users size={14} />} label="Tổng khách hàng" value={customers.length} />
+        <StatCard icon={<Users size={14} />} label="Tổng khách hàng" value={totalItems} />
         <StatCard icon={<TrendingUp size={14} />} label="Tổng giá trị đã chốt" value={formatCurrency(totalClosedValueAll)} tone="success" />
       </div>
 
@@ -116,8 +110,8 @@ export const CustomersPage: React.FC = () => {
             <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Tìm theo tên hoặc SĐT..."
               style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', outline: 'none', boxSizing: 'border-box' }}
             />
@@ -145,14 +139,18 @@ export const CustomersPage: React.FC = () => {
           </div>
         </div>
 
-        {filteredSorted.length > 0 ? (
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '30px 0' }}>Đang tải...</div>
+        ) : rows.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {pagedList.map((s) => {
+            {rows.map((s) => {
               const isExpanded = expandedId === s.customer.id;
+              const orderState = customerOrders[s.customer.id];
+
               return (
                 <div key={s.customer.id} style={{ border: '1px solid #f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
                   <div
-                    onClick={() => setExpandedId(isExpanded ? null : s.customer.id)}
+                    onClick={() => handleToggleExpand(s.customer.id)}
                     style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.3fr auto', gap: '10px', alignItems: 'center', padding: '12px 14px', cursor: 'pointer', background: isExpanded ? '#f8fafc' : '#ffffff' }}
                   >
                     <div>
@@ -185,9 +183,17 @@ export const CustomersPage: React.FC = () => {
 
                   {isExpanded && (
                     <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 14px', background: '#fbfcfe' }}>
-                      {s.orders.length > 0 ? (
+                      {orderState?.loading ? (
+                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '10px 0' }}>
+                          Đang tải danh sách đơn...
+                        </div>
+                      ) : orderState?.error ? (
+                        <div style={{ textAlign: 'center', color: '#dc2626', fontSize: '12px', padding: '10px 0' }}>
+                          {orderState.error}
+                        </div>
+                      ) : orderState?.data && orderState.data.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {[...s.orders]
+                          {[...orderState.data]
                             .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
                             .map((o) => {
                               const meta = STATUS_META[o.status] || { label: o.status, color: '#475569', bg: '#f1f5f9' };
@@ -213,7 +219,9 @@ export const CustomersPage: React.FC = () => {
                             })}
                         </div>
                       ) : (
-                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '10px 0' }}>Khách hàng chưa có đơn nào</div>
+                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '10px 0' }}>
+                          Khách hàng chưa có đơn nào
+                        </div>
                       )}
                     </div>
                   )}
@@ -225,12 +233,12 @@ export const CustomersPage: React.FC = () => {
           <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '30px 0' }}>Không tìm thấy khách hàng nào</div>
         )}
 
-        {filteredSorted.length > 0 && (
+        {rows.length > 0 && (
           <div style={{ marginTop: '14px' }}>
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={filteredSorted.length}
+              totalItems={totalItems}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}

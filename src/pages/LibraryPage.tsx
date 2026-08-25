@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard } from '../types';
 import { Search, RefreshCw } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Pagination } from '../components/Pagination';
 import { formatCurrency } from '../utils/currency';
 import { ProductSpecModal } from '../components/ProductSpecModal';
 import { displayPrice } from '../utils/quoteOption';
+import { fetchLibraryProducts } from '../services/api';
 
 const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> = {
   CLOSED: { label: 'Đã chốt', bg: '#dcfce7', color: '#15803d' },
@@ -28,13 +29,10 @@ const selectStyle = (minWidth: string): React.CSSProperties => ({
 });
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
-  requests,
   categories,
   materials,
   currentRole,
   onSelectReq,
-  onRefreshPrices,
-  refreshing,
 }) => {
   // Seed từ khóa ban đầu từ URL (?q=...) khi nhảy tới đây từ "Xem thêm" ở search tổng Header —
   // chỉ đọc 1 lần lúc mount, sau đó searchTerm là state nội bộ bình thường như cũ.
@@ -48,133 +46,55 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [pageSize, setPageSize] = useState(UI_CONSTANTS.PRODUCT_LIBRARY.DEFAULT_PAGE_SIZE);
   const [detailItem, setDetailItem] = useState<ProductOptionCard | null>(null);
 
-  // Mỗi phương án báo giá (QuoteOption) là 1 "sản phẩm" riêng — 1 đơn có nhiều phương án (ORDER
-  // tạo để so sánh, mỗi phương án giá khác nhau) thì ra nhiều thẻ, hiện đủ hết. Chỉ lấy phương án
-  // thuộc đơn đã QUOTED/CLOSED: completeQuote (BE) xóa sạch & ghi đè toàn bộ options bằng đúng bộ
-  // ORDER gửi lên khi duyệt, nên option còn tồn tại trên đơn ở 2 status này chắc chắn đã qua ORDER —
-  // phương án Sale tự tạo (quick-quote, đơn còn PROCESSING) chưa duyệt sẽ không có mặt ở đây.
-  const productOptions = useMemo<ProductOptionCard[]>(() => {
-    const items: ProductOptionCard[] = [];
-    for (const r of requests) {
-      if (r.status !== 'QUOTED' && r.status !== 'CLOSED') continue;
-      const catName = r.category?.name || '';
+  const [products, setProducts] = useState<ProductOptionCard[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-      for (const o of r.options || []) {
-        if (o.quotedPrice == null) continue;
-
-        const matStr =
-          o.materials && o.materials.length > 0
-            ? o.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
-            : o.materialName || 'Chưa rõ chất liệu';
-
-        const weightVal = o.weightChi;
-        const weightDisplay = weightVal != null && Number(weightVal) > 0 ? `${weightVal} chỉ` : null;
-
-        let stoneDisplay = 'Không đính đá';
-        if (o.stones && o.stones.length > 0) {
-          const totalStones = o.stones.reduce((sum, s) => sum + (s.quantity || 1), 0);
-          const names = o.stones.map((s) => `${s.quantity}v ${s.stone?.name || s.stoneName || 'đá'}`).join(', ');
-          stoneDisplay = `${totalStones} viên (${names})`;
-        } else if (o.stoneDescription) {
-          stoneDisplay = o.stoneDescription;
-        } else if (o.stoneCost && Number(o.stoneCost) > 0) {
-          stoneDisplay = `Đá trị giá ${formatCurrency(Number(o.stoneCost))}`;
-        }
-
-        items.push({
-          key: `${r.id}:${o.id}`,
-          requestId: r.id,
-          code: r.code,
-          categoryId: r.categoryId,
-          images: r.images,
-          option: o,
-          productName: `${catName} ${matStr}`.trim() || 'Sản phẩm chế tác',
-          matStr,
-          weightDisplay,
-          stoneDisplay,
-          materialIds: (o.materials || []).map((m) => m.materialId).filter(Boolean),
-          requestCreatedAt: r.createdAt,
-        });
-      }
-    }
-
-    // Gộp sản phẩm giống nhau (cùng danh mục + chất liệu/khối lượng + đá) — KHÔNG xét giá, giá
-    // khác nhau vẫn coi là cùng 1 sản phẩm (chỉ khác thời điểm/khách báo giá). Giữ bản MỚI NHẤT
-    // làm đại diện, gắn số lần trùng để biết đã báo giá bao nhiêu lần.
-    const groups = new Map<string, ProductOptionCard[]>();
-    for (const item of items) {
-      const matKey =
-        item.option.materials && item.option.materials.length > 0
-          ? item.option.materials.map((m) => `${m.materialId}:${m.weightChi || 0}`).sort().join(',')
-          : `${item.matStr}:${item.option.weightChi || 0}`;
-      const stoneKey =
-        item.option.stones && item.option.stones.length > 0
-          ? item.option.stones.map((s) => `${s.stoneId}:${s.quantity}`).sort().join(',')
-          : item.option.stoneDescription || (item.option.stoneCost ? `cost:${item.option.stoneCost}` : 'none');
-      const dedupKey = `${item.categoryId || ''}|${matKey}|${stoneKey}`;
-      const group = groups.get(dedupKey);
-      if (group) group.push(item);
-      else groups.set(dedupKey, [item]);
-    }
-
-    const deduped: ProductOptionCard[] = [];
-    for (const group of groups.values()) {
-      group.sort(
-        (a, b) =>
-          new Date(b.option.quotedDate || b.requestCreatedAt || 0).getTime() -
-          new Date(a.option.quotedDate || a.requestCreatedAt || 0).getTime(),
-      );
-      deduped.push({ ...group[0], duplicateCount: group.length });
-    }
-    return deduped;
-  }, [requests]);
-
-  const filteredOptions = useMemo(() => {
-    const now = new Date();
-    let rangeCutoff: Date | null = null;
-    if (timeRange === 'TODAY') rangeCutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    else if (timeRange === 'THIS_WEEK') {
-      const day = now.getDay() || 7;
-      rangeCutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
-    } else if (timeRange === 'THIS_MONTH') rangeCutoff = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const list = productOptions.filter((item) => {
-      const query = searchTerm.trim().toLowerCase();
-      const codeMatch = item.code.toLowerCase().includes(query);
-      const nameMatch = item.productName.toLowerCase().includes(query);
-      const searchOk = !query || codeMatch || nameMatch;
-
-      const catOk = selectedCat === 'ALL' || item.categoryId === selectedCat;
-
-      const matOk = selectedMat === 'ALL' || item.materialIds.includes(selectedMat);
-
-      const refDate = item.option.quotedDate || item.requestCreatedAt;
-      const timeOk = !rangeCutoff || (refDate ? new Date(refDate) >= rangeCutoff : false);
-
-      return searchOk && catOk && matOk && timeOk;
-    });
-
-    return list.sort((a, b) => {
-      if (sortMode === 'PRICE_DESC') return displayPrice(b.option) - displayPrice(a.option);
-      if (sortMode === 'PRICE_ASC') return displayPrice(a.option) - displayPrice(b.option);
-      if (sortMode === 'MOST_QUOTED') return (b.duplicateCount || 1) - (a.duplicateCount || 1);
-      const dateA = new Date(a.option.quotedDate || a.requestCreatedAt || 0).getTime();
-      const dateB = new Date(b.option.quotedDate || b.requestCreatedAt || 0).getTime();
-      return dateB - dateA;
-    });
-  }, [productOptions, searchTerm, selectedCat, selectedMat, sortMode, timeRange]);
+  // Debounce search 300ms
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCat, selectedMat, sortMode, timeRange]);
+  }, [debouncedSearch, selectedCat, selectedMat, sortMode, timeRange]);
 
-  const totalItems = filteredOptions.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const loadData = async (withLivePrice = false) => {
+    if (withLivePrice) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const res = await fetchLibraryProducts({
+        search: debouncedSearch || undefined,
+        categoryId: selectedCat !== 'ALL' ? selectedCat : undefined,
+        materialId: selectedMat !== 'ALL' ? selectedMat : undefined,
+        timeRange,
+        sortMode,
+        withLivePrice: withLivePrice ? 'true' : undefined,
+        page: currentPage,
+        limit: pageSize,
+      });
+      setProducts(res.data || []);
+      setTotalItems(res.meta?.total || 0);
+      setTotalPages(res.meta?.totalPages || 1);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải danh sách sản phẩm');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  const pagedOptions = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredOptions.slice(start, start + pageSize);
-  }, [filteredOptions, currentPage, pageSize]);
+  useEffect(() => {
+    loadData(false);
+  }, [debouncedSearch, selectedCat, selectedMat, sortMode, timeRange, currentPage, pageSize]);
+
+  const handleRefreshPrices = () => loadData(true);
 
   const formatVND = (num?: number | string | null) => {
     const val = num ? Number(num) : 0;
@@ -193,23 +113,21 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             Xếp hạng sản phẩm đã báo giá cho khách theo giá, mốc thời gian và phân loại
           </p>
         </div>
-        {onRefreshPrices && (
-          <button
-            type="button"
-            onClick={onRefreshPrices}
-            disabled={refreshing}
-            title="Tính lại giá theo giá kim loại/đá hiện tại"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-              padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1',
-              background: '#ffffff', color: '#0f172a', fontSize: '12.5px', fontWeight: 700,
-              cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1,
-            }}
-          >
-            <RefreshCw size={14} style={refreshing ? { animation: 'spin 1s linear infinite' } : undefined} />
-            {refreshing ? 'Đang tải giá...' : 'Tải lại giá'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleRefreshPrices}
+          disabled={refreshing || loading}
+          title="Tính lại giá theo giá kim loại/đá hiện tại"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+            padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1',
+            background: '#ffffff', color: '#0f172a', fontSize: '12.5px', fontWeight: 700,
+            cursor: refreshing || loading ? 'default' : 'pointer', opacity: refreshing || loading ? 0.6 : 1,
+          }}
+        >
+          <RefreshCw size={14} style={refreshing ? { animation: 'spin 1s linear infinite' } : undefined} />
+          {refreshing ? 'Đang tải giá...' : 'Tải lại giá'}
+        </button>
       </div>
 
       {/* Filter Bar */}
@@ -269,14 +187,16 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         </div>
       </div>
 
+      {error && <div style={{ color: '#dc2626', fontSize: '13px', textAlign: 'center' }}>{error}</div>}
+
       {/* Product Cards Grid: 4 Columns */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '16px' }}>
-        {refreshing ? (
+        {loading ? (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
-            Đang tải giá sản phẩm...
+            Đang tải dữ liệu sản phẩm...
           </div>
-        ) : pagedOptions.length > 0 ? (
-          pagedOptions.map((item, idx) => {
+        ) : products.length > 0 ? (
+          products.map((item, idx) => {
             const rawImgUrl = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
             const imgUrl = rawImgUrl || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
             const tag = item.option.selectionStatus ? STATUS_TAG[item.option.selectionStatus] : undefined;

@@ -68,7 +68,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
     handleMarkClosedClick, handleCloseOptionSubmit,
     handleDeleteOption,
-    refreshQuietly, refreshList,
+    refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole);
 
   // Chỉ tính lại khi requests hoặc id popup đang mở thay đổi — tránh find()+filter() mỗi lần
@@ -230,11 +230,9 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
             } />
 
             <Route path="/library" element={
-              <LibraryPage requests={requests} categories={categories} materials={materials}
+              <LibraryPage categories={categories} materials={materials}
                 currentRole={currentRole}
-                onSelectReq={handleOpenDetail}
-                totalCount={counts.closed}
-                onRefreshPrices={refreshList} refreshing={listLoading} />
+                onSelectReq={handleOpenDetail} />
             } />
 
             <Route path="/calculator" element={

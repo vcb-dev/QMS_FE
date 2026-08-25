@@ -1,5 +1,5 @@
 import React from 'react';
-import type { QuoteRequest ,DashboardPageProps} from '../types';
+import type { QuoteRequest ,DashboardPageProps, DashboardChartsResponse} from '../types';
 import { ArrowRight, Calendar } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -11,20 +11,13 @@ import { StatusPill } from '../components/StatusPill';
 import { ChartTooltip } from '../components/ChartTooltip';
 import { DistributionPieCard } from '../components/DistributionPieCard';
 import { cardStyle } from '../styles/card';
-import { fetchQuoteRequests, fetchQuoteRequestStats } from '../services/api';
+import { fetchQuoteRequests, fetchQuoteRequestStats, fetchDashboardCharts } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { SaleStatusStatsGrid } from '../components/SaleStatusStatsGrid';
 
 // Bảng màu cho biểu đồ phân bố (danh mục/chất liệu) — hằng số tĩnh, đặt ở scope file để
 // không bị cấp phát lại mỗi lần component render (tránh cảnh báo thiếu dependency ở useMemo).
 const CATEGORY_COLORS = ['#2563eb', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#0ea5e9', '#ec4899', '#84cc16'];
-
-const PRICE_RANGES = [
-  { label: '< 5tr', min: 0, max: 5_000_000 },
-  { label: '5-15tr', min: 5_000_000, max: 15_000_000 },
-  { label: '15-30tr', min: 15_000_000, max: 30_000_000 },
-  { label: '> 30tr', min: 30_000_000, max: Infinity },
-];
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   requests: initialRequests,
@@ -44,6 +37,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [apiRequests, setApiRequests] = React.useState<QuoteRequest[]>(initialRequests);
   const [loadingStats, setLoadingStats] = React.useState<boolean>(false);
   const [prevStats, setPrevStats] = React.useState<{ total: number; closeRate: number; closedRevenue: number; quotedRevenue: number } | null>(null);
+  const [charts, setCharts] = React.useState<DashboardChartsResponse | null>(null);
 
   // Kỳ trước để so sánh % — TODAY→hôm qua, THIS_WEEK→tuần trước, THIS_MONTH→tháng trước,
   // LAST_MONTH→tháng trước nữa, THIS_YEAR→năm trước. ALL không có kỳ trước để so sánh.
@@ -94,6 +88,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         setApiRequests(res.data);
       }
 
+      if (currentRole !== 'SALE') {
+        const chartsRes = await fetchDashboardCharts({ timeRange: newRange });
+        setCharts(chartsRes);
+      }
+
       if (currentRole === 'ADMIN') {
         const prevQuery = getPreviousPeriodQuery(newRange);
         if (prevQuery) {
@@ -128,174 +127,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     setCounts(initialCounts);
   }, [currentRole, initialRequests, initialCounts]);
 
-  // Helper calculation for daily / monthly timeline chart data
-  const timelineChartData = React.useMemo(() => {
-    const now = new Date();
-    const map = new Map<string, {
-      key: string;
-      label: string;
-      pending: number;
-      processing: number;
-      needMoreInfo: number;
-      quoted: number;
-      rejected: number;
-      closed: number;
-      total: number;
-      value: number;
-    }>();
-    const buckets: any[] = [];
-
-    const increment = (b: any, status: string) => {
-      b.total += 1;
-      if (status === 'PENDING') b.pending += 1;
-      else if (status === 'PROCESSING') b.processing += 1;
-      else if (status === 'NEED_MORE_INFO') b.needMoreInfo += 1;
-      else if (status === 'QUOTED') b.quoted += 1;
-      else if (status === 'REJECTED') b.rejected += 1;
-      else if (status === 'CLOSED') b.closed += 1;
-    };
-
-    if (timeRange === 'TODAY') {
-      const slots = [
-        { label: '00-03h' },
-        { label: '03-06h' },
-        { label: '06-09h' },
-        { label: '09-12h' },
-        { label: '12-15h' },
-        { label: '15-18h' },
-        { label: '18-21h' },
-        { label: '21-24h' },
-      ];
-      slots.forEach((s) => {
-        const b = { key: s.label, label: s.label, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0, total: 0, value: 0 };
-        map.set(s.label, b);
-        buckets.push(b);
-      });
-
-      apiRequests.forEach((r) => {
-        if (!r.createdAt) return;
-        const d = new Date(r.createdAt);
-        const hour = d.getHours();
-        const slotIdx = Math.min(Math.floor(hour / 3), 7);
-        const b = buckets[slotIdx];
-        if (b) increment(b, r.status);
-      });
-    } else if (timeRange === 'THIS_WEEK') {
-      const dayNames = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-      const currentDay = now.getDay();
-      const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
-      const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
-
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const key = `${yyyy}-${mm}-${dd}`;
-        const label = `${dayNames[i]} (${dd}/${mm})`;
-        const b = { key, label, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0, total: 0, value: 0 };
-        map.set(key, b);
-        buckets.push(b);
-      }
-
-      apiRequests.forEach((r) => {
-        if (!r.createdAt) return;
-        const d = new Date(r.createdAt);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const key = `${yyyy}-${mm}-${dd}`;
-        const b = map.get(key);
-        if (b) increment(b, r.status);
-      });
-    } else if (timeRange === 'THIS_MONTH' || timeRange === 'LAST_MONTH') {
-      const targetMonthDate = timeRange === 'LAST_MONTH'
-        ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
-        : new Date(now.getFullYear(), now.getMonth(), 1);
-      const year = targetMonthDate.getFullYear();
-      const month = targetMonthDate.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-      for (let i = 1; i <= daysInMonth; i++) {
-        const mm = String(month + 1).padStart(2, '0');
-        const dd = String(i).padStart(2, '0');
-        const key = `${year}-${mm}-${dd}`;
-        const label = `${dd}/${mm}`;
-        const b = { key, label, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0, total: 0, value: 0 };
-        map.set(key, b);
-        buckets.push(b);
-      }
-
-      apiRequests.forEach((r) => {
-        if (!r.createdAt) return;
-        const d = new Date(r.createdAt);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const key = `${yyyy}-${mm}-${dd}`;
-        const b = map.get(key);
-        if (b) increment(b, r.status);
-      });
-    } else if (timeRange === 'THIS_YEAR') {
-      const year = now.getFullYear();
-      for (let i = 0; i < 12; i++) {
-        const mm = String(i + 1).padStart(2, '0');
-        const key = `${year}-${mm}`;
-        const label = `Thg ${i + 1}`;
-        const b = { key, label, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0, total: 0, value: 0 };
-        map.set(key, b);
-        buckets.push(b);
-      }
-
-      apiRequests.forEach((r) => {
-        if (!r.createdAt) return;
-        const d = new Date(r.createdAt);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const key = `${yyyy}-${mm}`;
-        const b = map.get(key);
-        if (b) increment(b, r.status);
-      });
-    } else {
-      // ALL: Last 12 months
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const key = `${yyyy}-${mm}`;
-        const label = `Thg ${d.getMonth() + 1}/${yyyy.toString().slice(-2)}`;
-        const b = { key, label, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0, total: 0, value: 0 };
-        map.set(key, b);
-        buckets.push(b);
-      }
-
-      apiRequests.forEach((r) => {
-        if (!r.createdAt) return;
-        const d = new Date(r.createdAt);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const key = `${yyyy}-${mm}`;
-        const b = map.get(key);
-        if (b) increment(b, r.status);
-      });
-    }
-
-    return buckets.map((b) => {
-      let val = b.total;
-      if (chartStatusFilter === 'PENDING') val = b.pending;
-      else if (chartStatusFilter === 'PROCESSING') val = b.processing;
-      else if (chartStatusFilter === 'NEED_MORE_INFO') val = b.needMoreInfo;
-      else if (chartStatusFilter === 'QUOTED') val = b.quoted;
-      else if (chartStatusFilter === 'REJECTED') val = b.rejected;
-      else if (chartStatusFilter === 'CLOSED') val = b.closed;
-
-      return {
-        ...b,
-        value: val,
-      };
-    });
-  }, [apiRequests, timeRange, chartStatusFilter]);
-
   const getStatusColor = (status: string) =>
     STATUS_CHART_META.find((s) => s.value === status)?.color || '#2563eb';
 
@@ -305,30 +136,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const recentRequests = React.useMemo(() => {
     return apiRequests.slice(0, 5);
-  }, [apiRequests]);
-
-  // Mỗi phương án báo giá (QuoteOption) là 1 "sản phẩm" riêng — 1 đơn có nhiều phương án thì ra
-  // nhiều thẻ, giống cách LibraryPage dựng danh sách sản phẩm (không gộp về 1 thẻ/đơn như trước).
-  const completedProducts = React.useMemo(() => {
-    const items: { key: string; productName: string; price: number; images?: QuoteRequest['images'] }[] = [];
-    for (const r of apiRequests) {
-      if (r.status !== 'QUOTED' && r.status !== 'CLOSED') continue;
-      const catName = r.category?.name || '';
-      for (const o of r.options || []) {
-        if (o.quotedPrice == null) continue;
-        const matStr =
-          o.materials && o.materials.length > 0
-            ? o.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
-            : o.materialName || '';
-        items.push({
-          key: `${r.id}:${o.id || matStr}`,
-          productName: `${catName} ${matStr}`.trim() || r.productName || 'Sản phẩm chế tác',
-          price: Number(o.quotedPrice),
-          images: r.images,
-        });
-      }
-    }
-    return items;
   }, [apiRequests]);
 
   // Doanh thu (Admin Analytics) — tổng tiền đơn đã chốt & tổng tiền đơn đã báo giá (chưa chốt)
@@ -363,6 +170,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     () => (prevStats ? { total: prevStats.total, closeRate: prevStats.closeRate } : null),
     [prevStats]
   );
+
+  // Biểu đồ cột Timeline — backend trả về từng bucket với đủ số liệu theo trạng thái
+  // (pending/processing/needMoreInfo/quoted/rejected/closed/total) nhưng không có field
+  // "value" chung. Khi người dùng lọc theo 1 trạng thái cụ thể, Bar dataKey="value" cần
+  // field này được tính từ chartStatusFilter — nếu không bar sẽ luôn rỗng/bằng 0.
+  const timelineChartData = React.useMemo(() => {
+    return (charts?.timeline || []).map((b) => {
+      let val = b.total;
+      if (chartStatusFilter === 'PENDING') val = b.pending;
+      else if (chartStatusFilter === 'PROCESSING') val = b.processing;
+      else if (chartStatusFilter === 'NEED_MORE_INFO') val = b.needMoreInfo;
+      else if (chartStatusFilter === 'QUOTED') val = b.quoted;
+      else if (chartStatusFilter === 'REJECTED') val = b.rejected;
+      else if (chartStatusFilter === 'CLOSED') val = b.closed;
+      return { ...b, value: val };
+    });
+  }, [charts, chartStatusFilter]);
 
   // % thay đổi so với kỳ trước — null nếu không có kỳ trước hoặc kỳ trước = 0 và kỳ này cũng = 0
   const pctChange = (curr: number, prev: number | undefined): number | 'NEW' | null => {
@@ -401,52 +225,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       </span>
     );
   };
-
-  // 1.1-1.2 Biểu đồ theo Sale + phân bố sản phẩm (danh mục/chất liệu/khoảng giá) — Admin Analytics.
-  // Gộp chung 1 lượt duyệt apiRequests thay vì 4 useMemo riêng, mỗi cái tự forEach lại toàn bộ mảng.
-  const { saleStatsData, categoryDistribution, materialDistribution, priceRangeDistribution } = React.useMemo(() => {
-    const saleMap = new Map<string, { name: string; total: number; closed: number }>();
-    const categoryMap = new Map<string, number>();
-    const materialMap = new Map<string, number>();
-    const priceBuckets = PRICE_RANGES.map((r) => ({ label: r.label, value: 0 }));
-
-    apiRequests.forEach((r) => {
-      const saleName = r.requester?.name || r.createdBy?.name || 'Chưa rõ';
-      if (!saleMap.has(saleName)) saleMap.set(saleName, { name: saleName, total: 0, closed: 0 });
-      const saleBucket = saleMap.get(saleName)!;
-      saleBucket.total += 1;
-      if (r.status === 'CLOSED') saleBucket.closed += 1;
-
-      const catName = r.category?.name || 'Chưa phân loại';
-      categoryMap.set(catName, (categoryMap.get(catName) || 0) + 1);
-
-      const matNames = r.materials && r.materials.length > 0
-        ? r.materials.map((m) => m.name)
-        : r.material ? [r.material.name] : ['Chưa rõ'];
-      matNames.forEach((name) => materialMap.set(name, (materialMap.get(name) || 0) + 1));
-
-      const price = r.quotedPrice ? Number(r.quotedPrice) : null;
-      if (price !== null && price > 0) {
-        const idx = PRICE_RANGES.findIndex((rg) => price >= rg.min && price < rg.max);
-        if (idx >= 0) priceBuckets[idx].value += 1;
-      }
-    });
-
-    return {
-      saleStatsData: Array.from(saleMap.values())
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 8),
-      categoryDistribution: Array.from(categoryMap.entries())
-        .map(([name, value], idx) => ({ name, value, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 8),
-      materialDistribution: Array.from(materialMap.entries())
-        .map(([name, value], idx) => ({ name, value, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 8),
-      priceRangeDistribution: priceBuckets,
-    };
-  }, [apiRequests]);
 
   const STATUS_PILL_LABELS: Record<string, string> = {
     PENDING: 'MỚI TẠO',
@@ -787,16 +565,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       })()}
 
       {/* 1.1 Biểu đồ theo Sale — chỉ Admin xem, số yêu cầu tạo & đã chốt của từng Sale */}
-      {currentRole === 'ADMIN' && saleStatsData.length > 0 && (
+      {currentRole === 'ADMIN' && (charts?.saleStats || []).length > 0 && (
         <div style={cardStyle}>
           <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
             Hiệu suất theo Sale
           </h2>
           <span style={{ fontSize: '11px', color: '#64748b' }}>Số yêu cầu đã tạo và đã chốt của từng Sale (top 8)</span>
 
-          <ResponsiveContainer width="100%" height={Math.max(180, saleStatsData.length * 42)}>
+          <ResponsiveContainer width="100%" height={Math.max(180, (charts?.saleStats || []).length * 42)}>
             <BarChart
-              data={saleStatsData}
+              data={(charts?.saleStats || [])}
               layout="vertical"
               margin={{ top: 14, right: 24, left: 8, bottom: 4 }}
               barCategoryGap="24%"
@@ -837,9 +615,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 1.2 Biểu đồ phân bố sản phẩm — chỉ Admin xem, theo danh mục & khoảng giá */}
       {currentRole === 'ADMIN' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-          <DistributionPieCard title="Phân bố theo danh mục" subtitle="Top 8 danh mục nhiều yêu cầu nhất" data={categoryDistribution} />
+          <DistributionPieCard title="Phân bố theo danh mục" subtitle="Top 8 danh mục nhiều yêu cầu nhất" data={(charts?.categoryDistribution || []).map((d, idx) => ({ ...d, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))} />
 
-          <DistributionPieCard title="Phân bố theo chất liệu" subtitle="Top 8 chất liệu nhiều yêu cầu nhất" data={materialDistribution} />
+          <DistributionPieCard title="Phân bố theo chất liệu" subtitle="Top 8 chất liệu nhiều yêu cầu nhất" data={(charts?.materialDistribution || []).map((d, idx) => ({ ...d, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))} />
 
           {/* Phân bố theo khoảng giá */}
           <div style={cardStyle}>
@@ -849,7 +627,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span style={{ fontSize: '11px', color: '#64748b' }}>Số đơn đã báo giá theo từng khoảng</span>
 
             <ResponsiveContainer width="100%" height={190}>
-              <BarChart data={priceRangeDistribution} margin={{ top: 18, right: 10, left: -20, bottom: 4 }} barCategoryGap="30%">
+              <BarChart data={charts?.priceRangeDistribution || []} margin={{ top: 18, right: 10, left: -20, bottom: 4 }} barCategoryGap="30%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 10.5, fill: '#cbd5e1' }} axisLine={false} tickLine={false} />
@@ -996,8 +774,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {completedProducts.length > 0 ? (
-              completedProducts.slice(0, 4).map((item) => {
+            {(charts?.featuredProducts || []).length > 0 ? (
+              (charts?.featuredProducts || []).map((item) => {
                 const rawImg = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
                 const imgUrl = rawImg || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                 const formattedPrice = item.price > 0 ? formatCurrency(item.price) : '---';
