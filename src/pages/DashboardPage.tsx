@@ -88,10 +88,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         setApiRequests(res.data);
       }
 
-      if (currentRole !== 'SALE') {
-        const chartsRes = await fetchDashboardCharts({ timeRange: newRange });
-        setCharts(chartsRes);
-      }
+      const chartsRes = await fetchDashboardCharts({ timeRange: newRange });
+      setCharts(chartsRes);
 
       if (currentRole === 'ADMIN') {
         const prevQuery = getPreviousPeriodQuery(newRange);
@@ -126,6 +124,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     setApiRequests(initialRequests);
     setCounts(initialCounts);
   }, [currentRole, initialRequests, initialCounts]);
+
+  // SALE bỏ qua handleTimeRangeChange ở effect trên (không có dropdown thời gian) nên charts
+  // (Sản phẩm nổi bật, phân bố danh mục/chất liệu...) không bao giờ được fetch nếu thiếu đoạn
+  // này — tự fetch riêng 1 lần lúc mount với kỳ mặc định THIS_MONTH.
+  React.useEffect(() => {
+    if (currentRole !== 'SALE') return;
+    fetchDashboardCharts({ timeRange: 'THIS_MONTH' })
+      .then(setCharts)
+      .catch((err) => console.error('Error fetching dashboard charts for SALE:', err));
+  }, [currentRole]);
 
   const getStatusColor = (status: string) =>
     STATUS_CHART_META.find((s) => s.value === status)?.color || '#2563eb';

@@ -1,23 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ArrowRight, Gem, Weight } from 'lucide-react';
-import type { ProductSpecModalProps } from '../types';
+import { X, History, Coins } from 'lucide-react';
+import type { ProductSpecModalProps, QuoteHistoryEntry } from '../types';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { ImageLightbox } from './ImageLightbox';
-import { displayPrice } from '../utils/quoteOption';
+import { formatPriceRange } from '../utils/quoteOption';
+import { fetchLibraryProductHistory } from '../services/api';
 
+const HISTORY_PAGE_SIZE = 20;
+
+// Chỉ phương án khách CHỐT THẬT (CLOSED) mới gắn tag. SELECTED ("Sale đang nghiêng về") không gắn.
 const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> = {
   CLOSED: { label: 'Đã chốt', bg: '#dcfce7', color: '#15803d' },
-  SELECTED: { label: 'Đang chọn', bg: '#e2e8f0', color: '#475569' },
 };
 
-export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose, onViewRequest }) => {
+const fmtDate = (s?: string | null) =>
+  s ? new Date(s).toLocaleDateString('vi-VN') : '—';
+
+export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose, filters }) => {
   const images = item.images && item.images.length > 0 ? item.images : [];
   const [activeIdx, setActiveIdx] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const mainImgUrl = images[activeIdx]?.imageUrl || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
-  const tag = item.option.selectionStatus ? STATUS_TAG[item.option.selectionStatus] : undefined;
+
+  // Lịch sử báo giá — KHÔNG gửi kèm list nữa (nhóm có thể vài nghìn đơn). Lazy-load theo trang khi
+  // mở modal; nút "Tải thêm" tải trang tiếp theo. Truyền cùng bộ lọc ngoài để khớp view đang lọc.
+  const [history, setHistory] = useState<QuoteHistoryEntry[]>([]);
+  const [histPage, setHistPage] = useState(1);
+  const [histTotalPages, setHistTotalPages] = useState(1);
+  const [histLoading, setHistLoading] = useState(false);
+  const [selIdx, setSelIdx] = useState(0);
+  const selected = history[selIdx] ?? history[0];
+
+  useEffect(() => {
+    if (!item.groupKey) return;
+    let cancelled = false;
+    setHistLoading(true);
+    fetchLibraryProductHistory({
+      groupKey: item.groupKey,
+      page: histPage,
+      limit: HISTORY_PAGE_SIZE,
+      ...(filters || {}),
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setHistory((prev) =>
+          histPage === 1 ? res.data : [...prev, ...res.data],
+        );
+        setHistTotalPages(res.meta.totalPages);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setHistLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // filters cố ý KHÔNG vào deps — modal mở lại (key theo item) là fetch mới; filters chỉ đọc 1 lần.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.groupKey, histPage]);
 
   return createPortal(
     <>
@@ -26,9 +68,6 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
         <div className="modal-header">
           <div style={{ minWidth: 0 }}>
             <h2 style={{ fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.productName}</h2>
-            {/* <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginTop: '2px' }}>
-              {item.code} · {item.option.optionName}
-            </div> */}
           </div>
           <button
             onClick={onClose}
@@ -79,74 +118,129 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
 
           {/* Cột thông tin */}
           <div className="product-spec-info-col">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--text-main)' }}>
-                {formatCurrency(displayPrice(item.option))}
-              </div>
-              {tag && (
-                <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '10px', background: tag.bg, color: tag.color, flexShrink: 0 }}>
-                  {tag.label}
-                </span>
-              )}
-            </div>
-
-            {/* Chất liệu + Đá quý — cùng 1 hàng, kẻ dọc giữa 2 cột cho dễ phân biệt */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={{ paddingRight: '16px', borderRight: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '7px', letterSpacing: '0.3px' }}>
-                  <Weight size={13} /> CHẤT LIỆU
+            {/* Trái: lịch sử báo giá (mới → cũ) · Phải: giá các phương án của đơn đang chọn */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '16px' }}>
+              <div style={{ paddingRight: '16px', borderRight: '1px solid var(--border-color)', minWidth: 0 }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', letterSpacing: '0.3px' }}>
+                  <History size={13} /> LỊCH SỬ BÁO GIÁ
                 </div>
-                {item.option.materials && item.option.materials.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {item.option.materials.map((m, idx) => (
-                      <div key={m.materialId || idx} style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                        {m.materialName || m.material?.name || 'Chưa rõ'} — <strong>{m.weightChi ?? item.option.weightChi ?? 0} chỉ</strong>
-                      </div>
-                    ))}
+                {history.length === 0 ? (
+                  <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>
+                    {histLoading ? 'Đang tải lịch sử…' : 'Chưa có lịch sử báo giá'}
                   </div>
                 ) : (
-                  <div style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                    {item.matStr}{item.weightDisplay ? ` — ${item.weightDisplay}` : ''}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {history.map((h, idx) => {
+                      const active = idx === selIdx;
+                      return (
+                        <button
+                          key={h.requestId}
+                          type="button"
+                          onClick={() => setSelIdx(idx)}
+                          style={{
+                            textAlign: 'left',
+                            background: active ? 'var(--primary-soft, #eef2ff)' : 'transparent',
+                            border: active ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+                            <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                              {h.code}
+                            </span>
+                            <span style={{ fontSize: '12.5px', fontWeight: 800, color: 'var(--text-main)', textAlign: 'right', flexShrink: 0 }}>
+                              {fmtDate(h.quotedDate ?? h.quotedAt)}
+                              {h.weightDisplay ? ` · ${h.weightDisplay}` : ''}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            Sale: <strong style={{ color: 'var(--text-main)' }}>{h.saleName || '—'}</strong>
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                            Báo giá: <strong style={{ color: 'var(--text-main)' }}>{h.pricerName || '—'}</strong>
+                          </div>
+                          <div
+                            title={item.stoneDisplay || 'Không đính đá'}
+                            style={{ fontSize: '11.5px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          >
+                            Đá: <strong style={{ color: 'var(--text-main)' }}>{item.stoneDisplay || 'Không đính đá'}</strong>
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', textAlign: 'right' }}>
+                            Đã báo: <strong style={{ color: 'var(--text-main)' }}>{formatPriceRange(h.priceMin, h.priceMax, h.options[0]?.price ?? 0)}</strong>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {histPage < histTotalPages && (
+                      <button
+                        type="button"
+                        onClick={() => setHistPage((p) => p + 1)}
+                        disabled={histLoading}
+                        style={{
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          border: '1px dashed var(--border-color)',
+                          background: 'transparent',
+                          color: 'var(--text-muted)',
+                          cursor: histLoading ? 'default' : 'pointer',
+                        }}
+                      >
+                        {histLoading ? 'Đang tải…' : 'Tải thêm lịch sử'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '7px', letterSpacing: '0.3px' }}>
-                  <Gem size={13} /> ĐÁ QUÝ
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', letterSpacing: '0.3px' }}>
+                  <Coins size={13} /> GIÁ PHƯƠNG ÁN
                 </div>
-                {item.option.stones && item.option.stones.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {item.option.stones.map((s, idx) => (
-                      <div key={s.stoneId || idx} style={{ fontSize: '13px', color: 'var(--text-main)' }}>
-                        <strong>{s.quantity} viên</strong> {s.stoneName || s.stone?.name || 'đá'}
-                      </div>
-                    ))}
+                {selected && selected.options.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selected.options.map((o, idx) => {
+                      const oTag = o.selectionStatus ? STATUS_TAG[o.selectionStatus] : undefined;
+                      return (
+                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingBottom: '6px', borderBottom: idx < selected.options.length - 1 ? '1px dashed var(--border-color)' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {o.optionName}
+                            </span>
+                            {oTag && (
+                              <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '1px 6px', borderRadius: '8px', background: oTag.bg, color: oTag.color, flexShrink: 0 }}>
+                                {oTag.label}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '14px', fontWeight: 900, color: 'var(--text-main)' }}>
+                            {formatCurrency(o.price)}
+                          </div>
+                          {o.livePrice != null && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                              Hôm nay ~ <strong style={{ color: (o.livePriceDeltaPct ?? 0) > 0 ? '#15803d' : (o.livePriceDeltaPct ?? 0) < 0 ? '#b91c1c' : 'var(--text-main)' }}>
+                                {formatCurrency(o.livePrice)}
+                              </strong>
+                              {o.livePriceDeltaPct != null && o.livePriceDeltaPct !== 0 && (
+                                <span style={{ color: o.livePriceDeltaPct > 0 ? '#15803d' : '#b91c1c', fontWeight: 700 }}>
+                                  {' '}({o.livePriceDeltaPct > 0 ? '+' : ''}{o.livePriceDeltaPct}%)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>{item.stoneDisplay}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>Không có phương án</div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" className="tool-btn" onClick={onClose}>Đóng</button>
-          <button
-            type="button"
-            onClick={onViewRequest}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              padding: '7px 14px', borderRadius: '8px', border: 'none',
-              background: 'var(--primary)', color: 'white',
-              fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--primary-dark)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--primary)')}
-          >
-            Xem đơn gốc <ArrowRight size={14} />
-          </button>
         </div>
       </div>
     </div>

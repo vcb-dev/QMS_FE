@@ -1,16 +1,66 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Users, TrendingUp, ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react';
-import { fetchCustomerStats, fetchQuoteRequests } from '../services/api';
-import type { CustomerStatRow, SortMode, QuoteRequest } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { Search, Users, TrendingUp, ChevronDown, ChevronUp, MapPin, Phone, Calendar, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { fetchCustomerStats, fetchCustomerMonthComparison, fetchQuoteRequests, fetchProvinces, getAllUsersApi } from '../services/api';
+import type { CustomerStatRow, SortMode, QuoteRequest, StaffUser, CustomerMonthComparisonResponse } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { Pagination } from '../components/Pagination';
 import { STATUS_BADGE_META as STATUS_META } from '../constants';
 import { StatCard } from '../components/StatCard';
 
+// Cùng phong cách popover "Bộ lọc" như FilterBar.tsx (trang Danh Sách Yêu Cầu) — style trùng tên
+// nhưng khai báo riêng ở đây vì FilterBar không export ra ngoài.
+const selectArrowStyle: React.CSSProperties = {
+  position: 'absolute',
+  right: '10px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  color: '#64748b',
+  pointerEvents: 'none',
+};
+
+const selectStyle: React.CSSProperties = {
+  appearance: 'none',
+  WebkitAppearance: 'none',
+  MozAppearance: 'none',
+  width: '100%',
+  background: '#f8fafc',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  padding: '8px 30px 8px 12px',
+  fontSize: '12.5px',
+  fontWeight: 600,
+  color: '#334155',
+  outline: 'none',
+  cursor: 'pointer',
+  boxSizing: 'border-box',
+};
+
+const dateInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: '#f8fafc',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  padding: '7px 10px 7px 32px',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#334155',
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const popoverLabelStyle: React.CSSProperties = {
+  fontSize: '10.5px',
+  fontWeight: 800,
+  color: '#94a3b8',
+  textTransform: 'uppercase',
+  letterSpacing: '0.4px',
+  marginBottom: '5px',
+  display: 'block',
+};
+
 export const CustomersPage: React.FC = () => {
   const [rows, setRows] = useState<CustomerStatRow[]>([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [totalClosedValueAll, setTotalClosedValueAll] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,10 +70,55 @@ export const CustomersPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(12);
   const [loading, setLoading] = useState(false);
 
+  // Filter thêm: tỉnh/thành, nhân viên sale phụ trách (requesterId), mốc thời gian đơn gần nhất —
+  // mặc định "Tháng này" để khớp với card so sánh KPI tháng này/tháng trước ở đầu trang.
+  const [provinces, setProvinces] = useState<{ id: string; name: string }[]>([]);
+  const [saleStaff, setSaleStaff] = useState<StaffUser[]>([]);
+  const [provinceFilter, setProvinceFilter] = useState('ALL');
+  const [requesterFilter, setRequesterFilter] = useState('ALL');
+  const [timeRangeFilter, setTimeRangeFilter] = useState('THIS_MONTH');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // So sánh KPI tháng này/tháng trước cho 2 card đầu trang — độc lập với bộ lọc bảng bên dưới,
+  // chỉ theo tỉnh/thành + nhân viên sale (nếu có chọn).
+  const [monthComparison, setMonthComparison] = useState<CustomerMonthComparisonResponse | null>(null);
+
+  useEffect(() => {
+    fetchCustomerMonthComparison({
+      provinceId: provinceFilter !== 'ALL' ? provinceFilter : undefined,
+      requesterId: requesterFilter !== 'ALL' ? requesterFilter : undefined,
+    })
+      .then(setMonthComparison)
+      .catch(() => setMonthComparison(null));
+  }, [provinceFilter, requesterFilter]);
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [panelOpen]);
+
   // Lazy cache for orders per customer
   const [customerOrders, setCustomerOrders] = useState<
     Record<string, { loading: boolean; data: QuoteRequest[]; error?: string }>
   >({});
+
+  useEffect(() => {
+    fetchProvinces().then((data) => {
+      if (Array.isArray(data)) setProvinces(data);
+    });
+    getAllUsersApi()
+      .then((users) => setSaleStaff(users.filter((u) => u.role === 'SALE' && u.isActive)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchTerm(searchInput), 300);
@@ -32,25 +127,46 @@ export const CustomersPage: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, sortMode]);
+  }, [searchTerm, sortMode, provinceFilter, requesterFilter, timeRangeFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     setLoading(true);
     fetchCustomerStats({
       search: searchTerm || undefined,
       sortMode,
+      provinceId: provinceFilter !== 'ALL' ? provinceFilter : undefined,
+      requesterId: requesterFilter !== 'ALL' ? requesterFilter : undefined,
+      timeRange: timeRangeFilter !== 'ALL' ? timeRangeFilter : undefined,
+      startDate: startDateFilter || undefined,
+      endDate: endDateFilter || undefined,
       page: currentPage,
       limit: pageSize,
     })
       .then((res) => {
         setRows(res.data);
         setTotalItems(res.meta.total);
-        setTotalClosedValueAll(res.totalClosedValueAll);
         setError(null);
       })
       .catch((err) => setError(err.message || 'Không thể tải dữ liệu khách hàng'))
       .finally(() => setLoading(false));
-  }, [searchTerm, sortMode, currentPage, pageSize]);
+  }, [searchTerm, sortMode, provinceFilter, requesterFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize]);
+
+  const panelFilterCount =
+    (provinceFilter !== 'ALL' ? 1 : 0) +
+    (requesterFilter !== 'ALL' ? 1 : 0) +
+    (timeRangeFilter !== 'ALL' ? 1 : 0) +
+    (startDateFilter ? 1 : 0) +
+    (endDateFilter ? 1 : 0);
+
+  const isExtraFiltered = panelFilterCount > 0;
+
+  const handleResetExtraFilters = () => {
+    setProvinceFilter('ALL');
+    setRequesterFilter('ALL');
+    setTimeRangeFilter('ALL');
+    setStartDateFilter('');
+    setEndDateFilter('');
+  };
 
   const handleToggleExpand = (customerId: string) => {
     if (expandedId === customerId) {
@@ -100,24 +216,193 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <StatCard icon={<Users size={14} />} label="Tổng khách hàng" value={totalItems} />
-        <StatCard icon={<TrendingUp size={14} />} label="Tổng giá trị đã chốt" value={formatCurrency(totalClosedValueAll)} tone="success" />
+        <StatCard
+          icon={<Users size={14} />}
+          label="Khách hàng hoạt động (tháng này)"
+          value={monthComparison?.current.customerCount ?? 0}
+          deltaPct={monthComparison?.customerCountDeltaPct}
+        />
+        <StatCard
+          icon={<TrendingUp size={14} />}
+          label="Giá trị đã chốt (tháng này)"
+          value={formatCurrency(monthComparison?.current.closedValue ?? 0)}
+          tone="success"
+          deltaPct={monthComparison?.closedValueDeltaPct}
+        />
       </div>
 
       <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Tìm theo tên hoặc SĐT..."
-              style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', outline: 'none', boxSizing: 'border-box' }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Tìm theo tên hoặc SĐT..."
+                style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Nút Bộ Lọc — gom tỉnh/thành, nhân viên sale, mốc thời gian, giống FilterBar.tsx ở trang Danh Sách Yêu Cầu */}
+            <div style={{ position: 'relative' }} ref={panelRef}>
+              <button
+                type="button"
+                onClick={() => setPanelOpen((v) => !v)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: panelFilterCount > 0 ? '#0f172a' : '#f8fafc',
+                  color: panelFilterCount > 0 ? '#ffffff' : '#334155',
+                  border: panelFilterCount > 0 ? '1px solid #0f172a' : '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <SlidersHorizontal size={14} />
+                Bộ lọc
+                {panelFilterCount > 0 && (
+                  <span style={{
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    borderRadius: '999px',
+                    fontSize: '10.5px',
+                    fontWeight: 900,
+                    padding: '1px 6px',
+                    minWidth: '16px',
+                    textAlign: 'center',
+                  }}>
+                    {panelFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {panelOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  zIndex: 20,
+                  width: '300px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 32px rgba(15, 23, 42, 0.16)',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                }}>
+                  <div>
+                    <label style={popoverLabelStyle}>Tỉnh/thành</label>
+                    <div style={{ position: 'relative' }}>
+                      <select value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)} style={selectStyle}>
+                        <option value="ALL">Tất cả tỉnh/thành</option>
+                        {provinces.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} style={selectArrowStyle} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={popoverLabelStyle}>Nhân viên sale phụ trách</label>
+                    <div style={{ position: 'relative' }}>
+                      <select value={requesterFilter} onChange={(e) => setRequesterFilter(e.target.value)} style={selectStyle}>
+                        <option value="ALL">Tất cả nhân viên sale</option>
+                        {saleStaff.map((u) => (
+                          <option key={u.id} value={u.id}>{u.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} style={selectArrowStyle} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={popoverLabelStyle}>Lọc nhanh theo thời gian</label>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {([
+                        { value: 'TODAY', label: 'Hôm nay' },
+                        { value: 'THIS_WEEK', label: 'Tuần này' },
+                        { value: 'THIS_MONTH', label: 'Tháng này' },
+                        { value: 'ALL', label: 'Tất cả' },
+                      ] as { value: string; label: string }[]).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => { setTimeRangeFilter(opt.value); setStartDateFilter(''); setEndDateFilter(''); }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#0f172a' : '#f1f5f9',
+                            color: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#ffffff' : '#64748b',
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={popoverLabelStyle}>Khoảng ngày tùy chọn</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ position: 'relative' }}>
+                        <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                        <input
+                          type="date"
+                          value={startDateFilter}
+                          max={endDateFilter || undefined}
+                          onChange={(e) => { setStartDateFilter(e.target.value); setTimeRangeFilter('ALL'); }}
+                          style={dateInputStyle}
+                        />
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                        <input
+                          type="date"
+                          value={endDateFilter}
+                          min={startDateFilter || undefined}
+                          onChange={(e) => { setEndDateFilter(e.target.value); setTimeRangeFilter('ALL'); }}
+                          style={dateInputStyle}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Xóa lọc — cùng phía với nút Bộ lọc */}
+            <button
+              type="button"
+              onClick={handleResetExtraFilters}
+              disabled={!isExtraFiltered}
+              title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                background: isExtraFiltered ? '#fee2e2' : '#f8fafc',
+                color: isExtraFiltered ? '#b91c1c' : '#cbd5e1',
+                border: isExtraFiltered ? '1px solid #fca5a5' : '1px solid #e2e8f0',
+                borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: 700,
+                cursor: isExtraFiltered ? 'pointer' : 'not-allowed', opacity: isExtraFiltered ? 1 : 0.6,
+              }}
+            >
+              <RotateCcw size={13} /> Xóa bộ lọc
+            </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {([
               { key: 'TOP_SPEND', label: 'Chi tiêu nhiều nhất' },
               { key: 'MOST_ORDERS', label: 'Nhiều đơn nhất' },
@@ -198,9 +483,10 @@ export const CustomersPage: React.FC = () => {
                             .map((o) => {
                               const meta = STATUS_META[o.status] || { label: o.status, color: '#475569', bg: '#f1f5f9' };
                               return (
-                                <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '110px 1.8fr 1fr 1fr 1fr', gap: '10px', alignItems: 'center', fontSize: '12px', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                                <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '110px 1.6fr 1fr 0.9fr 1fr 1fr', gap: '10px', alignItems: 'center', fontSize: '12px', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
                                   <span style={{ fontFamily: 'monospace', color: '#64748b' }}>{o.code || o.id}</span>
                                   <span style={{ color: '#334155', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.productName}</span>
+                                  <span style={{ color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.requester?.name || undefined}>{o.requester?.name || 'Chưa gán'}</span>
                                   <span style={{ color: '#64748b' }}>{o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '---'}</span>
                                   <span
                                     style={{

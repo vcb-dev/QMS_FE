@@ -16,7 +16,10 @@ import {
   deleteQuoteOption,
 } from '../services/api';
 
-export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
+// `listDataEnabled=false` (khi đang ở trang KHÔNG đọc `requests[]` — Thư viện/Máy tính giá/Nhân
+// viên/Khách hàng/Cấu hình giá): vẫn fetch để lấy `counts` cho Sidebar nhưng kéo bản NHẸ (limit 1
+// + lite) thay vì hydrate 8 dòng kèm option/chất liệu/đá rồi vứt.
+export function useQuoteRequests(currentUser: User | null, currentRole: Role, listDataEnabled: boolean = true) {
   // Multi-Filter State
   const [currentFilter, setCurrentFilter] = useState<string>('OVERVIEW');
   const [statusSubFilter, setStatusSubFilter] = useState<string>('ALL');
@@ -33,7 +36,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(8);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [serverTotalPages, setServerTotalPages] = useState<number>(1);
   const [counts, setCounts] = useState<StatusCounts>({
@@ -80,8 +83,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
   const [listLoading, setListLoading] = useState<boolean>(Boolean(currentUser));
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
-  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked });
-  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked };
+  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
+  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
   // Đếm request để bỏ qua response trả về trễ (race condition khi chuyển tab/lọc liên tục)
   const requestIdRef = useRef(0);
@@ -99,8 +102,14 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
   // 2. Load Quote Requests dùng ref để đọc state mới nhất
   const loadData = async (showLoading = true) => {
-    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked } = filterRef.current;
+    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
     if (!currentUser) return;
+
+    // Trang KHÔNG đọc requests[] (Cấu hình giá / Thư viện / Nhân viên / Khách hàng): chỉ cần
+    // `counts` cho Sidebar, mà counts không đổi khi chỉ xem sang trang khác. Bỏ qua fetch trừ khi
+    // needCountsRef bật (lần đầu, hoặc sau mutation tạo/duyệt/chốt đơn) — tiết kiệm ~0.5-1s mỗi lần
+    // điều hướng tới các trang này (BE `findAll` vẫn chạy groupBy + count dù limit=1).
+    if (!listDataEnabled && !needCountsRef.current) return;
 
     const myRequestId = ++requestIdRef.current;
 
@@ -121,10 +130,11 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
 
       const includeCounts = needCountsRef.current;
       needCountsRef.current = false; // Reset sau lần đầu
-      const effectiveLimit = currentFilter === 'LIBRARY' ? 8 : pageSize;
+      // Trang không đọc requests[]: chỉ cần counts -> kéo 1 dòng + lite, khỏi hydrate cả trang.
+      const effectiveLimit = !listDataEnabled ? 1 : currentFilter === 'LIBRARY' ? 8 : pageSize;
 
       const quoteRes = await fetchQuoteRequests({
-        page: currentFilter === 'LIBRARY' ? 1 : currentPage,
+        page: currentFilter === 'LIBRARY' || !listDataEnabled ? 1 : currentPage,
         limit: effectiveLimit,
         status: targetStatus,
         search: searchTerm,
@@ -136,6 +146,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
         endDate: endDateFilter || undefined,
         includeCounts,
         includeLocked,
+        lite: !listDataEnabled ? true : undefined,
         withLivePrice: currentFilter === 'LIBRARY',
       });
 
@@ -145,12 +156,16 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
       const items: QuoteRequest[] = quoteRes.data || [];
       const meta = quoteRes.meta || {};
 
-      setRequests(items);
+      // Trang không đọc requests[]: chỉ lấy counts/tổng cho Sidebar, KHÔNG đụng requests/selectedId
+      // — giữ nguyên list thật đã tải ở trang Danh Sách để quay lại / mở modal không bị rỗng.
+      if (listDataEnabled) {
+        setRequests(items);
+      }
       setTotalRecords(meta.total || items.length);
       setServerTotalPages(meta.totalPages || 1);
       if (meta.counts) {
         setCounts(meta.counts);
-      } else if (items) {
+      } else if (listDataEnabled && items) {
         const pending = items.filter((r) => r.status === 'PENDING').length;
         const processing = items.filter((r) => r.status === 'PROCESSING').length;
         const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
@@ -169,7 +184,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
         });
       }
 
-      if (items.length > 0) {
+      if (listDataEnabled && items.length > 0) {
         setSelectedId((prevId) => {
           if (prevId && items.some((item) => item.id === prevId || item.code === prevId)) {
             return prevId;
@@ -219,6 +234,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role) {
     startDateFilter,
     endDateFilter,
     includeLocked,
+    listDataEnabled,
   ]);
 
   useEffect(() => {

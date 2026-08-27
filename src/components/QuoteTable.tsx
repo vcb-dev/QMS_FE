@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { Edit, Inbox, DollarSign, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, Trash2, X, Layers } from 'lucide-react';
+import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X } from 'lucide-react';
 import { formatCurrency, formatDuration as formatDurationMs } from '../utils/currency';
 import { STATUS_BADGE_META } from '../constants';
 
@@ -18,98 +18,11 @@ type QuoteTableProps = Pick<
   | 'onPricing'
   | 'onReject'
   | 'onResubmit'
-  | 'onDelete'
   | 'onMarkClosed'
-  | 'onManageOptions'
 > & {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onReturn?: (id: string) => void;
-};
-
-const actionBtnStyle: React.CSSProperties = { padding: '5px 10px', fontSize: '11.5px', fontWeight: 700, border: 'none', borderRadius: '8px' };
-
-// Nút hành động ORDER/ADMIN cho 1 dòng yêu cầu — 2 khối trước đây gần như byte-identical (Tiếp
-// nhận/Báo Giá/Quản Lý PA giống hệt nhau), ADMIN chỉ khác ở chỗ luôn có Sửa+Xóa và không bao giờ
-// khóa (ORDER thì khóa khi trạng thái không phải PENDING/PROCESSING).
-const RequestActionButtons: React.FC<{
-  r: QuoteRequest;
-  role: 'ORDER' | 'ADMIN';
-  pricedOptionsCount: number;
-  onAccept: (id: string, version: number) => void;
-  onPricing: (id: string) => void;
-  onManageOptions?: (id: string) => void;
-  onEdit: (req: QuoteRequest) => void;
-  onDelete?: (id: string) => void;
-}> = ({ r, role, pricedOptionsCount, onAccept, onPricing, onManageOptions, onEdit, onDelete }) => {
-  const acceptBtn = (
-    <button
-      className="tool-btn"
-      style={{ ...actionBtnStyle, background: '#f59e0b', color: 'white' }}
-      onClick={(e) => { e.stopPropagation(); onAccept(r.id, r.version); }}
-    >
-      <Inbox size={12} /> Tiếp nhận
-    </button>
-  );
-
-  const pricingBtn = (
-    <button
-      className="tool-btn"
-      style={{ ...actionBtnStyle, background: '#10b981', color: 'white' }}
-      onClick={(e) => { e.stopPropagation(); onPricing(r.id); }}
-    >
-      <DollarSign size={12} /> Báo Giá
-    </button>
-  );
-
-  const manageBtn = r.status === 'PROCESSING' && onManageOptions && pricedOptionsCount > 1 && (
-    <button
-      className="tool-btn"
-      title="Xóa bớt phương án giá nháp không cần dùng"
-      style={{ ...actionBtnStyle, background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1' }}
-      onClick={(e) => { e.stopPropagation(); onManageOptions(r.id); }}
-    >
-      <Layers size={12} /> Quản Lý PA ({pricedOptionsCount})
-    </button>
-  );
-
-  if (role === 'ORDER') {
-    return (
-      <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {r.status === 'PENDING' ? acceptBtn : r.status === 'PROCESSING' ? (
-          <>
-            {pricingBtn}
-            {manageBtn}
-          </>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: 'inline-flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-      {r.status === 'PENDING' && acceptBtn}
-      {r.status === 'PROCESSING' && pricingBtn}
-      {manageBtn}
-      <button
-        className="tool-btn"
-        style={{ ...actionBtnStyle, background: '#2563eb', color: 'white' }}
-        onClick={(e) => { e.stopPropagation(); onEdit(r); }}
-      >
-        <Edit size={12} /> Sửa
-      </button>
-      <button
-        className="tool-btn"
-        style={{ ...actionBtnStyle, background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (confirm(`Xóa hẳn yêu cầu ${r.code || r.id}? Không thể hoàn tác.`)) onDelete?.(r.id);
-        }}
-      >
-        <Trash2 size={12} /> Xóa
-      </button>
-    </div>
-  );
 };
 
 export const QuoteTable: React.FC<QuoteTableProps> = ({
@@ -124,9 +37,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onReject,
   onReturn,
   onResubmit,
-  onDelete,
   onMarkClosed,
-  onManageOptions,
 }) => {
   // Ảnh sản phẩm đang bấm xem zoom — null = không mở lightbox
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -202,7 +113,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     }
 
     return (
-      <div style={{ fontSize: '11px', lineHeight: '1.5' }}>
+      <div style={{ fontSize: '11px', lineHeight: '1.35' }}>
         <div style={{ color: '#475569' }}>{toAccept ? `Nhận xử lý sau ${toAccept}` : '—'}</div>
         {secondLine}
       </div>
@@ -564,7 +475,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               </th>
             )}
             <th>Bộ Phận</th>
-            <th style={{ textAlign: 'center' }}>Thao Tác</th>
           </tr>
         </thead>
         <tbody>
@@ -583,7 +493,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               : r.material ? [r.material.name] : ['---'];
 
             const priceVal = r.quotedPrice ? Number(r.quotedPrice) : 0;
-            const pricedOptionsCount = (r.options || []).filter((o) => o.quotedPrice != null).length;
 
             const formattedPrice = priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có';
 
@@ -669,7 +578,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                           {r.productName}
                         </div>
                         {(weightDisplay || stoneDisplay) && (
-                          <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '3px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {weightDisplay && (
                               <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
                                 {weightDisplay}
@@ -765,32 +674,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   <span style={{ background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600 }}>
                     {displayDeptName}
                   </span>
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  {/* SALE Role Permissions — thao tác đổi trạng thái/sửa đã dồn vào dropdown ở cột Trạng Thái */}
-                  {currentRole === 'SALE' && (
-                    <>
-                      {r.status === 'PENDING' && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}>
-                          Chờ tiếp nhận
-                        </span>
-                      )}
-                    </>
-                  )}
-
-                  {/* ORDER/ADMIN Role Permissions — logic dùng chung nằm trong RequestActionButtons */}
-                  {(currentRole === 'ORDER' || currentRole === 'ADMIN') && (
-                    <RequestActionButtons
-                      r={r}
-                      role={currentRole}
-                      pricedOptionsCount={pricedOptionsCount}
-                      onAccept={onAccept}
-                      onPricing={onPricing}
-                      onManageOptions={onManageOptions}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                    />
-                  )}
                 </td>
               </tr>
             );

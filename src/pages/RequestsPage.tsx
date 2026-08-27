@@ -3,7 +3,7 @@ import type { RequestsPageProps } from '../types';
 import { FilterBar } from '../components/FilterBar';
 import { QuoteTable } from '../components/QuoteTable';
 import { Pagination } from '../components/Pagination';
-import { PlusCircle } from 'lucide-react';
+import { Download, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const RequestsPage: React.FC<RequestsPageProps> = ({
@@ -46,9 +46,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onReject,
   onReturn,
   onResubmit,
-  onDelete,
   onMarkClosed,
-  onManageOptions,
   onOpenCreate,
   onOpenExport,
   onResetFilters,
@@ -64,35 +62,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
 
   return (
     <>
-      <div className="view-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          
-          <h1>Danh Sách Yêu Cầu Báo Giá</h1>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {currentRole === 'ADMIN' && setIncludeLocked && (
-            <button
-              className="tool-btn"
-              onClick={() => { setIncludeLocked(!includeLocked); setCurrentPage(1); }}
-              title="Yêu cầu đang chờ/xử lý bị ẩn vì người tạo hoặc người xử lý đã bị khóa tài khoản"
-              style={{ background: includeLocked ? '#fef3c7' : undefined, borderColor: includeLocked ? '#f59e0b' : undefined }}
-            >
-              {includeLocked ? 'Đang hiện yêu cầu bị khóa' : 'Hiện yêu cầu bị khóa'}
-            </button>
-          )}
-          {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
-            <button
-              className="primary-action"
-              // Gọi trực tiếp onClick={onOpenCreate} sẽ vô tình truyền thẳng SyntheticEvent của
-              // click vào làm calcData (object luôn truthy) — khiến CreateModal tưởng đang tạo đơn
-              // từ máy tính giá, khóa nhầm phần chọn đá dù đây là luồng tạo đơn thường.
-              onClick={() => onOpenCreate()}
-              style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá
-            </button>
-          )}
-        </div>
+      <div className="view-heading">
+        <h1>Danh Sách Yêu Cầu Báo Giá</h1>
       </div>
 
       <FilterBar
@@ -120,9 +91,50 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         categories={categories}
         materials={materials}
         onResetFilters={onResetFilters}
-        onOpenExport={onOpenExport}
         totalFiltered={totalRecords}
         totalTabItems={totalRecords}
+        includeLocked={includeLocked}
+        onIncludeLockedChange={currentRole === 'ADMIN' && setIncludeLocked
+          ? (v) => { setIncludeLocked(v); setCurrentPage(1); }
+          : undefined}
+        actions={
+          <>
+            {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
+              <button
+                className="primary-action"
+                // Gọi trực tiếp onClick={onOpenCreate} sẽ vô tình truyền thẳng SyntheticEvent của
+                // click vào làm calcData (object luôn truthy) — khiến CreateModal tưởng đang tạo đơn
+                // từ máy tính giá, khóa nhầm phần chọn đá dù đây là luồng tạo đơn thường.
+                onClick={() => onOpenCreate()}
+                style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá
+              </button>
+            )}
+            {onOpenExport && (
+              <button
+                type="button"
+                onClick={onOpenExport}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#f0fdf4',
+                  color: '#15803d',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+                title="Xuất danh sách đang lọc ra Excel"
+              >
+                <Download size={13} /> Xuất Excel
+              </button>
+            )}
+          </>
+        }
       />
 
       <div className="surface">
@@ -138,9 +150,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onReject={onReject}
           onReturn={onReturn}
           onResubmit={onResubmit}
-          onDelete={onDelete}
           onMarkClosed={onMarkClosed}
-          onManageOptions={onManageOptions}
         />
         <Pagination
           currentPage={currentPage}

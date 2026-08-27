@@ -94,6 +94,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   const onBack = () => navigate('/requests');
 
   const [loadedReq, setLoadedReq] = useState<QuoteRequest | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(!initialSelectedReq);
 
   // Đảm bảo record được chọn luôn khớp chính xác với ID trên đường dẫn URL khi F5/reload
   const selectedReq =
@@ -105,16 +106,22 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     if (!id) return;
     if (initialSelectedReq && (initialSelectedReq.id === id || initialSelectedReq.code === id)) {
       setLoadedReq(initialSelectedReq);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
     }
+    
     let isMounted = true;
     fetchQuoteRequestById(id)
       .then((data) => {
-        if (isMounted && data) {
-          setLoadedReq(data);
+        if (isMounted) {
+          if (data) setLoadedReq(data);
+          setIsLoading(false);
         }
       })
       .catch((err) => {
         console.error('Không thể tải chi tiết yêu cầu:', err);
+        if (isMounted) setIsLoading(false);
       });
     return () => {
       isMounted = false;
@@ -221,6 +228,17 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       setTimeout(() => setCopiedAllOpt(false), 1500);
     }).catch(() => {});
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-8 text-slate-500">
+        <div className="flex flex-col items-center gap-3">
+          <RotateCcw className="animate-spin text-blue-500" size={32} />
+          <p>Đang tải chi tiết yêu cầu báo giá...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!selectedReq) {
     return (
@@ -519,6 +537,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                       />
                     ))}
                   </div>
+                )}
+
+                {selectedReq.videoUrl && (
+                  <video
+                    controls
+                    src={selectedReq.videoUrl}
+                    style={{ width: '100%', maxHeight: '200px', marginTop: '10px', borderRadius: '10px', background: '#000' }}
+                  />
                 )}
               </div>
 

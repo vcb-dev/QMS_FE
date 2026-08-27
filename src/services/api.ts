@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOption, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOption, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE ;
@@ -50,14 +50,9 @@ export function getCookie(name: string): string | null {
   return null;
 }
 
-// Request Interceptor: đính kèm Bearer Token & X-CSRF-Token
+// Request Interceptor: đính kèm X-CSRF-Token — JWT tự động gửi qua httpOnly cookie (crmspd_at),
+// không cần đọc/gắn Authorization header từ storage nữa (token không còn lưu ở client-side JS).
 api.interceptors.request.use((config) => {
-  const token = getStoredToken();
-  if (token && token !== 'undefined' && token !== 'null' && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  // Tự động đọc cookie crmspd_csrf và gửi kèm Header X-CSRF-Token
   const csrfToken = getCookie('crmspd_csrf');
   if (csrfToken && config.headers) {
     config.headers['X-CSRF-Token'] = csrfToken;
@@ -110,12 +105,9 @@ api.interceptors.response.use(
 
 // Đọc: ưu tiên sessionStorage trước, rồi mới tới localStorage — loginApi lưu vào localStorage khi
 // rememberMe=true (mặc định của form đăng nhập), nếu ở đây chỉ đọc sessionStorage thì y hệt trường
-// hợp "đã đăng nhập nhớ tôi" vẫn bị đá về login mỗi lần F5, vì token/user nằm ở localStorage
-// nhưng hàm đọc chưa bao giờ nhìn vào đó.
-export function getStoredToken(): string | null {
-  return sessionStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem(STORAGE_KEYS.TOKEN);
-}
-
+// hợp "đã đăng nhập nhớ tôi" vẫn bị đá về login mỗi lần F5, vì user nằm ở localStorage nhưng hàm
+// đọc chưa bao giờ nhìn vào đó. JWT không còn lưu ở đây nữa — nằm hoàn toàn trong httpOnly cookie
+// (crmspd_at), JS phía client không đọc/ghi được, chống lộ token qua XSS.
 export function getStoredUser(): User | null {
   const data = sessionStorage.getItem(STORAGE_KEYS.USER) || localStorage.getItem(STORAGE_KEYS.USER);
   if (!data) return null;
@@ -127,9 +119,7 @@ export function getStoredUser(): User | null {
 }
 
 export function clearSession() {
-  sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
   sessionStorage.removeItem(STORAGE_KEYS.USER);
-  localStorage.removeItem(STORAGE_KEYS.TOKEN);
   localStorage.removeItem(STORAGE_KEYS.USER);
 }
 
@@ -143,15 +133,12 @@ export async function logoutApi(): Promise<void> {
   }
 }
 
-export async function loginApi(email: string, password: string, remember: boolean = true): Promise<{ accessToken: string; user: User }> {
+export async function loginApi(email: string, password: string, remember: boolean = true): Promise<{ user: User }> {
   try {
     const res = await api.post('/auth/login', { email, password });
     const data = res.data;
     clearSession();
     const store = remember ? localStorage : sessionStorage;
-    if (data.accessToken) {
-      store.setItem(STORAGE_KEYS.TOKEN, data.accessToken);
-    }
     if (data.user) {
       store.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
     }
@@ -166,19 +153,19 @@ export async function registerApi(payload: { name: string; email: string; passwo
 }
 
 export async function getAuditStatsApi(): Promise<Record<string, { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] }[]>> {
-  return apiCall(api.get('/audit-log/stats'), 'Không thể lấy thống kê hành động');
+  return apiCall(dedupedGet('/audit-log/stats'), 'Không thể lấy thống kê hành động');
 }
 
-export async function getAllUsersApi(): Promise<any[]> {
-  return apiCall(api.get('/users'), 'Không thể lấy danh sách người dùng');
+export async function getAllUsersApi(): Promise<StaffUser[]> {
+  return apiCall(dedupedGet('/users'), 'Không thể lấy danh sách người dùng');
 }
 
 export async function getUserStatsApi(): Promise<UserStatsResponse> {
-  return apiCall(api.get('/users/stats'), 'Không thể lấy thống kê người dùng');
+  return apiCall(dedupedGet('/users/stats'), 'Không thể lấy thống kê người dùng');
 }
 
 export async function getStaffPerformanceApi(): Promise<StaffPerformanceResponse> {
-  return apiCall(api.get('/quote-requests/staff-performance'), 'Không thể lấy hiệu suất nhân viên');
+  return apiCall(dedupedGet('/quote-requests/staff-performance'), 'Không thể lấy hiệu suất nhân viên');
 }
 
 export async function approveUserApi(userId: string, role?: string): Promise<User> {
@@ -232,7 +219,7 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
   if (filter?.materialId && filter.materialId !== 'ALL') params.materialId = filter.materialId;
   if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
 
-  const data = await apiCall(api.get('/quote-requests/stats', { params }), 'Không thể tải số liệu tổng hợp');
+  const data = await apiCall(dedupedGet('/quote-requests/stats', params), 'Không thể tải số liệu tổng hợp');
   return data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
 }
 
@@ -241,7 +228,7 @@ export async function fetchDashboardCharts(filter?: { timeRange?: string; startD
   if (filter?.timeRange) params.timeRange = filter.timeRange;
   if (filter?.startDate) params.startDate = filter.startDate;
   if (filter?.endDate) params.endDate = filter.endDate;
-  return apiCall(api.get('/quote-requests/dashboard-charts', { params }), 'Không thể lấy dữ liệu biểu đồ Dashboard');
+  return apiCall(dedupedGet('/quote-requests/dashboard-charts', params), 'Không thể lấy dữ liệu biểu đồ Dashboard');
 }
 
 export async function fetchQuoteRequestById(id: string): Promise<QuoteRequest> {
@@ -277,16 +264,33 @@ export async function fetchMasterData() {
 }
 
 export async function searchCustomers(search?: string) {
-  return apiCall(api.get('/customers', { params: search ? { search } : undefined }), 'Không thể tìm kiếm khách hàng');
+  return apiCall(dedupedGet('/customers', search ? { search } : undefined), 'Không thể tìm kiếm khách hàng');
 }
 
-export async function fetchCustomerStats(params: { search?: string; sortMode?: string; page?: number; limit?: number }): Promise<CustomerStatsResponse> {
-  return apiCall(api.get('/customers/stats', { params }), 'Không thể lấy thống kê khách hàng');
+export async function fetchCustomerStats(params: {
+  search?: string;
+  sortMode?: string;
+  provinceId?: string;
+  requesterId?: string;
+  timeRange?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}): Promise<CustomerStatsResponse> {
+  return apiCall(dedupedGet('/customers/stats', params), 'Không thể lấy thống kê khách hàng');
+}
+
+export async function fetchCustomerMonthComparison(params: {
+  provinceId?: string;
+  requesterId?: string;
+}): Promise<CustomerMonthComparisonResponse> {
+  return apiCall(dedupedGet('/customers/stats/month-comparison', params), 'Không thể lấy so sánh KPI theo tháng');
 }
 
 export async function fetchProvinces() {
   try {
-    const res = await api.get('/locations/provinces');
+    const res = await dedupedGet('/locations/provinces');
     return res.data;
   } catch (err: any) {
     console.error('Không thể lấy danh sách Tỉnh/TP:', err);
@@ -297,9 +301,7 @@ export async function fetchProvinces() {
 export async function fetchWards(provinceIdOrName?: string) {
   if (!provinceIdOrName) return [];
   try {
-    const res = await api.get('/locations/wards', {
-      params: { provinceId: provinceIdOrName },
-    });
+    const res = await dedupedGet('/locations/wards', { provinceId: provinceIdOrName });
     return res.data;
   } catch (err: any) {
     console.error('Không thể lấy danh sách Xã/Phường:', err);
@@ -313,16 +315,53 @@ export async function createCustomer(payload: { name: string; phone?: string; ad
 
 // CreateQuoteRequestDto/UpdateQuoteRequestDto không có field quotedPrice cấp ngoài, và options[]
 // phải qua sanitizeQuoteOption như completeQuoteRequest — nếu không NestJS whitelist reject.
+// `files` (ảnh mới, File thật) tách riêng khỏi phần JSON — xử lý ở buildQuoteRequestBody bên dưới.
 function sanitizeQuoteRequestPayload(payload: any) {
-  const { quotedPrice: _quotedPrice, ...rest } = payload || {};
+  const { quotedPrice: _quotedPrice, files: _files, videoFile: _videoFile, ...rest } = payload || {};
   return {
     ...rest,
     options: Array.isArray(payload?.options) ? payload.options.map((opt: any) => sanitizeQuoteOption(opt)) : payload?.options,
   };
 }
 
+// Có ảnh mới (payload.files: File[]) thì gửi multipart thật (upload thẳng lên Cloudinary ở BE,
+// không encode base64 qua JSON — base64 từng làm request tạo/sửa đơn chậm hẳn vì vừa tốn CPU
+// encode phía client vừa tăng size body). Mảng/object lồng nhau (materialIds/stoneIds/options/
+// imageUrls) phải JSON.stringify() trước khi append — multer trả field non-file dạng string thô,
+// BE tự JSON.parse lại (xem create-quote-request.dto.ts parseIfJsonString). Không có ảnh mới thì
+// giữ nguyên gửi JSON như trước, không đổi gì.
+function buildQuoteRequestBody(payload: any): any {
+  const sanitized = sanitizeQuoteRequestPayload(payload);
+  const files: File[] | undefined = payload?.files;
+  const videoFile: File | undefined = payload?.videoFile;
+  if ((!files || files.length === 0) && !videoFile) return sanitized;
+
+  const formData = new FormData();
+  if (files) {
+    for (const file of files) {
+      formData.append('files', file);
+    }
+  }
+  if (videoFile) {
+    formData.append('video', videoFile);
+  }
+  for (const [key, value] of Object.entries(sanitized)) {
+    if (value === undefined || value === null) continue;
+    if (value instanceof Date) {
+      formData.append(key, value.toISOString());
+    } else if (typeof value === 'object') {
+      formData.append(key, JSON.stringify(value));
+    } else {
+      formData.append(key, String(value));
+    }
+  }
+  return formData;
+}
+
 export async function createQuoteRequest(payload: any) {
-  return apiCall(api.post('/quote-requests', sanitizeQuoteRequestPayload(payload)), 'Lỗi khi tạo yêu cầu báo giá');
+  const body = buildQuoteRequestBody(payload);
+  const config = body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+  return apiCall(api.post('/quote-requests', body, config), 'Lỗi khi tạo yêu cầu báo giá');
 }
 
 export async function deleteQuoteRequest(id: string) {
@@ -330,7 +369,9 @@ export async function deleteQuoteRequest(id: string) {
 }
 
 export async function updateQuoteRequest(id: string, payload: any) {
-  return apiCall(api.patch(`/quote-requests/${id}`, sanitizeQuoteRequestPayload(payload)), 'Lỗi khi cập nhật yêu cầu báo giá');
+  const body = buildQuoteRequestBody(payload);
+  const config = body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+  return apiCall(api.patch(`/quote-requests/${id}`, body, config), 'Lỗi khi cập nhật yêu cầu báo giá');
 }
 
 export async function changeQuoteStatus(id: string, payload: {
@@ -338,7 +379,7 @@ export async function changeQuoteStatus(id: string, payload: {
   version?: number;
   quotedPrice?: number;
   vat?: number;
-  options?: any[];
+  options?: SanitizedQuoteOptionPayload[];
   rejectReason?: string;
   returnReason?: string;
   optionId?: string;
@@ -359,11 +400,29 @@ export async function acceptQuoteRequest(id: string, version: number) {
 // hiển thị-only (materialName...) kẻo NestJS whitelist reject. isSelected/stoneDescription được
 // giữ lại có chủ đích — BE dùng isSelected để set QuoteOption.selectionStatus, stoneDescription
 // để lưu tên đá lúc Order nhập tay tổng tiền đá (không chọn từ danh mục Stone).
+interface SanitizedQuoteOptionPayload {
+  optionName: string;
+  id?: string;
+  isSelected?: boolean;
+  weightChi?: number;
+  laborCost?: number;
+  stoneCost?: number;
+  vat?: number;
+  quotedPrice?: number;
+  totalMetalCost?: number;
+  metalRawCost?: number;
+  stonePrice?: number;
+  note?: string;
+  stoneDescription?: string;
+  materials?: { materialId: string; weightChi?: number }[];
+  stones?: { stoneId: string; quantity: number }[];
+}
+
 function sanitizeQuoteOption(
-  opt: any,
+  opt: QuoteOptionDraft | null | undefined,
   fallbackMaterials?: { materialId: string; weightChi: number }[],
   fallbackStones?: { stoneId: string; quantity: number }[],
-) {
+): SanitizedQuoteOptionPayload | null | undefined {
   if (!opt) return opt;
 
   const toNum = (v: any) => {
@@ -372,7 +431,7 @@ function sanitizeQuoteOption(
     return Number.isFinite(n) ? n : undefined;
   };
 
-  const clean: any = {
+  const clean: SanitizedQuoteOptionPayload & Record<string, unknown> = {
     optionName:
       typeof opt.optionName === 'string' && opt.optionName.trim()
         ? opt.optionName.trim()
@@ -413,10 +472,10 @@ function sanitizeQuoteOption(
   }
 
   // Sanitize materials: ONLY materialId and weightChi (number)
-  const rawMaterials = opt.materials || fallbackMaterials;
+  const rawMaterials: QuoteOptionDraftMaterial[] | undefined = opt.materials || fallbackMaterials;
   if (Array.isArray(rawMaterials) && rawMaterials.length > 0) {
     const cleanedMats = rawMaterials
-      .map((m: any) => {
+      .map((m) => {
         const matId = m.materialId || m.id;
         if (!matId || typeof matId !== 'string') return null;
         const w = toNum(m.weightChi);
@@ -425,7 +484,7 @@ function sanitizeQuoteOption(
           weightChi: w !== undefined ? w : clean.weightChi,
         };
       })
-      .filter(Boolean);
+      .filter((m): m is NonNullable<typeof m> => m !== null);
 
     if (cleanedMats.length > 0) {
       clean.materials = cleanedMats;
@@ -433,10 +492,10 @@ function sanitizeQuoteOption(
   }
 
   // Sanitize stones: ONLY stoneId and quantity (number)
-  const rawStones = opt.stones || fallbackStones;
+  const rawStones: QuoteOptionDraftStone[] | undefined = opt.stones || fallbackStones;
   if (Array.isArray(rawStones) && rawStones.length > 0) {
     const cleanedStones = rawStones
-      .map((s: any) => {
+      .map((s) => {
         const sId = s.stoneId || s.id;
         if (!sId || typeof sId !== 'string') return null;
         const qty = parseInt(String(s.quantity ?? s.qty ?? 1), 10) || 1;
@@ -445,7 +504,7 @@ function sanitizeQuoteOption(
           quantity: qty,
         };
       })
-      .filter(Boolean);
+      .filter((s): s is NonNullable<typeof s> => s !== null);
 
     if (cleanedStones.length > 0) {
       clean.stones = cleanedStones;
@@ -459,7 +518,7 @@ export async function completeQuoteRequest(
   id: string,
   _quotedPrice: number,
   _vat?: number,
-  options?: any[],
+  options?: QuoteOptionDraft[],
   extras?: {
     materialWeights?: { materialId: string; weightChi: number }[];
     manualStoneName?: string;
@@ -467,7 +526,9 @@ export async function completeQuoteRequest(
     stones?: { stoneId: string; quantity: number }[];
   },
 ) {
-  const cleanOptions = options?.map((opt) => sanitizeQuoteOption(opt, extras?.materialWeights, extras?.stones));
+  const cleanOptions = options
+    ?.map((opt) => sanitizeQuoteOption(opt, extras?.materialWeights, extras?.stones))
+    .filter((opt): opt is SanitizedQuoteOptionPayload => !!opt);
   return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions });
 }
 
@@ -537,11 +598,13 @@ export async function fetchPricingFormulas() {
   return apiCall(dedupedGet('/pricing-formulas'), 'Không thể tải công thức tính lãi');
 }
 
-export async function createPricingFormula(payload: { name: string; formulaType: 'MARGIN_TIERS' | 'MULTIPLIER'; config: any; isDefault?: boolean }) {
+export type PricingFormulaConfig = { tiers?: MarginTier[] } | { multipliers?: number[] };
+
+export async function createPricingFormula(payload: { name: string; formulaType: 'MARGIN_TIERS' | 'MULTIPLIER'; config: PricingFormulaConfig; isDefault?: boolean }) {
   return apiCall(api.post('/pricing-formulas', payload), 'Không thể thêm công thức tính lãi');
 }
 
-export async function updatePricingFormula(id: string, patch: { name?: string; config?: any; isDefault?: boolean }) {
+export async function updatePricingFormula(id: string, patch: { name?: string; config?: PricingFormulaConfig; isDefault?: boolean }) {
   return apiCall(api.patch(`/pricing-formulas/${id}`, patch), 'Không thể cập nhật công thức tính lãi');
 }
 
@@ -651,13 +714,34 @@ export async function fetchLibraryProducts(params: {
   search?: string;
   categoryId?: string;
   materialId?: string;
+  salePersonId?: string;
+  orderPersonId?: string;
   timeRange?: string;
+  startDate?: string;
+  endDate?: string;
   sortMode?: string;
-  withLivePrice?: string;
   page?: number;
   limit?: number;
 }): Promise<LibraryProductsResponse> {
-  return apiCall(api.get('/quote-requests/library-products', { params }), 'Không thể lấy danh sách sản phẩm');
+  return apiCall(dedupedGet('/quote-requests/library-products', params), 'Không thể lấy danh sách sản phẩm');
+}
+
+// Lịch sử báo giá 1 sản phẩm Thư Viện — lazy load khi mở modal chi tiết, phân trang theo đơn.
+// Truyền cùng bộ lọc ngoài để lịch sử khớp view đang lọc.
+export async function fetchLibraryProductHistory(params: {
+  groupKey: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryId?: string;
+  materialId?: string;
+  salePersonId?: string;
+  orderPersonId?: string;
+  timeRange?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<LibraryHistoryResponse> {
+  return apiCall(dedupedGet('/quote-requests/library-history', params), 'Không thể lấy lịch sử báo giá sản phẩm');
 }
 
 export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { categoryId?: string; materialId?: string; ownerId?: string; timeRange?: string; startDate?: string; endDate?: string; fields?: string[] }) {

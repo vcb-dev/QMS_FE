@@ -51,10 +51,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  // Đọc trong callback debounce bên dưới — dùng ref để luôn lấy giá trị mới nhất, tránh closure
-  // cũ ghi đè lựa chọn khách hàng của người dùng nếu response search về trễ sau khi đã chọn tay.
-  const selectedCustomerIdRef = useRef(selectedCustomerId);
-  selectedCustomerIdRef.current = selectedCustomerId;
 
   // New Customer Fields
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -83,7 +79,41 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [customerMeasurements, setCustomerMeasurements] = useState('');
   const [leadTime, setLeadTime] = useState('7-15 NGÀY (Tiêu chuẩn)');
   const [closeRateText, setCloseRateText] = useState('Khách chưa chốt báo giá');
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  // Ảnh cũ đã có sẵn (lúc sửa yêu cầu) — URL Cloudinary thật, gửi lại nguyên văn (BE pass-through,
+  // không upload lại). Ảnh mới chọn thêm — giữ nguyên File, gửi multipart thật lúc submit, KHÔNG
+  // còn encode base64 (encode + gửi base64 qua JSON body từng làm request tạo đơn chậm hẳn).
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  const [newImagePreviewUrls, setNewImagePreviewUrls] = useState<string[]>([]);
+  const totalImageCount = existingImageUrls.length + newImageFiles.length;
+
+  // Video sản phẩm/mẫu thực tế — chỉ 1 video/yêu cầu (khác ảnh cho phép nhiều). Cùng cơ chế với
+  // ảnh: video cũ (lúc sửa) giữ nguyên URL Cloudinary thật, video mới gửi multipart thật lúc submit.
+  const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
+  const [newVideoFile, setNewVideoFile] = useState<File | null>(null);
+  const [newVideoPreviewUrl, setNewVideoPreviewUrl] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const MAX_VIDEO_SIZE_MB = UI_CONSTANTS.CREATE_QUOTE_REQUEST.MAX_VIDEO_SIZE_MB;
+
+  // Preview ảnh mới chọn bằng object URL (không cần đọc file/encode gì) — thu hồi URL cũ mỗi khi
+  // danh sách file đổi hoặc component unmount, tránh rò rỉ bộ nhớ.
+  useEffect(() => {
+    const urls = newImageFiles.map((f) => URL.createObjectURL(f));
+    setNewImagePreviewUrls(urls);
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [newImageFiles]);
+
+  useEffect(() => {
+    if (!newVideoFile) {
+      setNewVideoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(newVideoFile);
+    setNewVideoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [newVideoFile]);
   const [understandProcess, setUnderstandProcess] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
@@ -117,11 +147,27 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const stoneDropdownRef = useRef<HTMLDivElement>(null);
   const stoneDropdownMenuRef = useRef<HTMLDivElement>(null);
   const stoneDropdownTriggerRef = useRef<HTMLButtonElement>(null);
-  const [stoneDropdownPos, setStoneDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const [stoneDropdownPos, setStoneDropdownPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 260, dropUp: false });
 
+  // Không gian dưới trigger có thể không đủ (trường nằm gần đáy form/màn hình) — nếu vậy lật menu
+  // lên trên trigger và luôn co maxHeight theo khoảng trống thật để nội dung không bị viewport cắt mất
+  // phần cuối (cuộn nội bộ không cứu được vì toàn bộ box đã nằm ngoài màn hình).
   const updateStoneDropdownPos = () => {
     const rect = stoneDropdownTriggerRef.current?.getBoundingClientRect();
-    if (rect) setStoneDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    if (!rect) return;
+    const margin = 8;
+    const spaceBelow = window.innerHeight - rect.bottom - margin;
+    const spaceAbove = rect.top - margin;
+    const desired = 320;
+    const dropUp = spaceBelow < 180 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(120, Math.min(desired, dropUp ? spaceAbove : spaceBelow));
+    setStoneDropdownPos({
+      top: dropUp ? rect.top - margin - maxHeight : rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      maxHeight,
+      dropUp,
+    });
   };
 
   useEffect(() => {
@@ -171,6 +217,21 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     );
   };
 
+  const [stoneSearchQuery, setStoneSearchQuery] = useState('');
+  const visibleStoneOptions = filteredStoneOptions.filter((s) =>
+    s.name.toLowerCase().includes(stoneSearchQuery.trim().toLowerCase())
+  );
+  const allVisibleStoneSelected =
+    visibleStoneOptions.length > 0 && visibleStoneOptions.every((s) => selectedStoneIds.includes(s.id));
+  const toggleSelectAllVisibleStones = () => {
+    if (allVisibleStoneSelected) {
+      const visibleIds = new Set(visibleStoneOptions.map((s) => s.id));
+      setSelectedStoneIds((prev) => prev.filter((id) => !visibleIds.has(id)));
+    } else {
+      setSelectedStoneIds((prev) => Array.from(new Set([...prev, ...visibleStoneOptions.map((s) => s.id)])));
+    }
+  };
+
   useEffect(() => {
     if (editingReq) {
       setIsNewCustomerMode(false);
@@ -180,11 +241,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
       setSelectedMaterialIds(matIds);
       setCustomerMeasurements(editingReq.customerMeasurements || '');
-      if (editingReq.images && editingReq.images.length > 0) {
-        setImageUrls(editingReq.images.map((img) => img.imageUrl));
-      } else {
-        setImageUrls([]);
-      }
+      setExistingImageUrls(editingReq.images ? editingReq.images.map((img) => img.imageUrl) : []);
+      setNewImageFiles([]);
+      setExistingVideoUrl(editingReq.videoUrl || null);
+      setNewVideoFile(null);
     } else {
       setIsNewCustomerMode(false);
       setNewCustomerName('');
@@ -267,7 +327,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       }
 
       setCustomerMeasurements(calculatorData?.note || '');
-      setImageUrls([]);
+      setExistingImageUrls([]);
+      setNewImageFiles([]);
+      setExistingVideoUrl(null);
+      setNewVideoFile(null);
     }
   }, [editingReq, categories, isOpen, calculatorData, materials, stoneOptionsAll]);
 
@@ -299,17 +362,20 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     }
   }, [newCustomerProvince]);
 
-  // Debounced Lazy Customer Search
+  // Debounced Lazy Customer Search — KHÔNG tự chọn sẵn khách hàng đầu tiên trả về (từng gây bug:
+  // gõ tìm tên khách mới nhưng không bấm "Tạo khách hàng mới" thì đơn vẫn âm thầm gắn vào khách
+  // ĐẦU TIÊN của kết quả tìm/danh sách mặc định — người dùng không hề chủ động chọn ai cả). Mỗi lần
+  // đổi từ khóa tìm, xóa lựa chọn cũ ngay (tránh giữ ID khách của kết quả tìm TRƯỚC trong khi
+  // dropdown đang hiển thị danh sách MỚI) — bắt buộc người dùng tự bấm chọn 1 dòng trong dropdown,
+  // hoặc để trống hẳn thì lúc submit sẽ tự tạo "Khách lẻ" theo tên đã gõ (xem handleSubmit).
   useEffect(() => {
     if (!isOpen || isNewCustomerMode) return;
+    setSelectedCustomerId('');
     setCustomerSearchLoading(true);
     const timer = setTimeout(() => {
       searchCustomers(customerSearch)
         .then((res) => {
           setCustomerList(res);
-          if (res.length > 0 && !selectedCustomerIdRef.current) {
-            setSelectedCustomerId(res[0].id);
-          }
         })
         .catch(() => { })
         .finally(() => setCustomerSearchLoading(false));
@@ -324,39 +390,57 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (imageUrls.length >= MAX_IMAGES) {
+      if (totalImageCount >= MAX_IMAGES) {
         alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
         e.target.value = '';
         return;
       }
 
-      const availableSlots = MAX_IMAGES - imageUrls.length;
+      const availableSlots = MAX_IMAGES - totalImageCount;
       const filesToProcess = Array.from(files).slice(0, availableSlots);
 
       if (files.length > availableSlots) {
         alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
       }
 
-      filesToProcess.forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            const urlStr = event.target.result as string;
-            setImageUrls((prev) => (prev.length < MAX_IMAGES ? [...prev, urlStr] : prev));
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+      setNewImageFiles((prev) => [...prev, ...filesToProcess]);
     }
     e.target.value = '';
   };
 
-  const removeImage = (indexToRemove: number) => {
-    setImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  const removeExistingImage = (indexToRemove: number) => {
+    setExistingImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const removeNewImage = (indexToRemove: number) => {
+    setNewImageFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+      alert(`Kích thước video vượt quá giới hạn cho phép (tối đa ${MAX_VIDEO_SIZE_MB}MB)!`);
+      return;
+    }
+
+    setExistingVideoUrl(null);
+    setNewVideoFile(file);
+  };
+
+  const removeVideo = () => {
+    setExistingVideoUrl(null);
+    setNewVideoFile(null);
+  };
+
+  const triggerVideoInput = () => {
+    videoInputRef.current?.click();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -413,7 +497,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         stoneIds: selectedStoneIds.length > 0 ? selectedStoneIds : undefined,
         customerMeasurements,
         desiredLeadTime: leadTime,
-        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+        imageUrls: existingImageUrls.length > 0 ? existingImageUrls : undefined,
+        files: newImageFiles.length > 0 ? newImageFiles : undefined,
+        videoUrl: existingVideoUrl || undefined,
+        videoFile: newVideoFile || undefined,
         quotedPrice: calculatorData?.suggestedPrice,
         options: calculatorData?.options && calculatorData.options.length > 0 ? calculatorData.options : undefined,
       });
@@ -672,67 +759,143 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         top: stoneDropdownPos.top,
                         left: stoneDropdownPos.left,
                         width: stoneDropdownPos.width,
+                        maxHeight: stoneDropdownPos.maxHeight,
                         zIndex: 9999,
                         background: '#ffffff',
                         border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-                        maxHeight: '260px',
-                        overflowY: 'auto',
-                        padding: '6px',
+                        borderRadius: '10px',
+                        boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
                       }}
                     >
-                      <div style={{ display: 'flex', gap: '16px', padding: '4px 8px 8px', borderBottom: '1px solid #e2e8f0', marginBottom: '4px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedStoneTypes.includes('MAIN')}
-                            onChange={() => toggleStoneType('MAIN')}
-                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
-                          />
-                          Đá chủ
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedStoneTypes.includes('SIDE')}
-                            onChange={() => toggleStoneType('SIDE')}
-                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
-                          />
-                          Đá tấm
-                        </label>
+                      {/* Bộ lọc loại đá dạng segmented control — chỉ 1 loại hiển thị tại 1 thời điểm */}
+                      <div style={{ display: 'flex', gap: '6px', padding: '10px 10px 8px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                        {(['MAIN', 'SIDE'] as const).map((t) => {
+                          const active = selectedStoneTypes.includes(t);
+                          const count = stoneOptionsAll.filter((s) => s.stoneType === t).length;
+                          return (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => toggleStoneType(t)}
+                              style={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '7px 10px',
+                                borderRadius: '7px',
+                                border: active ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                                background: active ? '#2563eb' : '#ffffff',
+                                color: active ? '#ffffff' : '#475569',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'background 0.12s, color 0.12s',
+                              }}
+                            >
+                              {t === 'MAIN' ? 'Đá chủ' : 'Đá tấm'}
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: '999px',
+                                  background: active ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                                  color: active ? '#ffffff' : '#64748b',
+                                }}
+                              >
+                                {count}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
 
-                      {selectedStoneTypes.length === 0 && (
-                        <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8' }}>Tích đá chủ hoặc đá tấm để xem danh sách đá</div>
-                      )}
-                      {selectedStoneTypes.length > 0 && filteredStoneOptions.length === 0 && (
-                        <div style={{ padding: '8px', fontSize: '12px', color: '#94a3b8' }}>Chưa có đá nào thuộc loại này</div>
-                      )}
-                      {filteredStoneOptions.map((s) => (
-                        <label
-                          key={s.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '7px 8px',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: '#334155',
-                            cursor: 'pointer',
-                          }}
-                        >
+                      {selectedStoneTypes.length > 0 && (
+                        <div style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}>
                           <input
-                            type="checkbox"
-                            checked={selectedStoneIds.includes(s.id)}
-                            onChange={() => toggleStoneId(s.id)}
-                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                            type="text"
+                            value={stoneSearchQuery}
+                            onChange={(e) => setStoneSearchQuery(e.target.value)}
+                            placeholder="Tìm tên đá..."
+                            style={{
+                              width: '100%',
+                              padding: '7px 10px',
+                              fontSize: '13px',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '6px',
+                              outline: 'none',
+                            }}
                           />
-                          {s.name}
-                        </label>
-                      ))}
+                        </div>
+                      )}
+
+                      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px' }}>
+                        {selectedStoneTypes.length === 0 && (
+                          <div style={{ padding: '16px 8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>
+                            Chọn "Đá chủ" hoặc "Đá tấm" ở trên để xem danh sách đá
+                          </div>
+                        )}
+                        {selectedStoneTypes.length > 0 && filteredStoneOptions.length === 0 && (
+                          <div style={{ padding: '16px 8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>Chưa có đá nào thuộc loại này</div>
+                        )}
+                        {selectedStoneTypes.length > 0 && filteredStoneOptions.length > 0 && visibleStoneOptions.length === 0 && (
+                          <div style={{ padding: '16px 8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>Không tìm thấy đá phù hợp</div>
+                        )}
+                        {visibleStoneOptions.length > 0 && (
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '7px 8px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              color: '#2563eb',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={allVisibleStoneSelected}
+                              onChange={toggleSelectAllVisibleStones}
+                              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                            />
+                            {allVisibleStoneSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${visibleStoneOptions.length})`}
+                          </label>
+                        )}
+                        {visibleStoneOptions.map((s) => (
+                          <label
+                            key={s.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '7px 8px',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              color: '#334155',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedStoneIds.includes(s.id)}
+                              onChange={() => toggleStoneId(s.id)}
+                              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                            />
+                            {s.name}
+                          </label>
+                        ))}
+                      </div>
                     </div>,
                     document.body,
                   )}
@@ -803,7 +966,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               {/* Multiple Images Upload Zone */}
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">
-                  Ảnh sản phẩm / mẫu thực tế ({imageUrls.length}/{MAX_IMAGES} ảnh)
+                  Ảnh sản phẩm / mẫu thực tế ({totalImageCount}/{MAX_IMAGES} ảnh)
                 </label>
                 <input
                   type="file"
@@ -816,7 +979,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 <div
                   className="upload-dropzone"
                   onClick={() => {
-                    if (imageUrls.length >= MAX_IMAGES) {
+                    if (totalImageCount >= MAX_IMAGES) {
                       alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh/yêu cầu!`);
                       return;
                     }
@@ -830,22 +993,22 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     justifyContent: 'center',
                     border: '2px dashed #cbd5e1',
                     borderRadius: '12px',
-                    background: imageUrls.length >= MAX_IMAGES ? '#f1f5f9' : '#f8fafc',
-                    cursor: imageUrls.length >= MAX_IMAGES ? 'not-allowed' : 'pointer',
+                    background: totalImageCount >= MAX_IMAGES ? '#f1f5f9' : '#f8fafc',
+                    cursor: totalImageCount >= MAX_IMAGES ? 'not-allowed' : 'pointer',
                     padding: '16px',
                     textAlign: 'center',
                     transition: 'border-color 0.2s',
-                    opacity: imageUrls.length >= MAX_IMAGES ? 0.7 : 1,
+                    opacity: totalImageCount >= MAX_IMAGES ? 0.7 : 1,
                   }}
                 >
                   <div style={{ marginBottom: '6px' }}>
                     <Upload size={30} color="#b45309" />
                   </div>
                   <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', marginBottom: '2px' }}>
-                    {imageUrls.length >= MAX_IMAGES
+                    {totalImageCount >= MAX_IMAGES
                       ? `✓ Đã đạt tối đa ${MAX_IMAGES} ảnh mẫu`
-                      : imageUrls.length > 0
-                      ? `✓ Đã chọn ${imageUrls.length}/${MAX_IMAGES} ảnh (Bấm để chọn thêm)`
+                      : totalImageCount > 0
+                      ? `✓ Đã chọn ${totalImageCount}/${MAX_IMAGES} ảnh (Bấm để chọn thêm)`
                       : 'Kéo thả hoặc bấm để chọn 1 hoặc nhiều ảnh'}
                   </div>
                   <span style={{ fontSize: '11px', color: '#64748b' }}>
@@ -853,11 +1016,13 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   </span>
                 </div>
 
-                {/* Uploaded Images Thumbnail Grid */}
-                {imageUrls.length > 0 && (
+                {/* Uploaded Images Thumbnail Grid — gộp ảnh cũ (existingImageUrls, URL thật) và
+                    ảnh mới vừa chọn (newImagePreviewUrls, object URL tạm để preview) thành 1 lưới,
+                    mỗi loại xóa qua đúng setter của nó. */}
+                {totalImageCount > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
-                    {imageUrls.map((url, idx) => (
-                      <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                    {existingImageUrls.map((url, idx) => (
+                      <div key={`existing-${idx}`} style={{ position: 'relative', display: 'inline-block' }}>
                         <img
                           src={url}
                           alt={`Ảnh mẫu ${idx + 1}`}
@@ -874,7 +1039,52 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeImage(idx);
+                            removeExistingImage(idx);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            right: '-6px',
+                            background: '#ef4444',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '20px',
+                            height: '20px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          }}
+                          title="Xóa ảnh này"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+
+                    {newImagePreviewUrls.map((url, idx) => (
+                      <div key={`new-${idx}`} style={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={url}
+                          alt={`Ảnh mẫu mới ${idx + 1}`}
+                          style={{
+                            width: '76px',
+                            height: '76px',
+                            borderRadius: '10px',
+                            objectFit: 'cover',
+                            border: '2px solid #b45309',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeNewImage(idx);
                           }}
                           style={{
                             position: 'absolute',
@@ -902,7 +1112,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     ))}
 
                     {/* Add More Photos Button Square */}
-                    {imageUrls.length < MAX_IMAGES && (
+                    {totalImageCount < MAX_IMAGES && (
                       <div
                         onClick={triggerFileInput}
                         style={{
@@ -927,6 +1137,79 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         <span>+ Thêm</span>
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+
+              {/* Video Upload Zone — chỉ 1 video/yêu cầu */}
+              <div className="form-group">
+                <label className="form-label">Video sản phẩm / mẫu thực tế (không bắt buộc)</label>
+                <input
+                  type="file"
+                  ref={videoInputRef}
+                  onChange={handleVideoFileChange}
+                  accept="video/*"
+                  style={{ display: 'none' }}
+                />
+
+                {existingVideoUrl || newVideoPreviewUrl ? (
+                  <div style={{ position: 'relative', display: 'inline-block', marginTop: '4px' }}>
+                    <video
+                      src={newVideoPreviewUrl || existingVideoUrl || undefined}
+                      controls
+                      style={{ width: '100%', maxHeight: '180px', borderRadius: '10px', background: '#000', border: '2px solid #b45309' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={removeVideo}
+                      style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '22px',
+                        height: '22px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      }}
+                      title="Xóa video này"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className="upload-dropzone"
+                    onClick={triggerVideoInput}
+                    style={{
+                      minHeight: '90px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px dashed #cbd5e1',
+                      borderRadius: '12px',
+                      background: '#f8fafc',
+                      cursor: 'pointer',
+                      padding: '14px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Upload size={24} color="#b45309" />
+                    <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', marginTop: '4px' }}>
+                      Bấm để chọn 1 video
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>
+                      (Tối đa {MAX_VIDEO_SIZE_MB}MB | MP4, MOV, WEBM)
+                    </span>
                   </div>
                 )}
               </div>

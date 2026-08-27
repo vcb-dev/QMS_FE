@@ -148,12 +148,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     });
   }, []);
 
-  // VAT chuẩn giờ nạp theo danh mục sản phẩm đang chọn (ProductCategory.vatRate) — không còn 1
-  // giá trị mặc định global (PricingConfig.defaultVatRate cũ). Đổi danh mục thì đổi luôn VAT gợi ý.
+  // VAT & tiền công chuẩn nạp theo danh mục sản phẩm đang chọn (ProductCategory.vatRate/laborCost)
+  // — không còn 1 giá trị mặc định global. Đổi danh mục thì đổi luôn VAT/công gợi ý, và vì cả 2
+  // đều nằm trong dependencies của effect tính giá debounce bên dưới nên đổi danh mục sẽ tự tính
+  // lại giá luôn (trước đây laborCost không đồng bộ theo danh mục nên đổi danh mục không đổi giá).
   useEffect(() => {
     if (!categoryId) return;
     const cat = dbCategories.find((c) => c.id === categoryId);
     if (cat?.vatRate != null) setVatPct(Number(cat.vatRate));
+    if (cat?.laborCost != null) setLaborCost(Number(cat.laborCost));
   }, [categoryId, dbCategories]);
 
   const totalStoneCost = stoneInputMode === 'total'
@@ -163,7 +166,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   // requestId chặn race: nếu gõ tiếp trong lúc request cũ chưa về, kết quả cũ về sau bị bỏ qua
   const calcRequestIdRef = useRef(0);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Ref lưu categoryId mới nhất để khi tính giá vẫn lấy đúng danh mục, nhưng không tự trigger tính giá khi đổi danh mục
+  // Ref lưu categoryId mới nhất để runCalculate() luôn đọc đúng danh mục hiện tại kể cả khi được
+  // gọi từ closure cũ (vd nút "Tính lại giá" bấm ngay sau khi đổi danh mục, trước khi effect debounce kịp chạy).
   const categoryIdRef = useRef(categoryId);
   useEffect(() => {
     categoryIdRef.current = categoryId;
@@ -323,7 +327,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   };
 
   // Kết quả tính giá real-time khi nhập liệu — debounce 500ms sau lần gõ cuối để khỏi spam API.
-  // Tuyệt đối không đưa categoryId vào dependencies để khi đổi danh mục sản phẩm không bị trigger gọi API tính giá.
+  // categoryId NẰM trong dependencies — mỗi danh mục có tiền công/VAT chuẩn riêng (và backend còn
+  // dùng categoryId để chọn công thức tính giá), nên đổi danh mục PHẢI tính lại giá. Trước đây cố
+  // tình loại categoryId ra để "đổi danh mục không tự gọi API", nhưng laborCost lúc đó cũng không
+  // đồng bộ theo danh mục nên đổi danh mục im re không đổi giá — đúng là bug, không phải chủ đích.
   useEffect(() => {
     if (!initialDataReady) return;
     setIsDebouncing(true);
@@ -334,8 +341,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
+    // `baseMetals` KHÔNG nằm trong deps: giá do BE tính từ dữ liệu của BE, mảng baseMetals phía FE
+    // chỉ để hiện thanh giá tham khảo. Nó fetch riêng nên hay về sau `initialDataReady` -> nếu để
+    // trong deps sẽ kích auto-calc chạy lần 2 cho ra ĐÚNG kết quả cũ (call thừa). Đổi giá gốc trong
+    // lúc trang đang mở thì bấm "Tính lại giá".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDataReady, materialRows, laborCost, vatPct, includeVat, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal, baseMetals]);
+  }, [initialDataReady, categoryId, materialRows, laborCost, vatPct, includeVat, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal]);
 
   // Nút "Tính giá ngay" / "Tính lại giá" — bấm để tính ngay, khỏi chờ debounce
   const handleCalculate = () => {

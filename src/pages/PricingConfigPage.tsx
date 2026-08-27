@@ -615,7 +615,11 @@ export const PricingConfigPage: React.FC = () => {
     setImporting(true);
     try {
       const result = await importStonesExcel(file);
-      setImportResult(`Đã import ${result.imported} đá`);
+      setImportResult(
+        result.skipped > 0
+          ? `Đã import ${result.imported} đá (bỏ qua ${result.skipped} đá trùng tên/cut/size)`
+          : `Đã import ${result.imported} đá`,
+      );
       const rowsFresh = await fetchStones();
       const freshList = Array.isArray(rowsFresh) ? rowsFresh : [];
       setStones(freshList);
@@ -717,7 +721,7 @@ export const PricingConfigPage: React.FC = () => {
 
               {/* Chất liệu & % tính giá — % nhân với giá kim loại gốc lúc tính (vàng theo tuổi: vd 18K=75; Bạc/Bạch kim = 100) */}
               <PanelSection
-                title="Chất liệu & % tính giá"
+                title="Chất liệu & Phần trăm tính giá"
                 icon={Layers}
                 action={<button type="button" onClick={() => { setMaterialError(null); setAddingMaterial(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm chất liệu</button>}
               >
@@ -1143,7 +1147,7 @@ export const PricingConfigPage: React.FC = () => {
         </div>
       )}
 
-      <MetalPriceHistoryModal isOpen={showMetalHistory} onClose={() => setShowMetalHistory(false)} />
+      <MetalPriceHistoryModal isOpen={showMetalHistory} onClose={() => setShowMetalHistory(false)} baseMetals={baseMetals} />
     </div>
   );
 };

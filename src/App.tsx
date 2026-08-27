@@ -39,17 +39,19 @@ interface AppShellProps {
   currentUser: User;
   currentRole: Role;
   handleLogout: () => Promise<void>;
-  setCurrentRole: (role: Role) => void;
 }
 
-function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: AppShellProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
   const [isExportOpen, setIsExportOpen] = useState(false);
   // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả
   const [scopeFilter, setScopeFilter] = useState(currentRole === 'SALE' ? 'MY_REQ' : 'ALL');
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Chỉ Tổng Quan (/) và Danh Sách Yêu Cầu (/requests, /requests/:id) mới thực sự đọc `requests[]`.
+  // Trang khác chỉ cần `counts` cho Sidebar -> useQuoteRequests kéo bản nhẹ, không hydrate cả trang.
+  const listDataEnabled = location.pathname === '/' || location.pathname.startsWith('/requests');
 
   const {
     requests, categories, materials, selectedId, setSelectedId,
@@ -69,7 +71,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
     handleMarkClosedClick, handleCloseOptionSubmit,
     handleDeleteOption,
     refreshQuietly,
-  } = useQuoteRequests(currentUser, currentRole);
+  } = useQuoteRequests(currentUser, currentRole, listDataEnabled);
 
   // Chỉ tính lại khi requests hoặc id popup đang mở thay đổi — tránh find()+filter() mỗi lần
   // AppShell render (VD gõ tìm kiếm, đổi trang) dù 2 popup này thường đang đóng.
@@ -125,7 +127,13 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
       OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator', STAFF: '/staff', CUSTOMERS: '/customers', PRICING_CONFIG: '/pricing-config',
     };
     navigate(map[filter] ?? '/requests');
-    handleTabChange(filter);
+    // Chỉ Tổng Quan (OVERVIEW) và Danh Sách Yêu Cầu (ALL) thật sự dùng requests/counts từ
+    // useQuoteRequests — Thư viện/Máy tính giá/Nhân viên/Khách hàng/Cấu hình giá đều tự fetch data
+    // riêng (nhận 0 prop requests/counts, xem route trong Routes bên dưới), gọi handleTabChange cho
+    // mấy trang này chỉ tốn 1 query DB ngầm vô ích, không trang nào đọc kết quả.
+    if (filter === 'OVERVIEW' || filter === 'ALL') {
+      handleTabChange(filter);
+    }
   };
 
   const handleOpenDetail = (id: string) => {
@@ -150,8 +158,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
   return (
     <div
-      className={`mac-window ${currentRole === 'ORDER' ? 'order-mode-active' : ''}`}
-      style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}
+      className={`w-screen h-screen flex flex-row overflow-hidden bg-white ${currentRole === 'ORDER' ? 'order-mode-active' : ''}`}
     >
       <Sidebar
         currentFilter={getSidebarKey()}
@@ -160,22 +167,19 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
         user={currentUser!}
         currentRole={currentRole}
         onOpenCreate={handleOpenCreate}
-        isOpen={isSidebarOpen}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'visible', minWidth: 0 }}>
+      <div className="flex-1 flex flex-col h-screen overflow-visible min-w-0">
         <Header
           user={currentUser!}
           currentRole={currentRole}
-          onRoleChange={setCurrentRole}
           onOpenCreateModal={handleOpenCreate}
           onLogout={handleLogout}
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           onSelectReq={handleOpenDetail}
           onSearchRequests={handleSearchRequestsFromHeader}
         />
 
-        <main className="content page-transition" key={location.pathname} style={{ flex: 1, overflowY: 'auto' }}>
+        <main className="content page-transition flex-1 overflow-y-auto p-5 flex flex-col gap-5 box-border" key={location.pathname}>
           <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={
@@ -232,6 +236,13 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
             <Route path="/library" element={
               <LibraryPage categories={categories} materials={materials}
                 currentRole={currentRole}
+                initialTimeRange={
+                  (['ALL', 'TODAY', 'THIS_WEEK', 'THIS_MONTH'] as const).includes(
+                    timeRangeFilter as never,
+                  )
+                    ? (timeRangeFilter as 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH')
+                    : 'ALL'
+                }
                 onSelectReq={handleOpenDetail} />
             } />
 
@@ -324,7 +335,7 @@ function AppShell({ currentUser, currentRole, handleLogout, setCurrentRole }: Ap
 
 // ─── App Root: Điều hướng chính với Route /login độc lập ─────────────────
 export function App() {
-  const { currentUser, currentRole, handleLoginSuccess, handleLogout, setCurrentRole } = useAuth();
+  const { currentUser, currentRole, handleLoginSuccess, handleLogout } = useAuth();
 
   return (
     <Routes>
@@ -340,7 +351,6 @@ export function App() {
               currentUser={currentUser}
               currentRole={currentRole}
               handleLogout={handleLogout}
-              setCurrentRole={setCurrentRole}
             />
           ) : <Navigate to="/login" replace />
         }

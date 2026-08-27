@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Material, ProductCategory, StatusCounts } from '../types';
-import { Calendar, ChevronDown, Download, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 
 const selectArrowStyle: React.CSSProperties = {
@@ -84,9 +84,11 @@ interface FilterBarProps {
   categories: ProductCategory[];
   materials: Material[];
   onResetFilters: () => void;
-  onOpenExport?: () => void;
   totalFiltered: number;
   totalTabItems: number;
+  actions?: React.ReactNode;
+  includeLocked?: boolean;
+  onIncludeLockedChange?: (value: boolean) => void;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -111,7 +113,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   categories,
   materials,
   onResetFilters,
-  onOpenExport,
+  actions,
+  includeLocked = false,
+  onIncludeLockedChange,
 }) => {
   const [panelOpen, setPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -133,7 +137,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     (materialFilter !== 'ALL' ? 1 : 0) +
     (timeRangeFilter !== 'ALL' ? 1 : 0) +
     (startDateFilter ? 1 : 0) +
-    (endDateFilter ? 1 : 0);
+    (endDateFilter ? 1 : 0) +
+    (includeLocked ? 1 : 0);
 
   const isFiltered =
     statusSubFilter !== 'ALL' ||
@@ -141,7 +146,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     panelFilterCount > 0;
 
   return (
-    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '10px 14px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* Status Squares — bấm để lọc theo trạng thái, thay cho dropdown */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
         <button
@@ -151,15 +156,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             background: statusSubFilter === 'ALL' ? '#0f172a' : '#f8fafc',
             border: statusSubFilter === 'ALL' ? '1px solid #0f172a' : '1px solid #e2e8f0',
             borderRadius: '10px',
-            padding: '10px 12px',
+            padding: '6px 10px',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
-          <div style={{ fontSize: '10.5px', fontWeight: 700, color: statusSubFilter === 'ALL' ? 'rgba(255,255,255,0.7)' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '4px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 700, color: statusSubFilter === 'ALL' ? 'rgba(255,255,255,0.7)' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
             Tất cả
           </div>
-          <div style={{ fontSize: '18px', fontWeight: 900, color: statusSubFilter === 'ALL' ? '#ffffff' : '#0f172a' }}>
+          <div style={{ fontSize: '15px', fontWeight: 900, color: statusSubFilter === 'ALL' ? '#ffffff' : '#0f172a' }}>
             {counts.total}
           </div>
         </button>
@@ -176,16 +181,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 border: isActive ? `1px solid ${s.color}` : '1px solid #e2e8f0',
                 borderLeft: `3px solid ${s.color}`,
                 borderRadius: '10px',
-                padding: '10px 12px',
+                padding: '6px 10px',
                 cursor: 'pointer',
                 textAlign: 'left',
                 boxShadow: isActive ? `0 0 0 1px ${s.color}` : 'none',
               }}
             >
-              <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.label}
               </div>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a' }}>
                 {counts[s.countKey]}
               </div>
             </button>
@@ -287,6 +292,28 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   </div>
                 </div>
 
+                {/* Yêu cầu bị khóa — chỉ ADMIN mới truyền onIncludeLockedChange nên chỉ ADMIN mới thấy */}
+                {onIncludeLockedChange && (
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={includeLocked}
+                        onChange={(e) => onIncludeLockedChange(e.target.checked)}
+                      />
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
+                        Hiện yêu cầu bị khóa
+                      </span>
+                      <span
+                        title="Yêu cầu đang chờ/xử lý bị ẩn vì người tạo hoặc người xử lý đã bị khóa tài khoản"
+                        style={{ display: 'inline-flex', cursor: 'help' }}
+                      >
+                        <HelpCircle size={13} style={{ color: '#94a3b8' }} />
+                      </span>
+                    </label>
+                  </div>
+                )}
+
                 {/* Category */}
                 <div>
                   <label style={popoverLabelStyle}>Danh mục</label>
@@ -354,11 +381,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   </div>
                 </div>
 
-                {/* Date Range */}
+                {/* Date Range — xếp cột, mỗi ô full width panel (nằm ngang bị bóp chật khiến
+                    input date co lại lệch, icon đè lên chữ) */}
                 <div>
                   <label style={popoverLabelStyle}>Khoảng ngày tùy chọn</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ position: 'relative', flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ position: 'relative' }}>
                       <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
                       <input
                         type="date"
@@ -368,8 +396,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         style={dateInputStyle}
                       />
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>đến</span>
-                    <div style={{ position: 'relative', flex: 1 }}>
+                    <div style={{ position: 'relative' }}>
                       <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
                       <input
                         type="date"
@@ -384,56 +411,39 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </div>
             )}
           </div>
-        </div>
 
-        {/* Xuất Excel + Xóa lọc — góc phải */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-        {onOpenExport && (
+          {/* Xóa lọc — cùng phía với nút Bộ lọc */}
           <button
             type="button"
-            onClick={onOpenExport}
+            onClick={onResetFilters}
+            disabled={!isFiltered}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#f0fdf4',
-              color: '#15803d',
-              border: '1px solid #bbf7d0',
+              background: isFiltered ? '#fee2e2' : '#f8fafc',
+              color: isFiltered ? '#b91c1c' : '#cbd5e1',
+              border: isFiltered ? '1px solid #fca5a5' : '1px solid #e2e8f0',
               borderRadius: '8px',
               padding: '8px 14px',
               fontSize: '12px',
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: isFiltered ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              opacity: isFiltered ? 1 : 0.6,
+              flexShrink: 0,
             }}
-            title="Xuất danh sách đang lọc ra Excel"
+            title={isFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
           >
-            <Download size={13} /> Xuất Excel
+            <RotateCcw size={13} /> Xóa bộ lọc
           </button>
-        )}
-        <button
-          type="button"
-          onClick={onResetFilters}
-          disabled={!isFiltered}
-          style={{
-            background: isFiltered ? '#fee2e2' : '#f8fafc',
-            color: isFiltered ? '#b91c1c' : '#cbd5e1',
-            border: isFiltered ? '1px solid #fca5a5' : '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '8px 14px',
-            fontSize: '12px',
-            fontWeight: 700,
-            cursor: isFiltered ? 'pointer' : 'not-allowed',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            opacity: isFiltered ? 1 : 0.6,
-            flexShrink: 0,
-          }}
-          title={isFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-        >
-          <RotateCcw size={13} /> Xóa bộ lọc
-        </button>
         </div>
+
+        {/* Tạo yêu cầu / Xuất Excel — góc phải, chỗ cũ của nút Xóa bộ lọc */}
+        {actions && (
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   );

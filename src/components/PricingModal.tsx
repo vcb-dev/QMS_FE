@@ -314,14 +314,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         // BE luôn đánh số "Phương án 1/2/3..." lại từ đầu mỗi lần gọi — Order bấm "Tính Giá Ngay"
         // nhiều lần (đổi công/VAT để so sánh) sẽ ra trùng tên "Phương án 1" giữa các cụm, lưu vào DB
         // vậy không phân biệt được. Đặt tên theo chất liệu + đúng mức công/VAT của cụm đó thay thế.
-        const laborLabel = l.toLocaleString('vi-VN');
+        const laborLabel = formatCurrency(l);
         const newOpts: QuoteOption[] = (Array.isArray(generated) ? generated : [])
           .filter((opt: any) => opt.quotedPrice != null)
           .map((opt: any) => {
             const optMaterial = dbMaterials.find((m) => m.name === opt.materialName);
             const materialId = optMaterial?.id || fixedMaterialId;
             return {
-              optionName: `${opt.materialName} · Công ${laborLabel}₫ · VAT ${vatVal}%`,
+              optionName: `${opt.materialName} · Công ${laborLabel} · VAT ${vatVal}%`,
               materialName: opt.materialName,
               weightChi: opt.weightChi != null ? opt.weightChi : w,
               laborCost: opt.laborCost,
@@ -372,7 +372,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           {
             // Cùng lý do với nhánh 1 chất liệu — kèm công/VAT vào tên để bấm "Tính Giá Ngay" nhiều
             // lần không ra trùng tên "Phương án phối hợp" giữa các cụm khi lưu vào DB.
-            optionName: `Phương án phối hợp (${matSummary}) · Công ${l.toLocaleString('vi-VN')}₫ · VAT ${vatVal}%`,
+            optionName: `Phương án phối hợp (${matSummary}) · Công ${formatCurrency(l)} · VAT ${vatVal}%`,
             materialName: matSummary,
             weightChi: validRows.reduce((sum, m) => sum + (parseFloat(m.weightChi) || 0), 0),
             laborCost: res.laborCost,

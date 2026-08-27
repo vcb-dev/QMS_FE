@@ -1,5 +1,4 @@
 export const STORAGE_KEYS = {
-  TOKEN: 'vcb_qms_token',
   USER: 'vcb_qms_user',
 } as const;
 
@@ -21,6 +20,7 @@ export const UI_CONSTANTS = {
 
   CREATE_QUOTE_REQUEST: {
     MAX_IMAGES: 5,
+    MAX_VIDEO_SIZE_MB: 100,
   },
 };
 
@@ -60,6 +60,13 @@ export const STATUS_BADGE_META: Record<string, { label: string; color: string; b
   REJECTED: { label: 'Từ chối', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
   CLOSED: { label: 'Đã chốt', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
 };
+// Nhãn hiển thị cho dropdown xem-thử-giao-diện-theo-role của Admin (Header.tsx)
+export const ROLE_SWITCH_LABEL: Record<'SALE' | 'ORDER' | 'ADMIN', string> = {
+  SALE: 'Sale',
+  ORDER: 'Order',
+  ADMIN: 'Admin',
+};
+
 export  const COMPANY_LOGO_URL = 'https://vienchibao.com/wp-content/uploads/2025/01/logo.png';
 // Ảnh vuông (1024x1024) — đặt trong public/ nên tham chiếu thẳng qua URL gốc, không import qua src/assets
 export const BACKGROUND_IMAGE_URL = '/screen.png';

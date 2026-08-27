@@ -1,5 +1,5 @@
-import React from 'react';
-import { UserPlus, Users, Search } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { UserPlus, Users, Search, Check } from 'lucide-react';
 import type { Customer } from '../types';
 
 interface CustomerSelectorSectionProps {
@@ -54,6 +54,25 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
     setIsNewCustomerMode(true);
   };
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const selectedCustomer = customerList.find((c) => c.id === selectedCustomerId);
+
+  // Có kết quả tìm mới về thì tự sổ dropdown ra luôn — không bắt người dùng phải bấm mở thêm 1 lần.
+  useEffect(() => {
+    if (customerList.length > 0) setIsDropdownOpen(true);
+  }, [customerList]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className="form-group">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -85,32 +104,92 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
 
       {!isNewCustomerMode ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }} ref={wrapRef}>
             <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
               className="form-control"
               placeholder="Gõ tìm tên hoặc SĐT khách hàng..."
               value={customerSearch}
-              onChange={(e) => setCustomerSearch(e.target.value)}
+              onChange={(e) => {
+                setCustomerSearch(e.target.value);
+                setIsDropdownOpen(true);
+              }}
+              onFocus={() => {
+                if (customerList.length > 0) setIsDropdownOpen(true);
+              }}
               style={{ paddingLeft: '30px', fontSize: '12px' }}
             />
+
+            {isDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  right: 0,
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  zIndex: 50,
+                  padding: '4px',
+                }}
+              >
+                {customerSearchLoading && (
+                  <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>Đang tìm...</div>
+                )}
+                {!customerSearchLoading && customerList.length === 0 && (
+                  <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>Không tìm thấy khách hàng nào</div>
+                )}
+                {!customerSearchLoading && customerList.map((cust) => {
+                  const fullAddr = [cust.address, cust.ward?.name, cust.province?.name].filter(Boolean).join(', ');
+                  const isSelected = cust.id === selectedCustomerId;
+                  return (
+                    <button
+                      key={cust.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerId(cust.id);
+                        setIsDropdownOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: isSelected ? '#eff6ff' : 'transparent',
+                        color: '#0f172a',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      className={isSelected ? '' : 'dropdown-item-hover'}
+                    >
+                      <span>
+                        <strong>{cust.name}</strong>
+                        {cust.phone ? ` (${cust.phone})` : ''}
+                        {fullAddr ? ` - ${fullAddr}` : ''}
+                      </span>
+                      {isSelected && <Check size={13} color="#2563eb" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <select
-            className="form-control"
-            value={selectedCustomerId}
-            onChange={(e) => setSelectedCustomerId(e.target.value)}
-          >
-            {customerList.map((cust) => {
-              const fullAddr = [cust.address, cust.ward?.name, cust.province?.name].filter(Boolean).join(', ');
-              return (
-                <option key={cust.id} value={cust.id}>
-                  {cust.name} {cust.phone ? `(${cust.phone})` : ''} {fullAddr ? `- ${fullAddr}` : ''}
-                </option>
-              );
-            })}
-            {customerList.length === 0 && <option value="">Không tìm thấy khách hàng nào</option>}
-          </select>
+
+          {selectedCustomer && !isDropdownOpen && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: '#eff6ff', borderRadius: '8px', fontSize: '11.5px', color: '#1e40af', fontWeight: 600 }}>
+              <Check size={13} /> Đã chọn: {selectedCustomer.name}{selectedCustomer.phone ? ` (${selectedCustomer.phone})` : ''}
+            </div>
+          )}
 
           {!customerSearchLoading && customerList.length === 0 && (
             <button
@@ -201,8 +280,8 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                 >
                   <option value="">-- Chọn Xã / Phường --</option>
                   {wards.map((w: any) => (
-                    <option key={w.id} value={w.districtName ? `${w.name} (${w.districtName})` : w.name}>
-                      {w.name} {w.districtName ? `(${w.districtName})` : ''}
+                    <option key={w.id} value={w.name}>
+                      {w.name}
                     </option>
                   ))}
                 </select>

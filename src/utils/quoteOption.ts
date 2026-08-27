@@ -12,6 +12,22 @@ export const cleanOptionLabel = (opt: { materialName?: string; optionName: strin
 export const displayPrice = (opt: { quotedPrice: number; livePrice?: number | null }) =>
   opt.livePrice != null ? Number(opt.livePrice) : Number(opt.quotedPrice) || 0;
 
+// Thẻ Thư Viện Sản Phẩm gộp nhiều option (khác tuổi vàng/khối lượng) — hiện khoảng giá min–max của
+// nhóm; bằng nhau (nhóm 1 option) thì 1 số; thiếu min/max thì rơi về giá đại diện.
+export const formatPriceRange = (
+  min: number | null | undefined,
+  max: number | null | undefined,
+  fallback: number,
+): string => {
+  const lo = Number(min) || 0;
+  const hi = Number(max) || 0;
+  if (lo <= 0 && hi <= 0) return fallback > 0 ? formatCurrency(fallback) : 'Chưa có giá';
+  if (lo > 0 && hi > 0 && Math.abs(hi - lo) > 1) {
+    return `${formatCurrency(lo)} – ${formatCurrency(hi)}`;
+  }
+  return formatCurrency(hi || lo);
+};
+
 // Nhãn hiển thị 1 phương án — chỉ mỗi tên "Phương án N" không đủ để Sale phân biệt các option,
 // ưu tiên materialName/optionName đã dọn "(Áp dụng X%)", cuối cùng mới rơi về số thứ tự.
 export const getOptionLabel = (opt: QuoteOption, idx: number): string =>

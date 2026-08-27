@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { Role, User, QuoteRequest, HeaderSearchProduct } from '../types';
-import { LogOut, User as UserIcon, Menu, ShieldCheck, Bell, X, Search, ChevronRight } from 'lucide-react';
+import { LogOut, User as UserIcon, ShieldCheck, Bell, X, Search, ChevronRight } from 'lucide-react';
 import { fetchQuoteRequests } from '../services/api';
 import { StatusPill } from './StatusPill';
 import { STATUS_BADGE_META } from '../constants';
@@ -13,10 +13,8 @@ const SEARCH_SECTION_LIMIT = 5;
 interface HeaderProps {
   user: User;
   currentRole: Role;
-  onRoleChange: (role: Role) => void;
   onOpenCreateModal: () => void;
   onLogout: () => void;
-  onToggleSidebar: () => void;
   onSelectReq: (id: string) => void;
   onSearchRequests: (query: string) => void;
 }
@@ -24,9 +22,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   user,
   currentRole,
-  onRoleChange,
   onLogout,
-  onToggleSidebar,
   onSelectReq,
   onSearchRequests,
 }) => {
@@ -167,31 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
   const productSection = productResults.slice(0, SEARCH_SECTION_LIMIT);
 
   return (
-    <header className="titlebar" style={{ position: 'relative', background: '#ffffff', borderBottom: '1px solid #e2e8f0', height: '64px', padding: '0 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Hamburger Menu Toggle Button */}
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderRadius: '8px',
-            padding: '6px 10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer',
-            color: '#334155',
-            fontSize: '12px',
-            fontWeight: 700,
-          }}
-          title="Thu gọn / Mở rộng Menu"
-        >
-          <Menu size={16} />
-          <span style={{ fontSize: '12px', color: '#475569' }}>Menu</span>
-        </button>
-      </div>
+    <header className="titlebar" style={{ position: 'relative', background: '#ffffff', borderBottom: '1px solid #e2e8f0', height: '64px', padding: '0 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
 
       {/* Search tổng — chỉ hiện ở Tổng Quan, canh giữa header. Gộp 2 mục: Yêu Cầu (mã đơn/tên
           khách hàng) và Sản Phẩm (danh mục/chất liệu đã báo giá) từ cùng 1 kết quả search. */}
@@ -373,30 +345,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Role switcher for Admin */}
-        {user.role === 'ADMIN' && (
-          <div className="role-switch">
-            <button
-              className={currentRole === 'SALE' ? 'active' : ''}
-              onClick={() => onRoleChange('SALE')}
-            >
-              Sale
-            </button>
-            <button
-              className={currentRole === 'ORDER' ? 'active' : ''}
-              onClick={() => onRoleChange('ORDER')}
-            >
-              Order
-            </button>
-            <button
-              className={currentRole === 'ADMIN' ? 'active' : ''}
-              onClick={() => onRoleChange('ADMIN')}
-            >
-              Admin
-            </button>
-          </div>
-        )}
-
         {/* Bell notification button */}
         <button
           type="button"
@@ -488,6 +436,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
+              {/* Xem thử giao diện theo góc nhìn Sale/Order/Admin — chỉ Admin mới thấy */}
               {/* Menu Item: Profile */}
               <button
                 type="button"
