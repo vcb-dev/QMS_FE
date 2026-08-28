@@ -148,6 +148,10 @@ export async function loginApi(email: string, password: string, remember: boolea
   }
 }
 
+export function redirectToLarkLogin() {
+  window.location.href = `${API_BASE}/auth/lark`;
+}
+
 export async function registerApi(payload: { name: string; email: string; password: string; role?: string }): Promise<{ user: User; message: string }> {
   return apiCall(api.post('/auth/register', payload), 'Đăng ký không thành công. Vui lòng kiểm tra lại');
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { LoginPageProps, AuthMode } from '../types';
-import { loginApi, registerApi, forgotPasswordApi, resetPasswordApi } from '../services/api';
+import { loginApi, registerApi, forgotPasswordApi, resetPasswordApi, redirectToLarkLogin } from '../services/api';
 import {
   Lock, Mail, UserPlus, KeyRound, ArrowLeft, ArrowRight, CheckCircle2,
   User as UserIcon, Briefcase, Eye, EyeOff,
@@ -58,6 +58,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Lấy lỗi từ query string (nếu redirect từ Backend về có mang theo lỗi OAuth)
+  const { search } = window.location;
+  React.useEffect(() => {
+    const params = new URLSearchParams(search);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      if (errorParam === 'LarkAuthFailed') {
+        setErrorMsg('Bạn đã từ chối cấp quyền hoặc quá trình đăng nhập Lark bị hủy.');
+      } else if (errorParam === 'LarkLoginError') {
+        setErrorMsg('Lỗi máy chủ khi xác thực Lark. Vui lòng thử lại sau.');
+      } else {
+        setErrorMsg(`Lỗi đăng nhập: ${errorParam}`);
+      }
+      
+      // Xóa params khỏi URL để không bị báo lỗi liên tục khi refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [search]);
 
   if (currentUser) {
     return <Navigate to="/" replace />;
@@ -172,6 +191,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
     }
   };
 
+
   const modeCopy: Record<AuthMode, { title: string; subtitle: string }> = {
     login: { title: 'Đăng nhập hệ thống', subtitle: 'Hệ thống Quản lý Báo giá' },
     register: { title: 'Yêu cầu quyền truy cập', subtitle: 'Hệ thống Quản lý Báo giá' },
@@ -183,21 +203,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
     <div style={{
       minHeight: '100vh',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
+      flexDirection: 'column', // Thêm flex-col
+      padding: '40px 20px',
       background: `linear-gradient(rgba(10, 15, 30, 0.35), rgba(10, 15, 30, 0.55)), url(${BACKGROUND_IMAGE_URL})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center 35%',
       backgroundRepeat: 'no-repeat',
+      overflowY: 'auto', // Đảm bảo cuộn được trên màn bé
     }}>
       <div style={{
         width: '100%',
         maxWidth: '420px',
+        margin: 'auto', // Quan trọng: chống bị khuất top khi màn hình quá thấp (flex bug)
         background: '#fffdf9',
         borderRadius: '20px',
         overflow: 'hidden',
         boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.5)',
+        flexShrink: 0, // Đảm bảo card không bị ép lại
       }}>
         {/* Thanh vàng thương hiệu trên cùng */}
         <div style={{ height: '5px', background: 'linear-gradient(90deg, #fde68a, #f0b429, #b45309)' }} />
@@ -208,7 +230,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
             <img
               src={COMPANY_LOGO_URL}
               alt="Viễn Chí Bảo"
-              style={{ height: '52px', objectFit: 'contain', marginBottom: '14px' }}
+              style={{ height: '52px', objectFit: 'contain', display: 'block', margin: '0 auto 14px auto' }}
             />
             <h1 style={{ fontSize: '19px', fontWeight: 800, color: '#1f2937', margin: 0 }}>
               {modeCopy[mode].title}
@@ -256,7 +278,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 1. LOGIN FORM */}
           {mode === 'login' && (
             <>
-
               <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <LabeledIconField
                   label="Tên đăng nhập"
@@ -310,7 +331,59 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                 </button>
               </form>
 
-              <p style={{ textAlign: 'center', fontSize: '12.5px', color: '#9ca3af', marginTop: '20px' }}>
+              {/* Nút đăng nhập Lark */}
+              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+                  <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: 600 }}>HOẶC</span>
+                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={redirectToLarkLogin}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto 1fr',
+                    alignItems: 'center',
+                    width: '100%',
+                    padding: '6px 0',
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '12px',
+                    fontSize: '14.5px',
+                    fontWeight: 600,
+                    color: '#374151',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#9ca3af';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '12px' }}>
+                    <img 
+                      src="https://p16-hera-overseas.larksuitecdn.com/tos-mya-i-lojyj5t9n9/f3f7b6969eb14364be035282e866b7bb.png~tplv-lojyj5t9n9-png:0:0.png" 
+                      alt="Lark Logo" 
+                      style={{ 
+                        width: '38px', 
+                        height: '38px', 
+                        objectFit: 'contain' 
+                      }} 
+                    />
+                  </div>
+                  <span>Đăng nhập qua Lark</span>
+                  <div />
+                </button>
+              </div>
+
+              <p style={{ textAlign: 'center', fontSize: '12.5px', color: '#9ca3af', marginTop: '24px' }}>
                 Chưa có tài khoản?{' '}
                 <button type="button" onClick={() => goToMode('register')} style={{ background: 'none', border: 'none', color: '#b45309', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer', padding: 0 }}>
                   Yêu cầu quyền truy cập
