@@ -6,7 +6,6 @@ import {
   Lock, Mail, UserPlus, KeyRound, ArrowLeft, ArrowRight, CheckCircle2,
   User as UserIcon, Briefcase, Eye, EyeOff,
 } from 'lucide-react';
-import { DevQuickLoginAccounts } from '../components/DevQuickLoginAccounts';
 import { COMPANY_LOGO_URL, BACKGROUND_IMAGE_URL } from '../constants';
 import {backLinkStyle, fieldLabelStyle,fieldIconStyle,fieldInputStyle,goldButtonStyle} from '../styles/card';
 
@@ -173,12 +172,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
     }
   };
 
-  const selectAccount = (accEmail: string) => {
-    setEmail(accEmail);
-    setPassword('123456');
-    clearMessages();
-  };
-
   const modeCopy: Record<AuthMode, { title: string; subtitle: string }> = {
     login: { title: 'Đăng nhập hệ thống', subtitle: 'Hệ thống Quản lý Báo giá' },
     register: { title: 'Yêu cầu quyền truy cập', subtitle: 'Hệ thống Quản lý Báo giá' },
@@ -263,8 +256,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 1. LOGIN FORM */}
           {mode === 'login' && (
             <>
-              {/* Chọn tài khoản kiểm thử nhanh — tạm thời cho dev/demo, xem DevQuickLoginAccounts.tsx để gỡ bỏ sau này */}
-              <DevQuickLoginAccounts currentEmail={email} onSelect={selectAccount} />
 
               <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <LabeledIconField
