@@ -78,7 +78,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
             onClick={() => setPeriod('WEEK')}
             style={{
               padding: '6px 14px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer',
-              background: period === 'WEEK' ? '#0f172a' : '#ffffff', color: period === 'WEEK' ? '#ffffff' : '#334155',
+              background: period === 'WEEK' ? '#e2e8f0' : '#ffffff', color: period === 'WEEK' ? '#0f172a' : '#64748b',
             }}
           >
             Tuần
@@ -88,7 +88,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
             onClick={() => setPeriod('MONTH')}
             style={{
               padding: '6px 14px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer',
-              background: period === 'MONTH' ? '#0f172a' : '#ffffff', color: period === 'MONTH' ? '#ffffff' : '#334155',
+              background: period === 'MONTH' ? '#e2e8f0' : '#ffffff', color: period === 'MONTH' ? '#0f172a' : '#64748b',
             }}
           >
             Tháng
@@ -102,9 +102,8 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
             key={item.key}
             onClick={() => onSelectStatus?.(item.value)}
             style={{
-              background: '#f8fafc',
+              background: '#ffffff',
               border: '1px solid #e2e8f0',
-              borderLeft: `3px solid ${item.color}`,
               borderRadius: '10px',
               padding: '14px',
               cursor: onSelectStatus ? 'pointer' : 'default',

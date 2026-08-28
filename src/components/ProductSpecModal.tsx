@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, History, Coins } from 'lucide-react';
+import { X, History, Coins, Copy, Check } from 'lucide-react';
 import type { ProductSpecModalProps, QuoteHistoryEntry } from '../types';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
+import { getPriceBreakdown, getLivePriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { ImageLightbox } from './ImageLightbox';
 import { formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProductHistory } from '../services/api';
@@ -32,6 +33,28 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
   const [histLoading, setHistLoading] = useState(false);
   const [selIdx, setSelIdx] = useState(0);
   const selected = history[selIdx] ?? history[0];
+
+  // Copy giá "sống" (Hôm nay ~) của phương án — fallback về giá gốc nếu option chưa có livePrice.
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  useEffect(() => { setCopiedIdx(null); setCopiedAll(false); }, [selIdx]);
+
+  const optLine = (o: { optionName: string; price: number; livePrice?: number | null }) =>
+    `${o.optionName}: ${formatCurrency(o.livePrice ?? o.price)}`;
+
+  const handleCopyOption = (idx: number, o: { optionName: string; price: number; livePrice?: number | null }) => {
+    navigator.clipboard.writeText(optLine(o)).then(() => {
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx((cur) => (cur === idx ? null : cur)), 1500);
+    }).catch(() => {});
+  };
+
+  const handleCopyAll = (opts: { optionName: string; price: number; livePrice?: number | null }[]) => {
+    navigator.clipboard.writeText(opts.map(optLine).join('\n')).then(() => {
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 1500);
+    }).catch(() => {});
+  };
 
   useEffect(() => {
     if (!item.groupKey) return;
@@ -72,7 +95,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
           <button
             onClick={onClose}
             aria-label="Đóng"
-            style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', flexShrink: 0, padding: '4px', marginLeft: '10px' }}
+            style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', flexShrink: 0, padding: '4px', marginLeft: '10px' }}
           >
             <X size={18} />
           </button>
@@ -197,8 +220,26 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
               </div>
 
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', letterSpacing: '0.3px' }}>
-                  <Coins size={13} /> GIÁ PHƯƠNG ÁN
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.3px' }}>
+                    <Coins size={13} /> GIÁ PHƯƠNG ÁN
+                  </div>
+                  {selected && selected.options.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyAll(selected.options)}
+                      title="Copy giá hôm nay của tất cả phương án"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
+                        padding: '4px 9px', borderRadius: '7px', border: '1px solid var(--border-color)',
+                        background: copiedAll ? '#dcfce7' : 'transparent',
+                        color: copiedAll ? '#16a34a' : 'var(--text-muted)',
+                        fontSize: '10.5px', fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      {copiedAll ? <Check size={12} /> : <Copy size={12} />} {copiedAll ? 'Đã copy' : 'Copy hết'}
+                    </button>
+                  )}
                 </div>
                 {selected && selected.options.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -215,21 +256,40 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                                 {oTag.label}
                               </span>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyOption(idx, o)}
+                              title={`Copy "${optLine(o)}"`}
+                              style={{
+                                flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '24px', height: '24px', borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                background: copiedIdx === idx ? '#dcfce7' : 'transparent',
+                                color: copiedIdx === idx ? '#16a34a' : 'var(--text-muted)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {copiedIdx === idx ? <Check size={11} /> : <Copy size={11} />}
+                            </button>
                           </div>
                           <div style={{ fontSize: '14px', fontWeight: 900, color: 'var(--text-main)' }}>
                             {formatCurrency(o.price)}
                           </div>
+                          {renderPriceBreakdownLines(getPriceBreakdown(o))}
                           {o.livePrice != null && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                              Hôm nay ~ <strong style={{ color: (o.livePriceDeltaPct ?? 0) > 0 ? '#15803d' : (o.livePriceDeltaPct ?? 0) < 0 ? '#b91c1c' : 'var(--text-main)' }}>
-                                {formatCurrency(o.livePrice)}
-                              </strong>
-                              {o.livePriceDeltaPct != null && o.livePriceDeltaPct !== 0 && (
-                                <span style={{ color: o.livePriceDeltaPct > 0 ? '#15803d' : '#b91c1c', fontWeight: 700 }}>
-                                  {' '}({o.livePriceDeltaPct > 0 ? '+' : ''}{o.livePriceDeltaPct}%)
-                                </span>
-                              )}
-                            </div>
+                            <>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                Hôm nay ~ <strong style={{ color: (o.livePriceDeltaPct ?? 0) > 0 ? '#15803d' : (o.livePriceDeltaPct ?? 0) < 0 ? '#b91c1c' : 'var(--text-main)' }}>
+                                  {formatCurrency(o.livePrice)}
+                                </strong>
+                                {o.livePriceDeltaPct != null && o.livePriceDeltaPct !== 0 && (
+                                  <span style={{ color: o.livePriceDeltaPct > 0 ? '#15803d' : '#b91c1c', fontWeight: 700 }}>
+                                    {' '}({o.livePriceDeltaPct > 0 ? '+' : ''}{o.livePriceDeltaPct}%)
+                                  </span>
+                                )}
+                              </div>
+                              {renderPriceBreakdownLines(getLivePriceBreakdown(o), { live: true })}
+                            </>
                           )}
                         </div>
                       );

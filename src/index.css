@@ -191,9 +191,9 @@ body {
 }
 
 .primary-action {
-  background: #111927;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
   padding: 9px 20px;
   border-radius: 10px;
   font-weight: 800;
@@ -202,14 +202,57 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 12px rgba(17, 25, 39, 0.25);
-  transition: all 0.2s ease;
+  box-shadow: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .primary-action:hover {
-  background: #1e293b;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(17, 25, 39, 0.35);
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+/* FilterBar — card trạng thái + nút tiện ích: đơn sắc, hover đậm hơn */
+.fb-square {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.fb-square:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.fb-square.active {
+  background: #f8fafc;
+  border-color: #0f172a;
+  box-shadow: inset 0 0 0 1px #0f172a;
+}
+
+.fb-btn {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.fb-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.fb-btn:disabled {
+  background: #f8fafc;
+  color: #cbd5e1;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
 }
 
 .dropdown-item-hover:hover {
@@ -227,25 +270,39 @@ body {
 }
 
 .sidebar {
-  background: #111927 !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
   padding: 0 12px 16px 12px !important;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  /* Tách khỏi luồng flex: hover chỉ đè lên nội dung, không đẩy cột nội dung co lại */
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  height: 100vh;
+  z-index: 100;
   width: 72px;
   min-width: 72px;
   flex-shrink: 0;
-  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), padding 0.2s ease;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), padding 0.2s ease, box-shadow 0.2s ease;
   overflow-x: hidden;
   overflow-y: auto;
   box-sizing: border-box;
 }
 
+/* Chừa sẵn 72px cho rail sidebar (cột nội dung là sibling ngay sau aside.sidebar) */
+.sidebar + div {
+  margin-left: 72px;
+}
+
 .sidebar:hover {
-  width: 240px;
-  min-width: 240px;
+  width: 260px;
+  min-width: 260px;
   padding: 0 16px 16px 16px !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
 }
 
 .sidebar-brand-text,
@@ -253,6 +310,18 @@ body {
   opacity: 0;
   white-space: nowrap;
   transition: opacity 0.15s ease;
+}
+
+.sidebar-nav button span.nav-label {
+  display: block;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-nav button svg {
+  flex-shrink: 0;
 }
 
 .sidebar:hover .sidebar-brand-text,
@@ -289,42 +358,42 @@ body {
   text-align: left;
   font-size: 13.5px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   transition: all 0.15s ease;
 }
 
 .sidebar-nav button:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .sidebar-nav button.active {
-  background: linear-gradient(180deg, #1e2c47 0%, #162238 100%) !important;
-  border: 1px solid rgba(245, 158, 11, 0.25) !important;
-  color: #f59e0b !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  background: #eff6ff !important;
+  border: 1px solid #bfdbfe !important;
+  color: #1d4ed8 !important;
+  box-shadow: none !important;
   font-weight: 700;
 }
 
 .sidebar-nav button.active svg {
-  color: #f59e0b !important;
+  color: #1d4ed8 !important;
 }
 
 .sidebar-nav .nav-badge {
-  background: rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
+  background: #f1f5f9;
+  color: #64748b;
   font-size: 11px;
   padding: 2px 7px;
   border-radius: 10px;
 }
 
 .sidebar-nav button.active .nav-badge {
-  background: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .sidebar-status {
@@ -763,7 +832,8 @@ body {
 }
 
 .modal-header {
-  background: #1e293b; color: white;
+  background: #ffffff; color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
   padding: 18px 24px;
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 10;

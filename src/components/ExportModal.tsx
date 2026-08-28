@@ -120,9 +120,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   return (
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '760px', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-        <div className="modal-header" style={{ background: '#0f172a', flexShrink: 0 }}>
+        <div className="modal-header" style={{ flexShrink: 0 }}>
           <h2>Xuất Excel Yêu Cầu Báo Giá</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>

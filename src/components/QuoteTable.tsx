@@ -4,6 +4,7 @@ import type { QuoteRequest, RequestsPageProps } from '../types';
 import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X } from 'lucide-react';
 import { formatCurrency, formatDuration as formatDurationMs } from '../utils/currency';
 import { STATUS_BADGE_META } from '../constants';
+import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 
 // Các field dưới trùng nguyên xi kiểu dữ liệu với RequestsPageProps (types/index.ts) — Pick thẳng
 // thay vì khai tay lại. 3 field còn lại khai riêng vì lệch với nguồn: onSelect khác tên onSelectReq,
@@ -496,6 +497,17 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
             const formattedPrice = priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có';
 
+            const priceOpt =
+              r.options?.find((o) => o.selectionStatus === 'CLOSED') ||
+              r.options?.find((o) => o.selectionStatus === 'SELECTED') ||
+              [...(r.options ?? [])].filter((o) => o.quotedPrice != null).pop() ||
+              r.options?.[0];
+            const priceBd = getPriceBreakdown({
+              quotedPrice: priceVal,
+              stonePrice: priceOpt?.stonePrice ?? null,
+              priceBreakdown: priceOpt?.priceBreakdown,
+            });
+
             const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
             const displayNote = r.desiredLeadTime || '---';
@@ -556,44 +568,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </div>
                 </td>
                 <td>
-                  {(() => {
-                    const activeOpt =
-                      r.options?.find((o) => o.selectionStatus === 'CLOSED') ||
-                      r.options?.find((o) => o.selectionStatus === 'SELECTED') ||
-                      r.options?.[0];
-
-                    const weightVal = activeOpt?.weightChi ?? (r as any).weightChi;
-                    const weightDisplay = weightVal != null && Number(weightVal) > 0 ? `${weightVal} chỉ` : null;
-
-                    let stoneDisplay = '';
-                    if (activeOpt?.stones && activeOpt.stones.length > 0) {
-                      stoneDisplay = activeOpt.stones.map((s) => `${s.quantity}v ${s.stoneName || s.stone?.name || 'đá'}`).join(', ');
-                    } else if (activeOpt?.stoneDescription) {
-                      stoneDisplay = activeOpt.stoneDescription;
-                    }
-
-                    return (
-                      <div>
-                        <div title={r.productName} style={{ fontWeight: 700, color: '#0f172a', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {r.productName}
-                        </div>
-                        {(weightDisplay || stoneDisplay) && (
-                          <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {weightDisplay && (
-                              <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
-                                {weightDisplay}
-                              </span>
-                            )}
-                            {stoneDisplay && (
-                              <span style={{ background: '#f0fdf4', border: '1px solid #dcfce7', color: '#166534', padding: '1px 5px', borderRadius: '4px', fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={stoneDisplay}>
-                                {stoneDisplay}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  <div title={r.productName} style={{ fontWeight: 700, color: '#0f172a', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.productName}
+                  </div>
                 </td>
                 <td>
                   <MaterialsCell materials={materialsList} />
@@ -620,7 +597,10 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 ) : priceVal > 0 ? (
                   (r.status === 'QUOTED' || r.status === 'CLOSED') ? (
                     <td style={{ color: '#0f766e', borderRadius: '6px', padding: '6px 8px', fontWeight: 800, fontSize: '13px' }}>
-                      {formattedPrice}
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {formattedPrice}
+                        {renderPriceBreakdownLines(priceBd)}
+                      </div>
                     </td>
                   ) : (
                     <td
@@ -634,6 +614,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                         <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 700, fontSize: '12.5px', opacity: 0.75 }}>
                           {formattedPrice}
                         </span>
+                        {renderPriceBreakdownLines(priceBd)}
                         <span
                           style={{
                             fontSize: '9.5px',

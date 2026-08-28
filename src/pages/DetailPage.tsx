@@ -29,7 +29,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
-import { cleanOptionLabel, stripAppliedPct } from '../utils/quoteOption';
+import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { cleanOptionLabel } from '../utils/quoteOption';
 import { ChatPopup } from '../components/ChatPopup';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { StatusPill } from '../components/StatusPill';
@@ -211,17 +212,27 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     };
   }, [socket, selectedReq?.id, selectedReq?.assigneeId, isChatParticipant]);
 
-  const handleCopyOptionPrice = (idx: number, opt: { optionName: string; materialName?: string; quotedPrice: number }) => {
-    const text = `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}`;
+  const handleCopyOptionPrice = (idx: number, opt: any) => {
+    const bd = getPriceBreakdown(opt as any);
+    const suffix = bd && bd.stone > 0
+      ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
+      : '';
+    const text = `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}${suffix}`;
     navigator.clipboard.writeText(text).then(() => {
       setCopiedOptIdx(idx);
       setTimeout(() => setCopiedOptIdx((cur) => (cur === idx ? null : cur)), 1500);
     }).catch(() => {});
   };
 
-  const handleCopyAllOptions = (options: { optionName: string; materialName?: string; quotedPrice: number }[]) => {
+  const handleCopyAllOptions = (options: any[]) => {
     const text = options
-      .map((opt) => `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}`)
+      .map((opt) => {
+        const bd = getPriceBreakdown(opt as any);
+        const suffix = bd && bd.stone > 0
+          ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
+          : '';
+        return `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}${suffix}`;
+      })
       .join('\n');
     navigator.clipboard.writeText(text).then(() => {
       setCopiedAllOpt(true);
@@ -269,11 +280,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   // Tên phương án đang được tính vào TỔNG BÁO GIÁ CHỐT ở sidebar — dùng để tạo liên kết
   // trực quan giữa số tiền ở sidebar và dòng phương án tương ứng trong "Các Phương Án Báo Giá".
   const finalOptionIndexInList = pricedOptions.findIndex((o) => o.id === finalOption?.id);
-  const finalOptionLabel = finalOption
-    ? cleanOptionLabel(finalOption) ||
-      stripAppliedPct(finalOption.optionName) ||
-      (finalOptionIndexInList >= 0 ? `Phương án ${finalOptionIndexInList + 1}` : '')
-    : '';
+  void finalOptionIndexInList; // kept for possible future use
 
   const STATUS_BADGE_LABELS: Record<string, string> = {
     PENDING: 'YÊU CẦU MỚI',
@@ -702,29 +709,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               >
                 {priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có giá chốt'}
               </div>
-
-              {/* Liên kết trực quan tới dòng phương án tương ứng trong "Các Phương Án Báo Giá" —
-                  tránh để 2 con số giống nhau nằm 2 nơi cách xa mà không có gì nối chúng lại. */}
-              {finalOptionLabel && priceVal > 0 && selectedReq.status !== 'PENDING' && selectedReq.status !== 'CLOSED' && (
-                <div
-                  style={{
-                    marginTop: '6px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: '#16a34a',
-                    background: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    borderRadius: '20px',
-                    padding: '2px 10px',
-                  }}
-                >
-                  <Layers size={11} /> Theo {finalOptionLabel}
-                </div>
+              {priceVal > 0 && renderPriceBreakdownLines(
+                getPriceBreakdown({
+                  quotedPrice: priceVal,
+                  stonePrice: finalOption?.stonePrice ?? null,
+                  priceBreakdown: finalOption?.priceBreakdown,
+                }),
               )}
-
+              
               {/* Sale chỉ cần biết có VAT hay không, không cần xem % chi tiết (ORDER/ADMIN mới xem chi tiết bên dưới) */}
               {currentRole === 'SALE' && finalOption && finalOption.vat != null && (
                 <div style={{ marginTop: '8px', fontSize: '11.5px', fontWeight: 700, color: finalOption.vat > 0 ? '#0f172a' : '#94a3b8' }}>

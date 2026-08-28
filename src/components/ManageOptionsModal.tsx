@@ -3,6 +3,7 @@ import { X, Trash2 } from 'lucide-react';
 import type { QuoteOption } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { getOptionLabel, getOptionSummary } from '../utils/quoteOption';
+import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 
 interface ManageOptionsModalProps {
   isOpen: boolean;
@@ -18,9 +19,9 @@ export const ManageOptionsModal: React.FC<ManageOptionsModalProps> = ({ isOpen, 
   return (
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '480px' }}>
-        <div className="modal-header" style={{ background: '#334155' }}>
+        <div className="modal-header">
           <h2>Quản Lý Phương Án Báo Giá{reqCode ? ` — ${reqCode}` : ''}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
@@ -58,9 +59,12 @@ export const ManageOptionsModal: React.FC<ManageOptionsModalProps> = ({ isOpen, 
                     )}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                    <strong style={{ fontSize: '14px', fontWeight: 900, color: '#334155' }}>
-                      {formatCurrency(Number(opt.quotedPrice))}
-                    </strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <strong style={{ fontSize: '14px', fontWeight: 900, color: '#334155' }}>
+                        {formatCurrency(Number(opt.quotedPrice))}
+                      </strong>
+                      {renderPriceBreakdownLines(getPriceBreakdown(opt))}
+                    </div>
                     <button
                       type="button"
                       title={canDelete ? 'Xóa phương án này' : 'Không thể xóa phương án cuối cùng'}

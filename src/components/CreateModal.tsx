@@ -11,9 +11,9 @@ import { CustomerSelectorSection } from './CustomerSelectorSection';
 const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle?: string }> = ({ label, onRemove, removeTitle }) => (
   <span
     style={{
-      background: '#eff6ff',
-      border: '1px solid #bfdbfe',
-      color: '#1d4ed8',
+      background: '#f1f5f9',
+      border: '1px solid #cbd5e1',
+      color: '#334155',
       padding: '4px 10px',
       borderRadius: '16px',
       fontSize: '11.5px',
@@ -28,7 +28,7 @@ const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle
       <button
         type="button"
         onClick={onRemove}
-        style={{ background: 'transparent', border: 'none', color: '#1d4ed8', cursor: 'pointer', padding: 0, fontSize: '12px', lineHeight: 1, fontWeight: 800 }}
+        style={{ background: 'transparent', border: 'none', color: '#334155', cursor: 'pointer', padding: 0, fontSize: '12px', lineHeight: 1, fontWeight: 800 }}
         title={removeTitle}
       >
         ✕
@@ -517,7 +517,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '920px', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
         {/* Header matching design */}
-        <div style={{ flexShrink: 0, background: '#111927', color: '#ffffff', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div style={{ flexShrink: 0, background: '#ffffff', color: '#0f172a', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <img
               src="https://vienchibao.com/wp-content/uploads/2025/01/logo.png"
@@ -525,16 +525,16 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               style={{ height: '32px', objectFit: 'contain' }}
             />
             <div>
-              <h2 id="modalCreateTitle" style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+              <h2 id="modalCreateTitle" style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
                 Tạo Yêu Cầu Báo Giá Chế Tác Mới
               </h2>
-              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '2px 0 0 0' }}>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
                 Điền đầy đủ các trường thông tin chuẩn nghiệp vụ VCB để chuyển bộ phận Định Giá
               </p>
             </div>
           </div>
 
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             <X size={20} />
           </button>
         </div>
@@ -688,7 +688,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             type="checkbox"
                             checked={selectedMaterialIds.includes(m.id)}
                             onChange={() => toggleMaterialId(m.id)}
-                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#475569' }}
                           />
                           {m.name}
                         </label>
@@ -788,9 +788,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                                 gap: '6px',
                                 padding: '7px 10px',
                                 borderRadius: '7px',
-                                border: active ? '1px solid #2563eb' : '1px solid #e2e8f0',
-                                background: active ? '#2563eb' : '#ffffff',
-                                color: active ? '#ffffff' : '#475569',
+                                border: active ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                                background: active ? '#e2e8f0' : '#ffffff',
+                                color: active ? '#0f172a' : '#475569',
                                 fontSize: '13px',
                                 fontWeight: 700,
                                 cursor: 'pointer',
@@ -804,8 +804,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                                   fontWeight: 700,
                                   padding: '1px 6px',
                                   borderRadius: '999px',
-                                  background: active ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-                                  color: active ? '#ffffff' : '#64748b',
+                                  background: active ? '#cbd5e1' : '#e2e8f0',
+                                  color: active ? '#0f172a' : '#64748b',
                                 }}
                               >
                                 {count}
@@ -856,7 +856,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                               borderRadius: '6px',
                               fontSize: '12px',
                               fontWeight: 700,
-                              color: '#2563eb',
+                              color: '#334155',
                               cursor: 'pointer',
                             }}
                           >
@@ -864,7 +864,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                               type="checkbox"
                               checked={allVisibleStoneSelected}
                               onChange={toggleSelectAllVisibleStones}
-                              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#475569' }}
                             />
                             {allVisibleStoneSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${visibleStoneOptions.length})`}
                           </label>
@@ -890,7 +890,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                               type="checkbox"
                               checked={selectedStoneIds.includes(s.id)}
                               onChange={() => toggleStoneId(s.id)}
-                              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563eb' }}
+                              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#475569' }}
                             />
                             {s.name}
                           </label>
@@ -1002,7 +1002,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   }}
                 >
                   <div style={{ marginBottom: '6px' }}>
-                    <Upload size={30} color="#b45309" />
+                    <Upload size={30} color="#64748b" />
                   </div>
                   <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', marginBottom: '2px' }}>
                     {totalImageCount >= MAX_IMAGES
@@ -1031,7 +1031,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             height: '76px',
                             borderRadius: '10px',
                             objectFit: 'cover',
-                            border: '2px solid #b45309',
+                            border: '2px solid #cbd5e1',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                           }}
                         />
@@ -1076,7 +1076,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             height: '76px',
                             borderRadius: '10px',
                             objectFit: 'cover',
-                            border: '2px solid #b45309',
+                            border: '2px solid #cbd5e1',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                           }}
                         />
@@ -1119,21 +1119,21 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                           width: '76px',
                           height: '76px',
                           borderRadius: '10px',
-                          border: '2px dashed #b45309',
-                          background: '#fffbeb',
+                          border: '2px dashed #cbd5e1',
+                          background: '#f8fafc',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
-                          color: '#b45309',
+                          color: '#475569',
                           fontSize: '11px',
                           fontWeight: 800,
                           gap: '2px',
                         }}
                         title="Bấm để chọn thêm ảnh"
                       >
-                        <Upload size={18} color="#b45309" />
+                        <Upload size={18} color="#64748b" />
                         <span>+ Thêm</span>
                       </div>
                     )}
@@ -1203,7 +1203,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       textAlign: 'center',
                     }}
                   >
-                    <Upload size={24} color="#b45309" />
+                    <Upload size={24} color="#64748b" />
                     <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', marginTop: '4px' }}>
                       Bấm để chọn 1 video
                     </div>
@@ -1215,7 +1215,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {/* Operational Notice Banner */}
-              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px', fontSize: '12.5px', color: '#92400e', lineHeight: '1.5' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', fontSize: '12.5px', color: '#475569', lineHeight: '1.5' }}>
                 <strong>Lưu ý nghiệp vụ:</strong> Yêu cầu BÁO GIÁ phải có đầy đủ mô tả, ảnh mẫu và chất liệu. Thời gian xử lý từ 1-4 giờ.
               </div>
 
@@ -1225,7 +1225,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   type="checkbox"
                   checked={understandProcess}
                   onChange={(e) => setUnderstandProcess(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: '#b45309', cursor: 'pointer' }}
+                  style={{ width: '16px', height: '16px', accentColor: '#475569', cursor: 'pointer' }}
                 />
                 Tôi đã nắm rõ quy trình
               </label>
@@ -1267,9 +1267,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               type="submit"
               disabled={submitting}
               style={{
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                color: '#ffffff',
-                border: 'none',
+                background: '#e2e8f0',
+                color: '#0f172a',
+                border: '1px solid #94a3b8',
                 borderRadius: '10px',
                 padding: '12px 28px',
                 fontSize: '14px',
@@ -1279,7 +1279,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                boxShadow: 'none',
                 opacity: submitting ? 0.7 : 1,
               }}
             >

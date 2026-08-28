@@ -152,19 +152,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <button
           type="button"
           onClick={() => onStatusSubFilterChange('ALL')}
-          style={{
-            background: statusSubFilter === 'ALL' ? '#0f172a' : '#f8fafc',
-            border: statusSubFilter === 'ALL' ? '1px solid #0f172a' : '1px solid #e2e8f0',
-            borderRadius: '10px',
-            padding: '6px 10px',
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
+          className={statusSubFilter === 'ALL' ? 'fb-square active' : 'fb-square'}
         >
-          <div style={{ fontSize: '10.5px', fontWeight: 700, color: statusSubFilter === 'ALL' ? 'rgba(255,255,255,0.7)' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
             Tất cả
           </div>
-          <div style={{ fontSize: '15px', fontWeight: 900, color: statusSubFilter === 'ALL' ? '#ffffff' : '#0f172a' }}>
+          <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a' }}>
             {counts.total}
           </div>
         </button>
@@ -176,16 +169,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               key={s.value}
               type="button"
               onClick={() => onStatusSubFilterChange(s.value)}
-              style={{
-                background: isActive ? '#f8fafc' : '#ffffff',
-                border: isActive ? `1px solid ${s.color}` : '1px solid #e2e8f0',
-                borderLeft: `3px solid ${s.color}`,
-                borderRadius: '10px',
-                padding: '6px 10px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                boxShadow: isActive ? `0 0 0 1px ${s.color}` : 'none',
-              }}
+              className={isActive ? 'fb-square active' : 'fb-square'}
             >
               <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.label}
@@ -228,25 +212,20 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               type="button"
               onClick={() => setPanelOpen((v) => !v)}
+              className="fb-btn"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: panelFilterCount > 0 ? '#0f172a' : '#f8fafc',
-                color: panelFilterCount > 0 ? '#ffffff' : '#334155',
-                border: panelFilterCount > 0 ? '1px solid #0f172a' : '1px solid #cbd5e1',
-                borderRadius: '8px',
                 padding: '8px 14px',
                 fontSize: '12.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
               }}
             >
               <SlidersHorizontal size={14} />
               Bộ lọc
               {panelFilterCount > 0 && (
                 <span style={{
-                  background: '#ffffff',
+                  background: '#cbd5e1',
                   color: '#0f172a',
                   borderRadius: '999px',
                   fontSize: '10.5px',
@@ -417,19 +396,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="button"
             onClick={onResetFilters}
             disabled={!isFiltered}
+            className="fb-btn"
             style={{
-              background: isFiltered ? '#fee2e2' : '#f8fafc',
-              color: isFiltered ? '#b91c1c' : '#cbd5e1',
-              border: isFiltered ? '1px solid #fca5a5' : '1px solid #e2e8f0',
-              borderRadius: '8px',
               padding: '8px 14px',
               fontSize: '12px',
-              fontWeight: 700,
-              cursor: isFiltered ? 'pointer' : 'not-allowed',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              opacity: isFiltered ? 1 : 0.6,
               flexShrink: 0,
             }}
             title={isFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}

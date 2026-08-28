@@ -30,9 +30,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className="sidebar"
       style={{
-        background: '#111927',
-        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-        color: '#ffffff',
+        background: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        color: '#0f172a',
       }}
     >
       {/* Brand Mark in Sidebar top matching screenshot */}
@@ -47,12 +47,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           height: '64px',
           padding: '0 12px',
           boxSizing: 'border-box',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid #e2e8f0',
           marginBottom: '16px',
           background: 'transparent',
           border: 'none',
           borderBottomWidth: '1px',
-          borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+          borderBottomColor: '#e2e8f0',
           borderBottomStyle: 'solid',
           width: '100%',
           cursor: 'pointer',
@@ -61,13 +61,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         <div
           style={{
-            background: '#ffffff',
-            padding: '5px 8px',
+            background: 'transparent',
+            padding: '0',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
             flexShrink: 0,
           }}
         >
@@ -77,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             style={{ height: '24px', objectFit: 'contain' }}
           />
         </div>
-        <span className="sidebar-brand-text" style={{ fontSize: '15px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.2px' }}>
+        <span className="sidebar-brand-text" style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.2px' }}>
           VCB QMS
         </span>
       </button>
@@ -88,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter === 'OVERVIEW' ? 'active' : ''}
           onClick={() => onFilterChange('OVERVIEW')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
             <LayoutDashboard size={18} /> <span className="nav-label">Tổng Quan</span>
           </span>
         </button>
@@ -98,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' && currentFilter !== 'STAFF' && currentFilter !== 'CUSTOMERS' && currentFilter !== 'PRICING_CONFIG' ? 'active' : ''}
           onClick={() => onFilterChange('ALL')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
             <FileText size={18} /> <span className="nav-label">Danh Sách Yêu Cầu Báo Giá</span>
           </span>
         </button>
@@ -109,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={currentFilter === 'STAFF' ? 'active' : ''}
             onClick={() => onFilterChange('STAFF')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
               <Users size={18} /> <span className="nav-label">Quản Lý Nhân Viên</span>
             </span>
           </button>
@@ -121,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={currentFilter === 'CUSTOMERS' ? 'active' : ''}
             onClick={() => onFilterChange('CUSTOMERS')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
               <Contact size={18} /> <span className="nav-label">Quản Lý Khách Hàng</span>
             </span>
           </button>
@@ -132,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter === 'LIBRARY' ? 'active' : ''}
           onClick={() => onFilterChange('LIBRARY')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
             <Package size={18} /> <span className="nav-label">{currentRole === 'SALE' ? 'Thư Viện Sản Phẩm' : 'Quản Lý Sản Phẩm'}</span>
           </span>
         </button>
@@ -142,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter === 'CALCULATOR' ? 'active' : ''}
           onClick={() => onFilterChange('CALCULATOR')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
             <Calculator size={18} /> <span className="nav-label">Máy Tính Giá</span>
           </span>
         </button>
@@ -153,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={currentFilter === 'PRICING_CONFIG' ? 'active' : ''}
             onClick={() => onFilterChange('PRICING_CONFIG')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
               <Settings size={18} /> <span className="nav-label">Cấu Hình Giá</span>
             </span>
           </button>

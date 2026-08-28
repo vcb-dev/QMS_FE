@@ -3,6 +3,7 @@ import { X, Award, Check } from 'lucide-react';
 import type { QuoteOption } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { getOptionLabel, getOptionSummary } from '../utils/quoteOption';
+import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 
 interface MarkClosedModalProps {
   isOpen: boolean;
@@ -39,9 +40,9 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
   return (
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '480px' }}>
-        <div className="modal-header" style={{ background: '#0c1542' }}>
+        <div className="modal-header">
           <h2>Chọn Phương Án Khách Đã Chốt{reqCode ? ` — ${reqCode}` : ''}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
@@ -83,9 +84,12 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
                     )}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                    <strong style={{ fontSize: '14px', fontWeight: 900, color: '#16a34a' }}>
-                      {formatCurrency(Number(opt.quotedPrice))}
-                    </strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <strong style={{ fontSize: '14px', fontWeight: 900, color: '#16a34a' }}>
+                        {formatCurrency(Number(opt.quotedPrice))}
+                      </strong>
+                      {renderPriceBreakdownLines(getPriceBreakdown(opt))}
+                    </div>
                     {isChosen && <Check size={16} color="#6d28d9" />}
                   </span>
                 </button>

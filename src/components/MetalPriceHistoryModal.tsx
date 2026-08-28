@@ -198,9 +198,9 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
   return createPortal(
     <div className="modal-backdrop show" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '880px', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-        <div className="modal-header" style={{ background: '#0c1542', flexShrink: 0 }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, color: 'white' }}><History size={18}/>Lịch Sử Giá Kim Loại</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+        <div className="modal-header" style={{ flexShrink: 0 }}>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, color: '#0f172a' }}><History size={18}/>Lịch Sử Giá Kim Loại</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>

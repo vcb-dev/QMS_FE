@@ -152,6 +152,8 @@ export interface QuoteOption {
   // Quản Lý Sản Phẩm luôn tính kèm. null = không tính được (thiếu config), fallback hiển thị
   // quotedPrice gốc. undefined = trang không yêu cầu tính live.
   livePrice?: number | null;
+  priceBreakdown?: { material: number; stone: number };
+  livePriceBreakdown?: { material: number; stone: number };
   quotedDate?: string;
   isSelected?: boolean;
   // Trạng thái được chọn lưu ở BE (QuoteOption.selectionStatus) — SELECTED = đang dùng báo giá chính,
@@ -276,6 +278,7 @@ export type CalcResult = {
   laborCost: number;
   stoneCost: number;
   stonePrice: number;
+  materialPrice?: number;
   vatRate: number;
   vatAmount: number;
   quotedPrice: number;
@@ -295,6 +298,7 @@ export type CalculatePriceResult = {
   laborCost?: number;
   stoneCost?: number;
   stonePrice?: number;
+  materialPrice?: number;
   stoneMarginLabel?: string;
   totalProductionCost?: number;
   profitMarginDivisor?: number;
@@ -330,7 +334,7 @@ export interface DashboardChartsResponse {
   categoryDistribution: { name: string; value: number }[];
   materialDistribution: { name: string; value: number }[];
   priceRangeDistribution: { label: string; value: number }[];
-  featuredProducts: { key: string; productName: string; price: number; images?: QuoteRequestImage[] }[];
+  featuredProducts: { key: string; productName: string; price: number; materialPrice?: number; stonePrice?: number; images?: QuoteRequestImage[] }[];
 }
 
 // Trang chi tiết chỉ để xem — mọi thao tác đổi trạng thái/dữ liệu (tiếp nhận, báo giá, từ chối,
@@ -385,6 +389,14 @@ export interface ProductOptionCard {
   // khi rep không tính được giá sống.
   livePriceMin?: number | null;
   livePriceMax?: number | null;
+  priceMaterialMin?: number;
+  priceMaterialMax?: number;
+  priceStoneMin?: number;
+  priceStoneMax?: number;
+  livePriceMaterialMin?: number | null;
+  livePriceMaterialMax?: number | null;
+  livePriceStoneMin?: number | null;
+  livePriceStoneMax?: number | null;
   // Lịch sử báo giá của nhóm — 1 phần tử / đơn, sắp mới → cũ. Modal chi tiết dùng để dựng cột trái
   // (danh sách đơn) + cột phải (giá các phương án của đơn đang chọn).
   history?: QuoteHistoryEntry[];
@@ -398,6 +410,8 @@ export interface QuoteHistoryOption {
   livePrice?: number | null;
   // % chênh lệch giá hôm nay so với lúc báo (BE tính sẵn) — null nếu không so được.
   livePriceDeltaPct?: number | null;
+  priceBreakdown?: { material: number; stone: number };
+  livePriceBreakdown?: { material: number; stone: number };
   selectionStatus?: string;
 }
 
@@ -433,6 +447,8 @@ export interface HeaderSearchProduct {
   requestId: string;
   productName: string;
   price: number | null;
+  materialPrice: number | null;
+  stonePrice: number | null;
 }
 
 export interface ProductSpecModalProps {
@@ -519,7 +535,8 @@ export interface RequestsPageProps {
   onMarkClosed?: (id: string) => void;
   onManageOptions?: (id: string) => void;
   onOpenCreate: () => void;
-  onOpenExport: () => void;
+  // Không truyền khi role không được export (SALE) — RequestsPage ẩn nút khi prop vắng.
+  onOpenExport?: () => void;
   onResetFilters: () => void;
   selectedId?: string | null;
 }

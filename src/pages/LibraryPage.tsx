@@ -446,7 +446,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                 }}
               >
                 {/* Image Container */}
-                <div style={{ position: 'relative', width: '100%', height: '120px', background: '#f8fafc' }}>
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', background: '#f8fafc' }}>
                   <img
                     src={imgUrl}
                     alt=""
@@ -515,11 +515,31 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                     <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a' }}>
                       {formatPriceRange(item.priceMin, item.priceMax, displayPrice(item.option))}
                     </div>
+                    {/* {item.priceMaterialMin != null && (
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
+                        Giá chất liệu: {formatPriceRange(item.priceMaterialMin, item.priceMaterialMax, item.priceMaterialMin)}
+                      </div>
+                    )}
+                    {item.priceStoneMin != null && item.priceStoneMax != null && item.priceStoneMax > 0 && (
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
+                        Giá đá: {formatPriceRange(item.priceStoneMin, item.priceStoneMax, item.priceStoneMin)}
+                      </div>
+                    )} */}
                     {item.livePriceMin != null && item.livePriceMax != null && (
                       <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#0369a1', marginTop: '1px' }}>
                         Hôm nay ~ {formatPriceRange(item.livePriceMin, item.livePriceMax, item.livePriceMax)}
                       </div>
                     )}
+                    {/* {item.livePriceMaterialMin != null && (
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8' }}>
+                        Giá chất liệu: {formatPriceRange(item.livePriceMaterialMin, item.livePriceMaterialMax, item.livePriceMaterialMin)}
+                      </div>
+                    )}
+                    {item.livePriceStoneMin != null && item.livePriceStoneMax != null && item.livePriceStoneMax > 0 && (
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8' }}>
+                        Giá đá: {formatPriceRange(item.livePriceStoneMin, item.livePriceStoneMax, item.livePriceStoneMin)}
+                      </div>
+                    )} */}
                   </div>
 
                   <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px', lineHeight: '1.4' }}>

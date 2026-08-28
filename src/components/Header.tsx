@@ -7,6 +7,7 @@ import { fetchQuoteRequests } from '../services/api';
 import { StatusPill } from './StatusPill';
 import { STATUS_BADGE_META } from '../constants';
 import { formatCurrency } from '../utils/currency';
+import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
 
 const SEARCH_SECTION_LIMIT = 5;
 
@@ -98,6 +99,10 @@ export const Header: React.FC<HeaderProps> = ({
           requestId: r.id,
           productName: `${catName} ${matStr}`.trim() || r.productName || 'Sản phẩm chế tác',
           price: Number(o.quotedPrice),
+          materialPrice: o.priceBreakdown ? o.priceBreakdown.material
+            : (o.quotedPrice != null && o.stonePrice != null ? Number(o.quotedPrice) - Number(o.stonePrice) : null),
+          stonePrice: o.priceBreakdown ? o.priceBreakdown.stone
+            : (o.stonePrice != null ? Number(o.stonePrice) : null),
         });
       }
     }
@@ -308,8 +313,11 @@ export const Header: React.FC<HeaderProps> = ({
                       <div style={{ minWidth: 0, fontSize: '12.5px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {p.productName}
                       </div>
-                      <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#b45309', flexShrink: 0 }}>
-                        {formatCurrency(p.price)}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
+                        <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#b45309' }}>
+                          {formatCurrency(p.price)}
+                        </div>
+                        {p.materialPrice != null && renderPriceBreakdownLines({ material: p.materialPrice, stone: p.stonePrice ?? 0 })}
                       </div>
                     </button>
                   ))}

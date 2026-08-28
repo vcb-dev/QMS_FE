@@ -13,6 +13,7 @@ import { DistributionPieCard } from '../components/DistributionPieCard';
 import { cardStyle } from '../styles/card';
 import { fetchQuoteRequests, fetchQuoteRequestStats, fetchDashboardCharts } from '../services/api';
 import { formatCurrency } from '../utils/currency';
+import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { SaleStatusStatsGrid } from '../components/SaleStatusStatsGrid';
 
 // Bảng màu cho biểu đồ phân bố (danh mục/chất liệu) — hằng số tĩnh, đặt ở scope file để
@@ -339,11 +340,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               {renderPointChangeBadge(kpiStats.closeRate, prevKpiStats?.closeRate)}
             </div>
           </div>
-          <div style={{ ...cardStyle, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div style={cardStyle}>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Doanh thu đã chốt
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#15803d', marginTop: '6px' }}>
+            <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>
               {formatCurrency(revenueStats.closedRevenue)}
             </div>
             <div style={{ marginTop: '6px' }}>
@@ -819,6 +820,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       <div style={{ fontSize: '11px', fontWeight: 900, color: '#2563eb', marginTop: '2px' }}>
                         {formattedPrice}
                       </div>
+                      {item.materialPrice != null && renderPriceBreakdownLines({ material: item.materialPrice, stone: item.stonePrice ?? 0 })}
                     </div>
                   </div>
                 );

@@ -62,9 +62,9 @@ export const ReasonPromptModal: React.FC<ReasonPromptModalProps> = ({
   return (
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '500px' }}>
-        <div className="modal-header" style={{ background: headerColor }}>
-          <h2>{title}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+        <div className="modal-header" style={{ background: '#ffffff', color: headerColor }}>
+          <h2 style={{ color: headerColor }}>{title}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: headerColor, cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>

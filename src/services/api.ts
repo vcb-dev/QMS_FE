@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOption, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE ;
@@ -621,6 +621,43 @@ export async function calculatePriceApi(payload: {
   return apiCall(api.post('/quote-options/calculate', payload), 'Lỗi khi tính giá từ hệ thống');
 }
 
+export interface CalculateBatchResultItem {
+  materialNameOrKey: string;
+  error?: string;
+  metalPricePerChi?: number;
+  totalMetalCost?: number;
+  metalRawCost?: number;
+  laborCost?: number;
+  stoneCost?: number;
+  stonePrice?: number;
+  totalProductionCost?: number;
+  profitMarginDivisor?: number;
+  profitMarginLabel?: string;
+  vatRate?: number;
+  vatAmount?: number;
+  quotedPrice?: number;
+}
+
+// Tính NHIỀU phương án (phương án chính + các "loại vàng khác") trong 1 request — thay N lần gọi
+// calculatePriceApi (mỗi lần ~1–5s qua pooler). Kết quả trả về theo ĐÚNG thứ tự items gửi lên.
+export async function calculatePriceBatchApi(payload: {
+  categoryId?: string;
+  includeVat?: boolean;
+  items: {
+    materialNameOrKey: string;
+    weightChi: number;
+    laborCost?: number;
+    stoneCost?: number;
+    vatRate?: number;
+    silverMultiplier?: number;
+  }[];
+}): Promise<CalculateBatchResultItem[]> {
+  return apiCall(
+    api.post('/quote-options/calculate-batch', payload),
+    'Lỗi khi tính danh sách phương án báo giá từ hệ thống',
+  );
+}
+
 export interface CalculateMultiResult {
   totalMetalCost: number;
   metalRawCost: number;
@@ -676,21 +713,6 @@ export async function importStonesExcel(file: File) {
     }
     throw new Error(data?.message || 'Không thể import bảng giá đá');
   }
-}
-
-export async function generatePricingOptionsApi(payload: {
-  requestedMatName?: string;
-  weightChi?: number;
-  laborCost?: number;
-  stoneCost?: number;
-  stoneDesc?: string;
-  vatRate?: number;
-  includeVat?: boolean;
-  manualBasePrice?: number;
-  categoryId?: string;
-  silverMultiplier?: number;
-}): Promise<QuoteOption[]> {
-  return apiCall(api.post('/quote-options/generate-options', payload), 'Lỗi khi tính danh sách phương án báo giá từ Backend');
 }
 
 export async function fetchSilverMultipliers(): Promise<number[]> {

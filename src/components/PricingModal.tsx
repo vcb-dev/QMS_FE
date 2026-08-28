@@ -4,12 +4,14 @@ import type { QuoteOption, QuoteRequest, Role } from '../types';
 import {
   fetchMasterData,
   calculatePriceMultiApi,
-  generatePricingOptionsApi,
+  calculatePriceBatchApi,
   fetchStones,
   fetchSilverMultipliers,
 } from '../services/api';
+import type { CalculateBatchResultItem } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
+import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 
@@ -72,6 +74,46 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const [calcIncludeVat, setCalcIncludeVat] = useState<boolean>(true);
   const [calcSilverMultiplier, setCalcSilverMultiplier] = useState<number>(3);
 
+  // Phương án "loại vàng khác" Order tự thêm để so sánh — KHÔNG còn tự sinh từ BE nữa. Mỗi dòng
+  // chọn 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau).
+  // Tính riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo, không chọn
+  // làm giá chính) cùng groupId với phương án chính.
+  const [compareRows, setCompareRows] = useState<
+    { id: string; materialId: string; materialName: string; weightChi: string }[]
+  >([]);
+  const addCompareRow = () =>
+    setCompareRows((prev) => [
+      ...prev,
+      {
+        id: `cmp_${Date.now()}_${prev.length}`,
+        materialId: dbMaterials[0]?.id || '',
+        materialName: dbMaterials[0]?.name || '',
+        weightChi: '',
+      },
+    ]);
+  const updateCompareRow = (
+    id: string,
+    patch: Partial<{ materialId: string; weightChi: string }>,
+  ) =>
+    setCompareRows((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              ...patch,
+              ...(patch.materialId != null
+                ? {
+                    materialName:
+                      dbMaterials.find((m) => m.id === patch.materialId)?.name || '',
+                  }
+                : {}),
+            }
+          : row,
+      ),
+    );
+  const removeCompareRow = (id: string) =>
+    setCompareRows((prev) => prev.filter((row) => row.id !== id));
+
   // Đá đính
   const [calcStoneMode, setCalcStoneMode] = useState<'catalog' | 'manual'>('catalog');
   const [calcManualStoneName, setCalcManualStoneName] = useState('');
@@ -103,6 +145,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // Khi modal mở, nạp danh sách options hiện có và chuẩn bị form máy tính
   useEffect(() => {
     if (!isOpen || !selectedReq) return;
+
+    setCompareRows([]);
 
     // Bản nháp chưa có giá (VD: "Yêu cầu ban đầu" tự tạo lúc Sale gửi yêu cầu) không phải 1 phương
     // án báo giá thật — không đưa vào state options, nếu không sẽ lệch số thứ tự "Phương án N" và
@@ -254,12 +298,63 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     });
   };
 
+  const isSilverName = (name: string) =>
+    /BẠC|SILVER|925/i.test(name) && !/BẠCH/i.test(name);
+
+  // Map 1 kết quả từ /quote-options/calculate-batch thành QuoteOption. Thuần, không gọi API —
+  // cả lô (phương án chính + các "loại vàng khác") tính trong 1 request duy nhất.
+  const mapOption = (
+    materialName: string,
+    materialId: string | undefined,
+    weightChi: number,
+    res: CalculateBatchResultItem | undefined,
+    ctx: {
+      laborCost: number;
+      vatVal: number;
+      stoneSelections?: { stoneId: string; quantity: number }[];
+      stoneDesc: string;
+      groupId: string;
+      locked: boolean;
+    },
+  ): QuoteOption | null => {
+    if (!res || res.error || typeof res.quotedPrice !== 'number' || !(res.quotedPrice > 0)) {
+      return null;
+    }
+    return {
+      optionName: ctx.locked
+        ? `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
+        : `${materialName} · Công ${formatCurrency(ctx.laborCost)} · VAT ${ctx.vatVal}%`,
+      materialName,
+      weightChi,
+      laborCost: res.laborCost,
+      stoneCost: res.stoneCost,
+      totalMetalCost: res.totalMetalCost,
+      metalRawCost: res.metalRawCost,
+      stonePrice: res.stonePrice,
+      vat: ctx.vatVal,
+      quotedPrice: res.quotedPrice,
+      isSelected: false,
+      locked: ctx.locked,
+      groupId: ctx.groupId,
+      materials: materialId ? [{ materialId, weightChi }] : undefined,
+      stones: ctx.stoneSelections,
+      stoneDescription: ctx.stoneDesc,
+      note: ctx.locked ? 'Loại vàng khác — chỉ tham khảo' : 'Tính từ máy tính giá',
+    };
+  };
+
   const handleRunCalculate = async () => {
     const validRows = calcMaterialRows.filter(
       (m) => m.materialName && (parseFloat(m.weightChi) || 0) > 0,
     );
     if (validRows.length === 0) {
       setCalcError('Vui lòng chọn ít nhất 1 chất liệu và nhập trọng lượng hợp lệ');
+      return;
+    }
+
+    // Dòng "loại vàng khác" đã chọn chất liệu nhưng CHƯA nhập khối lượng — bắt buộc nhập.
+    if (compareRows.some((r) => r.materialId && !((parseFloat(r.weightChi) || 0) > 0))) {
+      setCalcError('Nhập khối lượng (chỉ) cho phương án loại vàng khác');
       return;
     }
 
@@ -276,71 +371,92 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         totalStoneCost = calcStoneRows.reduce((sum, r) => sum + r.qty * stonePricePerUnit(r.stoneId), 0);
       }
 
+      const stoneSelections =
+        calcStoneMode === 'catalog' && calcStoneRows.length > 0
+          ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+          : undefined;
+      const stoneDesc =
+        calcStoneMode === 'manual'
+          ? calcManualStoneName
+          : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', ');
+
+      // Các dòng "loại vàng khác" hợp lệ (đã chọn chất liệu + nhập khối lượng > 0).
+      const compareValid = compareRows.filter(
+        (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
+      );
+      const compareItems = compareValid.map((r) => ({
+        materialNameOrKey: r.materialName,
+        weightChi: parseFloat(r.weightChi) || 0,
+        laborCost: l,
+        stoneCost: totalStoneCost,
+        vatRate: vatVal,
+        silverMultiplier: isSilverName(r.materialName) ? calcSilverMultiplier : undefined,
+      }));
+
+      // Bấm "Tính Giá Ngay" lần 2 (chỉ thêm phương án so sánh, giá chính không đổi) — phương án
+      // chính bị addOptionsToList bỏ qua vì trùng giá. Phải gán các phương án so sánh MỚI vào ĐÚNG
+      // groupId của phương án chính đang có, nếu không chúng thành "mồ côi" và không hiện lên.
+      const resolveGroupId = (primaryPrice: number): string => {
+        const existing = options.find(
+          (o) =>
+            !o.locked &&
+            o.quotedPrice != null &&
+            Number(o.quotedPrice) === Number(primaryPrice),
+        );
+        return existing?.groupId || `g_${Date.now()}`;
+      };
+
+      const mapCompare = (
+        results: CalculateBatchResultItem[],
+        gid: string,
+        offset: number,
+      ): QuoteOption[] =>
+        compareValid
+          .map((r, i) =>
+            mapOption(r.materialName, r.materialId, parseFloat(r.weightChi) || 0, results[i + offset], {
+              laborCost: l,
+              vatVal,
+              stoneSelections,
+              stoneDesc,
+              groupId: gid,
+              locked: true,
+            }),
+          )
+          .filter((o): o is QuoteOption => !!o);
+
       if (validRows.length === 1) {
         const single = validRows[0];
         const w = parseFloat(single.weightChi) || 0;
-        const isSilver =
-          /BẠC|SILVER|925/i.test(single.materialName) && !/BẠCH/i.test(single.materialName);
-
-        const stoneSelections =
-          calcStoneMode === 'catalog' && calcStoneRows.length > 0
-            ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-            : undefined;
-        const stoneDesc =
-          calcStoneMode === 'manual'
-            ? calcManualStoneName
-            : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', ');
-
-        const fixedMaterialId = single.materialId || single.id;
-
-        // BE sinh đủ tuổi vàng (10K/14K/18K/24K...) theo ĐÚNG tiền công/VAT vừa nhập, đánh dấu
-        // isSelected=true cho ĐÚNG 1 phương án khớp chất liệu Sale yêu cầu — breakdown giá của
-        // phương án khớp này giống hệt gọi /calculate riêng nên không cần gọi thêm API đó nữa.
-        const generated = await generatePricingOptionsApi({
-          requestedMatName: single.materialName,
-          weightChi: w,
-          laborCost: l,
-          stoneCost: totalStoneCost,
-          stoneDesc,
-          vatRate: vatVal,
-          includeVat: calcIncludeVat,
+        // 1 request duy nhất: phương án chính (index 0) + toàn bộ dòng "loại vàng khác".
+        const results = await calculatePriceBatchApi({
           categoryId: selectedReq?.category?.id || undefined,
-          silverMultiplier: isSilver ? calcSilverMultiplier : undefined,
+          includeVat: calcIncludeVat,
+          items: [
+            {
+              materialNameOrKey: single.materialName,
+              weightChi: w,
+              laborCost: l,
+              stoneCost: totalStoneCost,
+              vatRate: vatVal,
+              silverMultiplier: isSilverName(single.materialName) ? calcSilverMultiplier : undefined,
+            },
+            ...compareItems,
+          ],
         });
-
-        // groupId chung cho cả cụm (phương án khớp chất liệu Sale + các phương án tuổi vàng khác) —
-        // để lồng các phương án khác chất liệu vào trong card của phương án khớp khi hiển thị.
-        const groupId = `g_${Date.now()}`;
-        // BE luôn đánh số "Phương án 1/2/3..." lại từ đầu mỗi lần gọi — Order bấm "Tính Giá Ngay"
-        // nhiều lần (đổi công/VAT để so sánh) sẽ ra trùng tên "Phương án 1" giữa các cụm, lưu vào DB
-        // vậy không phân biệt được. Đặt tên theo chất liệu + đúng mức công/VAT của cụm đó thay thế.
-        const laborLabel = formatCurrency(l);
-        const newOpts: QuoteOption[] = (Array.isArray(generated) ? generated : [])
-          .filter((opt: any) => opt.quotedPrice != null)
-          .map((opt: any) => {
-            const optMaterial = dbMaterials.find((m) => m.name === opt.materialName);
-            const materialId = optMaterial?.id || fixedMaterialId;
-            return {
-              optionName: `${opt.materialName} · Công ${laborLabel} · VAT ${vatVal}%`,
-              materialName: opt.materialName,
-              weightChi: opt.weightChi != null ? opt.weightChi : w,
-              laborCost: opt.laborCost,
-              stoneCost: opt.stoneCost,
-              totalMetalCost: opt.totalMetalCost,
-              metalRawCost: opt.metalRawCost,
-              stonePrice: opt.stonePrice,
-              vat: opt.vat,
-              quotedPrice: opt.quotedPrice,
-              isSelected: false,
-              locked: !opt.isSelected,
-              groupId,
-              materials: materialId ? [{ materialId, weightChi: w }] : undefined,
-              stones: stoneSelections,
-              stoneDescription: stoneDesc,
-              note: 'Tính từ máy tính giá',
-            };
-          });
-        addOptionsToList(newOpts);
+        const mainOpt = mapOption(
+          single.materialName,
+          single.materialId || single.id,
+          w,
+          results[0],
+          { laborCost: l, vatVal, stoneSelections, stoneDesc, groupId: `g_${Date.now()}`, locked: false },
+        );
+        if (!mainOpt) {
+          setCalcError(results[0]?.error || 'Không nhận được giá hợp lệ từ hệ thống');
+          return;
+        }
+        const gid = resolveGroupId(mainOpt.quotedPrice);
+        mainOpt.groupId = gid;
+        addOptionsToList([mainOpt, ...mapCompare(results, gid, 1)]);
       } else {
         const payload = {
           materials: validRows.map((m) => ({
@@ -368,6 +484,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         const res = await calculatePriceMultiApi(payload);
         const matSummary = validRows.map((m) => `${m.materialName} (${m.weightChi} chỉ)`).join(' + ');
 
+        const groupId = resolveGroupId(res.quotedPrice);
+        const compareOpts =
+          compareItems.length > 0
+            ? mapCompare(
+                await calculatePriceBatchApi({
+                  categoryId: selectedReq?.category?.id || undefined,
+                  includeVat: calcIncludeVat,
+                  items: compareItems,
+                }),
+                groupId,
+                0,
+              )
+            : [];
+
         addOptionsToList([
           {
             // Cùng lý do với nhánh 1 chất liệu — kèm công/VAT vào tên để bấm "Tính Giá Ngay" nhiều
@@ -383,6 +513,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             vat: vatVal,
             quotedPrice: res.quotedPrice,
             isSelected: false,
+            groupId,
             materials: payload.materials,
             stones: payload.stones,
             stoneDescription:
@@ -391,6 +522,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', '),
             note: 'Tính từ máy tính giá',
           },
+          ...compareOpts,
         ]);
       }
     } catch (err: any) {
@@ -501,19 +633,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   return (
     <div className="modal-backdrop show">
       <div className="modal-card" style={{ maxWidth: '860px', width: '95%', maxHeight: '92vh', overflowY: 'auto' }}>
-        <div className="modal-header" style={{ background: '#0f172a', padding: '16px 20px' }}>
+        <div className="modal-header" style={{ padding: '16px 20px' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#ffffff' }}>
+            <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
               Báo Giá Yêu Cầu {selectedReq?.code || ''}
             </h2>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
               Khách: <strong>{selectedReq?.customer?.name || 'Khách vãng lai'}</strong> — Danh mục: <strong>{selectedReq?.category?.name || '---'}</strong>
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer' }}
+            style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
           >
             <X size={20} />
           </button>
@@ -589,9 +721,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                           <strong style={{ fontSize: '16px', fontWeight: 900, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
                             {formatCurrency(opt.quotedPrice)}
                           </strong>
+                          {renderPriceBreakdownLines(getPriceBreakdown(opt))}
+                        </div>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -642,9 +777,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                                 {childOpt.optionName || childOpt.materialName}
                               </span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                <strong style={{ fontSize: '13px', fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
-                                  {formatCurrency(childOpt.quotedPrice)}
-                                </strong>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                  <strong style={{ fontSize: '13px', fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
+                                    {formatCurrency(childOpt.quotedPrice)}
+                                  </strong>
+                                  {renderPriceBreakdownLines(getPriceBreakdown(childOpt))}
+                                </div>
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveOption(childIdx)}
@@ -820,6 +958,124 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* 1b. Phương án loại vàng khác — Order tự thêm để so sánh. KHÔNG còn tự sinh từ
+                    BE. Mỗi loại vàng PHẢI nhập khối lượng riêng; kết quả là option "chỉ tham khảo"
+                    (locked), không chọn được làm giá chính. */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                      Phương án loại vàng khác (tham khảo)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addCompareRow}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Plus size={13} /> Thêm phương án
+                    </button>
+                  </div>
+
+                  {compareRows.length === 0 ? (
+                    <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0 }}>
+                      Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {compareRows.map((row) => (
+                        <div
+                          key={row.id}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 140px 32px',
+                            gap: '10px',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <select
+                            key={dbMaterials.length}
+                            value={row.materialId}
+                            onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {dbMaterials.map((mat) => (
+                              <option key={mat.id} value={mat.id}>
+                                {mat.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={row.weightChi}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (v !== '' && parseFloat(v) < 0) return;
+                                updateCompareRow(row.id, { weightChi: v });
+                              }}
+                              placeholder="Số chỉ"
+                              style={{
+                                width: '100%',
+                                padding: '8px 38px 8px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid #cbd5e1',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                background: '#ffffff',
+                                fontVariantNumeric: 'tabular-nums',
+                              }}
+                            />
+                            <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: '#64748b', fontWeight: 700 }}>
+                              chỉ
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeCompareRow(row.id)}
+                            style={{
+                              height: '32px',
+                              width: '32px',
+                              borderRadius: '6px',
+                              border: '1px solid #fecaca',
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Tiền công & VAT */}

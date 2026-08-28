@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Calculator, CheckCircle2, RotateCcw, Copy, Check, Plus, Trash2 } from 'lucide-react';
-import { fetchMasterData, calculatePriceApi, calculatePriceMultiApi, generatePricingOptionsApi, fetchStones, fetchSilverMultipliers } from '../services/api';
+import { fetchMasterData, calculatePriceMultiApi, calculatePriceBatchApi, fetchStones, fetchSilverMultipliers } from '../services/api';
+import type { CalculateBatchResultItem } from '../services/api';
 import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
+import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
 import type {CalculatorPageProps, StoneRow,StoneCatalogItem,CalcResult} from '../types';
 import {cardStyle, cardTitleStyle} from '../styles/card';
@@ -61,6 +63,42 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   // Hệ số nhân Bạc — danh sách lấy từ cấu hình, người dùng chọn muốn nhân với hệ số nào lúc tính giá
   const [silverMultipliers, setSilverMultipliers] = useState<number[]>([]);
   const [selectedSilverMultiplier, setSelectedSilverMultiplier] = useState<number>(3);
+
+  // Phương án so sánh loại vàng khác — người dùng TỰ thêm, không còn tự sinh từ BE. Mỗi dòng chọn
+  // 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau). Tính
+  // riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo).
+  const [compareRows, setCompareRows] = useState<
+    { id: string; materialId: string; materialName: string; weightChi: string }[]
+  >([]);
+  const addCompareRow = () =>
+    setCompareRows((prev) => [
+      ...prev,
+      {
+        id: `cmp_${Date.now()}_${prev.length}`,
+        materialId: dbMaterials[0]?.id || '',
+        materialName: dbMaterials[0]?.name || '',
+        weightChi: '',
+      },
+    ]);
+  const updateCompareRow = (
+    id: string,
+    patch: Partial<{ materialId: string; weightChi: string }>,
+  ) =>
+    setCompareRows((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              ...patch,
+              ...(patch.materialId != null
+                ? { materialName: dbMaterials.find((m) => m.id === patch.materialId)?.name || '' }
+                : {}),
+            }
+          : row,
+      ),
+    );
+  const removeCompareRow = (id: string) =>
+    setCompareRows((prev) => prev.filter((row) => row.id !== id));
   // Chặn auto-calc chạy với material/hệ số mặc định (hardcode) trước khi DB trả dữ liệu thật về —
   // nếu không sẽ tính 2 lần: 1 lần với default lúc mount, 1 lần nữa khi master data/silver-multipliers tới
   const [initialDataReady, setInitialDataReady] = useState(false);
@@ -88,8 +126,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   const cleanOptionLabel = (opt: { materialName?: string; optionName: string }) =>
     (opt.materialName || opt.optionName || '').replace(/\s*\(Áp dụng[^)]*\)/i, '').trim();
 
-  const handleCopyPrice = (idx: number, opt: { materialName?: string; optionName: string; quotedPrice: number }) => {
-    const text = `${cleanOptionLabel(opt)}: ${formatCurrency(opt.quotedPrice)}`;
+  const handleCopyPrice = (idx: number, opt: any) => {
+    const bd = getPriceBreakdown(opt as any);
+    const suffix = bd && bd.stone > 0
+      ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
+      : '';
+    const text = `${cleanOptionLabel(opt)}: ${formatCurrency(opt.quotedPrice)}${suffix}`;
     navigator.clipboard.writeText(text).then(() => {
       setCopiedIdx(idx);
       setTimeout(() => setCopiedIdx((cur) => (cur === idx ? null : cur)), 1500);
@@ -98,7 +140,13 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
   const handleCopyAllPrices = () => {
     const text = priceOptions
-      .map((opt) => `${cleanOptionLabel(opt)}: ${formatCurrency(opt.quotedPrice)}`)
+      .map((opt) => {
+        const bd = getPriceBreakdown(opt as any);
+        const suffix = bd && bd.stone > 0
+          ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
+          : '';
+        return `${cleanOptionLabel(opt)}: ${formatCurrency(opt.quotedPrice)}${suffix}`;
+      })
       .join('\n');
     navigator.clipboard.writeText(text).then(() => {
       setCopiedAll(true);
@@ -173,6 +221,68 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     categoryIdRef.current = categoryId;
   }, [categoryId]);
 
+  // 1 item gửi lên /quote-options/calculate-batch cho 1 dòng compareRows.
+  const compareBatchItem = (r: { materialId: string; materialName: string; weightChi: string }) => {
+    const cMat = dbMaterials.find((dm) => dm.id === r.materialId);
+    const cSilver = cMat?.baseMetal?.name === 'Bạc';
+    return {
+      materialNameOrKey: r.materialName,
+      weightChi: parseFloat(r.weightChi) || 0,
+      laborCost: laborCost || 0,
+      stoneCost: totalStoneCost || 0,
+      vatRate: vatPct || 0,
+      silverMultiplier: cSilver ? selectedSilverMultiplier : undefined,
+    };
+  };
+
+  // Map 1 kết quả batch thành phương án "loại vàng khác" (locked). Thuần, không gọi API.
+  const mapCompareOpt = (
+    r: { materialId: string; materialName: string; weightChi: string },
+    cr: CalculateBatchResultItem | undefined,
+    vatValNum: number,
+    sharedStones: { stoneId: string; quantity: number }[] | undefined,
+  ): any | null => {
+    if (!cr || cr.error || typeof cr.quotedPrice !== 'number') return null;
+    const cw = parseFloat(r.weightChi) || 0;
+    return {
+      optionName: `${r.materialName} · ${cw} chỉ · Loại vàng khác (tham khảo)`,
+      materialName: r.materialName,
+      weightChi: cw,
+      laborCost: cr.laborCost,
+      stoneCost: cr.stoneCost,
+      totalMetalCost: cr.totalMetalCost,
+      metalRawCost: cr.metalRawCost,
+      stonePrice: cr.stonePrice,
+      vat: vatValNum,
+      quotedPrice: cr.quotedPrice,
+      isSelected: false,
+      locked: true,
+      materials: r.materialId ? [{ materialId: r.materialId, weightChi: cw }] : undefined,
+      stones: sharedStones,
+    };
+  };
+
+  // Các phương án "loại vàng khác" (compareRows) — bỏ qua dòng chưa nhập khối lượng, tính TẤT CẢ
+  // trong 1 request /quote-options/calculate-batch (trước đây mỗi dòng 1 request /calculate).
+  const buildCompareOptions = async (
+    vatValNum: number,
+    sharedStones: { stoneId: string; quantity: number }[] | undefined,
+    currentCatId: string | undefined,
+  ): Promise<any[]> => {
+    const rows = compareRows.filter(
+      (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
+    );
+    if (rows.length === 0) return [];
+    const results = await calculatePriceBatchApi({
+      categoryId: currentCatId || undefined,
+      includeVat,
+      items: rows.map(compareBatchItem),
+    });
+    return rows
+      .map((r, i) => mapCompareOpt(r, results[i], vatValNum, sharedStones))
+      .filter((o): o is any => !!o);
+  };
+
   const runCalculate = async () => {
     const validRows = materialRows.filter((m) => m.materialName && (parseFloat(m.weightChi) || 0) > 0);
     if (validRows.length === 0) {
@@ -190,67 +300,88 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     setErrorMessage(null);
     try {
       if (validRows.length === 1) {
-        // Luồng 1 chất liệu: Gọi calculate 5 bước + sinh phương án so sánh
+        // Luồng 1 chất liệu: tính giá chính qua /calculate. KHÔNG còn tự sinh bảng so sánh tuổi
+        // vàng — các phương án "loại vàng khác" do người dùng tự thêm ở khối compareRows.
         const singleRow = validRows[0];
         const w = parseFloat(singleRow.weightChi) || 0;
         const singleMat = dbMaterials.find((dm) => dm.id === singleRow.materialId);
         const isSingleSilver = singleMat?.baseMetal?.name === 'Bạc';
 
-        const [res, options] = await Promise.all([
-          calculatePriceApi({
-            materialNameOrKey: singleRow.materialName,
-            weightChi: w,
-            laborCost: laborCost || 0,
-            stoneCost: totalStoneCost || 0,
-            vatRate: vatPct || 0,
-            includeVat,
-            categoryId: currentCatId || undefined,
-            silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
-          }),
-          generatePricingOptionsApi({
-            requestedMatName: singleRow.materialName,
-            weightChi: w,
-            laborCost: laborCost || 0,
-            stoneCost: totalStoneCost || 0,
-            vatRate: vatPct || 0,
-            includeVat,
-            categoryId: currentCatId || undefined,
-            silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
-          }).catch(() => []),
-        ]);
+        const sharedStones =
+          stoneInputMode === 'table' && stoneRows.length > 0
+            ? stoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+            : undefined;
+        const vatValNum = includeVat ? (vatPct || 10) : 0;
+
+        // 1 request duy nhất: phương án chính (index 0) + tất cả dòng "loại vàng khác".
+        const compareValid = compareRows.filter(
+          (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
+        );
+        const batch = await calculatePriceBatchApi({
+          categoryId: currentCatId || undefined,
+          includeVat,
+          items: [
+            {
+              materialNameOrKey: singleRow.materialName,
+              weightChi: w,
+              laborCost: laborCost || 0,
+              stoneCost: totalStoneCost || 0,
+              vatRate: vatPct || 0,
+              silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
+            },
+            ...compareValid.map(compareBatchItem),
+          ],
+        });
 
         if (requestId !== calcRequestIdRef.current) return; // đã có input mới hơn, bỏ kết quả cũ này
 
-        if (res && typeof res.quotedPrice === 'number' && Number.isFinite(res.quotedPrice)) {
+        const res = batch[0];
+        if (res && !res.error && typeof res.quotedPrice === 'number' && Number.isFinite(res.quotedPrice)) {
           setQuotedPrice(res.quotedPrice);
-          // BE chỉ trả đủ cấu thành giá (totalMetalCost/laborCost/...) cho ORDER/ADMIN — Sale nhận
-          // bản rút gọn chỉ có materialNameOrKey/quotedPrice. Khối JSX đọc các field đầy đủ này đã
-          // tự khóa sau guard currentRole==='ORDER'||'ADMIN' nên an toàn ở runtime dù type khai optional.
-          setCalcResult(res as CalcResult);
+          // BE chỉ trả đủ cấu thành giá cho ORDER/ADMIN — Sale nhận bản rút gọn (chỉ quotedPrice).
+          // Khối JSX đọc field đầy đủ đã tự khóa sau guard currentRole nên an toàn ở runtime.
+          setCalcResult({
+            totalMetalCost: res.totalMetalCost ?? 0,
+            metalRawCost: res.metalRawCost,
+            laborCost: res.laborCost ?? 0,
+            stoneCost: res.stoneCost ?? 0,
+            stonePrice: res.stonePrice ?? 0,
+            vatRate: vatPct || 10,
+            vatAmount: res.vatAmount ?? 0,
+            quotedPrice: res.quotedPrice,
+            profitMarginLabel: res.profitMarginLabel,
+          });
         } else {
           setQuotedPrice(null);
           setCalcResult(null);
-          setErrorMessage('Không nhận được giá hợp lệ từ hệ thống');
+          setErrorMessage(res?.error || 'Không nhận được giá hợp lệ từ hệ thống');
         }
 
-        const enhancedOptions = (Array.isArray(options) ? options : []).map((opt) => {
-          // BE sinh mỗi phương án so sánh cho 1 tuổi vàng KHÁC NHAU (materialName riêng từng cái) —
-          // phải tra đúng materialId theo materialName của TỪNG phương án, không được dùng chung
-          // singleRow.materialId (chất liệu Sale chọn ban đầu) cho mọi phương án, kẻo cả 4 phương
-          // án đều bị lưu nhầm chung 1 chất liệu trong DB dù giá và tên đã tính đúng riêng biệt.
-          const optMaterial = dbMaterials.find((m) => m.name === opt.materialName);
-          const materialId = optMaterial?.id || singleRow.materialId;
-          return {
-            ...opt,
-            weightChi: opt.weightChi != null ? opt.weightChi : w,
-            materials: materialId ? [{ materialId, weightChi: w }] : undefined,
-            stones:
-              stoneInputMode === 'table' && stoneRows.length > 0
-                ? stoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-                : undefined,
-          };
-        });
-        setPriceOptions(enhancedOptions);
+        const mainOption = {
+          optionName: singleRow.materialName,
+          materialName: singleRow.materialName,
+          weightChi: w,
+          laborCost: res?.laborCost,
+          stoneCost: res?.stoneCost,
+          totalMetalCost: res?.totalMetalCost,
+          metalRawCost: res?.metalRawCost,
+          stonePrice: res?.stonePrice,
+          vat: vatValNum,
+          quotedPrice: res?.quotedPrice,
+          isSelected: true,
+          materials: singleRow.materialId
+            ? [{ materialId: singleRow.materialId, weightChi: w }]
+            : undefined,
+          stones: sharedStones,
+        };
+
+        const compareOptions = compareValid
+          .map((r, i) => mapCompareOpt(r, batch[i + 1], vatValNum, sharedStones))
+          .filter((o): o is any => !!o);
+
+        setPriceOptions(
+          res?.quotedPrice != null ? [mainOption, ...compareOptions] : compareOptions,
+        );
       } else {
         // Luồng NHIỀU chất liệu: Gọi API calculate-multi
         const multiPayload = {
@@ -271,6 +402,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
         };
 
         const res = await calculatePriceMultiApi(multiPayload);
+        const vatValNum = includeVat ? (vatPct || 10) : 0;
+        const compareOptions = await buildCompareOptions(
+          vatValNum,
+          multiPayload.stones,
+          currentCatId,
+        );
 
         if (requestId !== calcRequestIdRef.current) return;
 
@@ -307,6 +444,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               materials: validRows.map((m) => ({ materialId: m.materialId || m.id, weightChi: parseFloat(m.weightChi) || 0 })),
               stones: multiPayload.stones,
             },
+            ...compareOptions,
           ]);
         } else {
           setQuotedPrice(null);
@@ -346,7 +484,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     // trong deps sẽ kích auto-calc chạy lần 2 cho ra ĐÚNG kết quả cũ (call thừa). Đổi giá gốc trong
     // lúc trang đang mở thì bấm "Tính lại giá".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDataReady, categoryId, materialRows, laborCost, vatPct, includeVat, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal]);
+  }, [initialDataReady, categoryId, materialRows, laborCost, vatPct, includeVat, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal, compareRows]);
 
   // Nút "Tính giá ngay" / "Tính lại giá" — bấm để tính ngay, khỏi chờ debounce
   const handleCalculate = () => {
@@ -380,7 +518,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Plus size={14} color="#2563eb" /> Thêm chất liệu
+                <Plus size={14} color="#475569" /> Thêm chất liệu
               </button>
             </div>
 
@@ -524,6 +662,89 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               )}
             </div>
 
+            {/* Phương án so sánh loại vàng khác — TỰ thêm, không còn tự sinh từ BE. Mỗi loại vàng
+                PHẢI nhập khối lượng riêng; kết quả là phương án "chỉ tham khảo". */}
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#f8fafc', marginTop: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                  Phương án so sánh loại vàng khác (tham khảo)
+                </span>
+                <button
+                  type="button"
+                  onClick={addCompareRow}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px',
+                    color: '#334155', fontSize: '12px', fontWeight: 800, padding: '6px 12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={14} color="#475569" /> Thêm phương án
+                </button>
+              </div>
+
+              {compareRows.length === 0 ? (
+                <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0 }}>
+                  Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {compareRows.map((row) => {
+                    const missingWeight = !((parseFloat(row.weightChi) || 0) > 0);
+                    return (
+                      <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 36px', gap: '12px', alignItems: 'center' }}>
+                        <select
+                          value={row.materialId || ''}
+                          onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none', background: '#ffffff' }}
+                        >
+                          {dbMaterials.map((mat) => (
+                            <option key={mat.id} value={mat.id}>{mat.name}</option>
+                          ))}
+                        </select>
+
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.weightChi}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v !== '' && parseFloat(v) < 0) return;
+                              updateCompareRow(row.id, { weightChi: v });
+                            }}
+                            placeholder="Số chỉ"
+                            style={{
+                              width: '100%', padding: '9px 42px 9px 12px', borderRadius: '8px',
+                              border: missingWeight ? '1px solid #f87171' : '1px solid #cbd5e1',
+                              fontSize: '13px', fontWeight: 700, outline: 'none', background: '#ffffff',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          />
+                          <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
+                            chỉ
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeCompareRow(row.id)}
+                          title="Xóa phương án so sánh này"
+                          style={{ height: '36px', width: '36px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    Dòng chưa nhập khối lượng sẽ bị bỏ qua khi tính.
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* Sale: chỉ chọn CÓ/KHÔNG cộng VAT, không thấy/nhập được mức % (mức % do ORDER/ADMIN cấu hình) */}
             {isSale && (
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0', cursor: 'pointer', width: 'fit-content' }}>
@@ -609,7 +830,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     onClick={() => setStoneInputMode('table')}
                     style={{
                       flex: 1, padding: '8px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
-                      border: stoneInputMode === 'table' ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                      border: stoneInputMode === 'table' ? '1.5px solid #0f172a' : '1px solid #cbd5e1',
                       background: stoneInputMode === 'table' ? '#fff7ed' : '#ffffff',
                       color: stoneInputMode === 'table' ? '#c2410c' : '#64748b',
                     }}
@@ -621,7 +842,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     onClick={() => setStoneInputMode('total')}
                     style={{
                       flex: 1, padding: '8px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
-                      border: stoneInputMode === 'total' ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                      border: stoneInputMode === 'total' ? '1.5px solid #0f172a' : '1px solid #cbd5e1',
                       background: stoneInputMode === 'total' ? '#fff7ed' : '#ffffff',
                       color: stoneInputMode === 'total' ? '#c2410c' : '#64748b',
                     }}
@@ -817,8 +1038,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <div
                     key={idx}
                     style={{
-                      background: opt.isSelected ? '#fffbeb' : '#f8fafc',
-                      border: opt.isSelected ? '1.5px solid #f59e0b' : '1px solid #e2e8f0',
+                      background: opt.isSelected ? '#f1f5f9' : '#f8fafc',
+                      border: opt.isSelected ? '1.5px solid #0f172a' : '1px solid #e2e8f0',
                       borderRadius: '12px',
                       padding: '14px',
                       display: 'flex',
@@ -831,8 +1052,11 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {cleanOptionLabel(opt)}
                       </div>
-                      <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatCurrency(opt.quotedPrice)}
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCurrency(opt.quotedPrice)}
+                        </div>
+                        {renderPriceBreakdownLines(getPriceBreakdown(opt))}
                       </div>
                     </div>
                     <button
@@ -885,10 +1109,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 <div
                   style={{
                     width: '40px', height: '40px', borderRadius: '50%',
-                    background: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   }}
                 >
-                  <Calculator size={20} color="#ffffff" />
+                  <Calculator size={20} color="#475569" />
                 </div>
                 <div>
                   <h2 style={{ fontSize: '16px', fontWeight: 900, color: '#111827', margin: 0 }}>
@@ -906,15 +1130,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 disabled={isCalculating}
                 style={{
                   width: '100%',
-                  background: isCalculating ? '#cbd5e1' : 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-                  color: isCalculating ? '#64748b' : '#78350f',
-                  border: 'none',
+                  background: isCalculating ? '#e2e8f0' : '#f1f5f9',
+                  color: isCalculating ? '#94a3b8' : '#334155',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '12px',
                   padding: '16px',
                   fontSize: '15px',
                   fontWeight: 800,
                   cursor: isCalculating ? 'not-allowed' : 'pointer',
-                  boxShadow: isCalculating ? 'none' : '0 4px 10px rgba(245, 158, 11, 0.3)',
+                  boxShadow: 'none',
                   opacity: isCalculating ? 0.7 : 1,
                   transition: 'all 0.2s ease',
                 }}
@@ -929,10 +1153,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 <div
                   style={{
                     width: '40px', height: '40px', borderRadius: '50%',
-                    background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   }}
                 >
-                  <CheckCircle2 size={20} color="#ffffff" />
+                  <CheckCircle2 size={20} color="#475569" />
                 </div>
                 <div>
                   <h2 style={{ fontSize: '16px', fontWeight: 900, color: '#111827', margin: 0 }}>
@@ -984,9 +1208,20 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 )}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#374151' }}>Tổng báo giá</span>
-                  <span style={{ fontSize: '24px', fontWeight: 900, color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>
-                    {formatCurrency(quotedPrice)}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatCurrency(quotedPrice)}
+                    </span>
+                    {quotedPrice != null && calcResult && renderPriceBreakdownLines(
+                      getPriceBreakdown({
+                        quotedPrice,
+                        stonePrice: calcResult.stonePrice ?? null,
+                        priceBreakdown: calcResult.materialPrice != null
+                          ? { material: calcResult.materialPrice, stone: Math.round(Number(calcResult.stonePrice) || 0) }
+                          : undefined,
+                      }),
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1021,19 +1256,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     }}
                     style={{
                       width: '100%',
-                      background: (isCalculating || quotedPrice === null)
-                        ? '#cbd5e1'
-                        : 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-                      color: (isCalculating || quotedPrice === null) ? '#64748b' : '#78350f',
-                      border: 'none',
+                      background: (isCalculating || quotedPrice === null) ? '#e2e8f0' : '#f1f5f9',
+                      color: (isCalculating || quotedPrice === null) ? '#94a3b8' : '#334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '12px',
                       padding: '16px',
                       fontSize: '15px',
                       fontWeight: 800,
                       cursor: (isCalculating || quotedPrice === null) ? 'not-allowed' : 'pointer',
-                      boxShadow: (isCalculating || quotedPrice === null)
-                        ? 'none'
-                        : '0 4px 10px rgba(245, 158, 11, 0.3)',
+                      boxShadow: 'none',
                       transition: 'all 0.2s ease',
                       opacity: (isCalculating || quotedPrice === null) ? 0.7 : 1,
                     }}

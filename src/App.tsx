@@ -220,7 +220,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 onMarkClosed={handleMarkClosedClick}
                 onManageOptions={(id) => setManageOptionsReqId(id)}
                 onOpenCreate={handleOpenCreate}
-                onOpenExport={() => setIsExportOpen(true)}
+                onOpenExport={currentRole === 'SALE' ? undefined : () => setIsExportOpen(true)}
                 onResetFilters={() => { handleResetFilters(); setScopeFilter('ALL'); }}
                 selectedId={selectedReq?.id || selectedId || null}
               />
@@ -312,7 +312,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
           />
         )}
 
-        {isExportOpen && (
+        {isExportOpen && currentRole !== 'SALE' && (
           <ExportModal isOpen onClose={() => setIsExportOpen(false)}
             categories={categories} materials={materials}
             initialFilters={{
