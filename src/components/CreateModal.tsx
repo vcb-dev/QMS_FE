@@ -375,7 +375,11 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     const timer = setTimeout(() => {
       searchCustomers(customerSearch)
         .then((res) => {
-          setCustomerList(res);
+          setCustomerList(
+            Array.isArray(res)
+              ? res.slice(0, UI_CONSTANTS.CREATE_QUOTE_REQUEST.CUSTOMER_DROPDOWN_LIMIT)
+              : [],
+          );
         })
         .catch(() => { })
         .finally(() => setCustomerSearchLoading(false));

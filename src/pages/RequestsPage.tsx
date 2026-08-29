@@ -42,6 +42,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onSelectReq,
   onEdit,
   onAccept,
+  onQuoteNow,
   onPricing,
   onReject,
   onReturn,
@@ -146,6 +147,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onSelect={onSelectReq}
           onEdit={onEdit}
           onAccept={onAccept}
+          onQuoteNow={onQuoteNow}
           onPricing={onPricing}
           onReject={onReject}
           onReturn={onReturn}

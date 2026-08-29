@@ -21,6 +21,8 @@ export const UI_CONSTANTS = {
   CREATE_QUOTE_REQUEST: {
     MAX_IMAGES: 5,
     MAX_VIDEO_SIZE_MB: 100,
+    // Số khách hàng tối đa hiển thị trong dropdown chọn khách (danh sách mặc định lẫn kết quả tìm)
+    CUSTOMER_DROPDOWN_LIMIT: 10,
   },
 };
 

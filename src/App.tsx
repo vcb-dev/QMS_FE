@@ -9,6 +9,8 @@ import type { Role, User } from './types';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { NavProgressBar } from './components/NavProgressBar';
+import { Toast } from './components/Toast';
+import { LoadingOverlay } from './components/LoadingOverlay';
 
 import { LoginPage } from './pages/LoginPage';
 
@@ -61,11 +63,13 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     includeLocked, setIncludeLocked,
     pageSize, setPageSize, totalRecords, totalPages, counts,
-    listLoading, isCreateOpen, setIsCreateOpen, editingReq,
+    loading, loadingMessage,
+    listLoading, toastMessage, setToastMessage, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
     returnReqId, setReturnReqId, closeOptionReqId, setCloseOptionReqId,
     manageOptionsReqId, setManageOptionsReqId, handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
+    handleQuoteNow,
     handlePricingSubmit,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
     handleMarkClosedClick, handleCloseOptionSubmit,
@@ -212,6 +216,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 }}
                 onSelectReq={handleOpenDetail} onEdit={handleOpenEdit}
                 onAccept={handleAccept}
+                onQuoteNow={handleQuoteNow}
                 onPricing={(id) => setPricingReqId(id)}
                 onReject={(id) => setRejectReqId(id)}
                 onReturn={(id) => setReturnReqId(id)}
@@ -327,6 +332,10 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
             }} />
         )}
       </Suspense>
+
+      {loading && <LoadingOverlay message={loadingMessage} />}
+
+      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
       <NavProgressBar show={listLoading} />
     </div>

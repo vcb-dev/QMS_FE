@@ -846,21 +846,294 @@ body {
   background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px;
 }
 
-/* Popup chi tiết sản phẩm (ProductSpecModal) — chiếm gần trọn viewport, xếp dọc: ảnh trên, thông tin dưới */
+/* Popup chi tiết báo giá sản phẩm (ProductSpecModal) — 3 cột cân đối: ảnh · lịch sử · giá phương án.
+   Tông đơn sắc; xanh/đỏ chỉ dùng cho biến động giá. */
 .product-spec-modal {
-  width: min(680px, 96vw);
-  max-width: min(680px, 96vw);
+  width: min(1000px, 96vw);
+  max-width: min(1000px, 96vw);
   height: auto;
   max-height: 92vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
-.product-spec-grid { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.product-spec-image-col { width: 100%; height: 180px; flex-shrink: 0; position: relative; background: #f8fafc; }
-.product-spec-info-col { flex: 1; min-width: 0; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
-@media (max-width: 768px) {
-  .product-spec-image-col { height: 150px; }
+.product-spec-modal .modal-header { flex-shrink: 0; }
+.product-spec-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 3fr) minmax(0, 3.5fr) minmax(0, 3.5fr);
+  /* Hàng bó đúng chiều cao grid để mỗi .spec-col tự cuộn BÊN TRONG popup, không đẩy modal cao ra. */
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* --- Cột chung --- */
+.spec-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+.spec-col + .spec-col { border-left: 1px solid var(--border-color); }
+.spec-col--image { align-items: center; background: #fafafa; }
+
+/* --- Eyebrow dùng chung cho cả 3 cột --- */
+.spec-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 22px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.spec-eyebrow__label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.spec-eyebrow__label svg { flex-shrink: 0; }
+
+.spec-empty { font-size: 13px; color: var(--text-light); }
+
+/* --- Cột ảnh --- */
+.product-spec-image-frame {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1;
+  flex-shrink: 0;
+  position: relative;
+  background: #f1f5f9;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.spec-thumbs {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.spec-thumb {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  opacity: 0.7;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.spec-thumb[data-active] {
+  opacity: 1;
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--text-main);
+}
+.spec-meta { width: 100%; margin-top: 18px; display: flex; flex-direction: column; }
+.spec-meta > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-color);
+}
+.spec-meta > div:last-child { border-bottom: 1px solid var(--border-color); }
+.spec-meta dt {
+  flex-shrink: 0;
+  padding-top: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+.spec-meta dd {
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: right;
+}
+
+/* --- Cột lịch sử: thẻ chiều cao đồng nhất, padding cố định --- */
+.spec-hist-list { display: flex; flex-direction: column; gap: 8px; }
+.spec-hist-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 13px;
+  font: inherit;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.spec-hist-card:hover { border-color: var(--text-light); }
+.spec-hist-card[aria-selected='true'] {
+  background: #f1f5f9;
+  border-color: var(--text-main);
+  border-left-color: var(--text-main);
+}
+.spec-hist-card__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 1px;
+}
+.spec-hist-card__code {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+.spec-hist-card__date {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.spec-hist-card__line {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.spec-hist-card__line strong { color: var(--text-main); font-weight: 700; }
+.spec-hist-card__total {
+  margin-top: 5px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.spec-hist-card__total strong { color: var(--text-main); font-weight: 800; }
+.spec-hist-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+
+/* --- Cột giá phương án: mọi hàng căn trái cùng mép, action neo phải --- */
+.spec-copyall {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 4px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.spec-copyall[data-copied] { color: #15803d; background: #dcfce7; border-color: #bbf7d0; }
+
+.spec-opt-list { display: flex; flex-direction: column; }
+.spec-opt { display: flex; flex-direction: column; gap: 4px; padding: 14px 0; }
+.spec-opt:first-child { padding-top: 2px; }
+.spec-opt + .spec-opt { border-top: 1px solid var(--border-color); }
+.spec-opt__head { display: flex; align-items: center; gap: 6px; }
+.spec-opt__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.spec-badge {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  border-radius: 999px;
+}
+.spec-iconbtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.spec-iconbtn[data-copied] { color: #15803d; background: #dcfce7; border-color: #bbf7d0; }
+.spec-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+}
+.spec-today { display: flex; flex-direction: column; gap: 3px; margin-top: 3px; }
+.spec-today__row { display: flex; align-items: center; gap: 8px; }
+.spec-today__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-light);
+}
+.spec-delta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.spec-delta svg { flex-shrink: 0; }
+.spec-delta__pct { font-weight: 800; }
+.spec-delta--up { color: #15803d; }
+.spec-delta--down { color: #b91c1c; }
+.spec-delta--flat { color: var(--text-muted); }
+
+/* --- Responsive: 3 cột xếp dọc theo ưu tiên ảnh → giá → lịch sử --- */
+@media (max-width: 860px) {
+  .product-spec-grid {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .spec-col { flex: 0 0 auto; overflow-y: visible; }
+  .spec-col + .spec-col { border-left: none; border-top: 1px solid var(--border-color); }
+  .spec-col--image { order: 1; }
+  .spec-col--prices { order: 2; }
+  .spec-col--history { order: 3; }
+  .product-spec-image-frame { max-width: 260px; }
 }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }

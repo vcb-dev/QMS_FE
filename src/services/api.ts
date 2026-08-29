@@ -148,7 +148,12 @@ export async function loginApi(email: string, password: string, remember: boolea
   }
 }
 
+// Chốt 1 lần: double/spam click chỉ phát 1 lần điều hướng sang BE (browser vẫn chạy JS
+// thêm vài ms trước khi unload nên 2 click nhanh sẽ bắn 2 request nếu không chặn).
+let larkRedirecting = false;
 export function redirectToLarkLogin() {
+  if (larkRedirecting) return;
+  larkRedirecting = true;
   window.location.href = `${API_BASE}/auth/lark`;
 }
 

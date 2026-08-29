@@ -426,6 +426,8 @@ export interface QuoteHistoryEntry {
   // Khoảng giá ĐÃ BÁO của đơn này (BE tính sẵn).
   priceMin?: number;
   priceMax?: number;
+  // Ảnh của đơn này — modal chi tiết đổi ảnh nền theo đơn đang chọn (fallback ảnh nhóm nếu rỗng).
+  images?: QuoteRequestImage[];
   options: QuoteHistoryOption[];
 }
 
@@ -527,6 +529,9 @@ export interface RequestsPageProps {
   onSelectReq: (id: string) => void;
   onEdit: (req: QuoteRequest) => void;
   onAccept: (id: string, version: number) => void;
+  // "Báo giá luôn" từ đơn PENDING: tiếp nhận (khóa đơn) rồi mở modal nhập giá ngay. Tách khỏi
+  // onAccept vì onSuccess phải mở PricingModal, không chỉ reload danh sách.
+  onQuoteNow: (id: string, version: number) => void;
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
   onReturn: (id: string) => void;

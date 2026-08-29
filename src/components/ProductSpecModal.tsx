@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, History, Coins, Copy, Check } from 'lucide-react';
+import { X, History, Coins, Copy, Check, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import type { ProductSpecModalProps, QuoteHistoryEntry } from '../types';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
@@ -9,7 +9,8 @@ import { ImageLightbox } from './ImageLightbox';
 import { formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProductHistory } from '../services/api';
 
-const HISTORY_PAGE_SIZE = 20;
+// Cột lịch sử tải từng lô nhỏ, cuộn tới đáy thì tự tải lô kế (infinite scroll) — không nút bấm.
+const HISTORY_PAGE_SIZE = 8;
 
 // Chỉ phương án khách CHỐT THẬT (CLOSED) mới gắn tag. SELECTED ("Sale đang nghiêng về") không gắn.
 const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> = {
@@ -20,10 +21,8 @@ const fmtDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString('vi-VN') : '—';
 
 export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose, filters }) => {
-  const images = item.images && item.images.length > 0 ? item.images : [];
   const [activeIdx, setActiveIdx] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const mainImgUrl = images[activeIdx]?.imageUrl || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
 
   // Lịch sử báo giá — KHÔNG gửi kèm list nữa (nhóm có thể vài nghìn đơn). Lazy-load theo trang khi
   // mở modal; nút "Tải thêm" tải trang tiếp theo. Truyền cùng bộ lọc ngoài để khớp view đang lọc.
@@ -34,10 +33,25 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
   const [selIdx, setSelIdx] = useState(0);
   const selected = history[selIdx] ?? history[0];
 
+  // Infinite scroll cột lịch sử. loadingRef chặn tải trùng (state chưa kịp cập nhật giữa 2 render).
+  const gridRef = useRef<HTMLDivElement>(null);
+  const histColRef = useRef<HTMLElement>(null);
+  const histSentinelRef = useRef<HTMLDivElement>(null);
+  const histLoadingRef = useRef(false);
+
+  // Ảnh nền modal = ảnh của ĐƠN đang chọn ở cột lịch sử; đơn cũ chưa có ảnh riêng thì fallback ảnh nhóm.
+  const images =
+    selected?.images && selected.images.length > 0
+      ? selected.images
+      : item.images && item.images.length > 0
+        ? item.images
+        : [];
+  const mainImgUrl = images[activeIdx]?.imageUrl || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
+
   // Copy giá "sống" (Hôm nay ~) của phương án — fallback về giá gốc nếu option chưa có livePrice.
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  useEffect(() => { setCopiedIdx(null); setCopiedAll(false); }, [selIdx]);
+  useEffect(() => { setCopiedIdx(null); setCopiedAll(false); setActiveIdx(0); }, [selIdx]);
 
   const optLine = (o: { optionName: string; price: number; livePrice?: number | null }) =>
     `${o.optionName}: ${formatCurrency(o.livePrice ?? o.price)}`;
@@ -59,6 +73,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
   useEffect(() => {
     if (!item.groupKey) return;
     let cancelled = false;
+    histLoadingRef.current = true;
     setHistLoading(true);
     fetchLibraryProductHistory({
       groupKey: item.groupKey,
@@ -75,7 +90,9 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
       })
       .catch(() => {})
       .finally(() => {
-        if (!cancelled) setHistLoading(false);
+        if (cancelled) return;
+        histLoadingRef.current = false;
+        setHistLoading(false);
       });
     return () => {
       cancelled = true;
@@ -83,6 +100,27 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
     // filters cố ý KHÔNG vào deps — modal mở lại (key theo item) là fetch mới; filters chỉ đọc 1 lần.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.groupKey, histPage]);
+
+  // Cuộn tới gần đáy cột lịch sử → tải lô kế. Desktop cột tự cuộn (root = cột); mobile cả grid cuộn.
+  useEffect(() => {
+    if (histPage >= histTotalPages) return;
+    const sentinel = histSentinelRef.current;
+    if (!sentinel) return;
+    const mobile = window.matchMedia('(max-width: 860px)').matches;
+    const root = (mobile ? gridRef.current : histColRef.current) ?? null;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting || histLoadingRef.current) return;
+        histLoadingRef.current = true;
+        setHistPage((p) => (p < histTotalPages ? p + 1 : p));
+      },
+      { root, rootMargin: '160px 0px' },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+    // history.length: sau khi nối thêm dữ liệu, dựng lại observer để bắt lại trạng thái giao nhau
+    // (IntersectionObserver không tự gọi lại nếu sentinel vẫn nằm trong khung nhìn).
+  }, [histPage, histTotalPages, history.length]);
 
   return createPortal(
     <>
@@ -92,215 +130,163 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
           <div style={{ minWidth: 0 }}>
             <h2 style={{ fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.productName}</h2>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Đóng"
-            style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', flexShrink: 0, padding: '4px', marginLeft: '10px' }}
-          >
+          <button onClick={onClose} aria-label="Đóng" className="spec-close">
             <X size={18} />
           </button>
         </div>
 
-        <div className="product-spec-grid">
-          {/* Cột ảnh */}
-          <div className="product-spec-image-col">
-            <img
-              src={mainImgUrl}
-              alt=""
-              onClick={() => images.length > 0 && setZoomOpen(true)}
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
-              }}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: images.length > 0 ? 'zoom-in' : 'default' }}
-            />
-            {images.length > 1 && (
-              <div style={{ position: 'absolute', left: '12px', right: '12px', bottom: '12px', display: 'flex', gap: '6px', overflowX: 'auto' }}>
-                {images.map((img, idx) => (
-                  <img
-                    key={img.id}
-                    src={img.imageUrl}
-                    alt=""
-                    onClick={() => setActiveIdx(idx)}
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '7px',
-                      objectFit: 'cover',
-                      cursor: 'pointer',
-                      flexShrink: 0,
-                      border: idx === activeIdx ? '2px solid var(--primary)' : '2px solid rgba(255,255,255,0.7)',
-                      opacity: idx === activeIdx ? 1 : 0.75,
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                    }}
-                  />
+        <div className="product-spec-grid" ref={gridRef}>
+          {/* Cột 1 — hình ảnh sản phẩm của đơn đang chọn */}
+          <section className="spec-col spec-col--image">
+            <div className="spec-eyebrow">
+              <span className="spec-eyebrow__label"><ImageIcon size={13} /> Hình ảnh</span>
+            </div>
+            <div className="product-spec-image-frame">
+              <img
+                src={mainImgUrl}
+                alt=""
+                onClick={() => images.length > 0 && setZoomOpen(true)}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
+                }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: images.length > 0 ? 'zoom-in' : 'default' }}
+              />
+              {images.length > 1 && (
+                <div className="spec-thumbs">
+                  {images.map((img, idx) => (
+                    <img
+                      key={img.id}
+                      src={img.imageUrl}
+                      alt=""
+                      className="spec-thumb"
+                      data-active={idx === activeIdx || undefined}
+                      onClick={() => setActiveIdx(idx)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Thông số gộp của nhóm sản phẩm — lấp khoảng trống dưới ảnh, cân với cột phải */}
+            <dl className="spec-meta">
+              <div><dt>Chất liệu</dt><dd>{item.matStr || '—'}</dd></div>
+              <div><dt>Khối lượng</dt><dd>{item.weightDisplay || '—'}</dd></div>
+              <div><dt>Đá</dt><dd>{item.stoneDisplay || 'Không đính đá'}</dd></div>
+              <div><dt>Số đơn đã báo</dt><dd>{item.duplicateCount ?? (history.length || '—')}</dd></div>
+              <div><dt>Khoảng giá đã báo</dt><dd>{formatPriceRange(item.priceMin, item.priceMax, 0)}</dd></div>
+            </dl>
+          </section>
+
+          {/* Cột 2 — lịch sử báo giá (mới → cũ); chọn 1 đơn để đổi ảnh + bảng giá */}
+          <section className="spec-col spec-col--history" ref={histColRef}>
+            <div className="spec-eyebrow">
+              <span className="spec-eyebrow__label"><History size={13} /> Lịch sử báo giá</span>
+            </div>
+            {history.length === 0 ? (
+              <div className="spec-empty">{histLoading ? 'Đang tải lịch sử…' : 'Chưa có lịch sử báo giá'}</div>
+            ) : (
+              <div className="spec-hist-list">
+                {history.map((h, idx) => (
+                  <button
+                    key={h.requestId}
+                    type="button"
+                    className="spec-hist-card"
+                    aria-selected={idx === selIdx}
+                    onClick={() => setSelIdx(idx)}
+                  >
+                    <div className="spec-hist-card__top">
+                      <span className="spec-hist-card__code">{h.code}</span>
+                      <span className="spec-hist-card__date">
+                        {fmtDate(h.quotedDate ?? h.quotedAt)}
+                        {h.weightDisplay ? ` · ${h.weightDisplay}` : ''}
+                      </span>
+                    </div>
+                    <div className="spec-hist-card__line">Sale <strong>{h.saleName || '—'}</strong></div>
+                    <div className="spec-hist-card__line">Báo giá <strong>{h.pricerName || '—'}</strong></div>
+                    <div className="spec-hist-card__line" title={item.stoneDisplay || 'Không đính đá'}>
+                      Đá <strong>{item.stoneDisplay || 'Không đính đá'}</strong>
+                    </div>
+                    <div className="spec-hist-card__total">
+                      Đã báo <strong>{formatPriceRange(h.priceMin, h.priceMax, h.options[0]?.price ?? 0)}</strong>
+                    </div>
+                  </button>
                 ))}
+                {histPage < histTotalPages && (
+                  <div ref={histSentinelRef} className="spec-hist-more">
+                    {histLoading ? 'Đang tải thêm…' : ''}
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Cột thông tin */}
-          <div className="product-spec-info-col">
-            {/* Trái: lịch sử báo giá (mới → cũ) · Phải: giá các phương án của đơn đang chọn */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '16px' }}>
-              <div style={{ paddingRight: '16px', borderRight: '1px solid var(--border-color)', minWidth: 0 }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', letterSpacing: '0.3px' }}>
-                  <History size={13} /> LỊCH SỬ BÁO GIÁ
-                </div>
-                {history.length === 0 ? (
-                  <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>
-                    {histLoading ? 'Đang tải lịch sử…' : 'Chưa có lịch sử báo giá'}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {history.map((h, idx) => {
-                      const active = idx === selIdx;
-                      return (
-                        <button
-                          key={h.requestId}
-                          type="button"
-                          onClick={() => setSelIdx(idx)}
-                          style={{
-                            textAlign: 'left',
-                            background: active ? 'var(--primary-soft, #eef2ff)' : 'transparent',
-                            border: active ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                            borderRadius: '8px',
-                            padding: '8px 10px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
-                            <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                              {h.code}
-                            </span>
-                            <span style={{ fontSize: '12.5px', fontWeight: 800, color: 'var(--text-main)', textAlign: 'right', flexShrink: 0 }}>
-                              {fmtDate(h.quotedDate ?? h.quotedAt)}
-                              {h.weightDisplay ? ` · ${h.weightDisplay}` : ''}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            Sale: <strong style={{ color: 'var(--text-main)' }}>{h.saleName || '—'}</strong>
-                          </div>
-                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                            Báo giá: <strong style={{ color: 'var(--text-main)' }}>{h.pricerName || '—'}</strong>
-                          </div>
-                          <div
-                            title={item.stoneDisplay || 'Không đính đá'}
-                            style={{ fontSize: '11.5px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                          >
-                            Đá: <strong style={{ color: 'var(--text-main)' }}>{item.stoneDisplay || 'Không đính đá'}</strong>
-                          </div>
-                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', textAlign: 'right' }}>
-                            Đã báo: <strong style={{ color: 'var(--text-main)' }}>{formatPriceRange(h.priceMin, h.priceMax, h.options[0]?.price ?? 0)}</strong>
-                          </div>
-                        </button>
-                      );
-                    })}
-                    {histPage < histTotalPages && (
-                      <button
-                        type="button"
-                        onClick={() => setHistPage((p) => p + 1)}
-                        disabled={histLoading}
-                        style={{
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          padding: '7px 10px',
-                          borderRadius: '8px',
-                          border: '1px dashed var(--border-color)',
-                          background: 'transparent',
-                          color: 'var(--text-muted)',
-                          cursor: histLoading ? 'default' : 'pointer',
-                        }}
-                      >
-                        {histLoading ? 'Đang tải…' : 'Tải thêm lịch sử'}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.3px' }}>
-                    <Coins size={13} /> GIÁ PHƯƠNG ÁN
-                  </div>
-                  {selected && selected.options.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleCopyAll(selected.options)}
-                      title="Copy giá hôm nay của tất cả phương án"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
-                        padding: '4px 9px', borderRadius: '7px', border: '1px solid var(--border-color)',
-                        background: copiedAll ? '#dcfce7' : 'transparent',
-                        color: copiedAll ? '#16a34a' : 'var(--text-muted)',
-                        fontSize: '10.5px', fontWeight: 700, cursor: 'pointer',
-                      }}
-                    >
-                      {copiedAll ? <Check size={12} /> : <Copy size={12} />} {copiedAll ? 'Đã copy' : 'Copy hết'}
-                    </button>
-                  )}
-                </div>
-                {selected && selected.options.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {selected.options.map((o, idx) => {
-                      const oTag = o.selectionStatus ? STATUS_TAG[o.selectionStatus] : undefined;
-                      return (
-                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingBottom: '6px', borderBottom: idx < selected.options.length - 1 ? '1px dashed var(--border-color)' : 'none' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {o.optionName}
-                            </span>
-                            {oTag && (
-                              <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '1px 6px', borderRadius: '8px', background: oTag.bg, color: oTag.color, flexShrink: 0 }}>
-                                {oTag.label}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleCopyOption(idx, o)}
-                              title={`Copy "${optLine(o)}"`}
-                              style={{
-                                flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: '24px', height: '24px', borderRadius: '6px',
-                                border: '1px solid var(--border-color)',
-                                background: copiedIdx === idx ? '#dcfce7' : 'transparent',
-                                color: copiedIdx === idx ? '#16a34a' : 'var(--text-muted)',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {copiedIdx === idx ? <Check size={11} /> : <Copy size={11} />}
-                            </button>
-                          </div>
-                          <div style={{ fontSize: '14px', fontWeight: 900, color: 'var(--text-main)' }}>
-                            {formatCurrency(o.price)}
-                          </div>
-                          {renderPriceBreakdownLines(getPriceBreakdown(o))}
-                          {o.livePrice != null && (
-                            <>
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                Hôm nay ~ <strong style={{ color: (o.livePriceDeltaPct ?? 0) > 0 ? '#15803d' : (o.livePriceDeltaPct ?? 0) < 0 ? '#b91c1c' : 'var(--text-main)' }}>
-                                  {formatCurrency(o.livePrice)}
-                                </strong>
-                                {o.livePriceDeltaPct != null && o.livePriceDeltaPct !== 0 && (
-                                  <span style={{ color: o.livePriceDeltaPct > 0 ? '#15803d' : '#b91c1c', fontWeight: 700 }}>
-                                    {' '}({o.livePriceDeltaPct > 0 ? '+' : ''}{o.livePriceDeltaPct}%)
-                                  </span>
-                                )}
-                              </div>
-                              {renderPriceBreakdownLines(getLivePriceBreakdown(o), { live: true })}
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '13px', color: 'var(--text-light)' }}>Không có phương án</div>
-                )}
-              </div>
+          {/* Cột 3 — bảng giá theo phương án chất liệu của đơn đang chọn */}
+          <section className="spec-col spec-col--prices">
+            <div className="spec-eyebrow">
+              <span className="spec-eyebrow__label"><Coins size={13} /> Giá phương án</span>
+              {selected && selected.options.length > 1 && (
+                <button
+                  type="button"
+                  className="spec-copyall"
+                  data-copied={copiedAll || undefined}
+                  onClick={() => handleCopyAll(selected.options)}
+                  title="Copy giá hôm nay của tất cả phương án"
+                >
+                  {copiedAll ? <Check size={12} /> : <Copy size={12} />} {copiedAll ? 'Đã copy' : 'Copy hết'}
+                </button>
+              )}
             </div>
-          </div>
+            {selected && selected.options.length > 0 ? (
+              <div className="spec-opt-list">
+                {selected.options.map((o, idx) => {
+                  const oTag = o.selectionStatus ? STATUS_TAG[o.selectionStatus] : undefined;
+                  const dp = o.livePriceDeltaPct ?? 0;
+                  const deltaCls = dp > 0 ? 'spec-delta--up' : dp < 0 ? 'spec-delta--down' : 'spec-delta--flat';
+                  return (
+                    <div key={idx} className="spec-opt">
+                      <div className="spec-opt__head">
+                        <span className="spec-opt__name">{o.optionName}</span>
+                        {oTag && (
+                          <span className="spec-badge" style={{ background: oTag.bg, color: oTag.color }}>
+                            {oTag.label}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="spec-iconbtn"
+                          data-copied={copiedIdx === idx || undefined}
+                          onClick={() => handleCopyOption(idx, o)}
+                          title={`Copy "${optLine(o)}"`}
+                        >
+                          {copiedIdx === idx ? <Check size={11} /> : <Copy size={11} />}
+                        </button>
+                      </div>
+                      <div className="spec-price">{formatCurrency(o.price)}</div>
+                      {renderPriceBreakdownLines(getPriceBreakdown(o))}
+                      {o.livePrice != null && (
+                        <div className="spec-today">
+                          <div className="spec-today__row">
+                            <span className="spec-today__label">Hôm nay</span>
+                            <span className={`spec-delta ${deltaCls}`}>
+                              {dp > 0 ? <ArrowUp size={12} /> : dp < 0 ? <ArrowDown size={12} /> : null}
+                              {formatCurrency(o.livePrice)}
+                              {dp !== 0 && (
+                                <span className="spec-delta__pct">{dp > 0 ? '+' : ''}{dp}%</span>
+                              )}
+                            </span>
+                          </div>
+                          {renderPriceBreakdownLines(getLivePriceBreakdown(o), { live: true })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="spec-empty">Không có phương án</div>
+            )}
+          </section>
         </div>
       </div>
     </div>

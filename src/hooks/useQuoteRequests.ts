@@ -82,6 +82,14 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
   const [loadingMessage, setLoadingMessage] = useState('Đang tải dữ liệu từ hệ thống VCB...');
   const [listLoading, setListLoading] = useState<boolean>(Boolean(currentUser));
 
+  // Thông báo thành công dạng nhẹ (toast góc màn hình), tự ẩn sau vài giây.
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toastMessage) return;
+    const t = setTimeout(() => setToastMessage(null), 3500);
+    return () => clearTimeout(t);
+  }, [toastMessage]);
+
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
   const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
   filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
@@ -327,6 +335,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
   };
 
   const handleCreateOrUpdateSubmit = async (payload: any) => {
+    const wasEditing = !!editingReq;
     await runAction('Đang lưu yêu cầu...', 'Không thể lưu yêu cầu', async () => {
       if (editingReq) {
         let updated = await updateQuoteRequest(editingReq.id, payload);
@@ -336,6 +345,9 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
         return updated;
       }
       return createQuoteRequest(payload);
+    }, {
+      onSuccess: () =>
+        setToastMessage(wasEditing ? 'Đã cập nhật yêu cầu báo giá.' : 'Đã tạo yêu cầu báo giá thành công.'),
     });
   };
 
@@ -356,6 +368,18 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
 
   const handleAccept = async (id: string, version: number) => {
     await runAction('Đang tiếp nhận đơn...', 'Không thể tiếp nhận', () => acceptQuoteRequest(id, version));
+  };
+
+  // "Báo giá luôn" từ đơn PENDING: tiếp nhận trước (khóa đơn về mình), CHỈ khi thành công mới mở
+  // PricingModal. Người khác vừa tiếp nhận trước -> acceptQuoteRequest ném lỗi, runAction báo alert,
+  // onSuccess không chạy, modal không mở.
+  const handleQuoteNow = async (id: string, version: number) => {
+    await runAction(
+      'Đang tiếp nhận đơn...',
+      'Không thể tiếp nhận',
+      () => acceptQuoteRequest(id, version),
+      { onSuccess: () => setPricingReqId(id) },
+    );
   };
 
   const handlePricingSubmit = async (
@@ -478,6 +502,8 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     loading,
     loadingMessage,
     listLoading,
+    toastMessage,
+    setToastMessage,
     isCreateOpen,
     setIsCreateOpen,
     editingReq,
@@ -499,6 +525,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     handleCreateOrUpdateSubmit,
     handleDeleteRequest,
     handleAccept,
+    handleQuoteNow,
     handlePricingSubmit,
     handleSelectOption,
     handleRejectSubmit,

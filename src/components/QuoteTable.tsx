@@ -16,6 +16,7 @@ type QuoteTableProps = Pick<
   | 'currentUser'
   | 'onEdit'
   | 'onAccept'
+  | 'onQuoteNow'
   | 'onPricing'
   | 'onReject'
   | 'onResubmit'
@@ -34,6 +35,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onSelect,
   onEdit,
   onAccept,
+  onQuoteNow,
   onPricing,
   onReject,
   onReturn,
@@ -366,9 +368,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           options={[
             { value: 'PENDING',       ...STATUS_META.PENDING,    label: 'Yêu cầu mới' },
             { value: 'PROCESSING',    ...STATUS_META.PROCESSING, label: 'Tiếp nhận (Đang xử lý)' },
+            { value: 'QUOTE_NOW',     ...STATUS_META.QUOTED,     label: 'Báo giá luôn' },
           ]}
           onChange={(val) => {
             if (val === 'PROCESSING') onAccept(r.id, r.version);
+            // Báo giá luôn: tiếp nhận + khóa đơn rồi mở modal nhập giá. Nếu người khác vừa tiếp
+            // nhận trước, bước tiếp nhận sẽ báo lỗi và modal không mở (xử lý ở onQuoteNow).
+            else if (val === 'QUOTE_NOW') onQuoteNow(r.id, r.version);
           }}
         />
       );

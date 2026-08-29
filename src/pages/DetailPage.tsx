@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Image as ImageIcon,
+  Play,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
@@ -137,9 +138,17 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           .filter(Boolean)
       : [UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE];
 
+  // Video (nếu có) gộp chung một carousel với ảnh và đứng TRƯỚC; không có video thì ảnh hiện đầu.
+  const videoUrl = selectedReq?.videoUrl || null;
+  const mediaList: { type: 'video' | 'image'; url: string }[] = [
+    ...(videoUrl ? [{ type: 'video' as const, url: videoUrl }] : []),
+    ...imagesList.map((url) => ({ type: 'image' as const, url })),
+  ];
+  const imageOffset = videoUrl ? 1 : 0; // lệch index giữa mediaList và imagesList (cho lightbox)
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const currentImageIdx = Math.min(activeImageIndex, Math.max(0, imagesList.length - 1));
-  const mainImageUrl = imagesList[currentImageIdx] || imagesList[0];
+  const currentMediaIdx = Math.min(activeImageIndex, Math.max(0, mediaList.length - 1));
+  const currentMedia = mediaList[currentMediaIdx] || mediaList[0];
 
   const [copiedOptIdx, setCopiedOptIdx] = useState<number | null>(null);
   const [copiedAllOpt, setCopiedAllOpt] = useState(false);
@@ -430,7 +439,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '20px' }}>
-              {/* Image Preview & Thumbnails */}
+              {/* Media Preview & Thumbnails (video trước, rồi ảnh) */}
               <div>
                 <div
                   style={{
@@ -438,33 +447,43 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     height: '230px',
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    background: '#ffffff',
+                    background: currentMedia?.type === 'video' ? '#000' : '#ffffff',
                     border: '1px solid #e2e8f0',
-                    cursor: 'zoom-in',
+                    cursor: currentMedia?.type === 'image' ? 'zoom-in' : 'default',
                     position: 'relative',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                   }}
-                  onClick={() => setLightboxOpen(true)}
-                  title="Bấm để xem ảnh phóng to"
+                  onClick={() => {
+                    if (currentMedia?.type === 'image') setLightboxOpen(true);
+                  }}
+                  title={currentMedia?.type === 'image' ? 'Bấm để xem ảnh phóng to' : undefined}
                 >
-                  <img
-                    src={mainImageUrl}
-                    alt=""
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
-                    }}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      transition: 'transform 0.25s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  />
+                  {currentMedia?.type === 'video' ? (
+                    <video
+                      controls
+                      src={currentMedia.url}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                    />
+                  ) : (
+                    <img
+                      src={currentMedia?.url}
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.25s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    />
+                  )}
 
-                  {imagesList.length > 1 && (
+                  {mediaList.length > 1 && (
                     <>
                       <span
                         style={{
@@ -486,72 +505,78 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                           pointerEvents: 'none',
                         }}
                       >
-                        <ImageIcon size={13} /> {currentImageIdx + 1} / {imagesList.length}
+                        {currentMedia?.type === 'video' ? <Play size={13} /> : <ImageIcon size={13} />}{' '}
+                        {currentMediaIdx + 1} / {mediaList.length}
                       </span>
 
                       <ImageNavButton
                         direction="prev"
-                        title="Ảnh trước"
+                        title="Trước"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : imagesList.length - 1));
+                          setActiveImageIndex(currentMediaIdx > 0 ? currentMediaIdx - 1 : mediaList.length - 1);
                         }}
                       />
 
                       <ImageNavButton
                         direction="next"
-                        title="Ảnh kế tiếp"
+                        title="Kế tiếp"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setActiveImageIndex((prev) => (prev < imagesList.length - 1 ? prev + 1 : 0));
+                          setActiveImageIndex(currentMediaIdx < mediaList.length - 1 ? currentMediaIdx + 1 : 0);
                         }}
                       />
                     </>
                   )}
                 </div>
 
-                {imagesList.length > 1 && (
+                {mediaList.length > 1 && (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-                    {imagesList.map((url, idx) => (
-                      <img
-                        key={idx}
-                        src={url}
-                        alt=""
-                        onClick={() => setActiveImageIndex(idx)}
-                        onDoubleClick={() => {
-                          setActiveImageIndex(idx);
-                          setLightboxOpen(true);
-                        }}
-                        style={{
-                          width: '52px',
-                          height: '52px',
-                          borderRadius: '8px',
-                          objectFit: 'cover',
-                          background: '#ffffff',
-                          border: currentImageIdx === idx ? '2px solid #2563eb' : '1px solid #cbd5e1',
-                          boxShadow: currentImageIdx === idx ? '0 0 0 2px rgba(37,99,235,0.25)' : 'none',
-                          cursor: 'pointer',
-                          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                          flexShrink: 0,
-                        }}
-                        onMouseEnter={(e) => {
-                          if (currentImageIdx !== idx) e.currentTarget.style.borderColor = '#94a3b8';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (currentImageIdx !== idx) e.currentTarget.style.borderColor = '#cbd5e1';
-                        }}
-                        title={`Xem ảnh ${idx + 1}`}
-                      />
-                    ))}
+                    {mediaList.map((m, idx) => {
+                      const selected = currentMediaIdx === idx;
+                      const commonStyle: React.CSSProperties = {
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '8px',
+                        objectFit: 'cover',
+                        background: m.type === 'video' ? '#000' : '#ffffff',
+                        border: selected ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                        boxShadow: selected ? '0 0 0 2px rgba(37,99,235,0.25)' : 'none',
+                        cursor: 'pointer',
+                        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                        flexShrink: 0,
+                      };
+                      return m.type === 'video' ? (
+                        <div
+                          key={idx}
+                          onClick={() => setActiveImageIndex(idx)}
+                          style={{ ...commonStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Xem video"
+                        >
+                          <Play size={18} color="#ffffff" />
+                        </div>
+                      ) : (
+                        <img
+                          key={idx}
+                          src={m.url}
+                          alt=""
+                          onClick={() => setActiveImageIndex(idx)}
+                          onDoubleClick={() => {
+                            setActiveImageIndex(idx);
+                            setLightboxOpen(true);
+                          }}
+                          style={commonStyle}
+                          onMouseEnter={(e) => {
+                            if (!selected) e.currentTarget.style.borderColor = '#94a3b8';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!selected) e.currentTarget.style.borderColor = '#cbd5e1';
+                          }}
+                          title={`Xem ảnh ${idx - imageOffset + 1}`}
+                        />
+                      );
+                    })}
                   </div>
-                )}
-
-                {selectedReq.videoUrl && (
-                  <video
-                    controls
-                    src={selectedReq.videoUrl}
-                    style={{ width: '100%', maxHeight: '200px', marginTop: '10px', borderRadius: '10px', background: '#000' }}
-                  />
                 )}
               </div>
 
@@ -916,11 +941,11 @@ export const DetailPage: React.FC<DetailPageProps> = ({
         </div>
       </div>
 
-      {lightboxOpen && (
+      {lightboxOpen && currentMedia?.type === 'image' && (
         <ImageLightbox
           images={imagesList}
-          activeIndex={currentImageIdx}
-          onIndexChange={setActiveImageIndex}
+          activeIndex={Math.max(0, currentMediaIdx - imageOffset)}
+          onIndexChange={(i) => setActiveImageIndex(i + imageOffset)}
           onClose={() => setLightboxOpen(false)}
         />
       )}

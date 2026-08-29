@@ -56,6 +56,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
 
   // UI feedback states
   const [loading, setLoading] = useState(false);
+  const [larkLoading, setLarkLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -68,7 +69,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
       if (errorParam === 'LarkAuthFailed') {
         setErrorMsg('Bạn đã từ chối cấp quyền hoặc quá trình đăng nhập Lark bị hủy.');
       } else if (errorParam === 'LarkLoginError') {
-        setErrorMsg('Lỗi máy chủ khi xác thực Lark. Vui lòng thử lại sau.');
+        const reason = params.get('reason');
+        setErrorMsg(reason || 'Lỗi máy chủ khi xác thực Lark. Vui lòng thử lại sau.');
       } else {
         setErrorMsg(`Lỗi đăng nhập: ${errorParam}`);
       }
@@ -341,7 +343,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                 
                 <button
                   type="button"
-                  onClick={redirectToLarkLogin}
+                  disabled={larkLoading}
+                  onClick={() => {
+                    if (larkLoading) return;
+                    setLarkLoading(true);
+                    redirectToLarkLogin();
+                  }}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr auto 1fr',
@@ -354,11 +361,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                     fontSize: '14.5px',
                     fontWeight: 600,
                     color: '#374151',
-                    cursor: 'pointer',
+                    cursor: larkLoading ? 'not-allowed' : 'pointer',
+                    opacity: larkLoading ? 0.6 : 1,
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                     transition: 'all 0.2s',
                   }}
                   onMouseOver={(e) => {
+                    if (larkLoading) return;
                     e.currentTarget.style.background = '#f9fafb';
                     e.currentTarget.style.borderColor = '#9ca3af';
                   }}
@@ -378,7 +387,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                       }} 
                     />
                   </div>
-                  <span>Đăng nhập qua Lark</span>
+                  <span>{larkLoading ? 'Đang chuyển tới Lark...' : 'Đăng nhập qua Lark'}</span>
                   <div />
                 </button>
               </div>
