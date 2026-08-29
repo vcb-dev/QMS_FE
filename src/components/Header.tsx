@@ -8,6 +8,7 @@ import { StatusPill } from './StatusPill';
 import { STATUS_BADGE_META } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { UserAvatar } from './UserAvatar';
 
 const SEARCH_SECTION_LIMIT = 5;
 
@@ -143,14 +144,6 @@ export const Header: React.FC<HeaderProps> = ({
   const handleSelectProductResult = (productName: string) => {
     setSearchOpen(false);
     navigate(`/library?q=${encodeURIComponent(productName)}`);
-  };
-
-  // Get user initials for circular avatar (e.g. "Nguyen Van A" -> "NA")
-  const getInitials = (name: string) => {
-    if (!name) return 'U';
-    const parts = name.trim().split(' ');
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   // Close dropdown when clicking outside
@@ -400,22 +393,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Circular Avatar */}
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '50%',
-                background: '#0f172a',
-                color: '#ffffff',
-                fontWeight: 800,
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {getInitials(user.name)}
-            </div>
+            <UserAvatar src={user.avatar} name={user.name} size={34} background="#0f172a" />
           </button>
 
           {/* Popup Dropdown Menu */}
@@ -516,9 +494,13 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
               <div style={{ textAlign: 'center', padding: '14px 0' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)', color: 'white', fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px auto' }}>
-                  {getInitials(user.name)}
-                </div>
+                <UserAvatar
+                  src={user.avatar}
+                  name={user.name}
+                  size={56}
+                  background="linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)"
+                  style={{ margin: '0 auto 8px auto' }}
+                />
                 <strong style={{ fontSize: '16px', color: '#0f172a' }}>{user.name}</strong>
                 <p style={{ margin: '2px 0 0 0', color: '#64748b', fontSize: '12px' }}>{user.email}</p>
               </div>

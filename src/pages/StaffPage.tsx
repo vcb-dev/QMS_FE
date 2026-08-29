@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity } from 'lucide-react';
 import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
-import type { StaffUser, UserStatsResponse, StaffPerformanceResponse } from '../types';
+import type { StaffUser, UserStatsResponse, StaffPerformanceResponse, Role } from '../types';
 import { Pagination } from '../components/Pagination';
 import { formatDuration } from '../utils/currency';
 import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
 import { StatCard } from '../components/StatCard';
+import { UserAvatar } from '../components/UserAvatar';
 
 type ActionStat = { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] };
 
@@ -41,6 +42,8 @@ export const StaffPage: React.FC = () => {
   const [accountPageSize, setAccountPageSize] = useState(10);
   const [actionStats, setActionStats] = useState<Record<string, { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] }[]>>({});
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
+  // Role admin chọn khi duyệt từng tài khoản chờ (mặc định giữ role hiện tại — Lark tạo ra là SALE)
+  const [approveRole, setApproveRole] = useState<Record<string, Role>>({});
 
   useEffect(() => {
     setAccountPage(1);
@@ -74,9 +77,10 @@ export const StaffPage: React.FC = () => {
 
   const handleApprove = async (id: string) => {
     setActionLoadingId(id);
+    const role = approveRole[id];
     try {
-      await approveUserApi(id);
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isApproved: true } : u)));
+      const updated = await approveUserApi(id, role);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isApproved: true, role: updated.role } : u)));
     } catch (err: any) {
       alert(err.message || 'Không thể phê duyệt tài khoản');
     } finally {
@@ -199,9 +203,25 @@ export const StaffPage: React.FC = () => {
               <tbody>
                 {pagedAccountList.map((u) => (
                   <tr key={u.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>{u.name}</td>
+                    <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
+                        {u.name}
+                      </span>
+                    </td>
                     <td style={{ padding: '10px', color: '#64748b' }}>{u.email}</td>
-                    <td style={{ padding: '10px', color: '#334155' }}>{ROLE_LABEL[u.role] || u.role}</td>
+                    <td style={{ padding: '10px', color: '#334155' }}>
+                      <select
+                        value={approveRole[u.id] || u.role}
+                        disabled={actionLoadingId === u.id}
+                        onChange={(e) => setApproveRole((prev) => ({ ...prev, [u.id]: e.target.value as Role }))}
+                        style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        {(['SALE', 'ORDER'] as Role[]).map((r) => (
+                          <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td style={{ padding: '10px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <button
@@ -246,7 +266,12 @@ export const StaffPage: React.FC = () => {
               <tbody>
                 {pagedAccountList.map((u) => (
                   <tr key={u.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>{u.name}</td>
+                    <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
+                        {u.name}
+                      </span>
+                    </td>
                     <td style={{ padding: '10px', color: '#64748b' }}>{u.email}</td>
                     <td style={{ padding: '10px', color: '#334155' }}>{ROLE_LABEL[u.role] || u.role}</td>
                     <td style={{ padding: '10px' }}>

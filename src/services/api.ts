@@ -93,7 +93,9 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401 && !isAuthRequest) {
+    // skipAuthRedirect: caller tự xử lý 401 (VD bootstrap getProfileApi lúc khởi động) —
+    // không reload để tránh vòng lặp reload khi phiên đã hết hạn.
+    if (error.response?.status === 401 && !isAuthRequest && !originalRequest?.skipAuthRedirect) {
       clearSession();
       if (!window.location.pathname.includes('/login')) {
         window.location.reload();
@@ -130,6 +132,21 @@ export async function logoutApi(): Promise<void> {
     console.error('Error calling logout API:', err);
   } finally {
     clearSession();
+  }
+}
+
+// Khôi phục phiên từ cookie httpOnly (crmspd_at) lúc app khởi động — dùng cho cả login mật khẩu
+// lẫn login Lark (Lark callback chỉ set cookie rồi redirect, không ghi được localStorage).
+export async function getProfileApi(): Promise<User | null> {
+  try {
+    const res = await api.get('/auth/profile', { skipAuthRedirect: true } as any);
+    if (res.data) {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(res.data));
+    }
+    return res.data ?? null;
+  } catch {
+    clearSession();
+    return null;
   }
 }
 

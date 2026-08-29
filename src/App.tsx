@@ -344,7 +344,13 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
 
 // ─── App Root: Điều hướng chính với Route /login độc lập ─────────────────
 export function App() {
-  const { currentUser, currentRole, handleLoginSuccess, handleLogout } = useAuth();
+  const { currentUser, currentRole, authLoading, handleLoginSuccess, handleLogout } = useAuth();
+
+  // Chờ khôi phục phiên từ cookie (getProfileApi) trước khi quyết định điều hướng —
+  // nếu không, login Lark (chỉ set cookie rồi redirect) sẽ bị đá về /login ngay.
+  if (authLoading) {
+    return <LoadingOverlay />;
+  }
 
   return (
     <Routes>

@@ -18,6 +18,7 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  avatar?: string | null;
   department?: {
     id: string;
     name: string;
@@ -551,6 +552,7 @@ export interface StaffUser {
   name: string;
   email: string;
   role: Role;
+  avatar?: string | null;
   isApproved: boolean;
   isActive: boolean;
   department?: { id: string; name: string } | null;
