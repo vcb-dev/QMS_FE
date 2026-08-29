@@ -483,15 +483,14 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         setCustomerList((prev) => [createdCust, ...prev]);
         setSelectedCustomerId(createdCust.id);
         setIsNewCustomerMode(false);
-      } else if (!finalCustomerId) {
-        // Không chọn khách có sẵn cũng không bắt buộc gõ tên — tự tạo "Khách lẻ" nếu để trống hẳn.
-        const createdCust = await createCustomer({
-          name: customerSearch.trim() || 'Khách lẻ',
-        });
+      } else if (!finalCustomerId && customerSearch.trim()) {
+        // Có gõ tên nhưng không chọn khách có sẵn trong danh sách → coi như khách mới, tạo bản ghi.
+        const createdCust = await createCustomer({ name: customerSearch.trim() });
         finalCustomerId = createdCust.id;
         setCustomerList((prev) => [createdCust, ...prev]);
         setSelectedCustomerId(createdCust.id);
       }
+      // Bỏ trống hẳn ô khách hàng → KHÔNG tạo khách mới, để BE tự gom vào khách chung "Khách lẻ".
 
       await onSubmit({
         customerId: finalCustomerId,
