@@ -44,8 +44,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
   const [mode, setMode] = useState<AuthMode>('login');
 
   // Form states
-  const [email, setEmail] = useState('sale@vcb.vn');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [name, setName] = useState('');
