@@ -3,7 +3,7 @@ import type { RequestsPageProps } from '../types';
 import { FilterBar } from '../components/FilterBar';
 import { QuoteTable } from '../components/QuoteTable';
 import { Pagination } from '../components/Pagination';
-import { Download, PlusCircle } from 'lucide-react';
+import { Download, PlusCircle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const RequestsPage: React.FC<RequestsPageProps> = ({
@@ -64,7 +64,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   return (
     <>
       <div className="view-heading">
-        <h1>Danh Sách Yêu Cầu Báo Giá</h1>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <FileText size={20} /> Danh Sách Yêu Cầu Báo Giá
+        </h1>
       </div>
 
       <FilterBar

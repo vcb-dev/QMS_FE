@@ -346,12 +346,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         style={{
                           padding: '6px 12px',
                           borderRadius: '6px',
-                          border: 'none',
                           fontSize: '11.5px',
                           fontWeight: 700,
                           cursor: 'pointer',
-                          background: timeRangeFilter === opt.value ? '#0f172a' : '#f1f5f9',
-                          color: timeRangeFilter === opt.value ? '#ffffff' : '#64748b',
+                          background: timeRangeFilter === opt.value ? '#ffffff' : '#f1f5f9',
+                          color: timeRangeFilter === opt.value ? '#0f172a' : '#64748b',
+                          border: timeRangeFilter === opt.value ? '1px solid #0f172a' : '1px solid transparent',
                         }}
                       >
                         {opt.label}

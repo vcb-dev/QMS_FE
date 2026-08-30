@@ -609,3 +609,38 @@ export interface ChatPopupProps {
   unreadCount: number;
   onOpenChange: (isOpen: boolean) => void;
 }
+
+// ── Cấu hình thông báo Lark (trang admin) ─────────────────────────────
+// 1 bản ghi = 1 webhook Custom Bot của 1 nhóm Lark (bảng lark_webhook). `actions` = các hành động
+// hệ thống (audit_logs.action) mà nhóm này nhận thông báo — nhiều nhóm có thể cùng nhận 1 hành động.
+export interface LarkWebhook {
+  id: string;
+  chatName: string; // nhóm / phòng chat Lark đích (cột chat_name, NOT NULL)
+  botName: string | null; // tên Custom Bot — tùy chọn, chỉ để nhận diện (cột bot_name)
+  webhookUrl: string;
+  hasSecret: boolean; // webhook_secret không trả về client, chỉ báo có/không
+  isEnabled: boolean; // bật/tắt gửi qua webhook này (cột is_enabled)
+  actions: string[]; // AuditAction đang bật cho webhook này (bảng lark_webhook_subscription)
+  updatedByName: string | null; // updatedBy?.name
+  updatedAt: string | null;
+}
+
+// Mục trong checklist "đăng ký hành động" — GET /lark-webhooks/actions
+export interface LarkActionInfo {
+  action: string; // key AuditAction, vd QUOTE_PRICE
+  label: string; // nhãn tiếng Việt
+  richCard: boolean; // true = gửi thẻ chi tiết (ảnh + giá), false = thẻ tóm tắt
+}
+
+// GET /lark-webhooks — lọc + phân trang HẾT ở BE, FE chỉ hiển thị.
+export interface LarkWebhookListResponse {
+  data: LarkWebhook[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+  stats: { total: number; enabled: number; actionsCovered: number };
+}
+
+// GET /lark-webhooks/updaters — cho dropdown lọc "người cập nhật"
+export interface LarkUpdater {
+  id: string;
+  name: string;
+}

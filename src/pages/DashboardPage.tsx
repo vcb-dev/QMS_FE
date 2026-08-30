@@ -1,6 +1,6 @@
 import React from 'react';
 import type { QuoteRequest ,DashboardPageProps, DashboardChartsResponse} from '../types';
-import { ArrowRight, Calendar } from 'lucide-react';
+import { ArrowRight, Calendar, LayoutDashboard } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
@@ -268,8 +268,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 1. View Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
-            Tổng quan
+          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <LayoutDashboard size={22} /> Tổng quan
           </h1>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
             {timeRange === 'THIS_MONTH' && 'Hoạt động trong tháng này'}
@@ -802,7 +802,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       transition: 'transform 0.15s ease',
                     }}
                   >
-                    <div style={{ width: '100%', height: '95px', background: '#f8fafc' }}>
+                    <div style={{ width: '100%', aspectRatio: '1', background: '#f8fafc' }}>
                       <img
                         src={imgUrl}
                         alt=""
@@ -810,7 +810,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                         }}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                       />
                     </div>
                     <div style={{ padding: '8px 10px' }}>

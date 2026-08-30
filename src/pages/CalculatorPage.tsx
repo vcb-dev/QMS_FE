@@ -495,6 +495,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: '30px', fontFamily: "'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      <div>
+        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Calculator size={22} /> Máy Tính Giá
+        </h1>
+        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+          Tính giá kim hoàn theo thông số sản phẩm, kim loại và đá
+        </p>
+      </div>
+
       {/* Giá vàng thị trường theo tuổi — đặt lên đầu trang, ẩn với SALE */}
       {!isSale && <VnGoldPriceTicker />}
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench, Coins, Layers, Gem, PlusCircle, TrendingUp, Percent, History, type LucideIcon } from 'lucide-react';
+import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench, Coins, Layers, Gem, PlusCircle, TrendingUp, Percent, History, Settings, type LucideIcon } from 'lucide-react';
 import { MetalPriceHistoryModal } from '../components/MetalPriceHistoryModal';
 import {
   fetchStones,
@@ -24,7 +24,7 @@ import {
 import { formatNumberVN } from '../utils/currency';
 import type{BaseMetal, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
 import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE} from "../constants/index";
-import {PRIMARY_BLUE,PRIMARY_DARK,thStyle,tdStyle,tdCenterStyle,tableHeadRowStyle,labelStyle, btnPrimaryStyle, btnSecondaryStyle, btnGhostSmallStyle, iconBtnStyle,pageBtnStyle, inputStyle, valueBoxStyle, suffixStyle, fieldErrorStyle } from '../styles/card';
+import {PRIMARY_BLUE,thStyle,tdStyle,tdCenterStyle,tableHeadRowStyle,labelStyle, btnPrimaryStyle, btnSecondaryStyle, btnGhostSmallStyle, iconBtnStyle,pageBtnStyle, inputStyle, valueBoxStyle, suffixStyle, fieldErrorStyle } from '../styles/card';
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 // Chặn thật sự ngay lúc gõ (không chỉ báo lỗi) — kẹp giá trị về đúng khoảng 0-100% (VAT/lợi nhuận,
 // công thức margin dùng (100-pct)/100 nên không được vượt 100)
@@ -660,8 +660,8 @@ export const PricingConfigPage: React.FC = () => {
       {/* Panel duy nhất — header + tabs + nội dung + footer sticky, giống mockup */}
       <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px' }}>
         <div style={{ padding: '22px 22px 0' }}>
-          <h1 style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Cấu hình giá</h1>
-          <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>Quản lý nguồn giá gốc và quy tắc tính giá bán cho hệ thống kho.</p>
+          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}><Settings size={22} /> Cấu hình giá</h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Quản lý nguồn giá gốc và quy tắc tính giá bán cho hệ thống kho.</p>
 
           <div style={{ display: 'flex', gap: '22px', marginTop: '18px', borderBottom: '1px solid #e5e7eb' }}>
             <button type="button" className={`pcp-tab${activeTab === 'SOURCE' ? ' pcp-tab--active' : ''}`} onClick={() => setActiveTab('SOURCE')}>
@@ -1121,7 +1121,7 @@ export const PricingConfigPage: React.FC = () => {
             title={hasValidationError ? 'Còn field lỗi, sửa trước khi lưu' : undefined}
             style={{
               ...btnPrimaryStyle,
-              background: saved ? '#16a34a' : PRIMARY_DARK,
+              ...(saved ? { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' } : null),
               cursor: (saving || !hasPendingChanges || hasValidationError) ? 'default' : 'pointer',
               opacity: (!saving && (!hasPendingChanges || hasValidationError)) ? 0.5 : 1,
             }}

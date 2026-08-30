@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE ;
@@ -840,3 +840,88 @@ export async function uploadChatImage(quoteRequestId: string, file: File): Promi
     'Không thể tải ảnh lên',
   );
 }
+
+// ── Cấu hình thông báo Lark (ADMIN) ──────────────────────────────────
+// REST: /lark-webhooks. webhookSecret KHÔNG trả về client (chỉ hasSecret).
+// PATCH/POST: bỏ field webhookSecret = giữ nguyên, '' = xóa, chuỗi = đặt mới.
+// actions = danh sách AuditAction webhook này nhận thông báo (bỏ field = giữ nguyên).
+
+export interface LarkWebhookInput {
+  chatName?: string;
+  botName?: string;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  isEnabled?: boolean;
+  actions?: string[];
+}
+
+export interface LarkWebhookQuery {
+  search?: string;
+  status?: 'on' | 'off';
+  updatedById?: string;
+  updatedWithin?: '24h' | '7d' | '30d';
+  page?: number;
+  limit?: number;
+}
+
+export async function fetchLarkActions(): Promise<LarkActionInfo[]> {
+  return apiCall(
+    api.get('/lark-webhooks/actions'),
+    'Không thể tải danh mục hành động',
+  );
+}
+
+export async function fetchLarkUpdaters(): Promise<LarkUpdater[]> {
+  return apiCall(
+    api.get('/lark-webhooks/updaters'),
+    'Không thể tải danh sách người cập nhật',
+  );
+}
+
+// Lọc + phân trang do BE làm — FE chỉ truyền query rồi hiển thị data + meta.
+export async function fetchLarkWebhooks(
+  query: LarkWebhookQuery = {},
+): Promise<LarkWebhookListResponse> {
+  return apiCall(
+    api.get('/lark-webhooks', { params: query }),
+    'Không thể tải danh sách webhook Lark',
+  );
+}
+
+export async function createLarkWebhook(
+  body: LarkWebhookInput,
+): Promise<LarkWebhook> {
+  return apiCall(
+    api.post('/lark-webhooks', body),
+    'Không thể thêm webhook Lark',
+  );
+}
+
+export async function updateLarkWebhook(
+  id: string,
+  body: LarkWebhookInput,
+): Promise<LarkWebhook> {
+  return apiCall(
+    api.patch(`/lark-webhooks/${id}`, body),
+    'Không thể cập nhật webhook Lark',
+  );
+}
+
+export async function deleteLarkWebhook(id: string): Promise<void> {
+  return apiCall(
+    api.delete(`/lark-webhooks/${id}`),
+    'Không thể xóa webhook Lark',
+  );
+}
+
+// Bắn 1 tin thử qua webhook đã lưu (dùng URL + secret của bản ghi).
+export async function testLarkWebhook(
+  id: string,
+): Promise<{ ok: boolean; message: string }> {
+  return apiCall(
+    api.post(`/lark-webhooks/${id}/test`),
+    'Không gửi được tin thử',
+  );
+}
+
+

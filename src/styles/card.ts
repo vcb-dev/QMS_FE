@@ -90,9 +90,11 @@ export const suffixStyle: React.CSSProperties = {
 
 export const fieldErrorStyle: React.CSSProperties = { fontSize: '10.5px', color: '#dc2626', fontWeight: 700 };
 
+// Đồng bộ với nút .primary-action / .fb-btn của trang Danh Sách Yêu Cầu — tông xám đơn sắc,
+// không dùng nền tối/xanh cho nút hành động.
 export const btnPrimaryStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-  background: PRIMARY_DARK, border: 'none', borderRadius: '8px', color: '#ffffff',
+  background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#334155',
   fontSize: '12.5px', fontWeight: 800, padding: '9px 18px', cursor: 'pointer',
 };
 

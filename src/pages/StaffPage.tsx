@@ -129,8 +129,8 @@ export const StaffPage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
-          Quản Lý Nhân Viên
+        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Users size={22} /> Quản Lý Nhân Viên
         </h1>
         <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
           Thống kê người dùng và hiệu suất người báo giá
@@ -167,9 +167,10 @@ export const StaffPage: React.FC = () => {
             type="button"
             onClick={() => setAccountTab('PENDING')}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px', border: 'none',
-              background: accountTab === 'PENDING' ? '#0f172a' : '#f1f5f9',
-              color: accountTab === 'PENDING' ? '#fff' : '#475569',
+              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px',
+              background: accountTab === 'PENDING' ? '#ffffff' : '#f1f5f9',
+              color: accountTab === 'PENDING' ? '#0f172a' : '#475569',
+              border: accountTab === 'PENDING' ? '1px solid #0f172a' : '1px solid transparent',
               fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
             }}
           >
@@ -179,9 +180,10 @@ export const StaffPage: React.FC = () => {
             type="button"
             onClick={() => setAccountTab('ACTIVE')}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px', border: 'none',
-              background: accountTab === 'ACTIVE' ? '#0f172a' : '#f1f5f9',
-              color: accountTab === 'ACTIVE' ? '#fff' : '#475569',
+              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px',
+              background: accountTab === 'ACTIVE' ? '#ffffff' : '#f1f5f9',
+              color: accountTab === 'ACTIVE' ? '#0f172a' : '#475569',
+              border: accountTab === 'ACTIVE' ? '1px solid #0f172a' : '1px solid transparent',
               fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
             }}
           >

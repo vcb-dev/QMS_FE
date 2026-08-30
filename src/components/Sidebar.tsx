@@ -8,6 +8,7 @@ import {
   Users,
   Contact,
   Settings,
+  Bell,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -94,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 2. Danh Sách Yêu Cầu Báo Giá */}
         <button
-          className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' && currentFilter !== 'STAFF' && currentFilter !== 'CUSTOMERS' && currentFilter !== 'PRICING_CONFIG' ? 'active' : ''}
+          className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' && currentFilter !== 'STAFF' && currentFilter !== 'CUSTOMERS' && currentFilter !== 'PRICING_CONFIG' && currentFilter !== 'NOTIFICATION_CONFIG' ? 'active' : ''}
           onClick={() => onFilterChange('ALL')}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
@@ -154,6 +155,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
               <Settings size={18} /> <span className="nav-label">Cấu Hình Giá</span>
+            </span>
+          </button>
+        )}
+
+        {/* 6. Cấu Hình Thông Báo — chỉ ADMIN */}
+        {currentRole === 'ADMIN' && (
+          <button
+            className={currentFilter === 'NOTIFICATION_CONFIG' ? 'active' : ''}
+            onClick={() => onFilterChange('NOTIFICATION_CONFIG')}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+              <Bell size={18} /> <span className="nav-label">Cấu Hình Thông Báo</span>
             </span>
           </button>
         )}

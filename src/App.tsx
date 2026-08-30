@@ -32,6 +32,7 @@ const DetailPage = lazy(() => import('./pages/DetailPage').then((m) => ({ defaul
 const StaffPage = lazy(() => import('./pages/StaffPage').then((m) => ({ default: m.StaffPage })));
 const CustomersPage = lazy(() => import('./pages/CustomersPage').then((m) => ({ default: m.CustomersPage })));
 const PricingConfigPage = lazy(() => import('./pages/PricingConfigPage').then((m) => ({ default: m.PricingConfigPage })));
+const NotificationConfigPage = lazy(() => import('./pages/NotificationConfigPage').then((m) => ({ default: m.NotificationConfigPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 
 import './index.css';
@@ -123,12 +124,13 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
     if (p.startsWith('/staff')) return 'STAFF';
     if (p.startsWith('/customers')) return 'CUSTOMERS';
     if (p.startsWith('/pricing-config')) return 'PRICING_CONFIG';
+    if (p.startsWith('/notification-config')) return 'NOTIFICATION_CONFIG';
     return 'OVERVIEW';
   };
 
   const handleSidebarChange = (filter: string) => {
     const map: Record<string, string> = {
-      OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator', STAFF: '/staff', CUSTOMERS: '/customers', PRICING_CONFIG: '/pricing-config',
+      OVERVIEW: '/', ALL: '/requests', LIBRARY: '/library', CALCULATOR: '/calculator', STAFF: '/staff', CUSTOMERS: '/customers', PRICING_CONFIG: '/pricing-config', NOTIFICATION_CONFIG: '/notification-config',
     };
     navigate(map[filter] ?? '/requests');
     // Chỉ Tổng Quan (OVERVIEW) và Danh Sách Yêu Cầu (ALL) thật sự dùng requests/counts từ
@@ -265,6 +267,10 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
 
             <Route path="/pricing-config" element={
               currentRole === 'ORDER' || currentRole === 'ADMIN' ? <PricingConfigPage /> : <Navigate to="/" replace />
+            } />
+
+            <Route path="/notification-config" element={
+              currentRole === 'ADMIN' ? <NotificationConfigPage /> : <Navigate to="/" replace />
             } />
 
             <Route path="*" element={<NotFoundPage />} />

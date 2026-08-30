@@ -250,25 +250,20 @@ export const CustomersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setPanelOpen((v) => !v)}
+                className="fb-btn"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: panelFilterCount > 0 ? '#0f172a' : '#f8fafc',
-                  color: panelFilterCount > 0 ? '#ffffff' : '#334155',
-                  border: panelFilterCount > 0 ? '1px solid #0f172a' : '1px solid #cbd5e1',
-                  borderRadius: '8px',
                   padding: '8px 14px',
                   fontSize: '12.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
                 }}
               >
                 <SlidersHorizontal size={14} />
                 Bộ lọc
                 {panelFilterCount > 0 && (
                   <span style={{
-                    background: '#ffffff',
+                    background: '#cbd5e1',
                     color: '#0f172a',
                     borderRadius: '999px',
                     fontSize: '10.5px',
@@ -340,12 +335,12 @@ export const CustomersPage: React.FC = () => {
                           style={{
                             padding: '6px 12px',
                             borderRadius: '6px',
-                            border: 'none',
                             fontSize: '11.5px',
                             fontWeight: 700,
                             cursor: 'pointer',
-                            background: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#0f172a' : '#f1f5f9',
-                            color: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#ffffff' : '#64748b',
+                            background: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#ffffff' : '#f1f5f9',
+                            color: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#0f172a' : '#64748b',
+                            border: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '1px solid #0f172a' : '1px solid transparent',
                           }}
                         >
                           {opt.label}
@@ -389,13 +384,10 @@ export const CustomersPage: React.FC = () => {
               onClick={handleResetExtraFilters}
               disabled={!isExtraFiltered}
               title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
+              className="fb-btn"
               style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
-                background: isExtraFiltered ? '#fee2e2' : '#f8fafc',
-                color: isExtraFiltered ? '#b91c1c' : '#cbd5e1',
-                border: isExtraFiltered ? '1px solid #fca5a5' : '1px solid #e2e8f0',
-                borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: 700,
-                cursor: isExtraFiltered ? 'pointer' : 'not-allowed', opacity: isExtraFiltered ? 1 : 0.6,
+                padding: '8px 14px', fontSize: '12px', flexShrink: 0,
               }}
             >
               <RotateCcw size={13} /> Xóa bộ lọc
@@ -413,9 +405,10 @@ export const CustomersPage: React.FC = () => {
                 type="button"
                 onClick={() => setSortMode(opt.key)}
                 style={{
-                  padding: '7px 12px', borderRadius: '8px', border: 'none', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
-                  background: sortMode === opt.key ? '#0f172a' : '#f1f5f9',
-                  color: sortMode === opt.key ? '#fff' : '#475569',
+                  padding: '7px 12px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
+                  background: sortMode === opt.key ? '#ffffff' : '#f1f5f9',
+                  color: sortMode === opt.key ? '#0f172a' : '#475569',
+                  border: sortMode === opt.key ? '1px solid #0f172a' : '1px solid transparent',
                 }}
               >
                 {opt.label}
