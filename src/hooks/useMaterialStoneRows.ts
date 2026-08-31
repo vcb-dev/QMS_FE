@@ -64,9 +64,8 @@ export function useMaterialStoneRows(
     setStoneRows((prev) => prev.filter((r) => r.id !== id));
   };
 
-  // Đơn giá/tên đá luôn tra theo catalog TẠI THỜI ĐIỂM ĐỌC, không cache trên row — tránh giá cũ khi
-  // catalog vừa đổi trong lúc modal đang mở lâu (PricingModal có thể mở lâu hơn CalculatorPage).
-  const stonePricePerUnit = (stoneId: string) => stoneCatalog.find((s) => s.id === stoneId)?.price || 0;
+  // Tên đá tra theo catalog TẠI THỜI ĐIỂM ĐỌC (cho mô tả/nhãn). Đơn giá đá KHÔNG tính ở FE nữa —
+  // BE nhận danh sách {stoneId, quantity} và tự cộng tổng tiền đá.
   const stoneName = (stoneId: string) => stoneCatalog.find((s) => s.id === stoneId)?.name || '';
 
   return {
@@ -80,7 +79,6 @@ export function useMaterialStoneRows(
     addStoneRow,
     updateStoneRow,
     removeStoneRow,
-    stonePricePerUnit,
     stoneName,
   };
 }

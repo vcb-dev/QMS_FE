@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE ;
@@ -39,7 +39,13 @@ async function apiCall(promise: Promise<{ data: any }>, fallbackMsg: string): Pr
     const res = await promise;
     return res.data;
   } catch (err: any) {
-    throw new Error(err.response?.data?.message || fallbackMsg);
+    // Giữ HTTP status trên Error để nơi gọi phân biệt 409 (optimistic-lock conflict) với lỗi
+    // thường — axios error bị `new Error` nuốt mất `err.response`.
+    const wrapped = new Error(
+      err.response?.data?.message || fallbackMsg,
+    ) as Error & { status?: number };
+    wrapped.status = err.response?.status;
+    throw wrapped;
   }
 }
 
@@ -178,20 +184,31 @@ export async function registerApi(payload: { name: string; email: string; passwo
   return apiCall(api.post('/auth/register', payload), 'Đăng ký không thành công. Vui lòng kiểm tra lại');
 }
 
-export async function getAuditStatsApi(): Promise<Record<string, { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] }[]>> {
-  return apiCall(dedupedGet('/audit-log/stats'), 'Không thể lấy thống kê hành động');
+// Bộ lọc thời gian dùng chung cho các endpoint thống kê trang Nhân Viên — BE quy đổi & tính hết,
+// FE chỉ đẩy tham số lên.
+export type StaffTimeFilter = { timeRange?: string; startDate?: string; endDate?: string };
+function staffTimeParams(filter?: StaffTimeFilter): Record<string, any> {
+  const params: Record<string, any> = {};
+  if (filter?.timeRange && filter.timeRange !== 'ALL') params.timeRange = filter.timeRange;
+  if (filter?.startDate) params.startDate = filter.startDate;
+  if (filter?.endDate) params.endDate = filter.endDate;
+  return params;
 }
 
-export async function getAllUsersApi(): Promise<StaffUser[]> {
-  return apiCall(dedupedGet('/users'), 'Không thể lấy danh sách người dùng');
+export async function getAuditStatsApi(filter?: StaffTimeFilter): Promise<Record<string, { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] }[]>> {
+  return apiCall(dedupedGet('/audit-log/stats', staffTimeParams(filter)), 'Không thể lấy thống kê hành động');
 }
 
-export async function getUserStatsApi(): Promise<UserStatsResponse> {
-  return apiCall(dedupedGet('/users/stats'), 'Không thể lấy thống kê người dùng');
+export async function getAllUsersApi(filter?: StaffTimeFilter): Promise<StaffUser[]> {
+  return apiCall(dedupedGet('/users', staffTimeParams(filter)), 'Không thể lấy danh sách người dùng');
 }
 
-export async function getStaffPerformanceApi(): Promise<StaffPerformanceResponse> {
-  return apiCall(dedupedGet('/quote-requests/staff-performance'), 'Không thể lấy hiệu suất nhân viên');
+export async function getUserStatsApi(filter?: StaffTimeFilter): Promise<UserStatsResponse> {
+  return apiCall(dedupedGet('/users/stats', staffTimeParams(filter)), 'Không thể lấy thống kê người dùng');
+}
+
+export async function getStaffPerformanceApi(filter?: StaffTimeFilter): Promise<StaffPerformanceResponse> {
+  return apiCall(dedupedGet('/quote-requests/staff-performance', staffTimeParams(filter)), 'Không thể lấy hiệu suất nhân viên');
 }
 
 export async function approveUserApi(userId: string, role?: string): Promise<User> {
@@ -287,6 +304,12 @@ export async function fetchMasterData() {
   })();
 
   return masterDataCachePromise;
+}
+
+// Xoá cache master data để lần fetch sau lấy dữ liệu mới (gọi sau khi Admin sửa
+// chất liệu / danh mục / kim loại gốc ở PricingConfigPage).
+export function invalidateMasterData(): void {
+  masterDataCachePromise = null;
 }
 
 export async function searchCustomers(search?: string) {
@@ -551,23 +574,32 @@ export async function completeQuoteRequest(
     manualStonePrice?: number;
     stones?: { stoneId: string; quantity: number }[];
   },
+  version?: number,
 ) {
   const cleanOptions = options
     ?.map((opt) => sanitizeQuoteOption(opt, extras?.materialWeights, extras?.stones))
     .filter((opt): opt is SanitizedQuoteOptionPayload => !!opt);
-  return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions });
+  return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version });
 }
 
 export async function selectQuoteOption(id: string, optionId: string) {
   return changeQuoteStatus(id, { action: 'SELECT_OPTION', optionId });
 }
 
-export async function rejectQuoteRequest(id: string, rejectReason: string) {
-  return changeQuoteStatus(id, { action: 'REJECT', rejectReason });
+export async function rejectQuoteRequest(
+  id: string,
+  rejectReason: string,
+  version?: number,
+) {
+  return changeQuoteStatus(id, { action: 'REJECT', rejectReason, version });
 }
 
-export async function returnQuoteRequest(id: string, returnReason: string) {
-  return changeQuoteStatus(id, { action: 'RETURN', returnReason });
+export async function returnQuoteRequest(
+  id: string,
+  returnReason: string,
+  version?: number,
+) {
+  return changeQuoteStatus(id, { action: 'RETURN', returnReason, version });
 }
 
 export async function resubmitQuoteRequest(id: string) {
@@ -638,7 +670,9 @@ export async function calculatePriceApi(payload: {
   materialNameOrKey: string;
   weightChi: number;
   laborCost?: number;
+  // Đá nhập tổng tay. Khi có `stones` (đá chọn từ danh mục) thì BE tự cộng, bỏ qua field này.
   stoneCost?: number;
+  stones?: { stoneId: string; quantity: number }[];
   vatRate?: number;
   includeVat?: boolean;
   categoryId?: string;
@@ -662,6 +696,12 @@ export interface CalculateBatchResultItem {
   vatRate?: number;
   vatAmount?: number;
   quotedPrice?: number;
+  materialPrice?: number;
+  // Cấu thành lãi/VAT — BE tính sẵn, FE chỉ hiển thị.
+  metalVatAmount?: number;
+  metalProfit?: number;
+  stoneVatAmount?: number;
+  stoneProfit?: number;
 }
 
 // Tính NHIỀU phương án (phương án chính + các "loại vàng khác") trong 1 request — thay N lần gọi
@@ -674,6 +714,7 @@ export async function calculatePriceBatchApi(payload: {
     weightChi: number;
     laborCost?: number;
     stoneCost?: number;
+    stones?: { stoneId: string; quantity: number }[];
     vatRate?: number;
     silverMultiplier?: number;
   }[];
@@ -692,6 +733,12 @@ export interface CalculateMultiResult {
   laborCost: number;
   vatAmount: number;
   quotedPrice: number;
+  materialPrice?: number;
+  // Cấu thành lãi/VAT — BE tính sẵn, FE chỉ hiển thị.
+  metalVatAmount?: number;
+  metalProfit?: number;
+  stoneVatAmount?: number;
+  stoneProfit?: number;
   breakdown: { materialId: string; materialName: string; weightChi: number; cost: number }[];
 }
 
@@ -921,6 +968,24 @@ export async function testLarkWebhook(
   return apiCall(
     api.post(`/lark-webhooks/${id}/test`),
     'Không gửi được tin thử',
+  );
+}
+
+// Công tắc tổng cầu chat web <-> Lark DM (ADMIN).
+export async function fetchDmBridgeStatus(): Promise<LarkDmBridgeStatus> {
+  return apiCall(
+    api.get('/lark-webhooks/dm-bridge'),
+    'Không thể tải trạng thái cầu Lark DM',
+  );
+}
+
+export async function updateDmBridge(
+  isEnabled: boolean,
+  note?: string,
+): Promise<LarkDmBridgeStatus> {
+  return apiCall(
+    api.patch('/lark-webhooks/dm-bridge', { isEnabled, note }),
+    'Không đổi được trạng thái cầu Lark DM',
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp } from 'lucide-react';
-import type { QuoteOption, QuoteRequest, Role } from '../types';
+import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role } from '../types';
 import {
   fetchMasterData,
   calculatePriceMultiApi,
@@ -12,8 +12,11 @@ import type { CalculateBatchResultItem } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { getPrimaryOption, batchResultToOption } from '../utils/quoteOption';
 import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
+import { useCompareRows } from '../hooks/useCompareRows';
+import { modalCloseIconBtnStyle } from '../styles/modal';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -26,7 +29,7 @@ interface PricingModalProps {
   onOpenCalculator?: () => void;
   selectedReq?: QuoteRequest | null;
   currentRole: Role;
-  materials?: { id: string; name: string }[];
+  materials?: { id: string; name: string; baseMetal?: { name: string } | null }[];
 }
 
 export const PricingModal: React.FC<PricingModalProps> = ({
@@ -39,7 +42,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   materials: initialMaterialsList = [],
 }) => {
   // Master data
-  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string }[]>(initialMaterialsList);
+  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetal?: { name: string } | null }[]>(initialMaterialsList);
+  
+  const isSilverMaterialId = (materialId?: string) =>
+    !!materialId && dbMaterials.find((m) => m.id === materialId)?.baseMetal?.name === 'Bạc';
   const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
   const [silverMultipliers, setSilverMultipliers] = useState<number[]>([]);
   // VAT giờ lấy theo danh mục sản phẩm của yêu cầu đang báo giá (ProductCategory.vatRate),
@@ -66,7 +72,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     addStoneRow,
     updateStoneRow,
     removeStoneRow,
-    stonePricePerUnit,
     stoneName,
   } = useMaterialStoneRows(dbMaterials, stoneCatalog);
   const [calcLaborCost, setCalcLaborCost] = useState<string>(String(PRICING_DEFAULTS.LABOR_COST));
@@ -78,41 +83,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // chọn 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau).
   // Tính riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo, không chọn
   // làm giá chính) cùng groupId với phương án chính.
-  const [compareRows, setCompareRows] = useState<
-    { id: string; materialId: string; materialName: string; weightChi: string }[]
-  >([]);
-  const addCompareRow = () =>
-    setCompareRows((prev) => [
-      ...prev,
-      {
-        id: `cmp_${Date.now()}_${prev.length}`,
-        materialId: dbMaterials[0]?.id || '',
-        materialName: dbMaterials[0]?.name || '',
-        weightChi: '',
-      },
-    ]);
-  const updateCompareRow = (
-    id: string,
-    patch: Partial<{ materialId: string; weightChi: string }>,
-  ) =>
-    setCompareRows((prev) =>
-      prev.map((row) =>
-        row.id === id
-          ? {
-              ...row,
-              ...patch,
-              ...(patch.materialId != null
-                ? {
-                    materialName:
-                      dbMaterials.find((m) => m.id === patch.materialId)?.name || '',
-                  }
-                : {}),
-            }
-          : row,
-      ),
-    );
-  const removeCompareRow = (id: string) =>
-    setCompareRows((prev) => prev.filter((row) => row.id !== id));
+  const { compareRows, setCompareRows, addCompareRow, updateCompareRow, removeCompareRow } = useCompareRows(dbMaterials);
 
   // Đá đính
   const [calcStoneMode, setCalcStoneMode] = useState<'catalog' | 'manual'>('catalog');
@@ -156,10 +127,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       // Phương án Sale THẬT SỰ chọn — ưu tiên CLOSED/SELECTED; nếu đơn cũ/dữ liệu thiếu cờ này
       // (không option nào SELECTED/CLOSED) thì fallback về option ĐẦU TIÊN thay vì khóa hết —
       // khóa hết sẽ khiến Order không còn cách nào chọn giá chính để báo giá cho đơn đó.
-      const salePrimaryOption =
-        realOptions.find((opt) => opt.selectionStatus === 'CLOSED') ||
-        realOptions.find((opt) => opt.selectionStatus === 'SELECTED') ||
-        realOptions[0];
+      const salePrimaryOption = getPrimaryOption({ options: realOptions });
       setOptions(
         realOptions.map((opt) => ({
           ...opt,
@@ -193,16 +161,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     const reqMaterials = selectedReq.materials || [];
-    const primaryOpt =
-      selectedReq.options?.find((o) => o.selectionStatus === 'CLOSED') ||
-      selectedReq.options?.find((o) => o.selectionStatus === 'SELECTED') ||
-      selectedReq.options?.[0];
+    const primaryOpt = getPrimaryOption({ options: selectedReq.options });
 
     if (primaryOpt?.materials && primaryOpt.materials.length > 0) {
       setCalcMaterialRows(
-        primaryOpt.materials.map((m: any, idx: number) => ({
+        primaryOpt.materials.map((m: QuoteOptionMaterial, idx: number) => ({
           id: `m_${idx}_${Date.now()}`,
-          materialId: m.materialId || m.id,
+          materialId: m.materialId || m.id || '',
           materialName: m.materialName || m.material?.name || '',
           weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
         })),
@@ -242,9 +207,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
       setCalcStoneRows(
-        primaryOpt.stones.map((s: any, idx: number) => ({
+        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => ({
           id: `stone_${idx}_${Date.now()}`,
-          stoneType: s.stone?.stoneType || '',
+          stoneType: (s.stone?.stoneType as 'MAIN' | 'SIDE' | '') || '',
           stoneId: s.stoneId,
           qty: s.quantity || 1,
         })),
@@ -261,7 +226,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     setCalcError(null);
-  }, [isOpen, selectedReq, dbMaterials, defaultVatRate, setCalcMaterialRows, setCalcStoneRows]);
+  }, [isOpen, selectedReq, dbMaterials, defaultVatRate, setCalcMaterialRows, setCalcStoneRows, setCompareRows]);
 
   // Đổi chất liệu/khối lượng/đá hoặc tiền công/VAT sau khi đã bấm "Tính Giá Ngay" — chỉ xóa lỗi cũ.
   // Kết quả tính đã được thêm thẳng vào "Các Phương Án Báo Giá" ngay khi tính xong (xem
@@ -298,11 +263,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     });
   };
 
-  const isSilverName = (name: string) =>
-    /BẠC|SILVER|925/i.test(name) && !/BẠCH/i.test(name);
-
-  // Map 1 kết quả từ /quote-options/calculate-batch thành QuoteOption. Thuần, không gọi API —
-  // cả lô (phương án chính + các "loại vàng khác") tính trong 1 request duy nhất.
+  // Map 1 kết quả từ /quote-options/calculate-batch thành QuoteOption — dùng chung
+  // batchResultToOption (utils/quoteOption), chỉ đặt tên/note đặc thù màn này.
   const mapOption = (
     materialName: string,
     materialId: string | undefined,
@@ -316,32 +278,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       groupId: string;
       locked: boolean;
     },
-  ): QuoteOption | null => {
-    if (!res || res.error || typeof res.quotedPrice !== 'number' || !(res.quotedPrice > 0)) {
-      return null;
-    }
-    return {
+  ): QuoteOption | null =>
+    batchResultToOption({
       optionName: ctx.locked
         ? `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
         : `${materialName} · Công ${formatCurrency(ctx.laborCost)} · VAT ${ctx.vatVal}%`,
       materialName,
+      materialId,
       weightChi,
-      laborCost: res.laborCost,
-      stoneCost: res.stoneCost,
-      totalMetalCost: res.totalMetalCost,
-      metalRawCost: res.metalRawCost,
-      stonePrice: res.stonePrice,
+      res,
       vat: ctx.vatVal,
-      quotedPrice: res.quotedPrice,
-      isSelected: false,
       locked: ctx.locked,
       groupId: ctx.groupId,
-      materials: materialId ? [{ materialId, weightChi }] : undefined,
       stones: ctx.stoneSelections,
       stoneDescription: ctx.stoneDesc,
       note: ctx.locked ? 'Loại vàng khác — chỉ tham khảo' : 'Tính từ máy tính giá',
-    };
-  };
+    });
 
   const handleRunCalculate = async () => {
     const validRows = calcMaterialRows.filter(
@@ -364,12 +316,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const l = parseFloat(calcLaborCost) || 0;
       const vatVal = calcIncludeVat ? (parseFloat(calcVat) || 10) : 0;
 
-      let totalStoneCost = 0;
-      if (calcStoneMode === 'manual') {
-        totalStoneCost = parseFloat(calcManualStonePrice) || 0;
-      } else {
-        totalStoneCost = calcStoneRows.reduce((sum, r) => sum + r.qty * stonePricePerUnit(r.stoneId), 0);
-      }
+      // Đá nhập tay → gửi thẳng số. Đá chọn từ danh mục → gửi danh sách stones cho BE tự cộng
+      // (FE KHÔNG tự nhân đơn giá × số lượng nữa).
+      const manualStoneCost =
+        calcStoneMode === 'manual' ? parseFloat(calcManualStonePrice) || 0 : 0;
 
       const stoneSelections =
         calcStoneMode === 'catalog' && calcStoneRows.length > 0
@@ -388,9 +338,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         materialNameOrKey: r.materialName,
         weightChi: parseFloat(r.weightChi) || 0,
         laborCost: l,
-        stoneCost: totalStoneCost,
+        stoneCost: manualStoneCost || undefined,
+        stones: stoneSelections,
         vatRate: vatVal,
-        silverMultiplier: isSilverName(r.materialName) ? calcSilverMultiplier : undefined,
+        // BE chỉ áp hệ số nhân cho chất liệu dùng công thức MULTIPLIER (Bạc); gửi luôn cũng an toàn.
+        silverMultiplier: isSilverMaterialId(r.materialId) ? calcSilverMultiplier : undefined,
       }));
 
       // Bấm "Tính Giá Ngay" lần 2 (chỉ thêm phương án so sánh, giá chính không đổi) — phương án
@@ -436,9 +388,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               materialNameOrKey: single.materialName,
               weightChi: w,
               laborCost: l,
-              stoneCost: totalStoneCost,
+              stoneCost: manualStoneCost || undefined,
+              stones: stoneSelections,
               vatRate: vatVal,
-              silverMultiplier: isSilverName(single.materialName) ? calcSilverMultiplier : undefined,
+              silverMultiplier: isSilverMaterialId(single.materialId || single.id) ? calcSilverMultiplier : undefined,
             },
             ...compareItems,
           ],
@@ -478,7 +431,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             calcStoneMode === 'manual' && calcManualStoneName.trim()
               ? calcManualStoneName.trim()
               : undefined,
-          manualStonePrice: calcStoneMode === 'manual' && totalStoneCost > 0 ? totalStoneCost : undefined,
+          manualStonePrice:
+            calcStoneMode === 'manual' && manualStoneCost > 0 ? manualStoneCost : undefined,
         };
 
         const res = await calculatePriceMultiApi(payload);
@@ -514,6 +468,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             quotedPrice: res.quotedPrice,
             isSelected: false,
             groupId,
+            priceBreakdown:
+              res.materialPrice != null
+                ? { material: res.materialPrice, stone: res.stonePrice ?? 0 }
+                : undefined,
             materials: payload.materials,
             stones: payload.stones,
             stoneDescription:
@@ -605,9 +563,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     typeof selectedOpt.quotedPrice === 'number' &&
     Number(selectedOpt.quotedPrice) > 0;
 
-  const isSilverPresent = calcMaterialRows.some(
-    (m) => /BẠC|SILVER|925/i.test(m.materialName) && !/BẠCH/i.test(m.materialName),
-  );
+  const isSilverPresent = calcMaterialRows.some((m) => isSilverMaterialId(m.materialId || m.id));
 
   // Ẩn option nháp chưa có giá (VD: "Yêu cầu ban đầu" tự tạo lúc Sale gửi yêu cầu, quotedPrice null)
   // khỏi danh sách hiển thị/đếm số — chỉ phương án đã tính giá thật mới coi là 1 phương án báo giá.
@@ -645,7 +601,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+            style={modalCloseIconBtnStyle}
           >
             <X size={20} />
           </button>

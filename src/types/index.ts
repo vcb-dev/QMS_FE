@@ -155,6 +155,14 @@ export interface QuoteOption {
   livePrice?: number | null;
   priceBreakdown?: { material: number; stone: number };
   livePriceBreakdown?: { material: number; stone: number };
+  // Cấu thành lãi/VAT do BE tính sẵn (option-mapper.util computeCostBreakdown) — FE CHỈ hiển thị,
+  // không tự tính. null/undefined khi option chưa đủ dữ liệu (nháp chưa có giá / đơn cũ).
+  costBreakdown?: {
+    metalVatAmount: number;
+    metalProfit: number;
+    stoneVatAmount: number;
+    stoneProfit: number;
+  } | null;
   quotedDate?: string;
   isSelected?: boolean;
   // Trạng thái được chọn lưu ở BE (QuoteOption.selectionStatus) — SELECTED = đang dùng báo giá chính,
@@ -225,6 +233,9 @@ export interface QuoteRequest {
   acceptedAt?: string;
   returnedAt?: string;
   options?: QuoteOption[];
+  // Khối lượng ở cấp yêu cầu — chỉ có ở dữ liệu cũ / một số response thô; UI ưu tiên đọc
+  // weightChi của phương án, đây chỉ là fallback hiển thị badge.
+  weightChi?: number | string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -254,7 +265,19 @@ export interface FilterOptions {
 }
 export interface CalculatorPageProps {
   currentRole?: Role;
-  onApplyToNewRequest?: (productData: any) => void;
+  onApplyToNewRequest?: (productData: CalculatorHandoff) => void;
+}
+
+// Dữ liệu "Áp dụng sang yêu cầu mới" — CalculatorPage bàn giao cho CreateModal qua
+// useQuoteRequests.calculatorData. Không phải payload gửi BE; CreateModal đọc để prefill form.
+export interface CalculatorHandoff {
+  categoryId?: string;
+  materialType?: string;
+  materials?: MaterialRow[];
+  stones?: { id?: string; stoneId?: string; quantity?: number }[];
+  suggestedPrice?: number | null;
+  note?: string;
+  options?: QuoteOption[];
 }
 
 export type MaterialRow = {
@@ -284,6 +307,11 @@ export type CalcResult = {
   vatAmount: number;
   quotedPrice: number;
   profitMarginLabel?: string;
+  // Cấu thành lãi/VAT — BE tính sẵn, FE chỉ hiển thị.
+  metalVatAmount?: number;
+  metalProfit?: number;
+  stoneVatAmount?: number;
+  stoneProfit?: number;
   breakdown?: { materialId: string; materialName: string; weightChi: number; cost: number }[];
 };
 
@@ -307,6 +335,10 @@ export type CalculatePriceResult = {
   subtotalPrice?: number;
   vatRate?: number;
   vatAmount?: number;
+  metalVatAmount?: number;
+  metalProfit?: number;
+  stoneVatAmount?: number;
+  stoneProfit?: number;
 };
 
 
@@ -579,15 +611,7 @@ export interface CreateModalProps {
   materials: Material[];
   editingReq: QuoteRequest | null;
   saleName: string;
-  calculatorData?: {
-    categoryId?: string;
-    materialType?: string;
-    materials?: { id?: string; materialId?: string; materialName?: string; weightChi?: string | number }[];
-    stones?: { id?: string; stoneId?: string; quantity?: number }[];
-    suggestedPrice?: number;
-    note?: string;
-    options?: { optionName: string; materialName?: string; quotedPrice: number; isSelected?: boolean }[];
-  } | null;
+  calculatorData?: CalculatorHandoff | null;
 }
 
 export interface ChatMessage {
@@ -644,3 +668,12 @@ export interface LarkUpdater {
   id: string;
   name: string;
 }
+
+// GET/PATCH /lark-webhooks/dm-bridge — công tắc tổng cầu chat web <-> Lark DM.
+export interface LarkDmBridgeStatus {
+  isEnabled: boolean;
+  changedByName: string | null;
+  changedAt: string | null;
+}
+export type CompareRow = { id: string; materialId: string; materialName: string; weightChi: string };
+

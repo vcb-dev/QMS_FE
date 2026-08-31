@@ -21,7 +21,11 @@ export function formatCurrency(
   return `${formatted} đ`;
 }
 
-export const formatDuration = (ms: number): string => {
+// Khoảng thời gian giữa 2 mốc (ms). Trả null nếu toMs < fromMs (data lỗi) — KHÔNG
+// làm tròn che giấu. Quy đổi: <60s giây, <60m phút, <24h giờ, else ngày.
+export const formatDuration = (fromMs: number, toMs: number): string | null => {
+  if (toMs < fromMs) return null;
+  const ms = toMs - fromMs;
   const seconds = ms / 1000;
   if (seconds < 60) return `${Math.max(1, Math.round(seconds))} giây`;
   const minutes = seconds / 60;

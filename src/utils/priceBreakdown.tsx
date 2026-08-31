@@ -3,33 +3,18 @@ import { formatCurrency } from './currency';
 import { formatPriceRange } from './quoteOption';
 
 type BreakdownInput = {
-  quotedPrice?: number | null;
-  stonePrice?: number | null;
-  priceBreakdown?: { material: number; stone: number };
-  livePrice?: number | null;
-  livePriceBreakdown?: { material: number; stone: number };
-  price?: number | null; // ProductSpecModal history option dùng `price` thay `quotedPrice`
+  priceBreakdown?: { material: number; stone: number } | null;
+  livePriceBreakdown?: { material: number; stone: number } | null;
 };
 
-// Hai phần giá bán để hiển thị. Ưu tiên field priceBreakdown BE tính sẵn; đơn cũ / endpoint chưa
-// kèm thì suy ra (quotedPrice|price) - (stonePrice ?? 0). null khi option chưa có giá.
+// Hai phần giá bán (chất liệu / đá) để hiển thị — BE tính sẵn và trả về trong `priceBreakdown`.
+// FE chỉ đọc, KHÔNG tự suy ra. null khi option chưa có giá / BE chưa kèm.
 export function getPriceBreakdown(opt: BreakdownInput): { material: number; stone: number } | null {
-  if (opt.priceBreakdown) return opt.priceBreakdown;
-  const raw = opt.quotedPrice ?? opt.price;
-  if (raw === null || raw === undefined) return null;
-  const total = Number(raw);
-  if (!Number.isFinite(total)) return null;
-  const stone = Number(opt.stonePrice) || 0;
-  return { material: Math.round(total - stone), stone: Math.round(stone) };
+  return opt.priceBreakdown ?? null;
 }
 
 export function getLivePriceBreakdown(opt: BreakdownInput): { material: number; stone: number } | null {
-  if (opt.livePriceBreakdown) return opt.livePriceBreakdown;
-  if (opt.livePrice === null || opt.livePrice === undefined) return null;
-  const total = Number(opt.livePrice);
-  if (!Number.isFinite(total)) return null;
-  const stone = Number(opt.stonePrice) || 0;
-  return { material: Math.round(total - stone), stone: Math.round(stone) };
+  return opt.livePriceBreakdown ?? null;
 }
 
 // 2 dòng phụ nhỏ dưới con số tổng. Ẩn dòng "Giá đá" khi stone <= 0.

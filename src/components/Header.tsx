@@ -100,10 +100,9 @@ export const Header: React.FC<HeaderProps> = ({
           requestId: r.id,
           productName: `${catName} ${matStr}`.trim() || r.productName || 'Sản phẩm chế tác',
           price: Number(o.quotedPrice),
-          materialPrice: o.priceBreakdown ? o.priceBreakdown.material
-            : (o.quotedPrice != null && o.stonePrice != null ? Number(o.quotedPrice) - Number(o.stonePrice) : null),
-          stonePrice: o.priceBreakdown ? o.priceBreakdown.stone
-            : (o.stonePrice != null ? Number(o.stonePrice) : null),
+          // Tách giá chất liệu / đá do BE tính sẵn (priceBreakdown) — FE chỉ đọc.
+          materialPrice: o.priceBreakdown ? o.priceBreakdown.material : null,
+          stonePrice: o.priceBreakdown ? o.priceBreakdown.stone : null,
         });
       }
     }

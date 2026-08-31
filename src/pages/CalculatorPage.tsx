@@ -6,10 +6,12 @@ import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { formatOptionCopyLine, cleanOptionLabel, batchResultToOption } from '../utils/quoteOption';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
-import type {CalculatorPageProps, StoneRow,StoneCatalogItem,CalcResult} from '../types';
+import type {CalculatorPageProps, StoneRow,StoneCatalogItem,CalcResult,QuoteOption} from '../types';
 import {cardStyle, cardTitleStyle} from '../styles/card';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
+import { useCompareRows } from '../hooks/useCompareRows';
 
 export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   currentRole,
@@ -43,7 +45,6 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     addStoneRow,
     updateStoneRow,
     removeStoneRow,
-    stonePricePerUnit,
   } = useMaterialStoneRows(dbMaterials, stoneCatalog, [
     { id: '1', materialId: '', materialName: '', weightChi: PRICING_DEFAULTS.WEIGHT_CHI },
   ]);
@@ -67,38 +68,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   // Phương án so sánh loại vàng khác — người dùng TỰ thêm, không còn tự sinh từ BE. Mỗi dòng chọn
   // 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau). Tính
   // riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo).
-  const [compareRows, setCompareRows] = useState<
-    { id: string; materialId: string; materialName: string; weightChi: string }[]
-  >([]);
-  const addCompareRow = () =>
-    setCompareRows((prev) => [
-      ...prev,
-      {
-        id: `cmp_${Date.now()}_${prev.length}`,
-        materialId: dbMaterials[0]?.id || '',
-        materialName: dbMaterials[0]?.name || '',
-        weightChi: '',
-      },
-    ]);
-  const updateCompareRow = (
-    id: string,
-    patch: Partial<{ materialId: string; weightChi: string }>,
-  ) =>
-    setCompareRows((prev) =>
-      prev.map((row) =>
-        row.id === id
-          ? {
-              ...row,
-              ...patch,
-              ...(patch.materialId != null
-                ? { materialName: dbMaterials.find((m) => m.id === patch.materialId)?.name || '' }
-                : {}),
-            }
-          : row,
-      ),
-    );
-  const removeCompareRow = (id: string) =>
-    setCompareRows((prev) => prev.filter((row) => row.id !== id));
+  const { compareRows, addCompareRow, updateCompareRow, removeCompareRow } = useCompareRows(dbMaterials);
   // Chặn auto-calc chạy với material/hệ số mặc định (hardcode) trước khi DB trả dữ liệu thật về —
   // nếu không sẽ tính 2 lần: 1 lần với default lúc mount, 1 lần nữa khi master data/silver-multipliers tới
   const [initialDataReady, setInitialDataReady] = useState(false);
@@ -118,20 +88,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   const isCalculating = !initialDataReady || loading || isDebouncing;
 
   // Danh sách các phương án giá (VD: đủ giá 10K/14K/18K/610/24K khi chọn vàng) — để Sale copy nhanh
-  const [priceOptions, setPriceOptions] = useState<any[]>([]);
+  const [priceOptions, setPriceOptions] = useState<QuoteOption[]>([]);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
 
-  // Nhãn hiển thị bỏ phần "(Áp dụng X%)" cho gọn — số % vẫn dùng để tính, chỉ ẩn khỏi UI
-  const cleanOptionLabel = (opt: { materialName?: string; optionName: string }) =>
-    (opt.materialName || opt.optionName || '').replace(/\s*\(Áp dụng[^)]*\)/i, '').trim();
-
-  const handleCopyPrice = (idx: number, opt: any) => {
-    const bd = getPriceBreakdown(opt as any);
-    const suffix = bd && bd.stone > 0
-      ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
-      : '';
-    const text = `${cleanOptionLabel(opt)}: ${formatCurrency(opt.quotedPrice)}${suffix}`;
+  const handleCopyPrice = (idx: number, opt: QuoteOption) => {
+    const text = formatOptionCopyLine(opt);
     navigator.clipboard.writeText(text).then(() => {
       setCopiedIdx(idx);
       setTimeout(() => setCopiedIdx((cur) => (cur === idx ? null : cur)), 1500);
@@ -139,15 +101,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   };
 
   const handleCopyAllPrices = () => {
-    const text = priceOptions
-      .map((opt) => {
-        const bd = getPriceBreakdown(opt as any);
-        const suffix = bd && bd.stone > 0
-          ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
-          : '';
-        return `${cleanOptionLabel(opt)}: ${formatCurrency(opt.quotedPrice)}${suffix}`;
-      })
-      .join('\n');
+    const text = priceOptions.map((opt) => formatOptionCopyLine(opt)).join('\n');
     navigator.clipboard.writeText(text).then(() => {
       setCopiedAll(true);
       setTimeout(() => setCopiedAll(false), 1500);
@@ -207,9 +161,13 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     if (cat?.laborCost != null) setLaborCost(Number(cat.laborCost));
   }, [categoryId, dbCategories]);
 
-  const totalStoneCost = stoneInputMode === 'total'
-    ? (manualStoneTotal || 0)
-    : stoneRows.reduce((sum, r) => sum + r.qty * stonePricePerUnit(r.stoneId), 0);
+  // Đá chọn từ danh mục → gửi danh sách {stoneId, quantity} cho BE tự cộng tổng tiền đá.
+  // Đá nhập tổng tay → gửi thẳng số user gõ. FE KHÔNG tự cộng đơn giá × số lượng nữa.
+  const catalogStoneSelections =
+    stoneInputMode === 'table'
+      ? stoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+      : [];
+  const manualStoneCost = stoneInputMode === 'total' ? manualStoneTotal || 0 : 0;
 
   // requestId chặn race: nếu gõ tiếp trong lúc request cũ chưa về, kết quả cũ về sau bị bỏ qua
   const calcRequestIdRef = useRef(0);
@@ -229,37 +187,32 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
       materialNameOrKey: r.materialName,
       weightChi: parseFloat(r.weightChi) || 0,
       laborCost: laborCost || 0,
-      stoneCost: totalStoneCost || 0,
+      stoneCost: manualStoneCost || undefined,
+      stones: catalogStoneSelections.length > 0 ? catalogStoneSelections : undefined,
       vatRate: vatPct || 0,
       silverMultiplier: cSilver ? selectedSilverMultiplier : undefined,
     };
   };
 
-  // Map 1 kết quả batch thành phương án "loại vàng khác" (locked). Thuần, không gọi API.
+  // Map 1 kết quả batch thành phương án "loại vàng khác" (locked) — dùng chung
+  // batchResultToOption (utils/quoteOption).
   const mapCompareOpt = (
     r: { materialId: string; materialName: string; weightChi: string },
     cr: CalculateBatchResultItem | undefined,
     vatValNum: number,
     sharedStones: { stoneId: string; quantity: number }[] | undefined,
-  ): any | null => {
-    if (!cr || cr.error || typeof cr.quotedPrice !== 'number') return null;
+  ): QuoteOption | null => {
     const cw = parseFloat(r.weightChi) || 0;
-    return {
+    return batchResultToOption({
       optionName: `${r.materialName} · ${cw} chỉ · Loại vàng khác (tham khảo)`,
       materialName: r.materialName,
+      materialId: r.materialId || undefined,
       weightChi: cw,
-      laborCost: cr.laborCost,
-      stoneCost: cr.stoneCost,
-      totalMetalCost: cr.totalMetalCost,
-      metalRawCost: cr.metalRawCost,
-      stonePrice: cr.stonePrice,
+      res: cr,
       vat: vatValNum,
-      quotedPrice: cr.quotedPrice,
-      isSelected: false,
       locked: true,
-      materials: r.materialId ? [{ materialId: r.materialId, weightChi: cw }] : undefined,
       stones: sharedStones,
-    };
+    });
   };
 
   // Các phương án "loại vàng khác" (compareRows) — bỏ qua dòng chưa nhập khối lượng, tính TẤT CẢ
@@ -268,7 +221,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     vatValNum: number,
     sharedStones: { stoneId: string; quantity: number }[] | undefined,
     currentCatId: string | undefined,
-  ): Promise<any[]> => {
+  ): Promise<QuoteOption[]> => {
     const rows = compareRows.filter(
       (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
     );
@@ -280,7 +233,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     });
     return rows
       .map((r, i) => mapCompareOpt(r, results[i], vatValNum, sharedStones))
-      .filter((o): o is any => !!o);
+      .filter((o): o is QuoteOption => !!o);
   };
 
   const runCalculate = async () => {
@@ -308,9 +261,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
         const isSingleSilver = singleMat?.baseMetal?.name === 'Bạc';
 
         const sharedStones =
-          stoneInputMode === 'table' && stoneRows.length > 0
-            ? stoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-            : undefined;
+          catalogStoneSelections.length > 0 ? catalogStoneSelections : undefined;
         const vatValNum = includeVat ? (vatPct || 10) : 0;
 
         // 1 request duy nhất: phương án chính (index 0) + tất cả dòng "loại vàng khác".
@@ -325,7 +276,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               materialNameOrKey: singleRow.materialName,
               weightChi: w,
               laborCost: laborCost || 0,
-              stoneCost: totalStoneCost || 0,
+              stoneCost: manualStoneCost || undefined,
+              stones: sharedStones,
               vatRate: vatPct || 0,
               silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
             },
@@ -346,8 +298,13 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
             laborCost: res.laborCost ?? 0,
             stoneCost: res.stoneCost ?? 0,
             stonePrice: res.stonePrice ?? 0,
+            materialPrice: res.materialPrice,
             vatRate: vatPct || 10,
             vatAmount: res.vatAmount ?? 0,
+            metalVatAmount: res.metalVatAmount,
+            metalProfit: res.metalProfit,
+            stoneVatAmount: res.stoneVatAmount,
+            stoneProfit: res.stoneProfit,
             quotedPrice: res.quotedPrice,
             profitMarginLabel: res.profitMarginLabel,
           });
@@ -357,30 +314,23 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           setErrorMessage(res?.error || 'Không nhận được giá hợp lệ từ hệ thống');
         }
 
-        const mainOption = {
+        const mainOption = batchResultToOption({
           optionName: singleRow.materialName,
           materialName: singleRow.materialName,
+          materialId: singleRow.materialId || undefined,
           weightChi: w,
-          laborCost: res?.laborCost,
-          stoneCost: res?.stoneCost,
-          totalMetalCost: res?.totalMetalCost,
-          metalRawCost: res?.metalRawCost,
-          stonePrice: res?.stonePrice,
+          res,
           vat: vatValNum,
-          quotedPrice: res?.quotedPrice,
-          isSelected: true,
-          materials: singleRow.materialId
-            ? [{ materialId: singleRow.materialId, weightChi: w }]
-            : undefined,
+          locked: false,
           stones: sharedStones,
-        };
+        });
 
         const compareOptions = compareValid
           .map((r, i) => mapCompareOpt(r, batch[i + 1], vatValNum, sharedStones))
-          .filter((o): o is any => !!o);
+          .filter((o): o is QuoteOption => !!o);
 
         setPriceOptions(
-          res?.quotedPrice != null ? [mainOption, ...compareOptions] : compareOptions,
+          mainOption ? [{ ...mainOption, isSelected: true }, ...compareOptions] : compareOptions,
         );
       } else {
         // Luồng NHIỀU chất liệu: Gọi API calculate-multi
@@ -394,11 +344,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           laborCost: laborCost || 0,
           vatRate: vatPct || 0,
           includeVat,
-          stones: stoneInputMode === 'table' && stoneRows.length > 0
-            ? stoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-            : undefined,
-          manualStoneName: stoneInputMode === 'total' && manualStoneTotal > 0 ? 'Đá tổng' : undefined,
-          manualStonePrice: stoneInputMode === 'total' && manualStoneTotal > 0 ? manualStoneTotal : undefined,
+          stones: catalogStoneSelections.length > 0 ? catalogStoneSelections : undefined,
+          manualStoneName: manualStoneCost > 0 ? 'Đá tổng' : undefined,
+          manualStonePrice: manualStoneCost > 0 ? manualStoneCost : undefined,
         };
 
         const res = await calculatePriceMultiApi(multiPayload);
@@ -415,11 +363,17 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           setQuotedPrice(res.quotedPrice);
           setCalcResult({
             totalMetalCost: res.totalMetalCost,
+            metalRawCost: res.metalRawCost,
             laborCost: res.laborCost,
             stoneCost: res.stoneCost,
             stonePrice: res.stonePrice || 0,
+            materialPrice: res.materialPrice,
             vatRate: vatPct || 10,
             vatAmount: res.vatAmount,
+            metalVatAmount: res.metalVatAmount,
+            metalProfit: res.metalProfit,
+            stoneVatAmount: res.stoneVatAmount,
+            stoneProfit: res.stoneProfit,
             quotedPrice: res.quotedPrice,
             breakdown: res.breakdown,
           });
@@ -944,21 +898,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                             />
                           </div>
 
-                          {/* Đơn giá/viên lấy từ cấu hình catalog đá trong DB — không sửa tay */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>Giá cốt / viên</span>
-                            <strong style={{ fontSize: '12.5px', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
-                              {formatCurrency(stonePricePerUnit(row.stoneId))}
-                            </strong>
-                          </div>
-
-                          {/* Thành tiền = Số lượng × Đơn giá catalog (mục 3.2) */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>Thành tiền</span>
-                            <strong style={{ fontSize: '13px', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-                              {formatCurrency(row.qty * stonePricePerUnit(row.stoneId))}
-                            </strong>
-                          </div>
+                          {/* Tổng tiền đá do BE tính (đơn giá catalog × SL) — xem "Tổng tiền đá" bên dưới. */}
                         </div>
                       </div>
                     ))}
@@ -967,7 +907,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '10px 4px 0 4px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 800, color: '#374151' }}>Tổng tiền đá</span>
                       <strong style={{ fontSize: '15px', color: '#c2410c', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatCurrency(totalStoneCost)}
+                        {calcResult?.stoneCost != null ? formatCurrency(calcResult.stoneCost) : '—'}
                       </strong>
                     </div>
                   </div>
@@ -1194,24 +1134,20 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     ) : null}
                     <BreakdownRow label="Giá kim loại (giá gốc)" value={calcResult.metalRawCost ?? calcResult.totalMetalCost} />
                     <BreakdownRow label="Công chế tác" value={calcResult.laborCost} />
-                    <BreakdownRow label="VAT kim loại" value={calcResult.vatAmount} />
-                    <BreakdownRow
-                      label="Tiền lãi kim loại"
-                      value={
-                        calcResult.metalRawCost != null
-                          ? calcResult.totalMetalCost - (calcResult.metalRawCost + calcResult.laborCost) * (1 + (calcResult.vatRate || 10) / 100)
-                          : 0
-                      }
-                      accent="#15803d"
-                    />
+                    {calcResult.metalVatAmount != null && (
+                      <BreakdownRow label="VAT kim loại" value={calcResult.metalVatAmount} />
+                    )}
+                    {calcResult.metalProfit != null && (
+                      <BreakdownRow label="Tiền lãi kim loại" value={calcResult.metalProfit} accent="#15803d" />
+                    )}
                     <div style={{ height: '1px', background: '#e5e7eb', margin: '2px 0' }} />
                     <BreakdownRow label="Đá quý (giá gốc)" value={calcResult.stoneCost} />
-                    <BreakdownRow label="VAT đá quý" value={calcResult.stoneCost * ((calcResult.vatRate || 10) / 100)} />
-                    <BreakdownRow
-                      label="Tiền lãi đá quý"
-                      value={calcResult.stonePrice - calcResult.stoneCost * (1 + (calcResult.vatRate || 10) / 100)}
-                      accent="#15803d"
-                    />
+                    {calcResult.stoneVatAmount != null && (
+                      <BreakdownRow label="VAT đá quý" value={calcResult.stoneVatAmount} />
+                    )}
+                    {calcResult.stoneProfit != null && (
+                      <BreakdownRow label="Tiền lãi đá quý" value={calcResult.stoneProfit} accent="#15803d" />
+                    )}
                     <div style={{ height: '1px', background: '#e5e7eb', margin: '2px 0' }} />
                   </>
                 )}
@@ -1223,11 +1159,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     </span>
                     {quotedPrice != null && calcResult && renderPriceBreakdownLines(
                       getPriceBreakdown({
-                        quotedPrice,
-                        stonePrice: calcResult.stonePrice ?? null,
                         priceBreakdown: calcResult.materialPrice != null
-                          ? { material: calcResult.materialPrice, stone: Math.round(Number(calcResult.stonePrice) || 0) }
-                          : undefined,
+                          ? { material: calcResult.materialPrice, stone: calcResult.stonePrice ?? 0 }
+                          : null,
                       }),
                     )}
                   </div>

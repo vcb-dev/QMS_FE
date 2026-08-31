@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
 import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X } from 'lucide-react';
-import { formatCurrency, formatDuration as formatDurationMs } from '../utils/currency';
-import { STATUS_BADGE_META } from '../constants';
+import { formatCurrency, formatDuration } from '../utils/currency';
+import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { getPrimaryOption } from '../utils/quoteOption';
 
 // Các field dưới trùng nguyên xi kiểu dữ liệu với RequestsPageProps (types/index.ts) — Pick thẳng
 // thay vì khai tay lại. 3 field còn lại khai riêng vì lệch với nguồn: onSelect khác tên onSelectReq,
@@ -86,13 +87,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     setIsDragging(true);
   };
 
-  // Mốc thời gian xử lý (nhận xử lý / báo giá / trả lại) — dựa trên acceptedAt/returnedAt
-  // Dưới 1 phút hiện giây, dưới 1 giờ hiện phút, dưới 1 ngày hiện giờ, từ 1 ngày trở lên hiện ngày tròn
-  // Trả về null nếu mốc sau đứng trước mốc trước (data lỗi) — không che giấu bằng cách làm tròn về 1
-  const formatDuration = (fromMs: number, toMs: number): string | null => {
-    if (toMs < fromMs) return null;
-    return formatDurationMs(toMs - fromMs);
-  };
+
 
   const renderProcessingTimeCell = (r: QuoteRequest) => {
     if (!r.acceptedAt) {
@@ -503,16 +498,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
             const formattedPrice = priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có';
 
-            const priceOpt =
-              r.options?.find((o) => o.selectionStatus === 'CLOSED') ||
-              r.options?.find((o) => o.selectionStatus === 'SELECTED') ||
-              [...(r.options ?? [])].filter((o) => o.quotedPrice != null).pop() ||
-              r.options?.[0];
-            const priceBd = getPriceBreakdown({
-              quotedPrice: priceVal,
-              stonePrice: priceOpt?.stonePrice ?? null,
-              priceBreakdown: priceOpt?.priceBreakdown,
-            });
+            const priceOpt = getPrimaryOption(r);
+            const priceBd = getPriceBreakdown({ priceBreakdown: priceOpt?.priceBreakdown });
 
             const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
@@ -526,7 +513,12 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               >
                 <td><strong style={{ fontFamily: 'monospace', fontSize: '12px', color: '#1e293b' }}>{r.code || r.id}</strong></td>
                 <td style={{ color: '#64748b', fontSize: '11px' }}>
-                  {r.createdAt ? new Date(r.createdAt).toISOString().replace('T', ' ').substring(0, 16) : '---'}
+                  {r.createdAt
+                    ? new Date(r.createdAt).toLocaleString('vi-VN', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })
+                    : '---'}
                 </td>
                 <td>{renderStatusCell(r, isMyReq)}</td>
                 {!isCompactView && (
@@ -542,14 +534,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 <td>
                   <div style={{ position: 'relative', display: 'inline-block' }}>
                     <img
-                      src={r.images && r.images.length > 0 ? r.images[0].imageUrl : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36'}
+                      src={r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE}
                       className="thumb-img"
                       alt="SP"
                       style={{ cursor: 'zoom-in' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setZoomScale(1);
-                        setZoomedImage(r.images && r.images.length > 0 ? r.images[0].imageUrl : 'https://images.unsplash.com/photo-1524758631624-e2822e304c36');
+                        setZoomedImage(r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE);
                       }}
                     />
                     {r.images && r.images.length > 1 && (

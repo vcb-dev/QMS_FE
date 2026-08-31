@@ -3,7 +3,7 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const UI_CONSTANTS = {
-  FALLBACK_PRODUCT_IMAGE: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36',
+  FALLBACK_PRODUCT_IMAGE: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36', // TODO: thay bằng ảnh local trong public/
   DEFAULT_PRICER_EMAIL: import.meta.env.VITE_DEFAULT_PRICER_EMAIL || '',
 
   PRODUCT_LIBRARY: {
@@ -77,3 +77,12 @@ export const STONE_PAGE_SIZE = 5;
 export const CATEGORY_PAGE_SIZE = 10;
 // Giá trị đại diện "không giới hạn" cho bậc lợi nhuận cuối cùng — hiển thị dạng ∞/toggle thay vì bắt nhập số khổng lồ
 export const UNLIMITED_MAX_COST = 999_999_999_999;
+
+// Map lựa chọn "Khách tỷ lệ chốt" (CreateModal) sang closeRatePct gửi BE.
+// pct = null → không gửi field (khách không thực hiện báo giá).
+export const CLOSE_RATE_OPTIONS: { value: string; label: string; pct: number | null }[] = [
+  { value: 'NOT_YET', label: 'Khách chưa chốt báo giá', pct: 0 },
+  { value: 'DEPOSITED', label: 'Khách đã đặt cọc', pct: 90 },
+  { value: 'SURE', label: 'Chắc chắn 100% lấy hàng', pct: 100 },
+  { value: 'NO_QUOTE', label: 'Không thực hiện báo giá', pct: null },
+];

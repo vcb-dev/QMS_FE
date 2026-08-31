@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { X, Upload, PlusCircle } from 'lucide-react';
-import { UI_CONSTANTS } from '../constants';
+import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
 
 // Chip "✓ tên" cho chất liệu/đá đã chọn — 2 chỗ trước đây tự viết lặp lại y hệt, chỉ khác điều
@@ -69,7 +69,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
 
   // Operational Fields
-  const [department, setDepartment] = useState('CSKH-Văn Phòng');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
@@ -78,7 +77,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [selectedStoneIds, setSelectedStoneIds] = useState<string[]>([]);
   const [customerMeasurements, setCustomerMeasurements] = useState('');
   const [leadTime, setLeadTime] = useState('7-15 NGÀY (Tiêu chuẩn)');
-  const [closeRateText, setCloseRateText] = useState('Khách chưa chốt báo giá');
+  const [closeRateValue, setCloseRateValue] = useState<string>(CLOSE_RATE_OPTIONS[0].value);
   // Ảnh cũ đã có sẵn (lúc sửa yêu cầu) — URL Cloudinary thật, gửi lại nguyên văn (BE pass-through,
   // không upload lại). Ảnh mới chọn thêm — giữ nguyên File, gửi multipart thật lúc submit, KHÔNG
   // còn encode base64 (encode + gửi base64 qua JSON body từng làm request tạo đơn chậm hẳn).
@@ -114,7 +113,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     setNewVideoPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [newVideoFile]);
-  const [understandProcess, setUnderstandProcess] = useState(true);
+  const [understandProcess, setUnderstandProcess] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -145,6 +144,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   // vào coi như không phản hồi gì dù state đã mở đúng.
   const [stoneDropdownOpen, setStoneDropdownOpen] = useState(false);
   const stoneDropdownRef = useRef<HTMLDivElement>(null);
+  const createdCustomerIdRef = useRef<string | null>(null);
   const stoneDropdownMenuRef = useRef<HTMLDivElement>(null);
   const stoneDropdownTriggerRef = useRef<HTMLButtonElement>(null);
   const [stoneDropdownPos, setStoneDropdownPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 260, dropUp: false });
@@ -233,6 +233,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   };
 
   useEffect(() => {
+    if (!isOpen) createdCustomerIdRef.current = null;
+    
     if (editingReq) {
       setIsNewCustomerMode(false);
       setSelectedCustomerId(editingReq.customer?.id || '');
@@ -245,6 +247,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setNewImageFiles([]);
       setExistingVideoUrl(editingReq.videoUrl || null);
       setNewVideoFile(null);
+      const matched = CLOSE_RATE_OPTIONS.find((o) => o.pct === editingReq.closeRatePct);
+      setCloseRateValue(matched?.value ?? CLOSE_RATE_OPTIONS[0].value);
+      setUnderstandProcess(false);
     } else {
       setIsNewCustomerMode(false);
       setNewCustomerName('');
@@ -263,7 +268,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
         if (calculatorData.materials && calculatorData.materials.length > 0) {
           const matchedIds: string[] = [];
-          calculatorData.materials.forEach((mItem: any) => {
+          calculatorData.materials.forEach((mItem) => {
             const mId = mItem.materialId || mItem.id;
             if (mId && materials.some((m) => m.id === mId)) {
               if (!matchedIds.includes(mId)) {
@@ -304,13 +309,13 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
         if (calculatorData.stones && calculatorData.stones.length > 0) {
           const stoneIds = calculatorData.stones
-            .map((s: any) => s.stoneId || s.id)
-            .filter(Boolean);
+            .map((s) => s.stoneId || s.id)
+            .filter((id): id is string => !!id);
           setSelectedStoneIds(stoneIds);
           const types = Array.from(
             new Set(
               stoneIds
-                .map((id: string) => stoneOptionsAll.find((s) => s.id === id)?.stoneType)
+                .map((id) => stoneOptionsAll.find((s) => s.id === id)?.stoneType)
                 .filter(Boolean),
             ),
           ) as ('MAIN' | 'SIDE')[];
@@ -331,6 +336,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setNewImageFiles([]);
       setExistingVideoUrl(null);
       setNewVideoFile(null);
+      setCloseRateValue(CLOSE_RATE_OPTIONS[0].value);
+      setUnderstandProcess(false);
     }
   }, [editingReq, categories, isOpen, calculatorData, materials, stoneOptionsAll]);
 
@@ -466,9 +473,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
     setSubmitting(true);
     try {
-      let finalCustomerId = selectedCustomerId;
+      // Dọn customer "Khách lẻ"/rác trùng cần chốt chặn DB phía BE — ngoài phạm vi FE.
+      let finalCustomerId = createdCustomerIdRef.current || selectedCustomerId;
 
-      if (isNewCustomerMode) {
+      if (isNewCustomerMode && !finalCustomerId) {
         const createdCust = await createCustomer({
           name: newCustomerName.trim() || 'Khách lẻ',
           phone: newCustomerPhone.trim() || undefined,
@@ -477,20 +485,21 @@ export const CreateModal: React.FC<CreateModalProps> = ({
           address: newCustomerAddress.trim() || undefined,
         });
 
+        createdCustomerIdRef.current = createdCust.id;
         finalCustomerId = createdCust.id;
-        // Chuyển ngay về trạng thái "đã chọn khách hàng này" — nếu bước gửi yêu cầu
-        // báo giá bên dưới thất bại và người dùng bấm gửi lại, sẽ KHÔNG tạo trùng khách hàng nữa.
-        setCustomerList((prev) => [createdCust, ...prev]);
         setSelectedCustomerId(createdCust.id);
+        setCustomerList((prev) => [createdCust, ...prev]);
         setIsNewCustomerMode(false);
       } else if (!finalCustomerId && customerSearch.trim()) {
         // Có gõ tên nhưng không chọn khách có sẵn trong danh sách → coi như khách mới, tạo bản ghi.
         const createdCust = await createCustomer({ name: customerSearch.trim() });
+        createdCustomerIdRef.current = createdCust.id;
         finalCustomerId = createdCust.id;
-        setCustomerList((prev) => [createdCust, ...prev]);
         setSelectedCustomerId(createdCust.id);
+        setCustomerList((prev) => [createdCust, ...prev]);
+        setIsNewCustomerMode(false);
       }
-      // Bỏ trống hẳn ô khách hàng → KHÔNG tạo khách mới, để BE tự gom vào khách chung "Khách lẻ".
+      const closeRatePct = CLOSE_RATE_OPTIONS.find((o) => o.value === closeRateValue)?.pct ?? null;
 
       await onSubmit({
         customerId: finalCustomerId,
@@ -500,6 +509,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         stoneIds: selectedStoneIds.length > 0 ? selectedStoneIds : undefined,
         customerMeasurements,
         desiredLeadTime: leadTime,
+        ...(closeRatePct != null ? { closeRatePct } : {}),
         imageUrls: existingImageUrls.length > 0 ? existingImageUrls : undefined,
         files: newImageFiles.length > 0 ? newImageFiles : undefined,
         videoUrl: existingVideoUrl || undefined,
@@ -578,20 +588,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                 wards={wards}
               />
 
-              {/* Sale Name & Department */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label className="form-label">Người hỏi giá (Sale) <span className="req">*</span></label>
-                  <input type="text" className="form-control" value={saleName} readOnly style={{ background: '#f1f5f9' }} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Bộ phận làm việc <span className="req">*</span></label>
-                  <select className="form-control" value={department} onChange={(e) => setDepartment(e.target.value)}>
-                    <option value="CSKH-Văn Phòng">CSKH-Văn Phòng</option>
-                    <option value="Cửa Hàng">Cửa Hàng</option>
-                    <option value="Global">Global</option>
-                  </select>
-                </div>
+              {/* Sale Name */}
+              <div className="form-group">
+                <label className="form-label">Người hỏi giá (Sale) <span className="req">*</span></label>
+                <input type="text" className="form-control" value={saleName} readOnly style={{ background: '#f1f5f9' }} />
               </div>
 
               {/* Danh Mục Sản Phẩm - DB Loaded */}
@@ -957,11 +957,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
                 <div className="form-group">
                   <label className="form-label">Khách tỷ lệ chốt <span className="req">*</span></label>
-                  <select className="form-control" value={closeRateText} onChange={(e) => setCloseRateText(e.target.value)}>
-                    <option value="Khách chưa chốt báo giá">Khách chưa chốt báo giá</option>
-                    <option value="Chắc chắn 100% lấy hàng">Chắc chắn 100% lấy hàng</option>
-                    <option value="Khách đã đặt cọc">Khách đã đặt cọc</option>
-                    <option value="Không thực hiện báo giá">Không thực hiện báo giá</option>
+                  <select className="form-control" value={closeRateValue} onChange={(e) => setCloseRateValue(e.target.value)}>
+                    {CLOSE_RATE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>

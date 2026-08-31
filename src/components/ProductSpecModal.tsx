@@ -6,7 +6,7 @@ import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { getPriceBreakdown, getLivePriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { ImageLightbox } from './ImageLightbox';
-import { formatPriceRange } from '../utils/quoteOption';
+import { formatPriceRange, formatOptionCopyLine } from '../utils/quoteOption';
 import { fetchLibraryProductHistory } from '../services/api';
 
 // Cột lịch sử tải từng lô nhỏ, cuộn tới đáy thì tự tải lô kế (infinite scroll) — không nút bấm.
@@ -53,18 +53,15 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   useEffect(() => { setCopiedIdx(null); setCopiedAll(false); setActiveIdx(0); }, [selIdx]);
 
-  const optLine = (o: { optionName: string; price: number; livePrice?: number | null }) =>
-    `${o.optionName}: ${formatCurrency(o.livePrice ?? o.price)}`;
-
-  const handleCopyOption = (idx: number, o: { optionName: string; price: number; livePrice?: number | null }) => {
-    navigator.clipboard.writeText(optLine(o)).then(() => {
+  const handleCopyOption = (idx: number, o: any) => {
+    navigator.clipboard.writeText(formatOptionCopyLine(o, { useLive: true })).then(() => {
       setCopiedIdx(idx);
       setTimeout(() => setCopiedIdx((cur) => (cur === idx ? null : cur)), 1500);
     }).catch(() => {});
   };
 
-  const handleCopyAll = (opts: { optionName: string; price: number; livePrice?: number | null }[]) => {
-    navigator.clipboard.writeText(opts.map(optLine).join('\n')).then(() => {
+  const handleCopyAll = (opts: any[]) => {
+    navigator.clipboard.writeText(opts.map(o => formatOptionCopyLine(o, { useLive: true })).join('\n')).then(() => {
       setCopiedAll(true);
       setTimeout(() => setCopiedAll(false), 1500);
     }).catch(() => {});
@@ -257,7 +254,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                           className="spec-iconbtn"
                           data-copied={copiedIdx === idx || undefined}
                           onClick={() => handleCopyOption(idx, o)}
-                          title={`Copy "${optLine(o)}"`}
+                          title={`Copy "${formatOptionCopyLine(o, { useLive: true })}"`}
                         >
                           {copiedIdx === idx ? <Check size={11} /> : <Copy size={11} />}
                         </button>

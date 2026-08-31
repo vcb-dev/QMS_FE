@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { QuoteRequest, DetailPageProps } from '../types';
+import type { QuoteRequest, DetailPageProps, QuoteOption, QuoteOptionMaterial } from '../types';
 import {
   ArrowLeft,
   XCircle,
@@ -29,9 +29,9 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
 import { UI_CONSTANTS } from '../constants';
-import { formatCurrency } from '../utils/currency';
+import { formatCurrency, formatDuration } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
-import { cleanOptionLabel } from '../utils/quoteOption';
+import { getPrimaryOption, formatOptionCopyLine } from '../utils/quoteOption';
 import { ChatPopup } from '../components/ChatPopup';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { StatusPill } from '../components/StatusPill';
@@ -106,35 +106,29 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
   useEffect(() => {
     if (!id) return;
-    if (initialSelectedReq && (initialSelectedReq.id === id || initialSelectedReq.code === id)) {
+    const propMatches =
+      initialSelectedReq &&
+      (initialSelectedReq.id === id || initialSelectedReq.code === id) &&
+      Array.isArray(initialSelectedReq.options);
+    if (propMatches) {
       setLoadedReq(initialSelectedReq);
       setIsLoading(false);
-    } else {
-      setIsLoading(true);
+      return; // đã đủ dữ liệu — không gọi API
     }
-    
+    setIsLoading(true);
     let isMounted = true;
     fetchQuoteRequestById(id)
-      .then((data) => {
-        if (isMounted) {
-          if (data) setLoadedReq(data);
-          setIsLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Không thể tải chi tiết yêu cầu:', err);
-        if (isMounted) setIsLoading(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [id, initialSelectedReq?.id, initialSelectedReq?.code]);
+      .then((data) => { if (isMounted) { if (data) setLoadedReq(data); setIsLoading(false); } })
+      .catch((err) => { console.error('Không thể tải chi tiết yêu cầu:', err); if (isMounted) setIsLoading(false); });
+    return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, initialSelectedReq?.id, initialSelectedReq?.code, initialSelectedReq?.options]);
 
   const rawImages = selectedReq?.images || [];
   const imagesList =
     rawImages.length > 0
       ? rawImages
-          .map((img: any) => (typeof img === 'string' ? img : img.imageUrl))
+          .map((img: string | { imageUrl: string }) => (typeof img === 'string' ? img : img.imageUrl))
           .filter(Boolean)
       : [UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE];
 
@@ -221,28 +215,16 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     };
   }, [socket, selectedReq?.id, selectedReq?.assigneeId, isChatParticipant]);
 
-  const handleCopyOptionPrice = (idx: number, opt: any) => {
-    const bd = getPriceBreakdown(opt as any);
-    const suffix = bd && bd.stone > 0
-      ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
-      : '';
-    const text = `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}${suffix}`;
+  const handleCopyOptionPrice = (idx: number, opt: QuoteOption) => {
+    const text = formatOptionCopyLine(opt);
     navigator.clipboard.writeText(text).then(() => {
       setCopiedOptIdx(idx);
       setTimeout(() => setCopiedOptIdx((cur) => (cur === idx ? null : cur)), 1500);
     }).catch(() => {});
   };
 
-  const handleCopyAllOptions = (options: any[]) => {
-    const text = options
-      .map((opt) => {
-        const bd = getPriceBreakdown(opt as any);
-        const suffix = bd && bd.stone > 0
-          ? ` (Giá chất liệu: ${formatCurrency(bd.material)} · Giá đá: ${formatCurrency(bd.stone)})`
-          : '';
-        return `${cleanOptionLabel(opt)}: ${formatCurrency(Number(opt.quotedPrice))}${suffix}`;
-      })
-      .join('\n');
+  const handleCopyAllOptions = (options: QuoteOption[]) => {
+    const text = options.map((opt) => formatOptionCopyLine(opt)).join('\n');
     navigator.clipboard.writeText(text).then(() => {
       setCopiedAllOpt(true);
       setTimeout(() => setCopiedAllOpt(false), 1500);
@@ -279,17 +261,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   // khỏi đếm số/danh sách/copy-hết — chỉ phương án đã tính giá thật mới coi là 1 phương án báo giá.
   const pricedOptions = selectedReq.options?.filter((o) => o.quotedPrice != null) || [];
 
-  // Phương án đã chốt (hoặc đang được chọn trong DB) — dùng để hiện chi tiết cấu thành giá cho ORDER/ADMIN
-  const finalOption =
-    selectedReq.options?.find((o) => o.selectionStatus === 'CLOSED' || o.selectionStatus === 'SELECTED') ||
-    pricedOptions[pricedOptions.length - 1] ||
-    selectedReq.options?.[0] ||
-    null;
+  const finalOption = getPrimaryOption(selectedReq);
 
-  // Tên phương án đang được tính vào TỔNG BÁO GIÁ CHỐT ở sidebar — dùng để tạo liên kết
-  // trực quan giữa số tiền ở sidebar và dòng phương án tương ứng trong "Các Phương Án Báo Giá".
-  const finalOptionIndexInList = pricedOptions.findIndex((o) => o.id === finalOption?.id);
-  void finalOptionIndexInList; // kept for possible future use
 
   const STATUS_BADGE_LABELS: Record<string, string> = {
     PENDING: 'YÊU CẦU MỚI',
@@ -309,24 +282,17 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     />
   );
 
-  const diffDays = (from?: string, to?: string): string | null => {
-    if (!from || !to) return null;
-    const ms = new Date(to).getTime() - new Date(from).getTime();
-    if (Number.isNaN(ms) || ms < 0) return null;
-    const seconds = ms / 1000;
-    if (seconds < 60) return `${Math.max(1, Math.round(seconds))} giây`;
-    const minutes = seconds / 60;
-    if (minutes < 60) return `${Math.max(1, Math.round(minutes))} phút`;
-    const hours = minutes / 60;
-    if (hours < 24) return `${Math.max(1, Math.round(hours))} giờ`;
-    return `${Math.round(hours / 24)} ngày`;
-  };
-
-  const timeToAccept = diffDays(selectedReq.createdAt, selectedReq.acceptedAt);
-  const timeToQuote = diffDays(selectedReq.acceptedAt, selectedReq.quotedDate);
-  const timeToReturn = diffDays(selectedReq.acceptedAt, selectedReq.returnedAt);
-  const timeToReject = selectedReq.status === 'REJECTED' 
-    ? diffDays(selectedReq.acceptedAt || selectedReq.createdAt, selectedReq.updatedAt)
+  const timeToAccept = selectedReq.createdAt && selectedReq.acceptedAt
+    ? formatDuration(new Date(selectedReq.createdAt).getTime(), new Date(selectedReq.acceptedAt).getTime())
+    : null;
+  const timeToQuote = selectedReq.acceptedAt && selectedReq.quotedDate
+    ? formatDuration(new Date(selectedReq.acceptedAt).getTime(), new Date(selectedReq.quotedDate).getTime())
+    : null;
+  const timeToReturn = selectedReq.acceptedAt && selectedReq.returnedAt
+    ? formatDuration(new Date(selectedReq.acceptedAt).getTime(), new Date(selectedReq.returnedAt).getTime())
+    : null;
+  const timeToReject = selectedReq.status === 'REJECTED' && (selectedReq.acceptedAt || selectedReq.createdAt) && selectedReq.updatedAt
+    ? formatDuration(new Date(selectedReq.acceptedAt || selectedReq.createdAt).getTime(), new Date(selectedReq.updatedAt).getTime())
     : null;
 
   // Đọc chất liệu từ phương án đang hiển thị (finalOption) — không lấy field cấp request
@@ -586,7 +552,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 {(() => {
                   const activeOpt = finalOption || selectedReq.options?.[0];
 
-                  const weightVal = activeOpt?.weightChi ?? (selectedReq as any).weightChi;
+                  const weightVal = activeOpt?.weightChi ?? selectedReq.weightChi;
                   const weightDisplay = weightVal != null && Number(weightVal) > 0 ? `${weightVal} chỉ` : 'Theo yêu cầu';
 
                   let stoneDisplay = 'Không đính đá';
@@ -735,11 +701,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 {priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có giá chốt'}
               </div>
               {priceVal > 0 && renderPriceBreakdownLines(
-                getPriceBreakdown({
-                  quotedPrice: priceVal,
-                  stonePrice: finalOption?.stonePrice ?? null,
-                  priceBreakdown: finalOption?.priceBreakdown,
-                }),
+                getPriceBreakdown({ priceBreakdown: finalOption?.priceBreakdown }),
               )}
               
               {/* Sale chỉ cần biết có VAT hay không, không cần xem % chi tiết (ORDER/ADMIN mới xem chi tiết bên dưới) */}
@@ -756,7 +718,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   {finalOption.materials && finalOption.materials.length > 1 ? (
                     <div style={{ background: '#f8fafc', padding: '6px 8px', borderRadius: '6px', marginBottom: '4px', border: '1px solid #e2e8f0' }}>
                       <div style={{ fontWeight: 800, color: '#475569', marginBottom: '3px' }}>Chi tiết từng kim loại:</div>
-                      {finalOption.materials.map((m: any, idx: number) => (
+                      {finalOption.materials.map((m: QuoteOptionMaterial, idx: number) => (
                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', marginTop: '2px' }}>
                           <span>• {m.materialName || m.material?.name || 'Kim loại'}:</span>
                           <strong>{m.weightChi != null ? `${m.weightChi} chỉ` : '---'}</strong>
@@ -770,7 +732,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   {finalOption.weightChi != null && (
                     <SpecRow label="Tổng khối lượng" value={`${finalOption.weightChi} chỉ`} />
                   )}
-                  {finalOption.totalMetalCost != null && finalOption.metalRawCost != null && finalOption.vat != null ? (
+                  {finalOption.costBreakdown ? (
                     <>
                       <SpecRow label="Giá kim loại (giá gốc)" value={formatCurrency(Number(finalOption.metalRawCost))} />
                       {finalOption.laborCost != null && (
@@ -778,16 +740,13 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                       )}
                       <SpecRow
                         label="VAT kim loại"
-                        value={formatCurrency((Number(finalOption.metalRawCost) + Number(finalOption.laborCost || 0)) * (Number(finalOption.vat) / 100))}
+                        value={formatCurrency(finalOption.costBreakdown.metalVatAmount)}
                       />
                       <SpecRow
                         label="Tiền lãi kim loại"
                         labelStyle={{ color: '#15803d', fontWeight: 700 }}
                         valueStyle={{ color: '#15803d' }}
-                        value={formatCurrency(
-                          Number(finalOption.totalMetalCost)
-                            - (Number(finalOption.metalRawCost) + Number(finalOption.laborCost || 0)) * (1 + Number(finalOption.vat) / 100),
-                        )}
+                        value={formatCurrency(finalOption.costBreakdown.metalProfit)}
                       />
                     </>
                   ) : finalOption.totalMetalCost != null && (
@@ -797,15 +756,15 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     />
                   )}
                   <div style={{ borderTop: '1px dashed #e2e8f0', margin: '4px 0' }} />
-                  {finalOption.stonePrice != null && finalOption.stoneCost != null && finalOption.vat != null ? (
+                  {finalOption.costBreakdown && finalOption.stonePrice != null && finalOption.stoneCost != null ? (
                     <>
                       <SpecRow label="Đá quý (giá gốc)" value={formatCurrency(Number(finalOption.stoneCost))} />
-                      <SpecRow label="VAT đá quý" value={formatCurrency(Number(finalOption.stoneCost) * (Number(finalOption.vat) / 100))} />
+                      <SpecRow label="VAT đá quý" value={formatCurrency(finalOption.costBreakdown.stoneVatAmount)} />
                       <SpecRow
                         label="Tiền lãi đá quý"
                         labelStyle={{ color: '#15803d', fontWeight: 700 }}
                         valueStyle={{ color: '#15803d' }}
-                        value={formatCurrency(Number(finalOption.stonePrice) - Number(finalOption.stoneCost) * (1 + Number(finalOption.vat) / 100))}
+                        value={formatCurrency(finalOption.costBreakdown.stoneProfit)}
                       />
                     </>
                   ) : (finalOption.stonePrice != null || finalOption.stoneCost != null) && (

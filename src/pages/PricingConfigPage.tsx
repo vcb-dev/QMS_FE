@@ -8,6 +8,7 @@ import {
   deleteStonesMany,
   importStonesExcel,
   fetchMasterData,
+  invalidateMasterData,
   updateProductCategoriesBulk,
   createProductCategory,
   deleteProductCategoriesMany,
@@ -347,8 +348,14 @@ export const PricingConfigPage: React.FC = () => {
     setError(null);
     try {
       await Promise.all([
+        // Cập nhật giá kim loại TUẦN TỰ, không Promise.all: mỗi PATCH chạy transaction Serializable
+        // trên base_metal_price_history, gửi song song nhiều cái sẽ đụng nhau -> Postgres P2034.
         metalPricesDirty
-          ? Promise.all(changedBaseMetals.map((m) => updateBaseMetalPrice(m.id, m.priceVnd)))
+          ? (async () => {
+              for (const m of changedBaseMetals) {
+                await updateBaseMetalPrice(m.id, m.priceVnd);
+              }
+            })()
           : Promise.resolve(),
         categoriesDirty
           ? updateProductCategoriesBulk(changedCategories.map((c) => ({ id: c.id, laborCost: c.laborCost || 0, vatRate: c.vatRate || 0 })))
@@ -381,6 +388,9 @@ export const PricingConfigPage: React.FC = () => {
       setEditingMaterialIds([]);
       setEditingCategoryIds([]);
       setEditingStoneIds([]);
+      if (materialsDirty || categoriesDirty || metalPricesDirty || formulasDirty) {
+        invalidateMasterData();
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
       showToast('success', 'Đã lưu cấu hình thành công');
@@ -470,6 +480,7 @@ export const PricingConfigPage: React.FC = () => {
       setFormulas((prev) => [...prev, created]);
       setInitialFormulas((prev) => [...prev, created]);
       setNewFormula({ name: '', formulaType: 'MARGIN_TIERS' });
+      invalidateMasterData();
       setAddingFormula(false);
     } catch (err: any) {
       setFormulaError(err.message || 'Không thể thêm công thức');
@@ -504,6 +515,7 @@ export const PricingConfigPage: React.FC = () => {
       setCategories((prev) => [...prev, created]);
       setInitialCategories((prev) => [...prev, created]);
       setNewCategory({ name: '', laborCost: '', vatRate: '10' });
+      invalidateMasterData();
       setAddingCategory(false);
     } catch (err: any) {
       setError(err.message || 'Không thể thêm danh mục sản phẩm');
@@ -526,6 +538,7 @@ export const PricingConfigPage: React.FC = () => {
       setBaseMetals((prev) => [...prev, created]);
       setInitialBaseMetals((prev) => [...prev, created]);
       setNewBaseMetalName('');
+      invalidateMasterData();
       setAddingBaseMetal(false);
     } catch (err: any) {
       setBaseMetalError(err.message || 'Không thể thêm kim loại gốc');
@@ -568,6 +581,7 @@ export const PricingConfigPage: React.FC = () => {
       setMaterials((prev) => [...prev, created]);
       setInitialMaterials((prev) => [...prev, created]);
       setNewMaterial((s) => ({ name: '', priceRatioPct: '100', pricingFormulaId: s.pricingFormulaId, baseMetalId: s.baseMetalId }));
+      invalidateMasterData();
       setAddingMaterial(false);
     } catch (err: any) {
       setMaterialError(err.message || 'Không thể thêm chất liệu');

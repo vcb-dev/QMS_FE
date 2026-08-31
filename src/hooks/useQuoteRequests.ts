@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts } from '../types';
+import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts, CalculatorHandoff, QuoteOption } from '../types';
 import {
   fetchQuoteRequests,
   fetchMasterData,
@@ -297,9 +297,9 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     setCurrentPage(1);
   };
 
-  const [calculatorData, setCalculatorData] = useState<any>(null);
+  const [calculatorData, setCalculatorData] = useState<CalculatorHandoff | null>(null);
 
-  const handleOpenCreate = (calcData?: any) => {
+  const handleOpenCreate = (calcData?: CalculatorHandoff) => {
     setEditingReq(null);
     setCalculatorData(calcData || null);
     setIsCreateOpen(true);
@@ -328,7 +328,19 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
       opts?.onSuccess?.(updated);
       await loadData(false);
     } catch (err: any) {
-      alert(`${errorPrefix}: ${err.message || 'Lỗi hệ thống'}`);
+      // Optimistic-lock conflict (BE ném 409 khi version FE gửi lệch version DB): người khác vừa
+      // sửa đơn này — không phải lỗi thao tác của user. Báo nhẹ + tải lại danh sách cho đồng bộ.
+      const isConflict =
+        err?.status === 409 ||
+        /cập nhật bởi người khác/i.test(err?.message || '');
+      if (isConflict) {
+        setToastMessage(
+          'Yêu cầu vừa được người khác cập nhật. Đã tải lại dữ liệu mới nhất, vui lòng thao tác lại.',
+        );
+        await loadData(false);
+      } else {
+        alert(`${errorPrefix}: ${err.message || 'Lỗi hệ thống'}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -385,7 +397,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
   const handlePricingSubmit = async (
     quotedPrice: number,
     vat?: number,
-    options?: any[],
+    options?: QuoteOption[],
     extras?: {
       materialWeights?: { materialId: string; weightChi: number }[];
       manualStoneName?: string;
@@ -394,10 +406,19 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     },
   ) => {
     if (!pricingReqId) return;
+    const version = requests.find((r) => r.id === pricingReqId)?.version;
     await runAction(
       'Đang cập nhật báo giá...',
       'Không thể báo giá',
-      () => completeQuoteRequest(pricingReqId, quotedPrice, vat, options, extras),
+      () =>
+        completeQuoteRequest(
+          pricingReqId,
+          quotedPrice,
+          vat,
+          options,
+          extras,
+          version,
+        ),
       { onSuccess: () => setPricingReqId(null) },
     );
   };
@@ -408,14 +429,16 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
 
   const handleRejectSubmit = async (reason: string) => {
     if (!rejectReqId) return;
-    await runAction('Đang từ chối yêu cầu...', 'Không thể từ chối', () => rejectQuoteRequest(rejectReqId, reason), {
+    const version = requests.find((r) => r.id === rejectReqId)?.version;
+    await runAction('Đang từ chối yêu cầu...', 'Không thể từ chối', () => rejectQuoteRequest(rejectReqId, reason, version), {
       onSuccess: () => setRejectReqId(null),
     });
   };
 
   const handleReturnSubmit = async (reason: string) => {
     if (!returnReqId) return;
-    await runAction('Đang trả lại yêu cầu...', 'Không thể trả lại', () => returnQuoteRequest(returnReqId, reason), {
+    const version = requests.find((r) => r.id === returnReqId)?.version;
+    await runAction('Đang trả lại yêu cầu...', 'Không thể trả lại', () => returnQuoteRequest(returnReqId, reason, version), {
       onSuccess: () => setReturnReqId(null),
     });
   };
