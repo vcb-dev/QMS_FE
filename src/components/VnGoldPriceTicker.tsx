@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { clsx } from 'clsx';
 import { TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 import { fetchVnGoldPrice } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
-import {PRICING_DEFAULTS} from '../constants';
+import { PRICING_DEFAULTS } from '../constants';
+
 interface VnGoldPriceItem {
   key: string;
   label: string;
@@ -10,7 +12,6 @@ interface VnGoldPriceItem {
   changeAmount: number | null;
   changePct: number | null;
 }
-
 
 // Nhãn bỏ phần "(Áp dụng X%)" cho gọn — số % vẫn dùng để tính giá tham khảo, chỉ ẩn khỏi UI
 const cleanLabel = (label: string) => label.replace(/\s*\(Áp dụng[^)]*\)/i, '').trim();
@@ -40,30 +41,23 @@ export const VnGoldPriceTicker: React.FC = () => {
   }, [load]);
 
   return (
-    <div
-      style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-        borderRadius: '14px',
-        padding: '18px 22px',
-        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.25)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', gap: '10px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12.5px', fontWeight: 900, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+    <div className="bg-surface border border-border rounded-[14px] py-[18px] px-[22px] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+      <div className="flex items-center justify-between mb-[14px] gap-[10px] flex-wrap">
+        <div className="flex items-center gap-[10px] flex-wrap">
+          <span className="text-[12.5px] font-black text-[#d97706] uppercase tracking-[0.6px]">
             Giá Vàng Thị Trường
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '9.5px', fontWeight: 800, color: '#4ade80', letterSpacing: '0.5px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', animation: 'livePulse 1.4s ease-in-out infinite' }} />
+          <span className="inline-flex items-center gap-[5px] text-[9.5px] font-extrabold text-[#16a34a] tracking-[0.5px]">
+            <span className="w-[6px] h-[6px] rounded-full bg-[#16a34a] animate-[livePulse_1.4s_ease-in-out_infinite]" />
             TRỰC TIẾP
           </span>
-          <span style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)' }}>
+          <span className="text-[10.5px] text-[#94a3b8]">
             (chỉ tham khảo, không dùng để tính giá)
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="flex items-center gap-[10px]">
           {updatedAt && (
-            <span style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.5)' }}>
+            <span className="text-[10.5px] text-[#94a3b8]">
               {new Date(updatedAt).toLocaleTimeString('vi-VN')}
             </span>
           )}
@@ -72,46 +66,48 @@ export const VnGoldPriceTicker: React.FC = () => {
             onClick={() => load()}
             disabled={loading}
             title="Tải lại"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '26px', height: '26px', borderRadius: '7px',
-              border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.08)', color: '#e2e8f0',
-              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, flexShrink: 0,
-            }}
+            className={clsx(
+              'flex items-center justify-center w-[26px] h-[26px] rounded-[7px] border border-[#cbd5e1] bg-[#f1f5f9] text-[#334155] shrink-0',
+              loading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer opacity-100',
+            )}
           >
-            <RefreshCw size={12} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {error && <div style={{ fontSize: '11.5px', color: '#fca5a5' }}> {error}</div>}
+      {error && <div className="text-[11.5px] text-[#dc2626]"> {error}</div>}
       {!error && items.length === 0 && (
-        <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.5)' }}>Đang tải giá vàng thị trường...</div>
+        <div className="text-[11.5px] text-[#94a3b8]">Đang tải giá vàng thị trường...</div>
       )}
 
       {items.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0' }}>
+        <div className="grid [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] gap-0">
           {items.map((it, idx) => {
             const isUp = (it.changePct ?? 0) > 0;
             const isDown = (it.changePct ?? 0) < 0;
-            const color = isUp ? '#4ade80' : isDown ? '#f87171' : 'rgba(255,255,255,0.4)';
             const Icon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
 
             return (
               <div
                 key={it.key}
-                style={{
-                  padding: '10px 16px',
-                  borderLeft: idx === 0 ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                }}
+                className={clsx(
+                  'py-[10px] px-[16px]',
+                  idx === 0 ? 'border-l-0' : 'border-l border-[#e2e8f0]',
+                )}
               >
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap', letterSpacing: '0.2px' }}>
+                <div className="text-[11px] font-bold text-[#64748b] whitespace-nowrap tracking-[0.2px]">
                   {cleanLabel(it.label)}
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', marginTop: '4px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {formatNumberVN(it.priceVnd)} <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginLeft: '2px' }}>VNĐ</span>
+                <div className="text-[20px] font-black text-[#0f172a] mt-[4px] [font-variant-numeric:tabular-nums] whitespace-nowrap">
+                  {formatNumberVN(it.priceVnd)} <span className="text-[12px] font-bold text-[#64748b] ml-[2px]">VNĐ</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', fontSize: '11.5px', fontWeight: 800, color }}>
+                <div
+                  className={clsx(
+                    'flex items-center gap-[4px] mt-[4px] text-[11.5px] font-extrabold',
+                    isUp ? 'text-[#16a34a]' : isDown ? 'text-[#dc2626]' : 'text-[#94a3b8]',
+                  )}
+                >
                   <Icon size={12} />
                   {it.changePct === null ? '—' : `${isUp ? '+' : ''}${it.changePct}%`}
                 </div>

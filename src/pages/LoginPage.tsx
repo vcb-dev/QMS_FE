@@ -7,7 +7,14 @@ import {
   User as UserIcon, Briefcase, Eye, EyeOff,
 } from 'lucide-react';
 import { COMPANY_LOGO_URL, BACKGROUND_IMAGE_URL } from '../constants';
-import {backLinkStyle, fieldLabelStyle,fieldIconStyle,fieldInputStyle,goldButtonStyle} from '../styles/card';
+import { clsx } from 'clsx';
+import {
+  backLinkCls,
+  fieldLabelCls,
+  fieldIconCls,
+  fieldInputCls,
+  goldButtonCls,
+} from '../styles/classNames';
 
 // Khối "nhãn + icon + input" dùng chung cho 8/10 field trong 4 form đăng nhập/đăng ký/quên-đặt lại
 // mật khẩu — trước đây lặp lại y hệt cấu trúc DOM này ở từng form. Field có nút hiện/ẩn mật khẩu
@@ -20,11 +27,11 @@ const LabeledIconField: React.FC<{
   onChange: (v: string) => void;
   placeholder?: string;
   maxLength?: number;
-  inputStyle?: React.CSSProperties;
-}> = ({ label, icon, type = 'text', value, onChange, placeholder, maxLength, inputStyle }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-    <label style={fieldLabelStyle}>{label}</label>
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+  inputClassName?: string;
+}> = ({ label, icon, type = 'text', value, onChange, placeholder, maxLength, inputClassName }) => (
+  <div className="flex flex-col gap-[6px]">
+    <label className={fieldLabelCls}>{label}</label>
+    <div className="relative flex items-center">
       {icon}
       <input
         type={type}
@@ -32,7 +39,7 @@ const LabeledIconField: React.FC<{
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        style={{ ...fieldInputStyle, ...inputStyle }}
+        className={clsx(fieldInputCls, inputClassName)}
       />
     </div>
   </div>
@@ -202,76 +209,42 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column', // Thêm flex-col
-      padding: '40px 20px',
-      background: `linear-gradient(rgba(10, 15, 30, 0.35), rgba(10, 15, 30, 0.55)), url(${BACKGROUND_IMAGE_URL})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center 35%',
-      backgroundRepeat: 'no-repeat',
-      overflowY: 'auto', // Đảm bảo cuộn được trên màn bé
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '420px',
-        margin: 'auto', // Quan trọng: chống bị khuất top khi màn hình quá thấp (flex bug)
-        background: '#fffdf9',
-        borderRadius: '20px',
-        overflow: 'hidden',
-        boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.5)',
-        flexShrink: 0, // Đảm bảo card không bị ép lại
-      }}>
+    <div
+      className="min-h-screen flex flex-col py-[40px] px-[20px] bg-cover bg-[center_35%] bg-no-repeat overflow-y-auto"
+      // động — giữ inline
+      style={{
+        backgroundImage: `linear-gradient(rgba(10, 15, 30, 0.35), rgba(10, 15, 30, 0.55)), url(${BACKGROUND_IMAGE_URL})`,
+      }}
+    >
+      <div className="w-full max-w-[420px] m-auto bg-[#fffdf9] rounded-[20px] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] shrink-0">
         {/* Thanh vàng thương hiệu trên cùng */}
-        <div style={{ height: '5px', background: 'linear-gradient(90deg, #fde68a, #f0b429, #b45309)' }} />
+        <div className="h-[5px] bg-[linear-gradient(90deg,#fde68a,#f0b429,#b45309)]" />
 
-        <div style={{ padding: '32px 36px 36px' }}>
+        <div className="pt-[32px] px-[36px] pb-[36px]">
           {/* Brand Header */}
-          <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+          <div className="text-center mb-[22px]">
             <img
               src={COMPANY_LOGO_URL}
               alt="Viễn Chí Bảo"
-              style={{ height: '52px', objectFit: 'contain', display: 'block', margin: '0 auto 14px auto' }}
+              className="h-[52px] object-contain block mt-0 mx-auto mb-[14px]"
             />
-            <h1 style={{ fontSize: '19px', fontWeight: 800, color: '#1f2937', margin: 0 }}>
+            <h1 className="text-[19px] font-extrabold text-[#1f2937] m-0">
               {modeCopy[mode].title}
             </h1>
-            <p style={{ fontSize: '12px', color: '#9ca3af', margin: '4px 0 0 0', letterSpacing: '0.3px' }}>
+            <p className="text-[12px] text-[#9ca3af] mt-[4px] mr-0 mb-0 ml-0 tracking-[0.3px]">
               {modeCopy[mode].subtitle}
             </p>
           </div>
 
           {/* Feedback Alerts */}
           {errorMsg && (
-            <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fca5a5',
-              color: '#b91c1c',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              fontSize: '12.5px',
-              marginBottom: '16px',
-              textAlign: 'center',
-            }}>
+            <div className="bg-[#fef2f2] border border-[#fca5a5] text-[#b91c1c] py-[10px] px-[14px] rounded-[10px] text-[12.5px] mb-[16px] text-center">
               {errorMsg}
             </div>
           )}
 
           {successMsg && (
-            <div style={{
-              background: '#f0fdf4',
-              border: '1px solid #86efac',
-              color: '#15803d',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              fontSize: '12.5px',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-            }}>
+            <div className="bg-[#f0fdf4] border border-[#86efac] text-[#15803d] py-[10px] px-[14px] rounded-[10px] text-[12.5px] mb-[16px] flex items-center justify-center gap-[8px]">
               <CheckCircle2 size={16} />
               {successMsg}
             </div>
@@ -280,67 +253,71 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 1. LOGIN FORM */}
           {mode === 'login' && (
             <>
-              <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <form onSubmit={handleLoginSubmit} className="flex flex-col gap-[16px]">
                 <LabeledIconField
                   label="Tên đăng nhập"
-                  icon={<UserIcon size={16} style={fieldIconStyle} />}
+                  icon={<UserIcon size={16} className={fieldIconCls} />}
                   type="email"
                   value={email}
                   onChange={setEmail}
                   placeholder="Nhập tên đăng nhập (email)"
                 />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label style={fieldLabelStyle}>Mật khẩu</label>
-                    <button type="button" onClick={() => goToMode('forgot')} style={{ background: 'none', border: 'none', color: '#b45309', fontSize: '12px', cursor: 'pointer', padding: 0, fontWeight: 600 }}>
+                <div className="flex flex-col gap-[6px]">
+                  <div className="flex justify-between items-center">
+                    <label className={fieldLabelCls}>Mật khẩu</label>
+                    <button
+                      type="button"
+                      onClick={() => goToMode('forgot')}
+                      className="bg-transparent border-0 text-[#b45309] text-[12px] cursor-pointer p-0 font-semibold"
+                    >
                       Quên mật khẩu?
                     </button>
                   </div>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <Lock size={16} style={fieldIconStyle} />
+                  <div className="relative flex items-center">
+                    <Lock size={16} className={fieldIconCls} />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Nhập mật khẩu"
-                      style={{ ...fieldInputStyle, paddingRight: '40px' }}
+                      className={clsx(fieldInputCls, 'pr-[40px]')}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
                       title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                      style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', display: 'flex' }}
+                      className="absolute right-[12px] bg-transparent border-0 text-[#9ca3af] cursor-pointer flex"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#4b5563', fontWeight: 600, cursor: 'pointer' }}>
+                <label className="flex items-center gap-[8px] text-[12.5px] text-[#4b5563] font-semibold cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{ width: '15px', height: '15px', accentColor: '#d97706', cursor: 'pointer' }}
+                    className="w-[15px] h-[15px] accent-[#d97706] cursor-pointer"
                   />
                   Ghi nhớ đăng nhập
                 </label>
 
-                <button type="submit" disabled={loading} style={goldButtonStyle}>
+                <button type="submit" disabled={loading} className={goldButtonCls}>
                   {loading ? 'Đang xác thực...' : 'Đăng nhập'}
                   {!loading && <ArrowRight size={16} />}
                 </button>
               </form>
 
               {/* Nút đăng nhập Lark */}
-              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                  <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: 600 }}>HOẶC</span>
-                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+              <div className="mt-[20px] flex flex-col gap-[16px]">
+                <div className="flex items-center gap-[10px]">
+                  <div className="flex-1 h-[1px] bg-[#e5e7eb]"></div>
+                  <span className="text-[12px] text-[#9ca3af] font-semibold">HOẶC</span>
+                  <div className="flex-1 h-[1px] bg-[#e5e7eb]"></div>
                 </div>
-                
+
                 <button
                   type="button"
                   disabled={larkLoading}
@@ -349,42 +326,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                     setLarkLoading(true);
                     redirectToLarkLogin();
                   }}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto 1fr',
-                    alignItems: 'center',
-                    width: '100%',
-                    padding: '6px 0',
-                    background: '#ffffff',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '12px',
-                    fontSize: '14.5px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    cursor: larkLoading ? 'not-allowed' : 'pointer',
-                    opacity: larkLoading ? 0.6 : 1,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseOver={(e) => {
-                    if (larkLoading) return;
-                    e.currentTarget.style.background = '#f9fafb';
-                    e.currentTarget.style.borderColor = '#9ca3af';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = '#ffffff';
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                  }}
+                  className={clsx(
+                    'grid grid-cols-[1fr_auto_1fr] items-center w-full py-[6px] px-0 bg-surface border border-[#d1d5db] rounded-[12px] text-[14.5px] font-semibold text-[#374151] shadow-[0_2px_4px_rgba(0,0,0,0.02)] transition-all duration-200',
+                    larkLoading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[#f9fafb] hover:border-[#9ca3af]'
+                  )}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '12px' }}>
-                    <img 
-                      src="https://p16-hera-overseas.larksuitecdn.com/tos-mya-i-lojyj5t9n9/f3f7b6969eb14364be035282e866b7bb.png~tplv-lojyj5t9n9-png:0:0.png" 
-                      alt="Lark Logo" 
-                      style={{ 
-                        width: '38px', 
-                        height: '38px', 
-                        objectFit: 'contain' 
-                      }} 
+                  <div className="flex justify-end pr-[12px]">
+                    <img
+                      src="https://p16-hera-overseas.larksuitecdn.com/tos-mya-i-lojyj5t9n9/f3f7b6969eb14364be035282e866b7bb.png~tplv-lojyj5t9n9-png:0:0.png"
+                      alt="Lark Logo"
+                      className="w-[38px] h-[38px] object-contain"
                     />
                   </div>
                   <span>{larkLoading ? 'Đang chuyển tới Lark...' : 'Đăng nhập qua Lark'}</span>
@@ -392,9 +343,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                 </button>
               </div>
 
-              <p style={{ textAlign: 'center', fontSize: '12.5px', color: '#9ca3af', marginTop: '24px' }}>
+              <p className="text-center text-[12.5px] text-[#9ca3af] mt-[24px]">
                 Chưa có tài khoản?{' '}
-                <button type="button" onClick={() => goToMode('register')} style={{ background: 'none', border: 'none', color: '#b45309', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer', padding: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => goToMode('register')}
+                  className="bg-transparent border-0 text-[#b45309] font-bold text-[12.5px] cursor-pointer p-0"
+                >
                   Yêu cầu quyền truy cập
                 </button>
               </p>
@@ -403,37 +358,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
 
           {/* 2. REGISTER FORM */}
           {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <LabeledIconField label="Họ Và Tên" icon={<UserIcon size={16} style={fieldIconStyle} />} value={name} onChange={setName} placeholder="Ví dụ: Nguyễn Văn A" />
+            <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-[14px]">
+              <LabeledIconField label="Họ Và Tên" icon={<UserIcon size={16} className={fieldIconCls} />} value={name} onChange={setName} placeholder="Ví dụ: Nguyễn Văn A" />
 
-              <LabeledIconField label="Email Công Việc" icon={<Mail size={16} style={fieldIconStyle} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
+              <LabeledIconField label="Email Công Việc" icon={<Mail size={16} className={fieldIconCls} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
 
               <LabeledIconField
                 label="Mật Khẩu (Khởi tạo)"
-                icon={<Lock size={16} style={fieldIconStyle} />}
+                icon={<Lock size={16} className={fieldIconCls} />}
                 type="password"
                 value={password}
                 onChange={setPassword}
                 placeholder="Nhập tối thiểu 6 ký tự"
               />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={fieldLabelStyle}>Vai Trò Trong Hệ Thống</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Briefcase size={16} style={fieldIconStyle} />
-                  <select value={role} onChange={(e) => setRole(e.target.value as any)} style={{ ...fieldInputStyle, cursor: 'pointer' }}>
+              <div className="flex flex-col gap-[6px]">
+                <label className={fieldLabelCls}>Vai Trò Trong Hệ Thống</label>
+                <div className="relative flex items-center">
+                  <Briefcase size={16} className={fieldIconCls} />
+                  <select value={role} onChange={(e) => setRole(e.target.value as any)} className={clsx(fieldInputCls, 'cursor-pointer')}>
                     <option value="SALE">Chuyên Viên Kinh Doanh (SALE)</option>
                     <option value="ORDER">Chuyên Viên Báo Giá (ORDER)</option>
                   </select>
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} style={{ ...goldButtonStyle, marginTop: '4px' }}>
+              <button type="submit" disabled={loading} className={clsx(goldButtonCls, 'mt-[4px]')}>
                 <UserPlus size={18} />
                 {loading ? 'Đang xử lý tạo tài khoản...' : 'Gửi Yêu Cầu Truy Cập'}
               </button>
 
-              <button type="button" onClick={() => goToMode('login')} style={backLinkStyle}>
+              <button type="button" onClick={() => goToMode('login')} className={backLinkCls}>
                 <ArrowLeft size={16} /> Quay lại trang đăng nhập
               </button>
             </form>
@@ -441,19 +396,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
 
           {/* 3. FORGOT PASSWORD FORM */}
           {mode === 'forgot' && (
-            <form onSubmit={handleForgotPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.5', margin: 0, textAlign: 'center' }}>
+            <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-[16px]">
+              <p className="text-[13px] text-[#6b7280] leading-[1.5] m-0 text-center">
                 Nhập email tài khoản của bạn. Hệ thống sẽ cấp mã xác thực OTP (6 chữ số) để đặt lại mật khẩu mới.
               </p>
 
-              <LabeledIconField label="Email Đã Đăng Ký" icon={<Mail size={16} style={fieldIconStyle} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
+              <LabeledIconField label="Email Đã Đăng Ký" icon={<Mail size={16} className={fieldIconCls} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
 
-              <button type="submit" disabled={loading} style={goldButtonStyle}>
+              <button type="submit" disabled={loading} className={goldButtonCls}>
                 <KeyRound size={18} />
                 {loading ? 'Đang gửi mã...' : 'Gửi Mã Xác Thực OTP'}
               </button>
 
-              <button type="button" onClick={() => goToMode('login')} style={backLinkStyle}>
+              <button type="button" onClick={() => goToMode('login')} className={backLinkCls}>
                 <ArrowLeft size={16} /> Quay lại trang đăng nhập
               </button>
             </form>
@@ -461,25 +416,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
 
           {/* 4. RESET PASSWORD FORM */}
           {mode === 'reset' && (
-            <form onSubmit={handleResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.5', margin: 0, textAlign: 'center' }}>
+            <form onSubmit={handleResetPasswordSubmit} className="flex flex-col gap-[14px]">
+              <p className="text-[13px] text-[#6b7280] leading-[1.5] m-0 text-center">
                 Nhập mã OTP 6 chữ số vừa nhận được và thiết lập mật khẩu mới của bạn.
               </p>
 
-              <LabeledIconField label="Email" icon={<Mail size={16} style={fieldIconStyle} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
+              <LabeledIconField label="Email" icon={<Mail size={16} className={fieldIconCls} />} type="email" value={email} onChange={setEmail} placeholder="user@vcb.vn" />
 
               <LabeledIconField
                 label="Mã Xác Thực OTP (6 chữ số)"
-                icon={<KeyRound size={16} style={{ ...fieldIconStyle, color: '#d97706' }} />}
+                icon={<KeyRound size={16} className={clsx(fieldIconCls, 'text-[#d97706]')} />}
                 value={otp}
                 onChange={setOtp}
                 maxLength={6}
-                inputStyle={{ border: '1px solid #f0b429', color: '#92400e', fontWeight: 700, letterSpacing: '3px' }}
+                inputClassName="border border-[#f0b429] text-[#92400e] font-bold tracking-[3px]"
               />
 
               <LabeledIconField
                 label="Mật Khẩu Mới"
-                icon={<Lock size={16} style={fieldIconStyle} />}
+                icon={<Lock size={16} className={fieldIconCls} />}
                 type="password"
                 value={newPassword}
                 onChange={setNewPassword}
@@ -489,17 +444,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
               <button
                 type="submit"
                 disabled={loading}
-                style={{
-                  ...goldButtonStyle,
-                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                  boxShadow: '0 6px 16px rgba(22, 163, 74, 0.35)',
-                }}
+                className="w-full bg-[linear-gradient(135deg,#16a34a_0%,#15803d_100%)] text-surface border-0 rounded-[10px] p-[13px] text-[14.5px] font-bold cursor-pointer flex items-center justify-center gap-[8px] shadow-[0_6px_16px_rgba(22,163,74,0.35)]"
               >
                 <CheckCircle2 size={18} />
                 {loading ? 'Đang cập nhật mật khẩu...' : 'Xác Nhận Đặt Lại Mật Khẩu'}
               </button>
 
-              <button type="button" onClick={() => goToMode('login')} style={backLinkStyle}>
+              <button type="button" onClick={() => goToMode('login')} className={backLinkCls}>
                 <ArrowLeft size={16} /> Quay lại trang đăng nhập
               </button>
             </form>

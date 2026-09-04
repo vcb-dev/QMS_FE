@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { Role, User, QuoteRequest, HeaderSearchProduct } from '../types';
@@ -160,64 +161,45 @@ export const Header: React.FC<HeaderProps> = ({
   const productSection = productResults.slice(0, SEARCH_SECTION_LIMIT);
 
   return (
-    <header className="titlebar" style={{ position: 'relative', background: '#ffffff', borderBottom: '1px solid #e2e8f0', height: '64px', padding: '0 24px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+    <header className="titlebar relative bg-surface border-b border-border h-[64px] py-0 px-[24px] box-border flex items-center justify-end">
 
       {/* Search tổng — chỉ hiện ở Tổng Quan, canh giữa header. Gộp 2 mục: Yêu Cầu (mã đơn/tên
           khách hàng) và Sản Phẩm (danh mục/chất liệu đã báo giá) từ cùng 1 kết quả search. */}
       {showSearch && (
-        <div ref={searchWrapRef} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: '360px' }}>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={15} style={{ position: 'absolute', left: '12px', color: '#94a3b8', pointerEvents: 'none' }} />
+        <div ref={searchWrapRef} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px]">
+          <div className="relative flex items-center">
+            <Search size={15} className="absolute left-[12px] text-faint pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => { if (searchResults.length > 0) openDropdownAtCurrentPosition(); }}
               placeholder="Tìm yêu cầu, sản phẩm, khách hàng..."
-              style={{
-                width: '100%',
-                padding: '9px 12px 9px 34px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                background: '#f8fafc',
-                fontSize: '12.5px',
-                color: '#0f172a',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="w-full pt-[9px] pr-[12px] pb-[9px] pl-[34px] rounded-[8px] border border-[#cbd5e1] bg-[#f8fafc] text-[12.5px] text-[#0f172a] outline-none box-border"
             />
           </div>
 
           {searchOpen && searchQuery.trim() && dropdownPos && createPortal(
             <div
               ref={dropdownContentRef}
+              className="fixed -translate-x-1/2 w-[420px] bg-surface border border-border rounded-[12px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12),0_8px_10px_-6px_rgba(0,0,0,0.05)] max-h-[440px] overflow-y-auto z-[3000] p-[6px]"
+              // động — giữ inline
               style={{
-                position: 'fixed',
                 top: `${dropdownPos.top}px`,
                 left: `${dropdownPos.left}px`,
-                transform: 'translateX(-50%)',
-                width: '420px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
-                maxHeight: '440px',
-                overflowY: 'auto',
-                zIndex: 3000,
-                padding: '6px',
               }}
             >
               {searching && (
-                <div style={{ padding: '14px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>Đang tìm...</div>
+                <div className="p-[14px] text-center text-[12px] text-faint">Đang tìm...</div>
               )}
 
               {!searching && requestSection.length === 0 && productSection.length === 0 && (
-                <div style={{ padding: '14px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>Không tìm thấy kết quả</div>
+                <div className="p-[14px] text-center text-[12px] text-faint">Không tìm thấy kết quả</div>
               )}
 
               {!searching && requestSection.length > 0 && (
-                <div style={{ marginBottom: '4px' }}>
-                  <div style={{ padding: '8px 10px 4px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                <div className="mb-[4px]">
+                  <div className="pt-[8px] px-[10px] pb-[4px] text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px]">
                     Yêu Cầu
                   </div>
                   {requestSection.map((r) => (
@@ -225,24 +207,11 @@ export const Header: React.FC<HeaderProps> = ({
                       key={r.id}
                       type="button"
                       onClick={() => handleSelectSearchResult(r.id)}
-                      className="dropdown-item-hover"
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '10px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
+                      className="dropdown-item-hover w-full flex items-center justify-between gap-[10px] py-[10px] px-[12px] rounded-[8px] border-0 bg-transparent cursor-pointer text-left"
                     >
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a' }}>{r.code}</div>
-                        <div style={{ fontSize: '11.5px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div className="min-w-0">
+                        <div className="text-[12.5px] font-extrabold text-[#0f172a]">{r.code}</div>
+                        <div className="text-[11.5px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">
                           {r.customer?.name || 'Chưa rõ khách hàng'}
                           {(r.materials && r.materials.length > 0) || r.material
                             ? ` · ${(r.materials && r.materials.length > 0 ? r.materials.map((m) => m.name) : [r.material!.name]).join(', ')}`
@@ -255,22 +224,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={handleViewMoreRequests}
-                    className="dropdown-item-hover"
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#b45309',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
+                    className="dropdown-item-hover w-full flex items-center justify-center gap-[4px] py-[8px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#b45309] text-[11.5px] font-bold cursor-pointer"
                   >
                     Xem thêm yêu cầu <ChevronRight size={13} />
                   </button>
@@ -279,7 +233,12 @@ export const Header: React.FC<HeaderProps> = ({
 
               {!searching && productSection.length > 0 && (
                 <div>
-                  <div style={{ padding: '8px 10px 4px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.4px', borderTop: requestSection.length > 0 ? '1px solid #f1f5f9' : 'none', marginTop: requestSection.length > 0 ? '4px' : 0, paddingTop: requestSection.length > 0 ? '10px' : '4px' }}>
+                  <div
+                    className={clsx(
+                      'px-[10px] pb-[4px] text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px]',
+                      requestSection.length > 0 ? 'border-t border-[#f1f5f9] mt-[4px] pt-[10px]' : 'border-t-0 mt-0 pt-[8px]',
+                    )}
+                  >
                     Sản Phẩm
                   </div>
                   {productSection.map((p) => (
@@ -287,26 +246,13 @@ export const Header: React.FC<HeaderProps> = ({
                       key={p.key}
                       type="button"
                       onClick={() => handleSelectProductResult(p.productName)}
-                      className="dropdown-item-hover"
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '10px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
+                      className="dropdown-item-hover w-full flex items-center justify-between gap-[10px] py-[10px] px-[12px] rounded-[8px] border-0 bg-transparent cursor-pointer text-left"
                     >
-                      <div style={{ minWidth: 0, fontSize: '12.5px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div className="min-w-0 text-[12.5px] font-bold text-[#0f172a] whitespace-nowrap overflow-hidden text-ellipsis">
                         {p.productName}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-                        <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#b45309' }}>
+                      <div className="flex flex-col items-end shrink-0">
+                        <div className="text-[11.5px] font-extrabold text-[#b45309]">
                           {formatCurrency(p.price)}
                         </div>
                         {p.materialPrice != null && renderPriceBreakdownLines({ material: p.materialPrice, stone: p.stonePrice ?? 0 })}
@@ -316,22 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={handleViewMoreProducts}
-                    className="dropdown-item-hover"
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#b45309',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
+                    className="dropdown-item-hover w-full flex items-center justify-center gap-[4px] py-[8px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#b45309] text-[11.5px] font-bold cursor-pointer"
                   >
                     Xem thêm sản phẩm <ChevronRight size={13} />
                   </button>
@@ -344,49 +275,29 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Right Action Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div className="flex items-center gap-[14px]">
         {/* Bell notification button */}
         <button
           type="button"
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '50%',
-            width: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            position: 'relative',
-            color: '#475569',
-          }}
+          className="bg-[#f8fafc] border border-border rounded-full w-[36px] h-[36px] flex items-center justify-center cursor-pointer relative text-[#475569]"
           title="Notifications"
         >
           <Bell size={17} />
-          <span style={{ position: 'absolute', top: '7px', right: '7px', width: '7px', height: '7px', background: '#ef4444', borderRadius: '50%', border: '1.5px solid #ffffff' }} />
+          <span className="absolute top-[7px] right-[7px] w-[7px] h-[7px] bg-[#ef4444] rounded-full border-[1.5px] border-surface" />
         </button>
 
         {/* Profile Avatar Dropdown Trigger */}
-        <div style={{ position: 'relative' }} ref={dropdownRef}>
+        <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '9px',
-              background: 'transparent',
-              border: 'none',
-              padding: '2px 4px',
-              cursor: 'pointer',
-            }}
+            className="flex items-center gap-[9px] bg-transparent border-0 py-[2px] px-[4px] cursor-pointer"
           >
-            <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'block' }}>
+            <div className="text-right leading-[1.2]">
+              <span className="text-[13px] font-extrabold text-[#0f172a] block">
                 {user.name || 'Nguyen Van A'}
               </span>
-              <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>
+              <span className="text-[10.5px] text-muted block">
                 {currentRole === 'SALE' ? 'Store Associate' : currentRole === 'ORDER' ? 'Order Specialist' : 'System Admin'}
               </span>
             </div>
@@ -398,25 +309,13 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Popup Dropdown Menu */}
           {isDropdownOpen && (
             <div
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                right: 0,
-                width: '230px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
-                padding: '8px',
-                zIndex: 1000,
-                animation: 'fadeIn 0.15s ease-out',
-              }}
+              className="absolute top-[calc(100%+8px)] right-0 w-[230px] bg-surface border border-border rounded-[12px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12),0_8px_10px_-6px_rgba(0,0,0,0.05)] p-[8px] z-[1000] animate-[fadeIn_0.15s_ease-out]"
             >
               {/* User Summary Header */}
-              <div style={{ padding: '10px', background: '#f8fafc', borderRadius: '8px', marginBottom: '6px' }}>
-                <div style={{ fontWeight: 800, fontSize: '13px', color: '#0f172a' }}>{user.name}</div>
-                <div style={{ fontSize: '11px', color: '#64748b', wordBreak: 'break-all' }}>{user.email}</div>
-                <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800 }}>
+              <div className="p-[10px] bg-[#f8fafc] rounded-[8px] mb-[6px]">
+                <div className="font-extrabold text-[13px] text-[#0f172a]">{user.name}</div>
+                <div className="text-[11px] text-muted [word-break:break-all]">{user.email}</div>
+                <div className="mt-[4px] inline-flex items-center gap-[4px] bg-[#dbeafe] text-[#1e40af] py-[2px] px-[8px] rounded-[12px] text-[10px] font-extrabold">
                   <ShieldCheck size={11} /> {user.role}
                 </div>
               </div>
@@ -429,27 +328,12 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsDropdownOpen(false);
                   setShowProfileModal(true);
                 }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#334155',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-                className="dropdown-item-hover"
+                className="dropdown-item-hover w-full flex items-center gap-[10px] py-[9px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#334155] text-[12.5px] font-semibold cursor-pointer text-left"
               >
                 <UserIcon size={15} color="#2563eb" /> Hồ Sơ Cá Nhân
               </button>
 
-              <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+              <div className="h-[1px] bg-[#f1f5f9] my-[4px]" />
 
               {/* Menu Item: Logout */}
               <button
@@ -458,21 +342,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsDropdownOpen(false);
                   onLogout();
                 }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#fef2f2',
-                  color: '#dc2626',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
+                className="w-full flex items-center gap-[10px] py-[9px] px-[12px] rounded-[8px] border-0 bg-[#fef2f2] text-[#dc2626] text-[12.5px] font-bold cursor-pointer text-left"
               >
                 <LogOut size={15} color="#dc2626" /> Đăng Xuất
               </button>
@@ -484,43 +354,43 @@ export const Header: React.FC<HeaderProps> = ({
       {/* User Profile Modal */}
       {showProfileModal && (
         <div className="modal-backdrop" onClick={() => setShowProfileModal(false)}>
-          <div className="modal-card" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card max-w-[400px]" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 className="m-0 text-[16px] font-extrabold flex items-center gap-[8px]">
                 <UserIcon size={18} color="#2563eb" /> Thông Tin Tài Khoản
               </h3>
               <button className="icon-btn" onClick={() => setShowProfileModal(false)}><X size={18} /></button>
             </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
-              <div style={{ textAlign: 'center', padding: '14px 0' }}>
+            <div className="modal-body flex flex-col gap-[12px] text-[13px]">
+              <div className="text-center py-[14px] px-0">
                 <UserAvatar
                   src={user.avatar}
                   name={user.name}
                   size={56}
                   background="linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)"
-                  style={{ margin: '0 auto 8px auto' }}
+                  className="mx-auto mb-[8px]"
                 />
-                <strong style={{ fontSize: '16px', color: '#0f172a' }}>{user.name}</strong>
-                <p style={{ margin: '2px 0 0 0', color: '#64748b', fontSize: '12px' }}>{user.email}</p>
+                <strong className="text-[16px] text-[#0f172a]">{user.name}</strong>
+                <p className="mt-[2px] mr-0 mb-0 ml-0 text-muted text-[12px]">{user.email}</p>
               </div>
 
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Mã tài khoản:</span>
-                  <span style={{ fontWeight: 700, fontFamily: 'monospace' }}>{user.id}</span>
+              <div className="bg-[#f8fafc] border border-border rounded-[10px] p-[12px] flex flex-col gap-[8px]">
+                <div className="flex justify-between">
+                  <span className="text-muted">Mã tài khoản:</span>
+                  <span className="font-bold font-mono">{user.id}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Vai trò (Role):</span>
-                  <span style={{ fontWeight: 800, color: '#0f172a' }}>{user.role}</span>
+                <div className="flex justify-between">
+                  <span className="text-muted">Vai trò (Role):</span>
+                  <span className="font-extrabold text-[#0f172a]">{user.role}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Phòng ban:</span>
-                  <span style={{ fontWeight: 700 }}>{user.department?.name || '---'}</span>
+                <div className="flex justify-between">
+                  <span className="text-muted">Phòng ban:</span>
+                  <span className="font-bold">{user.department?.name || '---'}</span>
                 </div>
               </div>
             </div>
-            <div className="modal-footer" style={{ justifyContent: 'flex-end' }}>
-              <button className="btn-insp btn-insp-primary" style={{ width: 'auto', padding: '8px 20px' }} onClick={() => setShowProfileModal(false)}>
+            <div className="modal-footer justify-end">
+              <button className="btn-insp btn-insp-primary w-auto py-[8px] px-[20px]" onClick={() => setShowProfileModal(false)}>
                 Đóng
               </button>
             </div>

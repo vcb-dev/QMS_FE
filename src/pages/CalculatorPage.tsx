@@ -9,7 +9,8 @@ import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBrea
 import { formatOptionCopyLine, cleanOptionLabel, batchResultToOption } from '../utils/quoteOption';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
 import type {CalculatorPageProps, StoneRow,StoneCatalogItem,CalcResult,QuoteOption} from '../types';
-import {cardStyle, cardTitleStyle} from '../styles/card';
+import { clsx } from 'clsx';
+import { cardCls } from '../styles/classNames';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
 
@@ -448,12 +449,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: '30px', fontFamily: "'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div className="flex flex-col gap-[18px] pb-[30px] font-['Inter','Roboto',-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <h1 className="text-[24px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
           <Calculator size={22} /> Máy Tính Giá
         </h1>
-        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+        <p className="text-[13px] text-muted mt-[4px] mr-0 mb-0 ml-0">
           Tính giá kim hoàn theo thông số sản phẩm, kim loại và đá
         </p>
       </div>
@@ -464,36 +465,30 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
       {/* Layout chính: trái nhập liệu, phải bảng báo giá sống (sticky) */}
       <div className="pricing-calc-grid">
         {/* Cột trái: nhập liệu */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="flex flex-col gap-[16px]">
 
           {/* Section 1: Thông số Sản phẩm & Kim loại */}
-          <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-              <h3 style={{ ...cardTitleStyle, margin: 0 }}>Thông số Sản phẩm & Kim loại</h3>
+          <div className={cardCls}>
+            <div className="flex items-center justify-between mb-[16px] flex-wrap gap-[10px]">
+              <h3 className="text-[15px] font-extrabold text-[#0f172a] m-0">Thông số Sản phẩm & Kim loại</h3>
               <button
                 type="button"
                 onClick={addMaterialRow}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px',
-                  color: '#334155', fontSize: '12px', fontWeight: 800, padding: '7px 14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className="flex items-center gap-[6px] bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[12px] font-extrabold py-[7px] px-[14px] cursor-pointer transition-[all_0.15s_ease]"
               >
                 <Plus size={14} color="#475569" /> Thêm chất liệu
               </button>
             </div>
 
             {/* Danh mục sản phẩm */}
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label className="form-label" style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+            <div className="form-group mb-[16px]">
+              <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase block mb-[6px]">
                 DANH MỤC SẢN PHẨM
               </label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none', background: '#ffffff' }}
+                className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface"
               >
                 <option value="">-- Chọn danh mục sản phẩm --</option>
                 {dbCategories.map((cat) => (
@@ -505,51 +500,31 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
             </div>
 
             {/* Khung danh sách Chất liệu chế tác */}
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#f8fafc' }}>
+            <div className="border border-[#e2e8f0] rounded-[12px] p-[14px] bg-[#f8fafc]">
               {/* Header cột cố định */}
               <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 140px 36px',
-                  gap: '12px',
-                  marginBottom: '8px',
-                  padding: '0 2px',
-                }}
+                className="grid [grid-template-columns:1fr_140px_36px] gap-[12px] mb-[8px] py-0 px-[2px]"
               >
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                <span className="text-[11px] font-extrabold text-[#64748b] uppercase">
                   LOẠI VÀNG / CHẤT LIỆU
                 </span>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                <span className="text-[11px] font-extrabold text-[#64748b] uppercase">
                   TRỌNG LƯỢNG (CHỈ)
                 </span>
                 <span />
               </div>
 
               {/* Danh sách các dòng chất liệu */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="flex flex-col gap-[8px]">
                 {materialRows.map((row) => (
                   <div
                     key={row.id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 140px 36px',
-                      gap: '12px',
-                      alignItems: 'center',
-                    }}
+                    className="grid [grid-template-columns:1fr_140px_36px] gap-[12px] items-center"
                   >
                     <select
                       value={row.materialId || ''}
                       onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        outline: 'none',
-                        background: '#ffffff',
-                      }}
+                      className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface"
                     >
                       {dbMaterials.map((mat) => (
                         <option key={mat.id} value={mat.id}>
@@ -558,7 +533,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       ))}
                     </select>
 
-                    <div style={{ position: 'relative' }}>
+                    <div className="relative">
                       <input
                         type="number"
                         step="0.01"
@@ -569,19 +544,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           if (v !== '' && parseFloat(v) < 0) return;
                           updateMaterialRow(row.id, { weightChi: v });
                         }}
-                        style={{
-                          width: '100%',
-                          padding: '9px 42px 9px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          outline: 'none',
-                          background: '#ffffff',
-                          fontVariantNumeric: 'tabular-nums',
-                        }}
+                        className="w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]"
                       />
-                      <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
+                      <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#64748b]">
                         chỉ
                       </span>
                     </div>
@@ -591,24 +556,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                         type="button"
                         onClick={() => removeMaterialRow(row.id)}
                         title="Xóa chất liệu này"
-                        style={{
-                          height: '36px',
-                          width: '36px',
-                          borderRadius: '8px',
-                          border: '1px solid #fecaca',
-                          background: '#fef2f2',
-                          color: '#dc2626',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
+                        className="h-[36px] w-[36px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer transition-[all_0.15s_ease]"
                       >
                         <Trash2 size={15} />
                       </button>
                     ) : (
-                      <div style={{ width: '36px', height: '36px' }} />
+                      <div className="w-[36px] h-[36px]" />
                     )}
                   </div>
                 ))}
@@ -616,9 +569,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
               {/* Tổng khối lượng khi có từ 2 chất liệu trở lên */}
               {materialRows.length > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '10px', marginTop: '10px', borderTop: '1px dashed #cbd5e1', fontSize: '12px', color: '#475569' }}>
-                  <span style={{ fontWeight: 700 }}>Tổng khối lượng:</span>
-                  <strong style={{ fontSize: '13px', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                <div className="flex justify-between items-baseline pt-[10px] mt-[10px] border-t border-dashed border-[#cbd5e1] text-[12px] text-[#475569]">
+                  <span className="font-bold">Tổng khối lượng:</span>
+                  <strong className="text-[13px] text-[#0f172a] [font-variant-numeric:tabular-nums]">
                     {materialRows.reduce((sum, r) => sum + (parseFloat(r.weightChi) || 0), 0).toFixed(2)} chỉ
                   </strong>
                 </div>
@@ -627,46 +580,41 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
             {/* Phương án so sánh loại vàng khác — TỰ thêm, không còn tự sinh từ BE. Mỗi loại vàng
                 PHẢI nhập khối lượng riêng; kết quả là phương án "chỉ tham khảo". */}
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#f8fafc', marginTop: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+            <div className="border border-[#e2e8f0] rounded-[12px] p-[14px] bg-[#f8fafc] mt-[14px]">
+              <div className="flex items-center justify-between mb-[10px]">
+                <span className="text-[11px] font-extrabold text-[#64748b] uppercase">
                   Phương án so sánh loại vàng khác (tham khảo)
                 </span>
                 <button
                   type="button"
                   onClick={addCompareRow}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px',
-                    color: '#334155', fontSize: '12px', fontWeight: 800, padding: '6px 12px',
-                    cursor: 'pointer',
-                  }}
+                  className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[12px] font-extrabold py-[6px] px-[12px] cursor-pointer"
                 >
                   <Plus size={14} color="#475569" /> Thêm phương án
                 </button>
               </div>
 
               {compareRows.length === 0 ? (
-                <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0 }}>
+                <p className="text-[11.5px] text-[#94a3b8] m-0">
                   Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
                 </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-[8px]">
                   {compareRows.map((row) => {
                     const missingWeight = !((parseFloat(row.weightChi) || 0) > 0);
                     return (
-                      <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 36px', gap: '12px', alignItems: 'center' }}>
+                      <div key={row.id} className="grid [grid-template-columns:1fr_140px_36px] gap-[12px] items-center">
                         <select
                           value={row.materialId || ''}
                           onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none', background: '#ffffff' }}
+                          className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface"
                         >
                           {dbMaterials.map((mat) => (
                             <option key={mat.id} value={mat.id}>{mat.name}</option>
                           ))}
                         </select>
 
-                        <div style={{ position: 'relative' }}>
+                        <div className="relative">
                           <input
                             type="number"
                             step="0.01"
@@ -678,14 +626,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               updateCompareRow(row.id, { weightChi: v });
                             }}
                             placeholder="Số chỉ"
-                            style={{
-                              width: '100%', padding: '9px 42px 9px 12px', borderRadius: '8px',
-                              border: missingWeight ? '1px solid #f87171' : '1px solid #cbd5e1',
-                              fontSize: '13px', fontWeight: 700, outline: 'none', background: '#ffffff',
-                              fontVariantNumeric: 'tabular-nums',
-                            }}
+                            className={clsx('w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] text-[13px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]', missingWeight ? 'border border-[#f87171]' : 'border border-[#cbd5e1]')}
                           />
-                          <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
+                          <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#64748b]">
                             chỉ
                           </span>
                         </div>
@@ -694,14 +637,14 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           type="button"
                           onClick={() => removeCompareRow(row.id)}
                           title="Xóa phương án so sánh này"
-                          style={{ height: '36px', width: '36px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          className="h-[36px] w-[36px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer"
                         >
                           <Trash2 size={15} />
                         </button>
                       </div>
                     );
                   })}
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  <span className="text-[11px] text-[#94a3b8]">
                     Dòng chưa nhập khối lượng sẽ bị bỏ qua khi tính.
                   </span>
                 </div>
@@ -710,25 +653,25 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
             {/* Sale: chỉ chọn CÓ/KHÔNG cộng VAT, không thấy/nhập được mức % (mức % do ORDER/ADMIN cấu hình) */}
             {isSale && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0', cursor: 'pointer', width: 'fit-content' }}>
+              <label className="flex items-center gap-[8px] mt-[14px] pt-[14px] border-t border-dashed border-[#e2e8f0] cursor-pointer w-fit">
                 <input
                   type="checkbox"
                   checked={includeVat}
                   onChange={(e) => setIncludeVat(e.target.checked)}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  className="w-[16px] h-[16px] cursor-pointer"
                 />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#374151' }}>Cộng VAT vào báo giá</span>
+                <span className="text-[13px] font-bold text-[#374151]">Cộng VAT vào báo giá</span>
               </label>
             )}
 
             {/* Hệ số nhân Bạc — chỉ ORDER/ADMIN được chọn, Sale luôn dùng mặc định (server ép, FE ẩn cho khỏi rối) */}
             {isSilverMaterial && !isSale && (
-              <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Hệ số nhân Bạc</label>
+              <div className="mt-[14px] pt-[14px] border-t border-dashed border-[#e2e8f0] flex items-center gap-[10px]">
+                <label className="text-[11px] font-extrabold text-[#64748b] uppercase">Hệ số nhân Bạc</label>
                 <select
                   value={selectedSilverMultiplier}
                   onChange={(e) => setSelectedSilverMultiplier(parseFloat(e.target.value) || 0)}
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none', background: '#ffffff' }}
+                  className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface"
                 >
                   {silverMultipliers.map((m) => (
                     <option key={m} value={m}>× {m}</option>
@@ -741,16 +684,16 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
             {/* Thanh giá nhanh — GIÁ GỐC dùng để tính giá. Sale không xem giá vàng/bạc/bạch kim gốc, chỉ nhập rồi bấm Tính giá.
                 Sửa giá gốc làm ở trang "Cấu hình giá" (PricingConfigPage), không tùy chỉnh trực tiếp ở đây nữa. */}
             {!isSale && (
-              <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+              <div className="mt-[14px] pt-[14px] border-t border-dashed border-[#e2e8f0] flex items-center gap-[28px] flex-wrap">
                 {baseMetals.map((m, idx) => (
                   <React.Fragment key={m.id}>
-                    {idx > 0 && <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />}
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                    {idx > 0 && <div className="w-[1px] h-[24px] bg-[#e2e8f0]" />}
+                    <div className="flex items-baseline gap-[10px] flex-wrap">
+                      <span className="text-[14px] font-extrabold text-[#475569] uppercase tracking-[0.3px]">
                         GIÁ {m.name.toUpperCase()}
                       </span>
-                      <strong style={{ fontSize: '19px', fontWeight: 900, color: '#334155', letterSpacing: '0.3px', fontVariantNumeric: 'tabular-nums' }}>
-                        {formatNumberVN(m.priceVnd)} <span style={{ fontSize: '14px', fontWeight: 700 }}>đ/chỉ</span>
+                      <strong className="text-[19px] font-black text-[#334155] tracking-[0.3px] [font-variant-numeric:tabular-nums]">
+                        {formatNumberVN(m.priceVnd)} <span className="text-[14px] font-bold">đ/chỉ</span>
                       </strong>
                     </div>
                   </React.Fragment>
@@ -761,25 +704,16 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
           {/* Section 2 + 3: Đá quý & Chế tác — gộp lưới 2 cột con để giảm chiều cao trang. Bạc dùng chung công/đá, chỉ ẩn riêng ô VAT (Bạc không tính VAT). */}
           {(
-            <div className="pricing-calc-subgrid" style={isSale ? { gridTemplateColumns: '1fr' } : undefined}>
+            <div className={clsx('pricing-calc-subgrid', isSale && '![grid-template-columns:1fr]')}>
               {/* Section 2: Thông số Đá quý — 2 phương thức nhập theo mục 3.1: nhập tổng trực tiếp, hoặc bảng tính từng viên */}
-              <div style={cardStyle}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                  <h3 style={{ ...cardTitleStyle, margin: 0 }}>Thông số Đá quý</h3>
+              <div className={cardCls}>
+                <div className="flex items-center justify-between mb-[14px]">
+                  <h3 className="text-[15px] font-extrabold text-[#0f172a] m-0">Thông số Đá quý</h3>
                   {stoneInputMode === 'table' && (
                     <button
                       type="button"
                       onClick={addStoneRow}
-                      style={{
-                        background: '#f3f3f3',
-                        border: '1px solid #a3a3a3',
-                        color: '#000000',
-                        fontSize: '12px',
-                        fontWeight: 800,
-                        borderRadius: '6px',
-                        padding: '6px 14px',
-                        cursor: 'pointer',
-                      }}
+                      className="bg-[#f3f3f3] border border-[#a3a3a3] text-[#000000] text-[12px] font-extrabold rounded-[6px] py-[6px] px-[14px] cursor-pointer"
                     >
                       + THÊM ĐÁ
                     </button>
@@ -787,28 +721,18 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 </div>
 
                 {/* Chọn phương thức nhập */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                <div className="flex gap-[8px] mb-[14px]">
                   <button
                     type="button"
                     onClick={() => setStoneInputMode('table')}
-                    style={{
-                      flex: 1, padding: '8px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
-                      border: stoneInputMode === 'table' ? '1.5px solid #0f172a' : '1px solid #cbd5e1',
-                      background: stoneInputMode === 'table' ? '#fff7ed' : '#ffffff',
-                      color: stoneInputMode === 'table' ? '#c2410c' : '#64748b',
-                    }}
+                    className={clsx('flex-1 py-[8px] px-[10px] rounded-[8px] text-[12px] font-extrabold cursor-pointer', stoneInputMode === 'table' ? 'border-[1.5px] border-[#0f172a] bg-[#fff7ed] text-[#c2410c]' : 'border border-[#cbd5e1] bg-surface text-muted')}
                   >
                     Tính từ bảng đá
                   </button>
                   <button
                     type="button"
                     onClick={() => setStoneInputMode('total')}
-                    style={{
-                      flex: 1, padding: '8px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
-                      border: stoneInputMode === 'total' ? '1.5px solid #0f172a' : '1px solid #cbd5e1',
-                      background: stoneInputMode === 'total' ? '#fff7ed' : '#ffffff',
-                      color: stoneInputMode === 'total' ? '#c2410c' : '#64748b',
-                    }}
+                    className={clsx('flex-1 py-[8px] px-[10px] rounded-[8px] text-[12px] font-extrabold cursor-pointer', stoneInputMode === 'total' ? 'border-[1.5px] border-[#0f172a] bg-[#fff7ed] text-[#c2410c]' : 'border border-[#cbd5e1] bg-surface text-muted')}
                   >
                     Nhập tổng tiền đá
                   </button>
@@ -817,7 +741,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 {stoneInputMode === 'total' ? (
                   /* Nhập tổng tiền đá trực tiếp — đã biết giá, khỏi khai từng viên */
                   <div className="form-group">
-                    <label className="form-label" style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                    <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase">
                       TỔNG TIỀN ĐÁ (VNĐ)
                     </label>
                     <input
@@ -825,42 +749,36 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       inputMode="numeric"
                       value={formatNumberVN(manualStoneTotal)}
                       onChange={(e) => setManualStoneTotal(parseFloat(e.target.value.replace(/\D/g, '')) || 0)}
-                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none', fontVariantNumeric: 'tabular-nums' }}
+                      className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none [font-variant-numeric:tabular-nums]"
                     />
                   </div>
                 ) : stoneRows.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div className="flex flex-col gap-[12px]">
                     {stoneRows.map((row) => (
                       <div
                         key={row.id}
-                        style={{
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '12px',
-                          padding: '14px',
-                          position: 'relative',
-                        }}
+                        className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[12px] p-[14px] relative"
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '6px' }}>
+                        <div className="flex items-center justify-end mb-[6px]">
                           <button
                             type="button"
                             onClick={() => removeStoneRow(row.id)}
-                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', fontWeight: 800 }}
+                            className="bg-transparent border-0 text-[#ef4444] cursor-pointer text-[16px] font-extrabold"
                           >
                             ✕
                           </button>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div className="flex flex-col gap-[12px]">
+                          <div className="grid grid-cols-2 gap-[10px]">
                             <div>
-                              <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                              <label className="text-[10.5px] text-[#64748b] font-bold block mb-[4px]">
                                 Loại đá
                               </label>
                               <select
                                 value={row.stoneType}
                                 onChange={(e) => updateStoneRow(row.id, { stoneType: e.target.value as StoneRow['stoneType'], stoneId: '' })}
-                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 600, background: '#ffffff' }}
+                                className="w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[12.5px] font-semibold bg-surface"
                               >
                                 <option value="">-- Chọn loại --</option>
                                 <option value="MAIN">Đá chủ</option>
@@ -868,14 +786,14 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               </select>
                             </div>
                             <div>
-                              <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                              <label className="text-[10.5px] text-[#64748b] font-bold block mb-[4px]">
                                 Sản phẩm đá
                               </label>
                               <select
                                 value={row.stoneId}
                                 disabled={!row.stoneType}
                                 onChange={(e) => updateStoneRow(row.id, { stoneId: e.target.value })}
-                                style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 600, background: row.stoneType ? '#ffffff' : '#f1f5f9' }}
+                                className={clsx('w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[12.5px] font-semibold', row.stoneType ? 'bg-surface' : 'bg-[#f1f5f9]')}
                               >
                                 <option value="">-- Chọn sản phẩm --</option>
                                 {stoneCatalog.filter((s) => s.stoneType === row.stoneType).map((s) => (
@@ -886,7 +804,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           </div>
 
                           <div>
-                            <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                            <label className="text-[10.5px] text-[#64748b] font-bold block mb-[4px]">
                               SL viên
                             </label>
                             <input
@@ -894,7 +812,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               min={1}
                               value={row.qty}
                               onChange={(e) => updateStoneRow(row.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 700, background: '#ffffff', textAlign: 'right' }}
+                              className="w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[12.5px] font-bold bg-surface text-right"
                             />
                           </div>
 
@@ -904,15 +822,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     ))}
 
                     {/* Tổng cộng tất cả các loại đá = Tổng tiền đá (mục 3.2) */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '10px 4px 0 4px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#374151' }}>Tổng tiền đá</span>
-                      <strong style={{ fontSize: '15px', color: '#c2410c', fontVariantNumeric: 'tabular-nums' }}>
+                    <div className="flex justify-between items-baseline pt-[10px] pr-[4px] pb-0 pl-[4px]">
+                      <span className="text-[12px] font-extrabold text-[#374151]">Tổng tiền đá</span>
+                      <strong className="text-[15px] text-[#c2410c] [font-variant-numeric:tabular-nums]">
                         {calcResult?.stoneCost != null ? formatCurrency(calcResult.stoneCost) : '—'}
                       </strong>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ width: '100%', padding: '24px', borderRadius: '12px', border: '1px dashed #cbd5e1', background: '#f8fafc', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                  <div className="w-full p-[24px] rounded-[12px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] text-center text-[#64748b] text-[13px]">
                     Bấm <strong>"THÊM ĐÁ"</strong> ở trên để nhập danh sách đá quý
                   </div>
                 )}
@@ -921,24 +839,24 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               {/* Section 3: Chế tác & Phí dịch vụ — tiền công/VAT sửa trực tiếp cho báo giá đang tính,
                   không ghi đè cấu hình chuẩn (Material.laborCost/PricingConfig.defaultVatRate) */}
               {!isSale && (
-                <div style={cardStyle}>
-                  <h3 style={{ ...cardTitleStyle, margin: '0 0 16px 0' }}>Chế tác & Phí dịch vụ</h3>
+                <div className={cardCls}>
+                  <h3 className="text-[15px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[16px] ml-0">Chế tác & Phí dịch vụ</h3>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="flex flex-col gap-[16px]">
                     <div className="form-group">
-                      <label className="form-label" style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                      <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase">
                         TIỀN CÔNG CHẾ TÁC (VNĐ)
                       </label>
                       <input
                         type="text"
                         value={formatNumberVN(laborCost)}
                         onChange={(e) => setLaborCost(Math.max(0, parseFloat(e.target.value.replace(/\D/g, '')) || 0))}
-                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none', fontVariantNumeric: 'tabular-nums' }}
+                        className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none [font-variant-numeric:tabular-nums]"
                       />
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label" style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                      <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase">
                         THUẾ VAT (%)
                       </label>
                       <input
@@ -951,7 +869,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           if (v !== '' && parseFloat(v) < 0) return;
                           setVatPct(Math.max(0, Math.min(100, parseFloat(v) || 0)));
                         }}
-                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, outline: 'none', fontVariantNumeric: 'tabular-nums' }}
+                        className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none [font-variant-numeric:tabular-nums]"
                       />
                     </div>
 
@@ -963,46 +881,30 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
           {/* Các Phương Án Giá — Sale copy nhanh gửi khách (cập nhật sống cùng lúc với bảng bên phải) */}
           {priceOptions.length > 0 && (
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <h3 style={{ ...cardTitleStyle, margin: 0 }}>Các Phương Án Giá</h3>
+            <div className={cardCls}>
+              <div className="flex items-center justify-between mb-[16px]">
+                <h3 className="text-[15px] font-extrabold text-[#0f172a] m-0">Các Phương Án Giá</h3>
                 <button
                   type="button"
                   onClick={handleCopyAllPrices}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '7px 14px', borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: copiedAll ? '#dcfce7' : '#ffffff',
-                    color: copiedAll ? '#16a34a' : '#475569',
-                    fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                  }}
+                  className={clsx('flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[12px] font-bold cursor-pointer', copiedAll ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-surface text-[#475569]')}
                 >
                   {copiedAll ? <Check size={13} /> : <Copy size={13} />}
                   {copiedAll ? 'Đã copy hết!' : 'Copy hết'}
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <div className="grid [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))] gap-[12px]">
                 {priceOptions.map((opt, idx) => (
                   <div
                     key={idx}
-                    style={{
-                      background: opt.isSelected ? '#f1f5f9' : '#f8fafc',
-                      border: opt.isSelected ? '1.5px solid #0f172a' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '10px',
-                    }}
+                    className={clsx('rounded-[12px] p-[14px] flex items-center justify-between gap-[10px]', opt.isSelected ? 'bg-[#f1f5f9] border-[1.5px] border-[#0f172a]' : 'bg-[#f8fafc] border border-[#e2e8f0]')}
                   >
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="min-w-0">
+                      <div className="text-[11.5px] font-bold text-[#64748b] overflow-hidden text-ellipsis whitespace-nowrap">
                         {cleanOptionLabel(opt)}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+                      <div className="flex flex-col">
+                        <div className="text-[16px] font-black text-[#0f172a] mt-[2px] [font-variant-numeric:tabular-nums]">
                           {formatCurrency(opt.quotedPrice)}
                         </div>
                         {renderPriceBreakdownLines(getPriceBreakdown(opt))}
@@ -1012,19 +914,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       type="button"
                       onClick={() => handleCopyPrice(idx, opt)}
                       title="Copy giá"
-                      style={{
-                        flexShrink: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '34px',
-                        height: '34px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: copiedIdx === idx ? '#dcfce7' : '#ffffff',
-                        color: copiedIdx === idx ? '#16a34a' : '#475569',
-                        cursor: 'pointer',
-                      }}
+                      className={clsx('shrink-0 flex items-center justify-center w-[34px] h-[34px] rounded-[8px] border border-[#cbd5e1] cursor-pointer', copiedIdx === idx ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-surface text-[#475569]')}
                     >
                       {copiedIdx === idx ? <Check size={15} /> : <Copy size={15} />}
                     </button>
@@ -1037,37 +927,22 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
         {/* Cột phải: Bảng báo giá sống (sticky) */}
         <div
-          style={{
-            background: '#F3F4F6',
-            color: '#111827',
-            border: '1px solid #d1d5db',
-            borderRadius: '24px',
-            padding: '26px',
-            boxShadow: '0 12px 32px rgba(15, 23, 42, 0.14)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            position: 'sticky',
-            top: '20px',
-          }}
+          className="bg-[#F3F4F6] text-[#111827] border border-[#d1d5db] rounded-[24px] p-[26px] shadow-[0_12px_32px_rgba(15,23,42,0.14)] flex flex-col gap-[16px] sticky top-[20px]"
         >
           {quotedPrice === null ? (
             <>
               {/* Trạng thái chưa tính — chỉ hiện số sau khi bấm nút, header gọn nằm ngang */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="flex items-center gap-[10px]">
                 <div
-                  style={{
-                    width: '40px', height: '40px', borderRadius: '50%',
-                    background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}
+                  className="w-[40px] h-[40px] rounded-full bg-[#f1f5f9] border border-[#e2e8f0] flex items-center justify-center shrink-0"
                 >
                   <Calculator size={20} color="#475569" />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '16px', fontWeight: 900, color: '#111827', margin: 0 }}>
+                  <h2 className="text-[16px] font-black text-[#111827] m-0">
                     Sẵn sàng tính giá
                   </h2>
-                  <p style={{ fontSize: '11.5px', color: '#6b7280', margin: '2px 0 0 0' }}>
+                  <p className="text-[11.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
                     Nhập trọng lượng — giá tự động cập nhật, hoặc bấm tính ngay
                   </p>
                 </div>
@@ -1077,20 +952,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 type="button"
                 onClick={handleCalculate}
                 disabled={isCalculating}
-                style={{
-                  width: '100%',
-                  background: isCalculating ? '#e2e8f0' : '#f1f5f9',
-                  color: isCalculating ? '#94a3b8' : '#334155',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  cursor: isCalculating ? 'not-allowed' : 'pointer',
-                  boxShadow: 'none',
-                  opacity: isCalculating ? 0.7 : 1,
-                  transition: 'all 0.2s ease',
-                }}
+                className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[15px] font-extrabold shadow-none transition-[all_0.2s_ease]', isCalculating ? 'bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
               >
                 {isCalculating ? 'Đang tính giá...' : 'Tính giá ngay'}
               </button>
@@ -1098,34 +960,31 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           ) : (
             <>
               {/* Calculated Result View — đã chốt, header gọn nằm ngang */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="flex items-center gap-[10px]">
                 <div
-                  style={{
-                    width: '40px', height: '40px', borderRadius: '50%',
-                    background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}
+                  className="w-[40px] h-[40px] rounded-full bg-[#f1f5f9] border border-[#e2e8f0] flex items-center justify-center shrink-0"
                 >
                   <CheckCircle2 size={20} color="#475569" />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '16px', fontWeight: 900, color: '#111827', margin: 0 }}>
+                  <h2 className="text-[16px] font-black text-[#111827] m-0">
                     Tổng báo giá đề xuất
                   </h2>
-                  <p style={{ fontSize: '11.5px', color: '#6b7280', margin: '2px 0 0 0' }}>
+                  <p className="text-[11.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
                     Đã tính theo thông số hiện tại
                   </p>
                 </div>
               </div>
 
               {/* Cấu thành giá + Tổng — gộp 1 card, breakdown chỉ ORDER/ADMIN xem (SALE không xem giá vốn) */}
-              <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+              <div className="bg-surface border border-[#e5e7eb] rounded-[14px] p-[16px] flex flex-col gap-[9px]">
                 {calcResult && (currentRole === 'ORDER' || currentRole === 'ADMIN') && (
                   <>
                     {calcResult.breakdown && calcResult.breakdown.length > 1 ? (
-                      <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', marginBottom: '4px', fontSize: '11.5px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontWeight: 800, color: '#475569', marginBottom: '4px' }}>Chi tiết từng kim loại:</div>
+                      <div className="bg-[#f8fafc] py-[8px] px-[10px] rounded-[8px] mb-[4px] text-[11.5px] border border-[#e2e8f0]">
+                        <div className="font-extrabold text-[#475569] mb-[4px]">Chi tiết từng kim loại:</div>
                         {calcResult.breakdown.map((b, i) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', marginTop: '2px' }}>
+                          <div key={i} className="flex justify-between text-[#334155] mt-[2px]">
                             <span>• {b.materialName} ({b.weightChi} chỉ):</span>
                             <strong>{formatCurrency(b.cost)}</strong>
                           </div>
@@ -1140,7 +999,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     {calcResult.metalProfit != null && (
                       <BreakdownRow label="Tiền lãi kim loại" value={calcResult.metalProfit} accent="#15803d" />
                     )}
-                    <div style={{ height: '1px', background: '#e5e7eb', margin: '2px 0' }} />
+                    <div className="h-[1px] bg-[#e5e7eb] my-[2px]" />
                     <BreakdownRow label="Đá quý (giá gốc)" value={calcResult.stoneCost} />
                     {calcResult.stoneVatAmount != null && (
                       <BreakdownRow label="VAT đá quý" value={calcResult.stoneVatAmount} />
@@ -1148,13 +1007,13 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     {calcResult.stoneProfit != null && (
                       <BreakdownRow label="Tiền lãi đá quý" value={calcResult.stoneProfit} accent="#15803d" />
                     )}
-                    <div style={{ height: '1px', background: '#e5e7eb', margin: '2px 0' }} />
+                    <div className="h-[1px] bg-[#e5e7eb] my-[2px]" />
                   </>
                 )}
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#374151' }}>Tổng báo giá</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[12.5px] font-extrabold text-[#374151]">Tổng báo giá</span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[24px] font-black text-[#0f172a] [font-variant-numeric:tabular-nums]">
                       {formatCurrency(quotedPrice)}
                     </span>
                     {quotedPrice != null && calcResult && renderPriceBreakdownLines(
@@ -1168,7 +1027,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 </div>
               </div>
 
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+              <div className="w-full flex flex-col gap-[10px] mt-[4px]">
                 {/* ORDER chỉ tính giá tham khảo, không tạo đơn — nút này chỉ dành cho SALE/ADMIN */}
                 {currentRole !== 'ORDER' && (
                   <button
@@ -1197,20 +1056,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                         options: priceOptions,
                       });
                     }}
-                    style={{
-                      width: '100%',
-                      background: (isCalculating || quotedPrice === null) ? '#e2e8f0' : '#f1f5f9',
-                      color: (isCalculating || quotedPrice === null) ? '#94a3b8' : '#334155',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      fontSize: '15px',
-                      fontWeight: 800,
-                      cursor: (isCalculating || quotedPrice === null) ? 'not-allowed' : 'pointer',
-                      boxShadow: 'none',
-                      transition: 'all 0.2s ease',
-                      opacity: (isCalculating || quotedPrice === null) ? 0.7 : 1,
-                    }}
+                    className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[15px] font-extrabold shadow-none transition-[all_0.2s_ease]', (isCalculating || quotedPrice === null) ? 'bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
                   >
                     {isCalculating ? 'Đang tính toán...' : 'Tạo Đơn Với Giá Này →'}
                   </button>
@@ -1220,23 +1066,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   type="button"
                   onClick={handleCalculate}
                   disabled={isCalculating}
-                  style={{
-                    width: '100%',
-                    background: '#ffffff',
-                    color: '#4b5563',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: isCalculating ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    opacity: isCalculating ? 0.7 : 1,
-                    transition: 'all 0.2s ease',
-                  }}
+                  className={clsx('w-full bg-surface text-[#4b5563] border border-[#e5e7eb] rounded-[12px] p-[12px] text-[13px] font-bold flex items-center justify-center gap-[6px] transition-[all_0.2s_ease]', isCalculating ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
                 >
                   <RotateCcw size={14} />
                   {isCalculating ? 'Đang tính lại...' : 'Tính lại giá'}
@@ -1246,7 +1076,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           )}
 
           {errorMessage && (
-            <div style={{ color: '#b91c1c', fontSize: '12px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '10px', borderRadius: '8px', width: '100%' }}>
+            <div className="text-[#b91c1c] text-[12px] bg-[#fef2f2] border border-[#fca5a5] p-[10px] rounded-[8px] w-full">
                {errorMessage}
             </div>
           )}
@@ -1257,9 +1087,19 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 };
 
 const BreakdownRow: React.FC<{ label: string; value: number; accent?: string }> = ({ label, value, accent }) => (
-  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-    <span style={{ fontSize: '12px', color: accent || '#6b7280', fontWeight: accent ? 700 : 400 }}>{label}</span>
-    <span style={{ fontSize: '13px', fontWeight: 700, color: accent || '#374151', fontVariantNumeric: 'tabular-nums' }}>
+  <div className="flex items-baseline justify-between">
+    <span
+      className={clsx('text-[12px]', accent ? 'font-bold' : 'font-normal text-[#6b7280]')}
+      // động — giữ inline
+      style={accent ? { color: accent } : undefined}
+    >
+      {label}
+    </span>
+    <span
+      className={clsx('text-[13px] font-bold [font-variant-numeric:tabular-nums]', !accent && 'text-[#374151]')}
+      // động — giữ inline
+      style={accent ? { color: accent } : undefined}
+    >
       {formatCurrency(value)}
     </span>
   </div>

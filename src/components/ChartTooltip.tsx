@@ -10,14 +10,10 @@ interface ChartTooltipProps {
 // trong (payload) khác nhau theo từng biểu đồ nên chỉ bọc children, không parse payload ở đây.
 export const ChartTooltip: React.FC<ChartTooltipProps> = ({ children, padding = '8px 12px', minWidth }) => (
   <div
+    className="bg-[#0f172a] text-white rounded-[8px] text-[12px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
+    // động — recharts
     style={{
-      background: '#0f172a',
-      color: '#fff',
       padding,
-      borderRadius: 8,
-      fontSize: 12,
-      fontWeight: 700,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
       minWidth,
     }}
   >

@@ -1,6 +1,7 @@
 import React from 'react';
 import { XCircle } from 'lucide-react';
 import { ReasonPromptModal } from './ReasonPromptModal';
+import { btnInspDangerCls } from '../styles/classNames';
 
 interface RejectModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ export const RejectModal: React.FC<RejectModalProps> = ({ isOpen, onClose, onSub
     placeholder="Nhập lý do không thể báo giá (ví dụ: Thiếu thông tin số đo, xưởng hết phôi gỗ...)..."
     validationMsg="Theo đặc tả: BẮT BUỘC phải nhập lý do từ chối!"
     errorFallbackMsg="Lỗi từ chối yêu cầu"
-    submitButtonClassName="btn-insp btn-insp-danger"
+    submitButtonClassName={btnInspDangerCls}
     submitIcon={<XCircle size={16} />}
     submitLabel="Xác Nhận Từ Chối"
   />

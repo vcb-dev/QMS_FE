@@ -610,10 +610,6 @@ export async function markQuoteClosed(id: string, optionId?: string) {
   return changeQuoteStatus(id, { action: 'MARK_CLOSED', optionId });
 }
 
-export async function deleteQuoteOption(id: string, optionId: string) {
-  return apiCall(api.delete(`/quote-requests/${id}/options/${optionId}`), 'Không thể xóa phương án báo giá');
-}
-
 export async function fetchVnGoldPrice() {
   return apiCall(dedupedGet('/vn-gold-price'), 'Không thể tải giá vàng thị trường tham khảo');
 }

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import clsx from 'clsx';
 
 interface UserAvatarProps {
   src?: string | null;
   name: string;
   size?: number;
   background?: string;
+  className?: string;
   style?: React.CSSProperties;
 }
 
@@ -23,6 +25,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   name,
   size = 34,
   background = '#0f172a',
+  className,
   style,
 }) => {
   const [failed, setFailed] = useState(false);
@@ -30,19 +33,13 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   return (
     <div
+      className={clsx("rounded-full text-white font-extrabold flex items-center justify-center overflow-hidden shrink-0", className)}
+      /* động — giữ inline */
       style={{
         width: size,
         height: size,
-        borderRadius: '50%',
         background,
-        color: '#ffffff',
-        fontWeight: 800,
         fontSize: Math.round(size * 0.38),
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        flexShrink: 0,
         ...style,
       }}
     >
@@ -52,7 +49,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
           alt={name}
           referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          className="w-full h-full object-cover"
         />
       ) : (
         initialsOf(name)

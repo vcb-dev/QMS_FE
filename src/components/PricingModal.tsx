@@ -16,7 +16,10 @@ import { getPrimaryOption, batchResultToOption } from '../utils/quoteOption';
 import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
-import { modalCloseIconBtnStyle } from '../styles/modal';
+import { clsx } from 'clsx';
+import { modalCloseIconBtnCls } from '../styles/classNames';
+
+const labelUppercaseCls = 'text-[11px] font-extrabold text-[#475569] uppercase';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -282,7 +285,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     batchResultToOption({
       optionName: ctx.locked
         ? `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
-        : `${materialName} · Công ${formatCurrency(ctx.laborCost)} · VAT ${ctx.vatVal}%`,
+        : `${materialName} · ${weightChi} chỉ`,
       materialName,
       materialId,
       weightChi,
@@ -454,9 +457,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
         addOptionsToList([
           {
-            // Cùng lý do với nhánh 1 chất liệu — kèm công/VAT vào tên để bấm "Tính Giá Ngay" nhiều
-            // lần không ra trùng tên "Phương án phối hợp" giữa các cụm khi lưu vào DB.
-            optionName: `Phương án phối hợp (${matSummary}) · Công ${formatCurrency(l)} · VAT ${vatVal}%`,
+            // matSummary đã gồm tên + khối lượng từng chất liệu, đủ phân biệt các cụm.
+            optionName: `Phương án phối hợp (${matSummary})`,
             materialName: matSummary,
             weightChi: validRows.reduce((sum, m) => sum + (parseFloat(m.weightChi) || 0), 0),
             laborCost: res.laborCost,
@@ -588,87 +590,78 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   return (
     <div className="modal-backdrop show">
-      <div className="modal-card" style={{ maxWidth: '860px', width: '95%', maxHeight: '92vh', overflowY: 'auto' }}>
-        <div className="modal-header" style={{ padding: '16px 20px' }}>
+      <div className="modal-card max-w-[860px] w-[95%] max-h-[92vh] overflow-y-auto">
+        <div className="modal-header py-[16px] px-[20px]">
           <div>
-            <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
+            <h2 className="m-0 text-[17px] font-extrabold text-[#0f172a]">
               Báo Giá Yêu Cầu {selectedReq?.code || ''}
             </h2>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>
+            <span className="text-[12px] text-muted">
               Khách: <strong>{selectedReq?.customer?.name || 'Khách vãng lai'}</strong> — Danh mục: <strong>{selectedReq?.category?.name || '---'}</strong>
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={modalCloseIconBtnStyle}
+            className={modalCloseIconBtnCls}
           >
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-[16px] p-[20px]">
           
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="bg-surface border border-border rounded-[14px] p-[16px]">
+            <div className="flex items-center justify-between mb-[12px]">
+              <div className="flex items-center gap-[8px]">
                 <Layers size={18} color="#d97706" />
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                <h3 className="text-[15px] font-extrabold text-[#0f172a] m-0">
                   Các Phương Án Báo Giá ({primaryEntries.length})
                 </h3>
               </div>
-              <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+              <span className="text-[11.5px] text-muted">
                 Chọn 1 phương án làm giá chính để chốt
               </span>
             </div>
 
             {primaryEntries.length === 0 ? (
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+              <div className="bg-[#f8fafc] p-[16px] rounded-[10px] text-center text-muted text-[13px]">
                 Chưa có phương án nào. Hãy dùng bảng máy tính bên dưới và bấm <strong>"Tính Giá Ngay"</strong> — phương án sẽ tự hiện lên đây.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="flex flex-col gap-[8px]">
                 {primaryEntries.map(({ opt, idx }) => {
                   const children = opt.groupId ? lockedByGroup.get(opt.groupId) || [] : [];
                   return (
                     <div
                       key={idx}
-                      style={{
-                        borderRadius: '10px',
-                        background: opt.isSelected ? '#f0fdf4' : '#f8fafc',
-                        border: opt.isSelected ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
-                        transition: 'all 0.15s ease',
-                      }}
+                      className={clsx(
+                        'rounded-[10px] transition-[all_0.15s_ease]',
+                        opt.isSelected ? 'bg-[#f0fdf4] border-[1.5px] border-[#16a34a]' : 'bg-[#f8fafc] border border-border'
+                      )}
                     >
                       <div
                         onClick={() => handleSelectOption(idx)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '12px',
-                          padding: '12px 14px',
-                          cursor: 'pointer',
-                        }}
+                        className="flex items-center justify-between gap-[12px] py-[12px] px-[14px] cursor-pointer"
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <div className="flex items-center gap-[10px] min-w-0">
                           <input
                             type="radio"
                             name="selectedOptionRadio"
                             checked={!!opt.isSelected}
                             onChange={() => handleSelectOption(idx)}
-                            style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }}
+                            className="w-[16px] h-[16px] accent-[#16a34a] cursor-pointer"
                           />
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                          <div className="min-w-0">
+                            <div className="text-[13.5px] font-extrabold text-[#0f172a]">
                               {opt.optionName || `Phương án ${idx + 1}`}
                               {opt.isSelected && (
-                                <span style={{ marginLeft: '8px', background: '#16a34a', color: '#ffffff', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '20px' }}>
+                                <span className="ml-[8px] bg-[#16a34a] text-surface text-[10px] font-extrabold py-[2px] px-[8px] rounded-[20px]">
                                   ĐÃ CHỌN LÀM GIÁ CHÍNH
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                            <div className="text-[12px] text-muted mt-[2px]">
                               {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
                               {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
                               {opt.vat != null ? ` · VAT ${opt.vat}%` : ''}
@@ -676,9 +669,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                          <strong style={{ fontSize: '16px', fontWeight: 900, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
+                        <div className="flex items-center gap-[12px] shrink-0">
+                        <div className="flex flex-col items-end">
+                          <strong className="text-[16px] font-black text-[#16a34a] tabular-nums">
                             {formatCurrency(opt.quotedPrice)}
                           </strong>
                           {renderPriceBreakdownLines(getPriceBreakdown(opt))}
@@ -690,18 +683,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                               handleRemoveOption(idx);
                             }}
                             title="Xóa phương án này"
-                            style={{
-                              background: '#fee2e2',
-                              border: 'none',
-                              color: '#dc2626',
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '6px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                            }}
+                            className="bg-[#fee2e2] border-0 text-[#dc2626] w-[28px] h-[28px] rounded-[6px] flex items-center justify-center cursor-pointer"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -711,30 +693,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       {/* Phương án đính kèm (khác chất liệu Sale/tuổi vàng khác) — lồng trong card
                           của phương án chính cùng cụm, chỉ để tham khảo, không có radio chọn. */}
                       {children.length > 0 && (
-                        <div style={{ padding: '0 14px 12px 40px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
+                        <div className="pt-0 pr-[14px] pb-[12px] pl-[40px] flex flex-col gap-[6px]">
+                          <span className="text-[10.5px] font-extrabold text-faint uppercase">
                             Phương án đính kèm — chỉ tham khảo
                           </span>
                           {children.map(({ opt: childOpt, idx: childIdx }) => (
                             <div
                               key={childIdx}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '8px',
-                                padding: '6px 10px',
-                                background: '#ffffff',
-                                border: '1px dashed #cbd5e1',
-                                borderRadius: '8px',
-                              }}
+                              className="flex items-center justify-between gap-[8px] py-[6px] px-[10px] bg-surface border border-dashed border-[#cbd5e1] rounded-[8px]"
                             >
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span className="text-[12px] font-bold text-muted min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                                 {childOpt.optionName || childOpt.materialName}
                               </span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                  <strong style={{ fontSize: '13px', fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
+                              <div className="flex items-center gap-[8px] shrink-0">
+                                <div className="flex flex-col items-end">
+                                  <strong className="text-[13px] font-extrabold text-[#16a34a] tabular-nums">
                                     {formatCurrency(childOpt.quotedPrice)}
                                   </strong>
                                   {renderPriceBreakdownLines(getPriceBreakdown(childOpt))}
@@ -743,14 +716,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                                   type="button"
                                   onClick={() => handleRemoveOption(childIdx)}
                                   title="Xóa phương án đính kèm này"
-                                  style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#94a3b8',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                  }}
+                                  className="bg-transparent border-0 text-faint cursor-pointer flex items-center"
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -767,37 +733,34 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           </div>
 
           {/* KHỐI 2: MÁY TÍNH BÁO GIÁ / TẠO PHƯƠNG ÁN MỚI (DẠNG NHƯ BÊN CALCULATOR) */}
-          <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '14px', padding: '16px' }}>
+          <div className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[14px] p-[16px]">
             <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                marginBottom: showCalculator ? '14px' : 0,
-              }}
+              className={clsx(
+                'flex items-center justify-between cursor-pointer',
+                showCalculator ? 'mb-[14px]' : 'mb-0'
+              )}
               onClick={() => setShowCalculator((prev) => !prev)}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-[8px]">
                 <Calculator size={18} color="#2563eb" />
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                <h3 className="text-[15px] font-extrabold text-[#0f172a] m-0">
                   Máy Tính Báo Giá / Tạo Phương Án Mới
                 </h3>
               </div>
               <button
                 type="button"
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                className="bg-transparent border-0 text-muted cursor-pointer"
               >
                 {showCalculator ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </button>
             </div>
 
             {showCalculator && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="flex flex-col gap-[14px]">
                 {/* 1. Chất liệu & Khối lượng */}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                  <div className="flex items-center justify-between mb-[8px]">
+                    <label className={labelUppercaseCls}>
                       Chất Liệu Chế Tác & Khối Lượng (Chỉ)
                     </label>
                     {/* Order không được đổi chất liệu Sale đã yêu cầu — modal này luôn xử lý 1 đơn
@@ -806,35 +769,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       <button
                         type="button"
                         onClick={addMaterialRow}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '6px',
-                          padding: '4px 10px',
-                          fontSize: '11.5px',
-                          fontWeight: 800,
-                          color: '#0f172a',
-                          cursor: 'pointer',
-                        }}
+                        className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[11.5px] font-extrabold text-[#0f172a] cursor-pointer"
                       >
                         <Plus size={13} /> Thêm chất liệu
                       </button>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="flex flex-col gap-[8px]">
                     {calcMaterialRows.map((row) => (
                       <div
                         key={row.id}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: calcMaterialRows.length > 1 && !selectedReq ? '1fr 140px 32px' : '1fr 140px',
-                          gap: '10px',
-                          alignItems: 'center',
-                        }}
+                        className={clsx(
+                          'grid gap-[10px] items-center',
+                          calcMaterialRows.length > 1 && !selectedReq ? 'grid-cols-[1fr_140px_32px]' : 'grid-cols-[1fr_140px]'
+                        )}
                       >
                         <select
                           // Ép remount khi dbMaterials load xong (từ [] sang có data) — nếu không, React
@@ -845,16 +794,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           disabled={!!selectedReq}
                           onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
                           title={selectedReq ? 'Không thể đổi chất liệu Sale đã yêu cầu' : undefined}
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            border: '1px solid #cbd5e1',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            background: selectedReq ? '#f1f5f9' : '#ffffff',
-                            color: selectedReq ? '#64748b' : undefined,
-                            cursor: selectedReq ? 'not-allowed' : 'pointer',
-                          }}
+                          className={clsx(
+                            'py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold',
+                            selectedReq ? 'bg-[#f1f5f9] text-muted cursor-not-allowed' : 'bg-surface cursor-pointer'
+                          )}
                         >
                           {dbMaterials.map((mat) => (
                             <option key={mat.id} value={mat.id}>
@@ -863,7 +806,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           ))}
                         </select>
 
-                        <div style={{ position: 'relative' }}>
+                        <div className="relative">
                           <input
                             type="number"
                             step="0.01"
@@ -875,18 +818,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                               updateMaterialRow(row.id, { weightChi: v });
                             }}
                             placeholder="Số chỉ"
-                            style={{
-                              width: '100%',
-                              padding: '8px 38px 8px 10px',
-                              borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              background: '#ffffff',
-                              fontVariantNumeric: 'tabular-nums',
-                            }}
+                            className="w-full pt-[8px] pr-[38px] pb-[8px] pl-[10px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold bg-surface tabular-nums"
                           />
-                          <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: '#64748b', fontWeight: 700 }}>
+                          <span className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[11px] text-muted font-bold">
                             chỉ
                           </span>
                         </div>
@@ -895,18 +829,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           <button
                             type="button"
                             onClick={() => removeMaterialRow(row.id)}
-                            style={{
-                              height: '32px',
-                              width: '32px',
-                              borderRadius: '6px',
-                              border: '1px solid #fecaca',
-                              background: '#fef2f2',
-                              color: '#dc2626',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                            }}
+                            className="h-[32px] w-[32px] rounded-[6px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -920,60 +843,35 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                     BE. Mỗi loại vàng PHẢI nhập khối lượng riêng; kết quả là option "chỉ tham khảo"
                     (locked), không chọn được làm giá chính. */}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                  <div className="flex items-center justify-between mb-[8px]">
+                    <label className={labelUppercaseCls}>
                       Phương án loại vàng khác (tham khảo)
                     </label>
                     <button
                       type="button"
                       onClick={addCompareRow}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '11.5px',
-                        fontWeight: 800,
-                        color: '#0f172a',
-                        cursor: 'pointer',
-                      }}
+                      className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[11.5px] font-extrabold text-[#0f172a] cursor-pointer"
                     >
                       <Plus size={13} /> Thêm phương án
                     </button>
                   </div>
 
                   {compareRows.length === 0 ? (
-                    <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0 }}>
+                    <p className="text-[11.5px] text-faint m-0">
                       Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
                     </p>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div className="flex flex-col gap-[8px]">
                       {compareRows.map((row) => (
                         <div
                           key={row.id}
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 140px 32px',
-                            gap: '10px',
-                            alignItems: 'center',
-                          }}
+                          className="grid grid-cols-[1fr_140px_32px] gap-[10px] items-center"
                         >
                           <select
                             key={dbMaterials.length}
                             value={row.materialId}
                             onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              background: '#ffffff',
-                              cursor: 'pointer',
-                            }}
+                            className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold bg-surface cursor-pointer"
                           >
                             {dbMaterials.map((mat) => (
                               <option key={mat.id} value={mat.id}>
@@ -982,7 +880,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             ))}
                           </select>
 
-                          <div style={{ position: 'relative' }}>
+                          <div className="relative">
                             <input
                               type="number"
                               step="0.01"
@@ -994,18 +892,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                                 updateCompareRow(row.id, { weightChi: v });
                               }}
                               placeholder="Số chỉ"
-                              style={{
-                                width: '100%',
-                                padding: '8px 38px 8px 10px',
-                                borderRadius: '8px',
-                                border: '1px solid #cbd5e1',
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                background: '#ffffff',
-                                fontVariantNumeric: 'tabular-nums',
-                              }}
+                              className="w-full pt-[8px] pr-[38px] pb-[8px] pl-[10px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold bg-surface tabular-nums"
                             />
-                            <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: '#64748b', fontWeight: 700 }}>
+                            <span className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[11px] text-muted font-bold">
                               chỉ
                             </span>
                           </div>
@@ -1013,18 +902,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           <button
                             type="button"
                             onClick={() => removeCompareRow(row.id)}
-                            style={{
-                              height: '32px',
-                              width: '32px',
-                              borderRadius: '6px',
-                              border: '1px solid #fecaca',
-                              background: '#fef2f2',
-                              color: '#dc2626',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                            }}
+                            className="h-[32px] w-[32px] rounded-[6px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1035,9 +913,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 </div>
 
                 {/* 2. Tiền công & VAT */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '12px' }}>
+                <div className="grid grid-cols-[1fr_140px] gap-[12px]">
                   <div>
-                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
                       Tiền Công Chế Tác (₫)
                     </label>
                     <input
@@ -1046,15 +924,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       value={formatNumberVN(calcLaborCost)}
                       onChange={(e) => setCalcLaborCost(e.target.value.replace(/\D/g, ''))}
                       placeholder="0"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, background: '#ffffff' }}
+                      className="w-full py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold bg-surface"
                     />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
                       Thuế VAT (%)
                     </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="flex items-center gap-[8px]">
                       <input
                         type="number"
                         min="0"
@@ -1065,14 +943,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           if (v !== '' && parseFloat(v) < 0) return;
                           setCalcVat(v);
                         }}
-                        style={{ width: '65px', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, background: '#ffffff' }}
+                        className="w-[65px] py-[8px] px-[10px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold bg-surface"
                       />
-                      <label style={{ fontSize: '12px', color: '#334155', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                      <label className="text-[12px] text-[#334155] font-bold flex items-center gap-[4px] cursor-pointer">
                         <input
                           type="checkbox"
                           checked={calcIncludeVat}
                           onChange={(e) => setCalcIncludeVat(e.target.checked)}
-                          style={{ width: '15px', height: '15px', accentColor: '#2563eb' }}
+                          className="w-[15px] h-[15px] accent-primary"
                         />
                         Cộng
                       </label>
@@ -1082,12 +960,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                 {/* Hệ số nhân Bạc (nếu có Bạc) */}
                 {isSilverPresent && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    <label style={{ fontSize: '11.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Hệ số nhân Bạc:</label>
+                  <div className="flex items-center gap-[10px] py-[8px] px-[12px] bg-surface rounded-[8px] border border-[#cbd5e1]">
+                    <label className={labelUppercaseCls}>Hệ số nhân Bạc:</label>
                     <select
                       value={calcSilverMultiplier}
                       onChange={(e) => setCalcSilverMultiplier(parseFloat(e.target.value) || 3)}
-                      style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 700 }}
+                      className="py-[4px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[12.5px] font-bold"
                     >
                       {silverMultipliers.map((m) => (
                         <option key={m} value={m}>× {m}</option>
@@ -1098,33 +976,33 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 )}
 
                 {/* 3. Đá quý */}
-                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                <div className="bg-surface border border-border rounded-[10px] p-[12px]">
+                  <div className="flex items-center justify-between mb-[8px]">
+                    <label className={labelUppercaseCls}>
                       Thông Số Đá Quý
                     </label>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div className="flex gap-[6px]">
                       <button
                         type="button"
                         onClick={() => setCalcStoneMode('catalog')}
-                        style={{
-                          padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                          border: calcStoneMode === 'catalog' ? '1px solid #0f172a' : '1px solid #cbd5e1',
-                          background: calcStoneMode === 'catalog' ? '#0f172a' : '#ffffff',
-                          color: calcStoneMode === 'catalog' ? '#ffffff' : '#334155',
-                        }}
+                        className={clsx(
+                          'py-[3px] px-[8px] rounded-[5px] text-[11px] font-bold cursor-pointer',
+                          calcStoneMode === 'catalog'
+                            ? 'border border-[#0f172a] bg-[#0f172a] text-surface'
+                            : 'border border-[#cbd5e1] bg-surface text-[#334155]'
+                        )}
                       >
                         Bảng đá
                       </button>
                       <button
                         type="button"
                         onClick={() => setCalcStoneMode('manual')}
-                        style={{
-                          padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                          border: calcStoneMode === 'manual' ? '1px solid #0f172a' : '1px solid #cbd5e1',
-                          background: calcStoneMode === 'manual' ? '#0f172a' : '#ffffff',
-                          color: calcStoneMode === 'manual' ? '#ffffff' : '#334155',
-                        }}
+                        className={clsx(
+                          'py-[3px] px-[8px] rounded-[5px] text-[11px] font-bold cursor-pointer',
+                          calcStoneMode === 'manual'
+                            ? 'border border-[#0f172a] bg-[#0f172a] text-surface'
+                            : 'border border-[#cbd5e1] bg-surface text-[#334155]'
+                        )}
                       >
                         Nhập tiền đá
                       </button>
@@ -1132,14 +1010,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </div>
 
                   {calcStoneMode === 'manual' ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '10px' }}>
+                    <div className="grid grid-cols-[1fr_140px] gap-[10px]">
                       <input
                         type="text"
                         value={calcManualStoneName}
                         onChange={(e) => setCalcManualStoneName(e.target.value)}
                         maxLength={200}
                         placeholder="Mô tả đá (VD: Kim cương 4.5 ly)"
-                        style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
+                        className="py-[7px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[12.5px]"
                       />
                       <input
                         type="text"
@@ -1147,17 +1025,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         value={formatNumberVN(calcManualStonePrice)}
                         onChange={(e) => setCalcManualStonePrice(e.target.value.replace(/\D/g, ''))}
                         placeholder="Giá đá (₫)"
-                        style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 700 }}
+                        className="py-[7px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[12.5px] font-bold"
                       />
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div className="flex flex-col gap-[6px]">
                       {calcStoneRows.map((sRow) => (
-                        <div key={sRow.id} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 70px 28px', gap: '8px', alignItems: 'center' }}>
+                        <div key={sRow.id} className="grid grid-cols-[90px_1fr_70px_28px] gap-[8px] items-center">
                           <select
                             value={sRow.stoneType}
                             onChange={(e) => updateStoneRow(sRow.id, { stoneType: e.target.value as StoneRow['stoneType'], stoneId: '' })}
-                            style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px' }}
+                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[12px]"
                           >
                             <option value="">Loại đá</option>
                             <option value="MAIN">Đá chủ</option>
@@ -1167,7 +1045,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             value={sRow.stoneId}
                             disabled={!sRow.stoneType}
                             onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
-                            style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: sRow.stoneType ? '#ffffff' : '#f1f5f9' }}
+                            className={clsx(
+                              'py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[12px]',
+                              sRow.stoneType ? 'bg-surface' : 'bg-[#f1f5f9]'
+                            )}
                           >
                             <option value="">-- Chọn sản phẩm --</option>
                             {stoneCatalog.filter((s) => s.stoneType === sRow.stoneType).map((s) => (
@@ -1180,12 +1061,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             value={sRow.qty}
                             onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
                             placeholder="SL"
-                            style={{ padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', textAlign: 'right', fontWeight: 700 }}
+                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[12px] text-right font-bold"
                           />
                           <button
                             type="button"
                             onClick={() => removeStoneRow(sRow.id)}
-                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                            className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -1194,7 +1075,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       <button
                         type="button"
                         onClick={addStoneRow}
-                        style={{ alignSelf: 'flex-start', background: 'transparent', border: '1px dashed #cbd5e1', borderRadius: '6px', padding: '4px 8px', fontSize: '11.5px', fontWeight: 700, color: '#2563eb', cursor: 'pointer' }}
+                        className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[11.5px] font-bold text-primary cursor-pointer"
                       >
                         + Thêm loại đá
                       </button>
@@ -1203,27 +1084,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 </div>
 
                 {/* 4. Nút Tính Giá */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="flex justify-between items-center">
                   {calcError ? (
-                    <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 700 }}>{calcError}</span>
+                    <span className="text-[#dc2626] text-[12px] font-bold">{calcError}</span>
                   ) : <span />}
 
                   <button
                     type="button"
                     onClick={handleRunCalculate}
                     disabled={calcLoading}
-                    style={{
-                      background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-                      color: '#78350f',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '10px 20px',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
-                      opacity: calcLoading ? 0.7 : 1,
-                    }}
+                    className={clsx(
+                      'bg-[linear-gradient(135deg,#fbbf24,#f59e0b)] text-[#78350f] border-0 rounded-[8px] py-[10px] px-[20px] text-[13px] font-extrabold cursor-pointer shadow-[0_2px_6px_rgba(245,158,11,0.3)]',
+                      calcLoading ? 'opacity-70' : 'opacity-100'
+                    )}
                   >
                     {calcLoading ? 'Đang tính...' : 'Tính Giá Ngay'}
                   </button>
@@ -1234,20 +1107,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           </div>
 
           {/* MODAL FOOTER */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '14px', marginTop: '4px' }}>
+          <div className="flex justify-end gap-[10px] border-t border-border pt-[14px] mt-[4px]">
             <button
               type="button"
               onClick={onClose}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '10px 18px',
-                fontSize: '13px',
-                fontWeight: 700,
-                color: '#475569',
-                cursor: 'pointer',
-              }}
+              className="bg-surface border border-[#cbd5e1] rounded-[8px] py-[10px] px-[18px] text-[13px] font-bold text-[#475569] cursor-pointer"
             >
               Đóng
             </button>
@@ -1259,19 +1123,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   ? 'Cần có ít nhất 1 phương án báo giá hợp lệ (> 0đ) để gửi báo giá'
                   : 'Xác nhận và gửi báo giá này'
               }
-              style={{
-                background: !hasValidPrice ? '#94a3b8' : '#0f172a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '10px 24px',
-                fontSize: '13.5px',
-                fontWeight: 800,
-                cursor: !hasValidPrice ? 'not-allowed' : 'pointer',
-                opacity: submitting ? 0.7 : 1,
-                boxShadow: !hasValidPrice ? 'none' : '0 2px 8px rgba(15, 23, 42, 0.25)',
-                transition: 'all 0.2s ease',
-              }}
+              className={clsx(
+                'text-surface border-0 rounded-[8px] py-[10px] px-[24px] text-[13.5px] font-extrabold transition-[all_0.2s_ease]',
+                !hasValidPrice
+                  ? 'bg-[#94a3b8] cursor-not-allowed shadow-none'
+                  : 'bg-[#0f172a] cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.25)]',
+                submitting ? 'opacity-70' : 'opacity-100'
+              )}
             >
               {submitting ? 'Đang lưu...' : 'Xác Nhận & Gửi Báo Giá'}
             </button>

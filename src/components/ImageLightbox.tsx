@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import clsx from 'clsx';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ImageLightboxProps {
@@ -84,44 +85,17 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        background: 'rgba(15, 23, 42, 0.9)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px',
-        cursor: zoomScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-out',
-        overflow: 'hidden',
-        userSelect: isDragging ? 'none' : 'auto',
-      }}
+      className={clsx(
+        "fixed inset-0 z-[99999] bg-[rgba(15,23,42,0.9)] backdrop-blur-[6px] flex items-center justify-center p-[40px] overflow-hidden",
+        zoomScale > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-zoom-out",
+        isDragging ? "select-none" : "select-auto"
+      )}
     >
       {/* Nút Đóng (Top-Right) */}
       <button
         type="button"
         onClick={onClose}
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '24px',
-          background: 'rgba(255,255,255,0.15)',
-          border: 'none',
-          borderRadius: '50%',
-          width: '42px',
-          height: '42px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#ffffff',
-          cursor: 'pointer',
-          zIndex: 10,
-          transition: 'background 0.15s ease',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+        className="fixed top-[20px] right-[24px] bg-[rgba(255,255,255,0.15)] hover:bg-[rgba(255,255,255,0.3)] border-none rounded-full w-[42px] h-[42px] flex items-center justify-center text-white cursor-pointer z-10 transition-colors duration-150"
         title="Đóng (Esc)"
       >
         <X size={22} />
@@ -129,21 +103,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
 
       {/* Thông tin số thứ tự ảnh & Hướng dẫn */}
       <span
-        style={{
-          position: 'fixed',
-          top: '24px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: 'rgba(255,255,255,0.9)',
-          fontSize: '13px',
-          fontWeight: 700,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
-          padding: '6px 16px',
-          borderRadius: '20px',
-          zIndex: 10,
-          letterSpacing: '0.3px',
-        }}
+        className="fixed top-[24px] left-1/2 -translate-x-1/2 text-[rgba(255,255,255,0.9)] text-[13px] font-bold bg-[rgba(0,0,0,0.5)] backdrop-blur-[4px] py-[6px] px-[16px] rounded-[20px] z-10 tracking-[0.3px]"
       >
         {images.length > 1 ? `Ảnh ${currentIdx + 1}/${images.length} · ` : ''}
         Lăn chuột để zoom ({Math.round(zoomScale * 100)}%){zoomScale > 1 ? ' · Kéo để xem các góc ảnh' : ''}
@@ -158,33 +118,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
             e.stopPropagation();
             goPrev();
           }}
-          style={{
-            position: 'fixed',
-            left: '24px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(4px)',
-            border: 'none',
-            borderRadius: '50%',
-            width: '50px',
-            height: '50px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            cursor: 'pointer',
-            zIndex: 10,
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-          }}
+          className="fixed left-[24px] top-1/2 -translate-y-1/2 bg-[rgba(255,255,255,0.15)] hover:bg-[rgba(255,255,255,0.3)] hover:scale-110 backdrop-blur-[4px] border-none rounded-full w-[50px] h-[50px] flex items-center justify-center text-white cursor-pointer z-10 transition-all duration-150"
           title="Ảnh trước (Phím ←)"
         >
           <ChevronLeft size={28} />
@@ -199,33 +133,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
             e.stopPropagation();
             goNext();
           }}
-          style={{
-            position: 'fixed',
-            right: '24px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(4px)',
-            border: 'none',
-            borderRadius: '50%',
-            width: '50px',
-            height: '50px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            cursor: 'pointer',
-            zIndex: 10,
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-          }}
+          className="fixed right-[24px] top-1/2 -translate-y-1/2 bg-[rgba(255,255,255,0.15)] hover:bg-[rgba(255,255,255,0.3)] hover:scale-110 backdrop-blur-[4px] border-none rounded-full w-[50px] h-[50px] flex items-center justify-center text-white cursor-pointer z-10 transition-all duration-150"
           title="Ảnh kế tiếp (Phím →)"
         >
           <ChevronRight size={28} />
@@ -239,17 +147,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
         draggable={false}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={handleImageMouseDown}
+        className={clsx(
+          "max-w-[85vw] max-h-[80vh] w-auto h-auto object-contain rounded-[10px] shadow-[0_16px_48px_rgba(0,0,0,0.6)] origin-center",
+          zoomScale > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
+        )}
+        // động — giữ inline
         style={{
-          maxWidth: '85vw',
-          maxHeight: '80vh',
-          width: 'auto',
-          height: 'auto',
-          objectFit: 'contain',
-          borderRadius: '10px',
-          boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
-          cursor: zoomScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomScale})`,
-          transformOrigin: 'center center',
           transition: isDragging ? 'none' : 'transform 0.05s linear',
         }}
       />
@@ -258,22 +162,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
       {images.length > 1 && (
         <div
           onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            gap: '10px',
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(8px)',
-            padding: '8px 14px',
-            borderRadius: '16px',
-            zIndex: 10,
-            maxWidth: '90vw',
-            overflowX: 'auto',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-          }}
+          className="fixed bottom-[20px] left-1/2 -translate-x-1/2 flex gap-[10px] bg-[rgba(15,23,42,0.75)] backdrop-blur-[8px] py-[8px] px-[14px] rounded-[16px] z-10 max-w-[90vw] overflow-x-auto shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
         >
           {images.map((url, idx) => (
             <img
@@ -284,22 +173,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
                 onIndexChange(idx);
                 resetView();
               }}
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '8px',
-                objectFit: 'cover',
-                cursor: 'pointer',
-                border: currentIdx === idx ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
-                boxShadow: currentIdx === idx ? '0 0 0 2px rgba(59,130,246,0.5)' : 'none',
-                opacity: currentIdx === idx ? 1 : 0.5,
-                transition: 'all 0.15s ease',
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => {
-                if (currentIdx !== idx) e.currentTarget.style.opacity = '0.5';
-              }}
+              className={clsx(
+                "w-[48px] h-[48px] rounded-[8px] object-cover cursor-pointer shrink-0 transition-all duration-150 hover:opacity-100",
+                currentIdx === idx
+                  ? "border-2 border-solid border-[#3b82f6] shadow-[0_0_0_2px_rgba(59,130,246,0.5)] opacity-100"
+                  : "border border-solid border-[rgba(255,255,255,0.2)] shadow-none opacity-50"
+              )}
               title={`Chuyển sang ảnh ${idx + 1}`}
             />
           ))}

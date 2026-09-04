@@ -1,4 +1,5 @@
 import React from 'react';
+import { clsx } from 'clsx';
 import { RotateCcw, Home, ShieldAlert, Copy, Check, ChevronDown, ChevronUp, Bug } from 'lucide-react';
 
 interface ErrorBoundaryProps {
@@ -62,91 +63,32 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
       const { error, errorInfo, copied, showDetails } = this.state;
 
       return (
-        <div
-          style={{
-            minHeight: '100vh',
-            width: '100vw',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-            boxSizing: 'border-box',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '560px',
-              background: '#ffffff',
-              borderRadius: '24px',
-              overflow: 'hidden',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-            }}
-          >
+        <div className="min-h-screen w-screen flex items-center justify-center p-[24px] bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_50%,#0f172a_100%)] font-sans box-border">
+          <div className="w-full max-w-[560px] bg-surface rounded-[24px] overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.1)]">
             {/* Top Brand Gold Accent */}
-            <div
-              style={{
-                background: 'linear-gradient(90deg, #fde68a, #f0b429, #b45309)',
-                height: '5px',
-              }}
-            />
+            <div className="bg-[linear-gradient(90deg,#fde68a,#f0b429,#b45309)] h-[5px]" />
 
-            <div style={{ padding: '36px 32px 32px' }}>
+            <div className="pt-[36px] px-[32px] pb-[32px]">
               {/* Header Info */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '24px' }}>
-                
-
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '20px',
-                    background: '#fef2f2',
-                    border: '1px solid #fee2e2',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#dc2626',
-                    marginBottom: '16px',
-                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.12)',
-                  }}
-                >
+              <div className="flex flex-col items-center text-center mb-[24px]">
+                <div className="w-[64px] h-[64px] rounded-[20px] bg-[#fef2f2] border border-[#fee2e2] flex items-center justify-center text-[#dc2626] mb-[16px] shadow-[0_4px_12px_rgba(220,38,38,0.12)]">
                   <ShieldAlert size={32} />
                 </div>
 
-                <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0', letterSpacing: '-0.3px' }}>
+                <h1 className="text-[20px] font-extrabold text-[#0f172a] m-0 mb-[8px] tracking-[-0.3px]">
                   Đã xảy ra sự cố không mong muốn
                 </h1>
-                <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0, lineHeight: '1.5', maxWidth: '420px' }}>
+                <p className="text-[13.5px] text-muted m-0 leading-[1.5] max-w-[420px]">
                   Hệ thống gặp lỗi trong quá trình xử lý giao diện. Bạn có thể thử tải lại trang hoặc quay về trang chủ.
                 </p>
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
+              <div className="flex gap-[12px] justify-center mb-[20px] flex-wrap">
                 <button
                   type="button"
                   onClick={this.handleReload}
-                  style={{
-                    flex: 1,
-                    minWidth: '160px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    background: '#0f172a',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '12px',
-                    padding: '12px 20px',
-                    fontSize: '13.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-[8px] bg-[#0f172a] text-white border-0 rounded-[12px] py-[12px] px-[20px] text-[13.5px] font-bold cursor-pointer shadow-[0_4px_12px_rgba(15,23,42,0.25)] transition-[all_0.15s_ease]"
                 >
                   <RotateCcw size={16} /> Tải lại trang
                 </button>
@@ -154,113 +96,45 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
                 <button
                   type="button"
                   onClick={this.handleGoHome}
-                  style={{
-                    flex: 1,
-                    minWidth: '160px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    background: '#f8fafc',
-                    color: '#334155',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '12px',
-                    padding: '12px 20px',
-                    fontSize: '13.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-[8px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[12px] py-[12px] px-[20px] text-[13.5px] font-bold cursor-pointer transition-[all_0.15s_ease]"
                 >
                   <Home size={16} /> Về trang chủ
                 </button>
               </div>
 
               {/* Technical Details Accordion */}
-              <div
-                style={{
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  background: '#f8fafc',
-                  overflow: 'hidden',
-                  transition: 'all 0.2s ease',
-                }}
-              >
+              <div className="border border-border rounded-[14px] bg-[#f8fafc] overflow-hidden transition-[all_0.2s_ease]">
                 <button
                   type="button"
                   onClick={this.toggleDetails}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#475569',
-                    fontSize: '12.5px',
-                    fontWeight: 700,
-                  }}
+                  className="w-full py-[12px] px-[16px] flex items-center justify-between bg-transparent border-0 cursor-pointer text-[#475569] text-[12.5px] font-bold"
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Bug size={15} color="#64748b" /> Thông tin kỹ thuật (dành cho IT / Hỗ trợ)
+                  <span className="flex items-center gap-[8px]">
+                    <Bug size={15} className="text-muted" /> Thông tin kỹ thuật (dành cho IT / Hỗ trợ)
                   </span>
                   {showDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
 
                 {showDetails && (
-                  <div style={{ padding: '0 16px 16px 16px', borderTop: '1px solid #e2e8f0' }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        margin: '12px 0 8px 0',
-                        gap: '8px',
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#dc2626' }}>
+                  <div className="pt-0 px-[16px] pb-[16px] border-t border-border">
+                    <div className="flex justify-between items-center my-[12px] mb-[8px] gap-[8px] flex-wrap">
+                      <span className="text-[11.5px] font-extrabold text-[#dc2626]">
                         {error?.name || 'Lỗi'}: {error?.message || 'Không xác định'}
                       </span>
                       <button
                         type="button"
                         onClick={this.handleCopyError}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          background: copied ? '#f0fdf4' : '#ffffff',
-                          color: copied ? '#16a34a' : '#334155',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
+                        className={clsx(
+                          'inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[11px] font-bold cursor-pointer',
+                          copied ? 'bg-[#f0fdf4] text-[#16a34a]' : 'bg-surface text-[#334155]',
+                        )}
                       >
                         {copied ? <Check size={12} /> : <Copy size={12} />}
                         {copied ? 'Đã sao chép' : 'Sao chép lỗi'}
                       </button>
                     </div>
 
-                    <div
-                      style={{
-                        background: '#0f172a',
-                        color: '#f87171',
-                        borderRadius: '8px',
-                        padding: '12px',
-                        fontSize: '11px',
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                        maxHeight: '160px',
-                        overflowY: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-all',
-                        lineHeight: '1.5',
-                      }}
-                    >
+                    <div className="bg-[#0f172a] text-[#f87171] rounded-[8px] p-[12px] text-[11px] font-mono max-h-[160px] overflow-y-auto whitespace-pre-wrap [word-break:break-all] leading-[1.5]">
                       {error?.stack || errorInfo?.componentStack || error?.message || 'Không có chi tiết stack trace.'}
                     </div>
                   </div>

@@ -29,56 +29,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <aside
-      className="sidebar"
-      style={{
-        background: '#ffffff',
-        borderRight: '1px solid #e2e8f0',
-        color: '#0f172a',
-      }}
+      className="sidebar bg-white border-r border-[#e2e8f0] text-[#0f172a]"
     >
       {/* Brand Mark in Sidebar top matching screenshot */}
       <button
         type="button"
         onClick={() => onFilterChange('OVERVIEW')}
         title="Về trang chính"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          height: '64px',
-          padding: '0 12px',
-          boxSizing: 'border-box',
-          borderBottom: '1px solid #e2e8f0',
-          marginBottom: '16px',
-          background: 'transparent',
-          border: 'none',
-          borderBottomWidth: '1px',
-          borderBottomColor: '#e2e8f0',
-          borderBottomStyle: 'solid',
-          width: '100%',
-          cursor: 'pointer',
-          textAlign: 'left',
-        }}
+        className="flex items-center gap-[12px] h-[64px] px-[12px] box-border border-0 border-b border-[#e2e8f0] mb-[16px] bg-transparent w-full cursor-pointer text-left"
       >
         <div
-          style={{
-            background: 'transparent',
-            padding: '0',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
+          className="bg-transparent p-0 rounded-[8px] flex items-center justify-center shrink-0"
         >
           <img
             src="https://vienchibao.com/wp-content/uploads/2025/01/logo.png"
             alt="Viễn Chí Bảo"
-            style={{ height: '24px', objectFit: 'contain' }}
+            className="h-[24px] object-contain"
           />
         </div>
-        <span className="sidebar-brand-text" style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.2px' }}>
-          VCB QMS
+        <span className="sidebar-brand-text text-[15px] font-extrabold text-[#0f172a] tracking-[-0.2px]">
+          Viễn Chí Bảo 
         </span>
       </button>
 
@@ -88,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter === 'OVERVIEW' ? 'active' : ''}
           onClick={() => onFilterChange('OVERVIEW')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+          <span className="flex items-center gap-[12px] min-w-0 flex-1">
             <LayoutDashboard size={18} /> <span className="nav-label">Tổng Quan</span>
           </span>
         </button>
@@ -98,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter !== 'OVERVIEW' && currentFilter !== 'LIBRARY' && currentFilter !== 'CALCULATOR' && currentFilter !== 'STAFF' && currentFilter !== 'CUSTOMERS' && currentFilter !== 'PRICING_CONFIG' && currentFilter !== 'NOTIFICATION_CONFIG' ? 'active' : ''}
           onClick={() => onFilterChange('ALL')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+          <span className="flex items-center gap-[12px] min-w-0 flex-1">
             <FileText size={18} /> <span className="nav-label">Danh Sách Yêu Cầu Báo Giá</span>
           </span>
         </button>
@@ -109,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={currentFilter === 'STAFF' ? 'active' : ''}
             onClick={() => onFilterChange('STAFF')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+            <span className="flex items-center gap-[12px] min-w-0 flex-1">
               <Users size={18} /> <span className="nav-label">Quản Lý Nhân Viên</span>
             </span>
           </button>
@@ -121,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={currentFilter === 'CUSTOMERS' ? 'active' : ''}
             onClick={() => onFilterChange('CUSTOMERS')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+            <span className="flex items-center gap-[12px] min-w-0 flex-1">
               <Contact size={18} /> <span className="nav-label">Quản Lý Khách Hàng</span>
             </span>
           </button>
@@ -132,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter === 'LIBRARY' ? 'active' : ''}
           onClick={() => onFilterChange('LIBRARY')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+          <span className="flex items-center gap-[12px] min-w-0 flex-1">
             <Package size={18} /> <span className="nav-label">{currentRole === 'SALE' ? 'Thư Viện Sản Phẩm' : 'Quản Lý Sản Phẩm'}</span>
           </span>
         </button>
@@ -142,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={currentFilter === 'CALCULATOR' ? 'active' : ''}
           onClick={() => onFilterChange('CALCULATOR')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+          <span className="flex items-center gap-[12px] min-w-0 flex-1">
             <Calculator size={18} /> <span className="nav-label">Máy Tính Giá</span>
           </span>
         </button>
@@ -153,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={currentFilter === 'PRICING_CONFIG' ? 'active' : ''}
             onClick={() => onFilterChange('PRICING_CONFIG')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+            <span className="flex items-center gap-[12px] min-w-0 flex-1">
               <Settings size={18} /> <span className="nav-label">Cấu Hình Giá</span>
             </span>
           </button>
@@ -165,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={currentFilter === 'NOTIFICATION_CONFIG' ? 'active' : ''}
             onClick={() => onFilterChange('NOTIFICATION_CONFIG')}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+            <span className="flex items-center gap-[12px] min-w-0 flex-1">
               <Bell size={18} /> <span className="nav-label">Cấu Hình Thông Báo</span>
             </span>
           </button>

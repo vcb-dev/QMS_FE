@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { clsx } from 'clsx';
 import { UserPlus, Users, Search, Check } from 'lucide-react';
 import type { Customer } from '../types';
+
+const subLabelCls = 'text-[11px] font-bold text-[#334155]';
 
 interface CustomerSelectorSectionProps {
   isNewCustomerMode: boolean;
@@ -75,7 +78,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
 
   return (
     <div className="form-group">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+      <div className="flex items-center justify-between mb-[6px]">
         <label className="form-label">
           {isNewCustomerMode ? 'Thông Tin Khách Hàng Mới' : 'Thông Tin Khách Hàng'}
         </label>
@@ -83,19 +86,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
           <button
             type="button"
             onClick={() => setIsNewCustomerMode(false)}
-            style={{
-              padding: '4px 10px',
-              fontSize: '11px',
-              fontWeight: 700,
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#64748b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
+            className="py-[4px] px-[10px] text-[11px] font-bold rounded-[6px] border border-[#cbd5e1] bg-surface text-muted cursor-pointer flex items-center gap-[4px]"
           >
             <Users size={12} /> ← Chọn khách hàng có sẵn
           </button>
@@ -103,12 +94,12 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
       </div>
 
       {!isNewCustomerMode ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ position: 'relative' }} ref={wrapRef}>
-            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+        <div className="flex flex-col gap-[6px]">
+          <div className="relative" ref={wrapRef}>
+            <Search size={14} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
             <input
               type="text"
-              className="form-control"
+              className="form-control pl-[30px] text-[12px]"
               placeholder="Gõ tìm tên hoặc SĐT khách hàng..."
               value={customerSearch}
               onChange={(e) => {
@@ -118,31 +109,17 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
               onFocus={() => {
                 if (customerList.length > 0) setIsDropdownOpen(true);
               }}
-              style={{ paddingLeft: '30px', fontSize: '12px' }}
             />
 
             {isDropdownOpen && (
               <div
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 4px)',
-                  left: 0,
-                  right: 0,
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
-                  maxHeight: '220px',
-                  overflowY: 'auto',
-                  zIndex: 50,
-                  padding: '4px',
-                }}
+                className="absolute top-[calc(100%+4px)] left-0 right-0 bg-surface border border-border rounded-[10px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12),0_8px_10px_-6px_rgba(0,0,0,0.05)] max-h-[220px] overflow-y-auto z-50 p-[4px]"
               >
                 {customerSearchLoading && (
-                  <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>Đang tìm...</div>
+                  <div className="p-[10px] text-[12px] text-faint">Đang tìm...</div>
                 )}
                 {!customerSearchLoading && customerList.length === 0 && (
-                  <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>Không tìm thấy khách hàng nào</div>
+                  <div className="p-[10px] text-[12px] text-faint">Không tìm thấy khách hàng nào</div>
                 )}
                 {!customerSearchLoading && customerList.map((cust) => {
                   const fullAddr = [cust.address, cust.ward?.name, cust.province?.name].filter(Boolean).join(', ');
@@ -155,22 +132,10 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                         setSelectedCustomerId(cust.id);
                         setIsDropdownOpen(false);
                       }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '8px',
-                        padding: '8px 10px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: isSelected ? '#eff6ff' : 'transparent',
-                        color: '#0f172a',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                      className={isSelected ? '' : 'dropdown-item-hover'}
+                      className={clsx(
+                        'w-full flex items-center justify-between gap-[8px] py-[8px] px-[10px] rounded-[8px] border-0 text-[#0f172a] text-[12px] cursor-pointer text-left',
+                        isSelected ? 'bg-[#eff6ff]' : 'bg-transparent dropdown-item-hover',
+                      )}
                     >
                       <span>
                         <strong>{cust.name}</strong>
@@ -186,7 +151,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
           </div>
 
           {selectedCustomer && !isDropdownOpen && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: '#eff6ff', borderRadius: '8px', fontSize: '11.5px', color: '#1e40af', fontWeight: 600 }}>
+            <div className="flex items-center gap-[6px] py-[6px] px-[10px] bg-[#eff6ff] rounded-[8px] text-[11.5px] text-[#1e40af] font-semibold">
               <Check size={13} /> Đã chọn: {selectedCustomer.name}{selectedCustomer.phone ? ` (${selectedCustomer.phone})` : ''}
             </div>
           )}
@@ -195,20 +160,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             <button
               type="button"
               onClick={handleStartNewCustomerFromSearch}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '8px 10px',
-                borderRadius: '8px',
-                border: '1.5px dashed #10b981',
-                background: '#f0fdf4',
-                color: '#15803d',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
+              className="flex items-center justify-center gap-[6px] py-[8px] px-[10px] rounded-[8px] border-[1.5px] border-dashed border-[#10b981] bg-[#f0fdf4] text-[#15803d] text-[12px] font-bold cursor-pointer"
             >
               <UserPlus size={13} />
               {customerSearch.trim()
@@ -218,18 +170,10 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
           )}
         </div>
       ) : (
-        <div style={{
-          background: '#f8fafc',
-          border: '1px solid #cbd5e1',
-          borderRadius: '10px',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-        }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[10px] p-[14px] flex flex-col gap-[10px]">
+          <div className="grid grid-cols-2 gap-[10px]">
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Tên Khách Hàng</label>
+              <label className={subLabelCls}>Tên Khách Hàng</label>
               <input
                 type="text"
                 className="form-control"
@@ -240,7 +184,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
               />
             </div>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Số Điện Thoại</label>
+              <label className={subLabelCls}>Số Điện Thoại</label>
               <input
                 type="text"
                 className="form-control"
@@ -252,9 +196,9 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div className="grid grid-cols-2 gap-[10px]">
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Tỉnh / Thành Phố</label>
+              <label className={subLabelCls}>Tỉnh / Thành Phố</label>
               <select
                 className="form-control"
                 value={newCustomerProvince}
@@ -270,7 +214,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             </div>
 
             <div>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Xã / Phường / Huyện</label>
+              <label className={subLabelCls}>Xã / Phường / Huyện</label>
               {wards.length > 0 ? (
                 <select
                   className="form-control"
@@ -300,7 +244,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
           </div>
 
           <div>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>Địa Chỉ Cụ Thể (Số nhà, tên đường...)</label>
+            <label className={subLabelCls}>Địa Chỉ Cụ Thể (Số nhà, tên đường...)</label>
             <input
               type="text"
               className="form-control"

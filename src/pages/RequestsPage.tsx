@@ -64,7 +64,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   return (
     <>
       <div className="view-heading">
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <h1 className="flex items-center gap-[10px]">
           <FileText size={20} /> Danh Sách Yêu Cầu Báo Giá
         </h1>
       </div>
@@ -104,12 +104,11 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           <>
             {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
               <button
-                className="primary-action"
+                className="primary-action inline-flex items-center gap-[6px] py-[8px] px-[18px] text-[13px]"
                 // Gọi trực tiếp onClick={onOpenCreate} sẽ vô tình truyền thẳng SyntheticEvent của
                 // click vào làm calcData (object luôn truthy) — khiến CreateModal tưởng đang tạo đơn
                 // từ máy tính giá, khóa nhầm phần chọn đá dù đây là luồng tạo đơn thường.
                 onClick={() => onOpenCreate()}
-                style={{ padding: '8px 18px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 <PlusCircle size={18} /> Tạo Yêu Cầu Báo Giá
               </button>
@@ -118,19 +117,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
               <button
                 type="button"
                 onClick={onOpenExport}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: '#f0fdf4',
-                  color: '#15803d',
-                  border: '1px solid #bbf7d0',
-                  borderRadius: '8px',
-                  padding: '8px 14px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
+                className="inline-flex items-center gap-[6px] bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] rounded-[8px] py-[8px] px-[14px] text-[13px] font-bold cursor-pointer"
                 title="Xuất danh sách đang lọc ra Excel"
               >
                 <Download size={13} /> Xuất Excel

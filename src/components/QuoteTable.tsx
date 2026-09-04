@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
 import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X } from 'lucide-react';
@@ -91,7 +92,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
   const renderProcessingTimeCell = (r: QuoteRequest) => {
     if (!r.acceptedAt) {
-      return <span style={{ color: '#94a3b8', fontSize: '11px' }}>Chưa tiếp nhận</span>;
+      return <span className="text-faint text-[11px]">Chưa tiếp nhận</span>;
     }
 
     const acceptedTime = new Date(r.acceptedAt).getTime();
@@ -101,18 +102,18 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     let secondLine: React.ReactNode = null;
     if (r.status === 'REJECTED' && r.updatedAt) {
       const dur = formatDuration(acceptedTime, new Date(r.updatedAt).getTime());
-      if (dur) secondLine = <div style={{ color: '#be123c' }}>Từ chối sau {dur}</div>;
+      if (dur) secondLine = <div className="text-[#be123c]">Từ chối sau {dur}</div>;
     } else if (r.returnedAt) {
       const dur = formatDuration(acceptedTime, new Date(r.returnedAt).getTime());
-      if (dur) secondLine = <div style={{ color: '#c2410c' }}>Trả lại sau {dur}</div>;
+      if (dur) secondLine = <div className="text-[#c2410c]">Trả lại sau {dur}</div>;
     } else if (r.quotedDate) {
       const dur = formatDuration(acceptedTime, new Date(r.quotedDate).getTime());
-      if (dur) secondLine = <div style={{ color: '#0f766e' }}>Báo giá sau {dur}</div>;
+      if (dur) secondLine = <div className="text-[#0f766e]">Báo giá sau {dur}</div>;
     }
 
     return (
-      <div style={{ fontSize: '11px', lineHeight: '1.35' }}>
-        <div style={{ color: '#475569' }}>{toAccept ? `Nhận xử lý sau ${toAccept}` : '—'}</div>
+      <div className="text-[11px] leading-[1.35]">
+        <div className="text-[#475569]">{toAccept ? `Nhận xử lý sau ${toAccept}` : '—'}</div>
         {secondLine}
       </div>
     );
@@ -171,7 +172,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     }, [open]);
 
     return (
-      <div ref={ref} style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
+      <div ref={ref} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
         {/* Trigger */}
         <button
           ref={triggerRef}
@@ -180,41 +181,60 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             if (!open) updateMenuPosition();
             setOpen(!open);
           }}
+          className="inline-flex items-center justify-center gap-[4px] min-w-[118px] py-[4px] px-[10px] rounded-[20px] text-[11.5px] font-bold cursor-pointer whitespace-nowrap shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[all_0.12s]"
+          // động — giữ inline
           style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-            minWidth: '118px', padding: '4px 10px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 700,
-            cursor: 'pointer', border: `1px solid ${meta.border}`,
-            background: meta.bg, color: meta.color, whiteSpace: 'nowrap',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            transition: 'all 0.12s',
+            border: `1px solid ${meta.border}`,
+            background: meta.bg,
+            color: meta.color,
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', color: meta.color }}>{meta.icon}</span>
+          <span
+            className="flex items-center"
+            // động — giữ inline
+            style={{ color: meta.color }}
+          >
+            {meta.icon}
+          </span>
           {meta.label}
-          <ChevronDown size={11} style={{ marginLeft: '1px', opacity: 0.7, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+          <ChevronDown
+            size={11}
+            className={clsx('ml-[1px] opacity-70 transition-[transform_0.15s]', open && 'rotate-180')}
+          />
         </button>
 
         {/* Dropdown Panel */}
         {open && createPortal(
-          <div ref={menuRef} style={{
-            position: 'fixed', top: menuPosition.top, left: menuPosition.left, zIndex: 9999,
-            background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px',
-            boxShadow: '0 8px 24px -4px rgba(0,0,0,0.12)', padding: '4px', minWidth: '180px',
-          }}>
+          <div
+            ref={menuRef}
+            className="fixed z-[9999] bg-surface border border-border rounded-[10px] shadow-[0_8px_24px_-4px_rgba(0,0,0,0.12)] p-[4px] min-w-[180px]"
+            // động — giữ inline
+            style={{
+              top: menuPosition.top,
+              left: menuPosition.left,
+            }}
+          >
             {options.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={clsx(
+                  'flex items-center gap-[8px] w-full py-[7px] px-[10px] border-0 rounded-[7px] text-[12.5px] cursor-pointer text-left',
+                  opt.value === current ? 'font-bold' : 'font-medium',
+                )}
+                // động — giữ inline
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  width: '100%', padding: '7px 10px', border: 'none', borderRadius: '7px',
                   background: opt.value === current ? opt.bg : 'transparent',
-                  color: opt.color, fontSize: '12.5px', fontWeight: opt.value === current ? 700 : 500,
-                  cursor: 'pointer', textAlign: 'left',
+                  color: opt.color,
                 }}
               >
-                <span style={{ color: opt.color }}>{opt.icon}</span>
+                <span
+                  // động — giữ inline
+                  style={{ color: opt.color }}
+                >
+                  {opt.icon}
+                </span>
                 {opt.label}
               </button>
             ))}
@@ -228,14 +248,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   // Chất liệu nhiều hơn 1: chỉ hiện cái đầu + "...", bấm vào xổ dọc xuống dưới (không tràn ngang)
   const MaterialsCell: React.FC<{ materials: string[] }> = ({ materials }) => {
     const [expanded, setExpanded] = useState(false);
-    const chipStyle: React.CSSProperties = { background: '#f1f5f9', color: '#334155', padding: '3px 7px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, display: 'inline-block' };
+    const chipCls = 'bg-[#f1f5f9] text-[#334155] py-[3px] px-[7px] rounded-[6px] text-[11px] font-semibold inline-block';
 
     if (materials.length === 0) {
-      return <span style={chipStyle}>---</span>;
+      return <span className={chipCls}>---</span>;
     }
 
     if (materials.length === 1) {
-      return <span style={chipStyle}>{materials[0]}</span>;
+      return <span className={chipCls}>{materials[0]}</span>;
     }
 
     if (!expanded) {
@@ -243,11 +263,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+          className="inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer"
           title="Bấm để xem tất cả chất liệu"
         >
-          <span style={chipStyle}>{materials[0]}</span>
-          <span style={{ color: '#94a3b8', fontWeight: 800, fontSize: '13px' }}>...</span>
+          <span className={chipCls}>{materials[0]}</span>
+          <span className="text-faint font-extrabold text-[13px]">...</span>
         </button>
       );
     }
@@ -255,11 +275,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     return (
       <div
         onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-        style={{ display: 'flex', flexDirection: 'column', gap: '3px', cursor: 'pointer' }}
+        className="flex flex-col gap-[3px] cursor-pointer"
         title="Bấm để thu gọn"
       >
         {materials.map((m, idx) => (
-          <span key={idx} style={chipStyle}>{m}</span>
+          <span key={idx} className={chipCls}>{m}</span>
         ))}
       </div>
     );
@@ -340,13 +360,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           );
         case 'NEED_MORE_INFO':
           return (
-            <span className="status-pill process" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }}>
+            <span className="status-pill process bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]">
               <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
             </span>
           );
         case 'CLOSED':
           return (
-            <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }}>
+            <span className="status-pill closed bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]">
               <Award size={13} color="#6d28d9" /> Đã chốt
             </span>
           );
@@ -407,7 +427,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'NEED_MORE_INFO') {
       return (
-        <span className="status-pill process" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }}>
+        <span className="status-pill process bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]">
           <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
         </span>
       );
@@ -423,7 +443,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'CLOSED') {
       return (
-        <span className="status-pill closed" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }} title="Khách đã chốt mua">
+        <span className="status-pill closed bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]" title="Khách đã chốt mua">
           <Award size={13} color="#6d28d9" /> Đã chốt
         </span>
       );
@@ -453,15 +473,15 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th>Ảnh</th>
             <th>Tên Sản Phẩm</th>
             <th>Chất Liệu</th>
-            <th style={{ color: '#3730a3' }}>VAT</th>
-            <th style={{ color: '#0f766e' }}>Báo Giá Khách (Có VAT)</th>
+            <th className="text-[#3730a3]">VAT</th>
+            <th className="text-[#0f766e]">Báo Giá Khách (Có VAT)</th>
             <th>Số Đo Kích Thước</th>
             {!isCompactView && <th>Tỷ Lệ Chốt</th>}
             {!isCompactView && <th>Yêu Cầu / Muốn Nhận</th>}
             {!isCompactView && <th>Người Báo Giá</th>}
             {!isCompactView && (
               <th>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span className="inline-flex items-center gap-[4px]">
                   Mốc Xử Lý
                   <span
                     title={
@@ -469,7 +489,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
                       'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.'
                     }
-                    style={{ display: 'inline-flex', cursor: 'help', color: '#94a3b8' }}
+                    className="inline-flex cursor-help text-faint"
                   >
                     <HelpCircle size={13} />
                   </span>
@@ -511,8 +531,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 className={isSelected ? 'selected' : ''}
                 onClick={() => onSelect(r.id)}
               >
-                <td><strong style={{ fontFamily: 'monospace', fontSize: '12px', color: '#1e293b' }}>{r.code || r.id}</strong></td>
-                <td style={{ color: '#64748b', fontSize: '11px' }}>
+                <td><strong className="font-mono text-[12px] text-[#1e293b]">{r.code || r.id}</strong></td>
+                <td className="text-muted text-[11px]">
                   {r.createdAt
                     ? new Date(r.createdAt).toLocaleString('vi-VN', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
@@ -523,21 +543,20 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 <td>{renderStatusCell(r, isMyReq)}</td>
                 {!isCompactView && (
                   <td>
-                    <strong style={{ color: '#0f172a' }}>{displayCustomerName}</strong>
+                    <strong className="text-[#0f172a]">{displayCustomerName}</strong>
                   </td>
                 )}
                 <td>
-                  <span style={{ background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600 }}>
+                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[11px] font-semibold">
                     {r.category?.name || '---'}
                   </span>
                 </td>
                 <td>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <div className="relative inline-block">
                     <img
                       src={r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE}
-                      className="thumb-img"
+                      className="thumb-img cursor-zoom-in"
                       alt="SP"
-                      style={{ cursor: 'zoom-in' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setZoomScale(1);
@@ -545,48 +564,34 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       }}
                     />
                     {r.images && r.images.length > 1 && (
-                      <span
-                        style={{
-                          position: 'absolute',
-                          bottom: '-2px',
-                          right: '-2px',
-                          background: '#0f172a',
-                          color: '#ffffff',
-                          fontSize: '9.5px',
-                          fontWeight: 800,
-                          padding: '1px 4px',
-                          borderRadius: '4px',
-                          border: '1px solid #ffffff',
-                          pointerEvents: 'none',
-                        }}
-                      >
+                      <span className="absolute bottom-[-2px] right-[-2px] bg-[#0f172a] text-surface text-[9.5px] font-extrabold py-[1px] px-[4px] rounded-[4px] border border-surface pointer-events-none">
                         +{r.images.length - 1}
                       </span>
                     )}
                   </div>
                 </td>
                 <td>
-                  <div title={r.productName} style={{ fontWeight: 700, color: '#0f172a', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div title={r.productName} className="font-bold text-[#0f172a] max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
                     {r.productName}
                   </div>
                 </td>
                 <td>
                   <MaterialsCell materials={materialsList} />
                 </td>
-                <td style={{ color: '#4338ca', fontWeight: 700, textAlign: 'center' }}>
+                <td className="text-[#4338ca] font-bold text-center">
                   {currentRole === 'SALE'
                     ? (r.vat == null ? '---' : r.vat === 0 ? 'Không VAT' : 'Có VAT')
                     : (r.vat != null ? `${r.vat}%` : '---')}
                 </td>
                 {isRejected ? (
                   <td
-                    style={{ background: '#fff1f2', fontWeight: 800, color: '#be123c', borderRadius: '6px', padding: '6px 8px' }}
+                    className="bg-[#fff1f2] font-extrabold text-[#be123c] rounded-[6px] py-[6px] px-[8px]"
                     title={r.rejectReason ? `Lý do từ chối: ${r.rejectReason}` : 'Bị từ chối'}
                   >
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <div className="inline-flex items-center gap-[5px]">
                       <span>Bị từ chối</span>
                       {r.rejectReason && (
-                        <span style={{ fontSize: '10px', background: '#ffe4e6', color: '#9f1239', border: '1px solid #fecdd3', padding: '1px 5px', borderRadius: '4px', cursor: 'help' }}>
+                        <span className="text-[10px] bg-[#ffe4e6] text-[#9f1239] border border-[#fecdd3] py-[1px] px-[5px] rounded-[4px] cursor-help">
                           ⓘ Lý do
                         </span>
                       )}
@@ -594,8 +599,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </td>
                 ) : priceVal > 0 ? (
                   (r.status === 'QUOTED' || r.status === 'CLOSED') ? (
-                    <td style={{ color: '#0f766e', borderRadius: '6px', padding: '6px 8px', fontWeight: 800, fontSize: '13px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <td className="text-[#0f766e] rounded-[6px] py-[6px] px-[8px] font-extrabold text-[13px]">
+                      <div className="flex flex-col">
                         {formattedPrice}
                         {renderPriceBreakdownLines(priceBd)}
                       </div>
@@ -603,54 +608,39 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   ) : (
                     <td
                       title="Giá tạm tính — Chưa được Admin/Order xác nhận, không được báo cho khách"
-                      style={{
-                        borderRadius: '6px',
-                        padding: '6px 8px',
-                      }}
+                      className="rounded-[6px] py-[6px] px-[8px]"
                     >
-                      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 700, fontSize: '12.5px', opacity: 0.75 }}>
+                      <div className="inline-flex flex-col items-start">
+                        <span className="text-faint italic font-bold text-[12.5px] opacity-75">
                           {formattedPrice}
                         </span>
                         {renderPriceBreakdownLines(priceBd)}
-                        <span
-                          style={{
-                            fontSize: '9.5px',
-                            color: '#ea580c',
-                            background: '#fff7ed',
-                            border: '1px solid #ffedd5',
-                            padding: '0 4px',
-                            borderRadius: '3px',
-                            fontWeight: 800,
-                            marginTop: '2px',
-                            lineHeight: '14px',
-                          }}
-                        >
+                        <span className="text-[9.5px] text-[#ea580c] bg-[#fff7ed] border border-[#ffedd5] py-0 px-[4px] rounded-[3px] font-extrabold mt-[2px] leading-[14px]">
                           Chưa duyệt
                         </span>
                       </div>
                     </td>
                   )
                 ) : (
-                  <td style={{ color: '#94a3b8', textAlign: 'center' }}>---</td>
+                  <td className="text-faint text-center">---</td>
                 )}
-                <td style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{r.customerMeasurements || '---'}</td>
+                <td className="text-[12px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
                 {!isCompactView && (
-                  <td style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>
+                  <td className="text-[11px] text-[#475569] font-semibold">
                     {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}
                   </td>
                 )}
                 {!isCompactView && (
-                  <td style={{ fontSize: '11px', color: '#d97706', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600 }}>
+                  <td className="text-[11px] text-[#d97706] max-w-[160px] overflow-hidden text-ellipsis font-semibold">
                     {displayNote}
                   </td>
                 )}
                 {!isCompactView && (
-                  <td><strong style={{ color: '#334155' }}>{r.assignee?.name || 'Chưa phân công'}</strong></td>
+                  <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
                 )}
                 {!isCompactView && <td>{renderProcessingTimeCell(r)}</td>}
                 <td>
-                  <span style={{ background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600 }}>
+                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[11px] font-semibold">
                     {displayDeptName}
                   </span>
                 </td>
@@ -672,29 +662,21 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
             });
           }}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(15, 23, 42, 0.85)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '40px', cursor: zoomScale > ZOOM_MIN ? (isDragging ? 'grabbing' : 'grab') : 'zoom-out',
-            overflow: 'auto',
-            userSelect: isDragging ? 'none' : 'auto',
-          }}
+          className={clsx(
+            'fixed inset-0 z-[9999] bg-[rgba(15,23,42,0.85)] flex items-center justify-center p-[40px] overflow-auto',
+            zoomScale > ZOOM_MIN ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-out',
+            isDragging ? 'select-none' : 'select-auto',
+          )}
         >
           <button
             type="button"
             onClick={() => { setZoomedImage(null); setZoomScale(1); }}
-            style={{
-              position: 'fixed', top: '20px', right: '24px',
-              background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%',
-              width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#ffffff', cursor: 'pointer', zIndex: 1,
-            }}
+            className="fixed top-[20px] right-[24px] bg-[rgba(255,255,255,0.12)] border-0 rounded-full w-[40px] h-[40px] flex items-center justify-center text-white cursor-pointer z-[1]"
             title="Đóng"
           >
             <X size={20} />
           </button>
-          <span style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.7)', fontSize: '12px', fontWeight: 600 }}>
+          <span className="fixed bottom-[20px] left-1/2 -translate-x-1/2 text-[rgba(255,255,255,0.7)] text-[12px] font-semibold">
             Lăn chuột để phóng to / thu nhỏ · Kéo ảnh để xem chỗ khác · {Math.round(zoomScale * 100)}%
           </span>
           <img
@@ -703,17 +685,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             draggable={false}
             onClick={(e) => e.stopPropagation()}
             onMouseDown={handleImageMouseDown}
+            className={clsx(
+              'max-w-none h-auto shrink-0 object-contain rounded-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.4)] m-auto',
+              zoomScale > ZOOM_MIN ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default',
+              isDragging ? 'transition-none' : 'transition-[width_0.05s_linear]',
+            )}
+            // động — giữ inline
             style={{
               width: `${70 * zoomScale}vw`,
-              maxWidth: 'none',
-              height: 'auto',
-              flexShrink: 0,
-              objectFit: 'contain',
-              borderRadius: '10px',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
-              cursor: zoomScale > ZOOM_MIN ? (isDragging ? 'grabbing' : 'grab') : 'default',
-              margin: 'auto',
-              transition: isDragging ? 'none' : 'width 0.05s linear',
             }}
           />
         </div>,

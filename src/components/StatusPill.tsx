@@ -32,9 +32,15 @@ export const StatusPill: React.FC<StatusPillProps> = ({ status, label, iconSize 
 
   return (
     <span
-      className="status-pill"
+      className="status-pill border border-solid"
       title={title}
-      style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, ...style }}
+      // động — giữ inline
+      style={{
+        background: meta.bg,
+        color: meta.color,
+        borderColor: meta.border,
+        ...style,
+      }}
     >
       {Icon && <Icon size={iconSize} />}
       {label}

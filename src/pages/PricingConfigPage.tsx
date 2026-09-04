@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench, Coins, Layers, Gem, PlusCircle, TrendingUp, Percent, History, Settings, type LucideIcon } from 'lucide-react';
+import { clsx } from 'clsx';
 import { MetalPriceHistoryModal } from '../components/MetalPriceHistoryModal';
 import {
   fetchStones,
@@ -24,8 +25,8 @@ import {
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
 import type{BaseMetal, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
-import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE} from "../constants/index";
-import {PRIMARY_BLUE,thStyle,tdStyle,tdCenterStyle,tableHeadRowStyle,labelStyle, btnPrimaryStyle, btnSecondaryStyle, btnGhostSmallStyle, iconBtnStyle,pageBtnStyle, inputStyle, valueBoxStyle, suffixStyle, fieldErrorStyle } from '../styles/card';
+import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE, PRIMARY_BLUE} from "../constants/index";
+import { thCls, tdCls, tdCenterCls, tableHeadRowCls, labelCls, btnPrimaryCls, btnSecondaryCls, btnGhostSmallCls, iconBtnCls, pageBtnCls, inputCls, valueBoxCls, suffixCls, fieldErrorCls } from '../styles/classNames';
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 // Chặn thật sự ngay lúc gõ (không chỉ báo lỗi) — kẹp giá trị về đúng khoảng 0-100% (VAT/lợi nhuận,
 // công thức margin dùng (100-pct)/100 nên không được vượt 100)
@@ -41,17 +42,17 @@ const clampMoney = (v: number): number => Math.min(MAX_MONEY_VND, Math.max(0, v)
 // ==========================
 
 const SectionHeader: React.FC<{ title: string; action?: React.ReactNode; icon?: LucideIcon }> = ({ title, action, icon: Icon }) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-      {Icon ? <Icon size={15} style={{ color: '#0f172a', flexShrink: 0 }} /> : <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0f172a', flexShrink: 0 }} />}
-      <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0, wordBreak: 'keep-all' }}>{title}</h3>
+  <div className="flex items-center justify-between flex-wrap gap-[10px] mb-[14px]">
+    <div className="flex items-center gap-[8px] min-w-0">
+      {Icon ? <Icon size={15} className="text-[#0f172a] shrink-0" /> : <span className="w-[8px] h-[8px] rounded-full bg-[#0f172a] shrink-0" />}
+      <h3 className="text-[13.5px] font-extrabold text-[#0f172a] m-0 [word-break:keep-all]">{title}</h3>
     </div>
     {action}
   </div>
 );
 
 const PanelSection: React.FC<{ title: string; action?: React.ReactNode; children: React.ReactNode; first?: boolean; icon?: LucideIcon }> = ({ title, action, children, first, icon }) => (
-  <div style={{ padding: '22px 0', borderTop: first ? 'none' : '1px solid #e5e7eb' }}>
+  <div className={clsx('py-[22px] px-0', first ? 'border-t-0' : 'border-t border-[#e5e7eb]')}>
     <SectionHeader title={title} action={action} icon={icon} />
     {children}
   </div>
@@ -59,49 +60,49 @@ const PanelSection: React.FC<{ title: string; action?: React.ReactNode; children
 
 // Thẻ khung viền riêng cho từng mục ở tab "Quy tắc tính giá bán" — chỉ dùng trong tab này, không đụng PanelSection (tab Nguồn giá gốc)
 const RuleCard: React.FC<{ title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode; icon?: LucideIcon }> = ({ title, subtitle, action, children, icon }) => (
-  <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '18px' }}>
+  <div className="border border-[#e5e7eb] rounded-[12px] p-[18px]">
     <SectionHeader title={title} action={action} icon={icon} />
-    {subtitle && <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: '-6px 0 12px 0' }}>{subtitle}</p>}
+    {subtitle && <p className="text-[11.5px] text-[#94a3b8] -mt-[6px] mr-0 mb-[12px] ml-0">{subtitle}</p>}
     {children}
   </div>
 );
 
 const EditIconButton: React.FC<{ onClick: () => void; active?: boolean; title?: string }> = ({ onClick, active, title }) => (
-  <button type="button" onClick={onClick} className="pcp-icon-btn pcp-icon-btn--edit" style={iconBtnStyle} title={title || (active ? 'Đóng sửa' : 'Sửa')}>
+  <button type="button" onClick={onClick} className={clsx('pcp-icon-btn pcp-icon-btn--edit', iconBtnCls)} title={title || (active ? 'Đóng sửa' : 'Sửa')}>
     <Pencil size={13} />
   </button>
 );
 
 const DeleteIconButton: React.FC<{ onClick: () => void; marked?: boolean; title?: string }> = ({ onClick, marked, title }) => (
-  <button type="button" onClick={onClick} className={`pcp-icon-btn${marked ? ' pcp-icon-btn--undo' : ''}`} style={iconBtnStyle} title={title || (marked ? 'Bỏ đánh dấu xóa' : 'Đánh dấu xóa')}>
+  <button type="button" onClick={onClick} className={clsx('pcp-icon-btn', marked && 'pcp-icon-btn--undo', iconBtnCls)} title={title || (marked ? 'Bỏ đánh dấu xóa' : 'Đánh dấu xóa')}>
     {marked ? <RotateCcw size={13} /> : <Trash2 size={13} />}
   </button>
 );
 
 // Banner lỗi màu đỏ dùng chung — 4 chỗ trong trang này trước đây tự viết lặp lại y hệt.
-const ErrorBanner: React.FC<{ message: string; style?: React.CSSProperties }> = ({ message, style }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#b91c1c', fontSize: '11.5px', background: '#fef2f2', border: '1px solid #fca5a5', padding: '8px 10px', borderRadius: '8px', ...style }}>
-    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+const ErrorBanner: React.FC<{ message: string; className?: string }> = ({ message, className }) => (
+  <div className={clsx('flex items-start gap-[6px] text-[#b91c1c] text-[11.5px] bg-[#fef2f2] border border-[#fca5a5] py-[8px] px-[10px] rounded-[8px]', className)}>
+    <AlertTriangle size={14} className="shrink-0 mt-[1px]" />
     <span>{message}</span>
   </div>
 );
 
 // Cặp nút Check/X "Xác nhận thêm / Hủy" dùng chung cho hàng "thêm mới" — 3 chỗ trước đây tự viết lặp lại y hệt.
 const ConfirmCancelButtons: React.FC<{ onConfirm: () => void; onCancel: () => void; justify?: 'center' | 'flex-end' }> = ({ onConfirm, onCancel, justify = 'center' }) => (
-  <div style={{ display: 'flex', gap: '10px', justifyContent: justify }}>
-    <button type="button" onClick={onConfirm} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Xác nhận thêm">
+  <div className={clsx('flex gap-[10px]', justify === 'flex-end' ? 'justify-end' : 'justify-center')}>
+    <button type="button" onClick={onConfirm} className={clsx(iconBtnCls, 'pcp-icon-btn pcp-icon-btn--edit')} title="Xác nhận thêm">
       <Check size={14} />
     </button>
-    <button type="button" onClick={onCancel} style={iconBtnStyle} className="pcp-icon-btn" title="Hủy">
+    <button type="button" onClick={onCancel} className={clsx(iconBtnCls, 'pcp-icon-btn')} title="Hủy">
       <X size={14} />
     </button>
   </div>
 );
 
 const ValueDisplay: React.FC<{ value: number; unit?: string; dirty?: boolean }> = ({ value, unit, dirty }) => (
-  <div style={{ ...valueBoxStyle, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-    <span style={{ fontWeight: 800, fontSize: '12.5px', color: dirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(value)}</span>
-    {unit && <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>{unit}</span>}
+  <div className={clsx(valueBoxCls, 'flex items-baseline gap-[6px]')}>
+    <span className={clsx('font-extrabold text-[12.5px]', dirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{formatNumberVN(value)}</span>
+    {unit && <span className="text-[11px] font-bold text-[#94a3b8]">{unit}</span>}
   </div>
 );
 
@@ -121,8 +122,12 @@ const NumberField: React.FC<{
   step?: string;
   clamp: (v: number) => number;
 }> = ({ value, onChange, error, dirty, width, autoFocus, suffix, suffixWidth, inputType, step, clamp }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: width || '100%' }}>
-    <div style={{ position: 'relative' }}>
+  <div
+    className="flex flex-col gap-[2px]"
+    // động — giữ inline
+    style={{ width: width || '100%' }}
+  >
+    <div className="relative">
       {inputType === 'text-money' ? (
         <input
           type="text"
@@ -130,23 +135,26 @@ const NumberField: React.FC<{
           autoFocus={autoFocus}
           value={formatNumberVN(value)}
           onChange={(e) => onChange(clamp(parseFloat(e.target.value.replace(/\D/g, '')) || 0))}
-          style={{ ...inputStyle, paddingRight: suffixWidth, borderColor: error ? '#dc2626' : dirty ? '#f59e0b' : '#cbd5e1' }}
+          className={clsx(inputCls, error ? 'border-[#dc2626]' : dirty ? 'border-[#f59e0b]' : 'border-[#cbd5e1]')}
+          // động — giữ inline
+          style={{ paddingRight: suffixWidth }}
         />
       ) : (
         <input
           type="number"
-          className="pcp-num-input"
+          className={clsx('pcp-num-input', inputCls, error ? 'border-[#dc2626]' : 'border-[#cbd5e1]')}
           min={0}
           max={100}
           step={step}
           value={value}
           onChange={(e) => onChange(clamp(parseFloat(e.target.value) || 0))}
-          style={{ ...inputStyle, paddingRight: suffixWidth, borderColor: error ? '#dc2626' : '#cbd5e1' }}
+          // động — giữ inline
+          style={{ paddingRight: suffixWidth }}
         />
       )}
-      <span style={suffixStyle}>{suffix}</span>
+      <span className={suffixCls}>{suffix}</span>
     </div>
-    {error && <span style={fieldErrorStyle}>{error}</span>}
+    {error && <span className={fieldErrorCls}>{error}</span>}
   </div>
 );
 
@@ -649,7 +657,7 @@ export const PricingConfigPage: React.FC = () => {
   const sideStones = stones.filter((s) => s.stoneType === 'SIDE');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="flex flex-col">
       <style>{`
         @keyframes pcp-spin { to { transform: rotate(360deg); } }
         .pcp-spin { animation: pcp-spin 0.8s linear infinite; }
@@ -669,15 +677,15 @@ export const PricingConfigPage: React.FC = () => {
         @media (max-width: 760px) { .pcp-rules-grid { grid-template-columns: 1fr !important; } }
       `}</style>
 
-      {error && <ErrorBanner message={error} style={{ marginBottom: '14px' }} />}
+      {error && <ErrorBanner message={error} className="mb-[14px]" />}
 
       {/* Panel duy nhất — header + tabs + nội dung + footer sticky, giống mockup */}
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px' }}>
-        <div style={{ padding: '22px 22px 0' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}><Settings size={22} /> Cấu hình giá</h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Quản lý nguồn giá gốc và quy tắc tính giá bán cho hệ thống kho.</p>
+      <div className="bg-surface border border-[#e5e7eb] rounded-[16px]">
+        <div className="pt-[22px] px-[22px] pb-0">
+          <h1 className="text-[24px] font-black text-[#0f172a] m-0 mb-[4px] tracking-[-0.3px] flex items-center gap-[10px]"><Settings size={22} /> Cấu hình giá</h1>
+          <p className="text-[13px] text-muted m-0">Quản lý nguồn giá gốc và quy tắc tính giá bán cho hệ thống kho.</p>
 
-          <div style={{ display: 'flex', gap: '22px', marginTop: '18px', borderBottom: '1px solid #e5e7eb' }}>
+          <div className="flex gap-[22px] mt-[18px] border-b border-[#e5e7eb]">
             <button type="button" className={`pcp-tab${activeTab === 'SOURCE' ? ' pcp-tab--active' : ''}`} onClick={() => setActiveTab('SOURCE')}>
               Nguồn giá gốc (Giá vốn)
             </button>
@@ -687,7 +695,7 @@ export const PricingConfigPage: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ padding: '0 22px' }}>
+        <div className="py-0 px-[22px]">
           {activeTab === 'SOURCE' && (
             <>
               {/* Giá kim loại quý — danh sách ĐỘNG, thêm kim loại mới không cần sửa code */}
@@ -696,20 +704,20 @@ export const PricingConfigPage: React.FC = () => {
                 title="Giá kim loại quý (VNĐ/chỉ)"
                 icon={Coins}
                 action={
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={() => setShowMetalHistory(true)} style={btnGhostSmallStyle}><History size={12} /> Lịch sử giá</button>
-                    <button type="button" onClick={() => { setBaseMetalError(null); setAddingBaseMetal(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm kim loại</button>
+                  <div className="flex gap-[8px]">
+                    <button type="button" onClick={() => setShowMetalHistory(true)} className={btnGhostSmallCls}><History size={12} /> Lịch sử giá</button>
+                    <button type="button" onClick={() => { setBaseMetalError(null); setAddingBaseMetal(true); }} className={btnGhostSmallCls}><Plus size={12} /> Thêm kim loại</button>
                   </div>
                 }
               >
-                {baseMetalError && <ErrorBanner message={baseMetalError} style={{ marginBottom: '12px' }} />}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px' }}>
+                {baseMetalError && <ErrorBanner message={baseMetalError} className="mb-[12px]" />}
+                <div className="grid [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))] gap-[20px]">
                   {baseMetals.map((m) => {
                     const original = initialBaseMetals.find((o) => o.id === m.id);
                     const dirty = !!original && original.priceVnd !== m.priceVnd;
                     return (
-                      <div key={m.id} style={{ opacity: m.isActive ? 1 : 0.5 }}>
-                        <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }} title={m.isActive ? 'Đang dùng — bỏ tích để ngừng dùng' : 'Đã ngừng dùng — tích để bật lại'}>
+                      <div key={m.id} className={m.isActive ? 'opacity-100' : 'opacity-50'}>
+                        <label className={clsx(labelCls, 'flex items-center gap-[5px] cursor-pointer')} title={m.isActive ? 'Đang dùng — bỏ tích để ngừng dùng' : 'Đã ngừng dùng — tích để bật lại'}>
                           <input
                             type="checkbox"
                             checked={m.isActive}
@@ -723,9 +731,9 @@ export const PricingConfigPage: React.FC = () => {
                   })}
                   {addingBaseMetal && (
                     <div>
-                      <label style={labelStyle}>Kim loại mới</label>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <input autoFocus value={newBaseMetalName} onChange={(e) => setNewBaseMetalName(e.target.value)} style={inputStyle} placeholder="VD: Titanium" />
+                      <label className={labelCls}>Kim loại mới</label>
+                      <div className="flex gap-[6px]">
+                        <input autoFocus value={newBaseMetalName} onChange={(e) => setNewBaseMetalName(e.target.value)} className={inputCls} placeholder="VD: Titanium" />
                         <ConfirmCancelButtons onConfirm={handleAddBaseMetal} onCancel={() => setAddingBaseMetal(false)} />
                       </div>
                     </div>
@@ -737,18 +745,18 @@ export const PricingConfigPage: React.FC = () => {
               <PanelSection
                 title="Chất liệu & Phần trăm tính giá"
                 icon={Layers}
-                action={<button type="button" onClick={() => { setMaterialError(null); setAddingMaterial(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm chất liệu</button>}
+                action={<button type="button" onClick={() => { setMaterialError(null); setAddingMaterial(true); }} className={btnGhostSmallCls}><Plus size={12} /> Thêm chất liệu</button>}
               >
-                {materialError && <ErrorBanner message={materialError} style={{ marginBottom: '12px' }} />}
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                {materialError && <ErrorBanner message={materialError} className="mb-[12px]" />}
+                <div className="overflow-x-auto">
+                  <table className="w-full table-fixed border-collapse text-[12.5px]">
                     <thead>
-                      <tr style={tableHeadRowStyle}>
-                        <th style={{ ...thStyle, width: '24%' }}>Tên chất liệu</th>
-                        <th style={{ ...thStyle, width: '18%' }}>Kim loại gốc</th>
-                        <th style={{ ...thStyle, width: '16%' }}>% tính giá</th>
-                        <th style={{ ...thStyle, width: '32%' }}>Công thức tính lãi</th>
-                        <th style={{ ...thStyle, width: '90px', textAlign: 'center' }}>Thao tác</th>
+                      <tr className={tableHeadRowCls}>
+                        <th className={clsx(thCls, 'w-[24%]')}>Tên chất liệu</th>
+                        <th className={clsx(thCls, 'w-[18%]')}>Kim loại gốc</th>
+                        <th className={clsx(thCls, 'w-[16%]')}>% tính giá</th>
+                        <th className={clsx(thCls, 'w-[32%]')}>Công thức tính lãi</th>
+                        <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -759,45 +767,45 @@ export const PricingConfigPage: React.FC = () => {
                         const ratioError = m.priceRatioPct < 0 ? 'Không được âm' : m.priceRatioPct > 1000 ? 'Tối đa 1000%' : null;
                         const formulaName = formulas.find((f) => f.id === m.pricingFormulaId)?.name || '—';
                         return (
-                          <tr key={m.id} style={{ borderBottom: '1px solid #f1f5f9', background: rowDirty ? '#fffbeb' : undefined }}>
-                            <td style={tdStyle}>
-                              <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{m.name}</span>
+                          <tr key={m.id} className={clsx('border-b border-[#f1f5f9]', rowDirty && 'bg-[#fffbeb]')}>
+                            <td className={tdCls}>
+                              <span className={clsx(valueBoxCls, 'font-extrabold text-[#0f172a]')}>{m.name}</span>
                             </td>
-                            <td style={tdStyle}>
+                            <td className={tdCls}>
                               {isEditing ? (
-                                <select value={m.baseMetalId || ''} onChange={(e) => updateMaterialBaseMetal(m.id, e.target.value)} style={inputStyle}>
+                                <select value={m.baseMetalId || ''} onChange={(e) => updateMaterialBaseMetal(m.id, e.target.value)} className={inputCls}>
                                   <option value="">— Phi kim loại —</option>
                                   {baseMetals.filter((bm) => bm.isActive).map((bm) => (
                                     <option key={bm.id} value={bm.id}>{bm.name}</option>
                                   ))}
                                 </select>
                               ) : (
-                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{m.baseMetal?.name || '— Phi kim loại —'}</span>
+                                <span className={clsx(valueBoxCls, 'font-bold text-[#334155]')}>{m.baseMetal?.name || '— Phi kim loại —'}</span>
                               )}
                             </td>
-                            <td style={tdStyle}>
+                            <td className={tdCls}>
                               {isEditing ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  <input type="number" className="pcp-num-input" min={0} max={1000} step="0.001" value={m.priceRatioPct} onChange={(e) => updateMaterialRatio(m.id, clampMaterialRatio(parseFloat(e.target.value) || 0))} style={{ ...inputStyle, borderColor: ratioError ? '#dc2626' : '#cbd5e1' }} />
-                                  {ratioError && <span style={fieldErrorStyle}>{ratioError}</span>}
+                                <div className="flex flex-col gap-[2px]">
+                                  <input type="number" className={clsx('pcp-num-input', inputCls, ratioError ? 'border-[#dc2626]' : 'border-[#cbd5e1]')} min={0} max={1000} step="0.001" value={m.priceRatioPct} onChange={(e) => updateMaterialRatio(m.id, clampMaterialRatio(parseFloat(e.target.value) || 0))} />
+                                  {ratioError && <span className={fieldErrorCls}>{ratioError}</span>}
                                 </div>
                               ) : (
-                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{m.priceRatioPct}%</span>
+                                <span className={clsx(valueBoxCls, 'font-bold text-[#334155]')}>{m.priceRatioPct}%</span>
                               )}
                             </td>
-                            <td style={tdStyle}>
+                            <td className={tdCls}>
                               {isEditing ? (
-                                <select value={m.pricingFormulaId} onChange={(e) => updateMaterialFormula(m.id, e.target.value)} style={inputStyle}>
+                                <select value={m.pricingFormulaId} onChange={(e) => updateMaterialFormula(m.id, e.target.value)} className={inputCls}>
                                   {formulas.map((f) => (
                                     <option key={f.id} value={f.id}>{f.name}</option>
                                   ))}
                                 </select>
                               ) : (
-                                <span style={{ ...valueBoxStyle, fontWeight: 700, color: '#334155' }}>{formulaName}</span>
+                                <span className={clsx(valueBoxCls, 'font-bold text-[#334155]')}>{formulaName}</span>
                               )}
                             </td>
-                            <td style={tdCenterStyle}>
-                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            <td className={tdCenterCls}>
+                              <div className="flex gap-[10px] justify-center">
                                 <EditIconButton onClick={() => setEditingMaterialIds((prev) => toggleInArray(prev, m.id))} active={isEditing} />
                               </div>
                             </td>
@@ -805,29 +813,29 @@ export const PricingConfigPage: React.FC = () => {
                         );
                       })}
                       {materials.length === 0 && (
-                        <tr><td colSpan={5} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có chất liệu nào</td></tr>
+                        <tr><td colSpan={5} className="p-[14px] text-center text-[#94a3b8]">Chưa có chất liệu nào</td></tr>
                       )}
                       {addingMaterial && (
                         <tr className="pcp-add-row">
-                          <td style={tdStyle}><input autoFocus value={newMaterial.name} onChange={(e) => setNewMaterial((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="VD: Vàng 16K" /></td>
-                          <td style={tdStyle}>
-                            <select value={newMaterial.baseMetalId} onChange={(e) => setNewMaterial((s) => ({ ...s, baseMetalId: e.target.value }))} style={inputStyle}>
+                          <td className={tdCls}><input autoFocus value={newMaterial.name} onChange={(e) => setNewMaterial((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="VD: Vàng 16K" /></td>
+                          <td className={tdCls}>
+                            <select value={newMaterial.baseMetalId} onChange={(e) => setNewMaterial((s) => ({ ...s, baseMetalId: e.target.value }))} className={inputCls}>
                               <option value="">— Phi kim loại —</option>
                               {baseMetals.filter((bm) => bm.isActive).map((bm) => (
                                 <option key={bm.id} value={bm.id}>{bm.name}</option>
                               ))}
                             </select>
                           </td>
-                          <td style={tdStyle}><input type="number" className="pcp-num-input" min={0} max={1000} step="0.001" value={newMaterial.priceRatioPct} onChange={(e) => setNewMaterial((s) => ({ ...s, priceRatioPct: e.target.value }))} style={inputStyle} /></td>
-                          <td style={tdStyle}>
-                            <select value={newMaterial.pricingFormulaId} onChange={(e) => setNewMaterial((s) => ({ ...s, pricingFormulaId: e.target.value }))} style={inputStyle}>
+                          <td className={tdCls}><input type="number" className={clsx('pcp-num-input', inputCls)} min={0} max={1000} step="0.001" value={newMaterial.priceRatioPct} onChange={(e) => setNewMaterial((s) => ({ ...s, priceRatioPct: e.target.value }))} /></td>
+                          <td className={tdCls}>
+                            <select value={newMaterial.pricingFormulaId} onChange={(e) => setNewMaterial((s) => ({ ...s, pricingFormulaId: e.target.value }))} className={inputCls}>
                               {formulas.length === 0 && <option value="">Chưa có công thức</option>}
                               {formulas.map((f) => (
                                 <option key={f.id} value={f.id}>{f.name}</option>
                               ))}
                             </select>
                           </td>
-                          <td style={tdCenterStyle}>
+                          <td className={tdCenterCls}>
                             <ConfirmCancelButtons onConfirm={handleAddMaterial} onCancel={() => setAddingMaterial(false)} />
                           </td>
                         </tr>
@@ -847,7 +855,7 @@ export const PricingConfigPage: React.FC = () => {
                       ref={fileInputRef}
                       type="file"
                       accept=".xlsx,.xls"
-                      style={{ display: 'none' }}
+                      className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0] || null;
                         if (f) {
@@ -860,16 +868,16 @@ export const PricingConfigPage: React.FC = () => {
                         e.target.value = '';
                       }}
                     />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importing} style={{ ...btnGhostSmallStyle, opacity: importing ? 0.6 : 1 }}>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importing} className={clsx(btnGhostSmallCls, importing && 'opacity-60')}>
                       {importing ? <Loader2 size={12} className="pcp-spin" /> : <Upload size={12} />} Nhập Excel
                     </button>
                   </>
                 }
               >
                 {stoneError && (
-                  <ErrorBanner message={stoneError} style={{ marginBottom: '12px', whiteSpace: 'pre-line', maxHeight: '160px', overflowY: 'auto' }} />
+                  <ErrorBanner message={stoneError} className="mb-[12px] whitespace-pre-line max-h-[160px] overflow-y-auto" />
                 )}
-                {importResult && <div style={{ marginBottom: '12px', color: '#16a34a', fontSize: '12px', fontWeight: 700 }}>{importResult}</div>}
+                {importResult && <div className="mb-[12px] text-[#16a34a] text-[12px] font-bold">{importResult}</div>}
 
                 <StoneGroupTable
                   title="Đá Chủ"
@@ -892,7 +900,7 @@ export const PricingConfigPage: React.FC = () => {
                   onConfirmAdd={handleAddStone}
                 />
 
-                <div style={{ height: '22px' }} />
+                <div className="h-[22px]" />
 
                 <StoneGroupTable
                   title="Đá Tấm"
@@ -919,8 +927,8 @@ export const PricingConfigPage: React.FC = () => {
           )}
 
           {activeTab === 'RULES' && (
-            <div className="pcp-rules-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(280px, 2fr)', gap: '20px', alignItems: 'start', padding: '22px 0' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="pcp-rules-grid grid [grid-template-columns:minmax(0,3fr)_minmax(280px,2fr)] gap-[20px] items-start py-[22px] px-0">
+            <div className="flex flex-col gap-[20px]">
               {/* VAT giờ cấu hình theo từng danh mục sản phẩm — xem panel "Tiền công / VAT" bên phải */}
 
               {/* Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu (bảng bên tab Nguồn giá gốc)
@@ -946,40 +954,40 @@ export const PricingConfigPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => (f.formulaType === 'MULTIPLIER' ? addMultiplier(f.id) : addTier(f.id))}
-                        style={btnGhostSmallStyle}
+                        className={btnGhostSmallCls}
                       >
                         <Plus size={12} /> {f.formulaType === 'MULTIPLIER' ? 'Thêm hệ số' : 'Thêm bậc'}
                       </button>
                     }
                   >
                     {f.formulaType === 'MULTIPLIER' ? (
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                      <div className="overflow-x-auto">
+                        <table className="w-full table-fixed border-collapse text-[12.5px]">
                           <thead>
-                            <tr style={tableHeadRowStyle}>
-                              <th style={{ ...thStyle, width: '60px' }}>STT</th>
-                              <th style={thStyle}>Hệ số nhân</th>
-                              <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
+                            <tr className={tableHeadRowCls}>
+                              <th className={clsx(thCls, 'w-[60px]')}>STT</th>
+                              <th className={thCls}>Hệ số nhân</th>
+                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
                             {(f.config.multipliers || []).map((mult, idx) => {
                               const multError = mult < 0 ? 'Không được âm' : null;
                               return (
-                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                  <td style={{ ...tdStyle, color: '#94a3b8', fontWeight: 700 }}>{idx + 1}</td>
-                                  <td style={tdStyle}>
+                                <tr key={idx} className="border-b border-[#f1f5f9]">
+                                  <td className={clsx(tdCls, 'text-[#94a3b8] font-bold')}>{idx + 1}</td>
+                                  <td className={tdCls}>
                                     {isEditing ? (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <input type="number" className="pcp-num-input" min={0} step="0.1" value={mult} onChange={(e) => updateMultiplier(f.id, idx, Math.max(0, parseFloat(e.target.value) || 0))} style={{ ...inputStyle, width: '100px', borderColor: multError ? '#dc2626' : '#cbd5e1' }} />
-                                        {multError && <span style={fieldErrorStyle}>{multError}</span>}
+                                      <div className="flex flex-col gap-[2px]">
+                                        <input type="number" className={clsx('pcp-num-input', inputCls, '!w-[100px]', multError ? 'border-[#dc2626]' : 'border-[#cbd5e1]')} min={0} step="0.1" value={mult} onChange={(e) => updateMultiplier(f.id, idx, Math.max(0, parseFloat(e.target.value) || 0))} />
+                                        {multError && <span className={fieldErrorCls}>{multError}</span>}
                                       </div>
                                     ) : (
-                                      <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a' }}>{mult}</span>
+                                      <span className={clsx(valueBoxCls, 'font-extrabold text-[#0f172a]')}>{mult}</span>
                                     )}
                                   </td>
-                                  <td style={{ ...tdStyle, textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                  <td className={clsx(tdCls, 'text-right')}>
+                                    <div className="flex gap-[10px] justify-end">
                                       <EditIconButton onClick={() => setEditingFormulaIds((prev) => toggleInArray(prev, f.id))} active={isEditing} />
                                       <DeleteIconButton onClick={() => removeMultiplier(f.id, idx)} />
                                     </div>
@@ -988,19 +996,19 @@ export const PricingConfigPage: React.FC = () => {
                               );
                             })}
                             {(f.config.multipliers || []).length === 0 && (
-                              <tr><td colSpan={3} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có hệ số nào</td></tr>
+                              <tr><td colSpan={3} className="p-[14px] text-center text-[#94a3b8]">Chưa có hệ số nào</td></tr>
                             )}
                           </tbody>
                         </table>
                       </div>
                     ) : (
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                      <div className="overflow-x-auto">
+                        <table className="w-full table-fixed border-collapse text-[12.5px]">
                           <thead>
-                            <tr style={tableHeadRowStyle}>
-                              <th style={{ ...thStyle, width: '42%' }}>Chi phí tối đa (VNĐ)</th>
-                              <th style={{ ...thStyle, width: '38%' }}>Biên độ lợi nhuận (%)</th>
-                              <th style={{ ...thStyle, width: '90px', textAlign: 'right' }}>Thao tác</th>
+                            <tr className={tableHeadRowCls}>
+                              <th className={clsx(thCls, 'w-[42%]')}>Chi phí tối đa (VNĐ)</th>
+                              <th className={clsx(thCls, 'w-[38%]')}>Biên độ lợi nhuận (%)</th>
+                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1009,29 +1017,29 @@ export const PricingConfigPage: React.FC = () => {
                               const pctError = marginPctError(marginPct);
                               const isUnlimited = tier.maxCost >= UNLIMITED_MAX_COST;
                               return (
-                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                  <td style={tdStyle}>
+                                <tr key={idx} className="border-b border-[#f1f5f9]">
+                                  <td className={tdCls}>
                                     {isEditing ? (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#6b7280', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                      <div className="flex items-center gap-[8px]">
+                                        <label className="flex items-center gap-[4px] text-[10px] text-[#6b7280] font-bold cursor-pointer shrink-0 whitespace-nowrap">
                                           <input type="checkbox" checked={isUnlimited} onChange={(e) => updateTier(f.id, idx, { maxCost: e.target.checked ? UNLIMITED_MAX_COST : 0 })} />
                                           Không giới hạn
                                         </label>
                                         {!isUnlimited && <MoneyField value={tier.maxCost} onChange={(v) => updateTier(f.id, idx, { maxCost: v })} />}
                                       </div>
                                     ) : (
-                                      isUnlimited ? <span style={{ ...valueBoxStyle, fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>Không giới hạn</span> : <ValueDisplay value={tier.maxCost} unit="VNĐ" />
+                                      isUnlimited ? <span className={clsx(valueBoxCls, 'font-extrabold text-[#0f172a] text-[14px]')}>Không giới hạn</span> : <ValueDisplay value={tier.maxCost} unit="VNĐ" />
                                     )}
                                   </td>
-                                  <td style={tdStyle}>
+                                  <td className={tdCls}>
                                     {isEditing ? (
                                       <PercentField value={marginPct} onChange={(pct) => updateTier(f.id, idx, { margin: `${pct}%`, divisor: (100 - pct) / 100 })} error={pctError} width="140px" />
                                     ) : (
                                       <ValueDisplay value={marginPct} unit="%" />
                                     )}
                                   </td>
-                                  <td style={{ ...tdStyle, textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                  <td className={clsx(tdCls, 'text-right')}>
+                                    <div className="flex gap-[10px] justify-end">
                                       <EditIconButton onClick={() => setEditingFormulaIds((prev) => toggleInArray(prev, f.id))} active={isEditing} />
                                       <DeleteIconButton onClick={() => removeTier(f.id, idx)} />
                                     </div>
@@ -1040,7 +1048,7 @@ export const PricingConfigPage: React.FC = () => {
                               );
                             })}
                             {(f.config.tiers || []).length === 0 && (
-                              <tr><td colSpan={3} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có bậc lợi nhuận nào</td></tr>
+                              <tr><td colSpan={3} className="p-[14px] text-center text-[#94a3b8]">Chưa có bậc lợi nhuận nào</td></tr>
                             )}
                           </tbody>
                         </table>
@@ -1053,34 +1061,34 @@ export const PricingConfigPage: React.FC = () => {
               {/* Thêm công thức mới — lưu ngay (giống thêm chất liệu/đá), sửa nội dung bên trong sau */}
               <RuleCard title="Thêm công thức mới" icon={PlusCircle}>
                 {addingFormula ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '360px' }}>
-                    <input autoFocus value={newFormula.name} onChange={(e) => setNewFormula((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="VD: Bậc lợi nhuận Bạch kim cao cấp" />
-                    <select value={newFormula.formulaType} onChange={(e) => setNewFormula((s) => ({ ...s, formulaType: e.target.value as PricingFormulaType }))} style={inputStyle}>
+                  <div className="flex flex-col gap-[10px] max-w-[360px]">
+                    <input autoFocus value={newFormula.name} onChange={(e) => setNewFormula((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="VD: Bậc lợi nhuận Bạch kim cao cấp" />
+                    <select value={newFormula.formulaType} onChange={(e) => setNewFormula((s) => ({ ...s, formulaType: e.target.value as PricingFormulaType }))} className={inputCls}>
                       <option value="MARGIN_TIERS">Bậc lợi nhuận theo chi phí</option>
                       <option value="MULTIPLIER">Hệ số nhân cố định</option>
                     </select>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button type="button" onClick={handleAddFormula} style={btnPrimaryStyle}><Check size={13} /> Thêm</button>
-                      <button type="button" onClick={() => setAddingFormula(false)} style={btnSecondaryStyle}><X size={13} /> Hủy</button>
+                    <div className="flex gap-[10px]">
+                      <button type="button" onClick={handleAddFormula} className={btnPrimaryCls}><Check size={13} /> Thêm</button>
+                      <button type="button" onClick={() => setAddingFormula(false)} className={btnSecondaryCls}><X size={13} /> Hủy</button>
                     </div>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => { setFormulaError(null); setAddingFormula(true); }} style={btnGhostSmallStyle}><Plus size={12} /> Thêm công thức</button>
+                  <button type="button" onClick={() => { setFormulaError(null); setAddingFormula(true); }} className={btnGhostSmallCls}><Plus size={12} /> Thêm công thức</button>
                 )}
               </RuleCard>
             </div>
 
             {/* Tiền công / VAT theo danh mục sản phẩm — panel riêng bên phải, gọn, giống ảnh mockup */}
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '18px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Wrench size={15} style={{ color: '#64748b', flexShrink: 0 }} />
+            <div className="border border-[#e5e7eb] rounded-[12px] p-[18px]">
+              <div className="flex items-start justify-between mb-[14px]">
+                <div className="flex items-center gap-[8px]">
+                  <Wrench size={15} className="text-[#64748b] shrink-0" />
                   <div>
-                    <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Tiền công / VAT</h3>
-                    <p style={{ fontSize: '11px', color: '#94a3b8', margin: '2px 0 0' }}>Theo danh mục sản phẩm</p>
+                    <h3 className="text-[13.5px] font-extrabold text-[#0f172a] m-0">Tiền công / VAT</h3>
+                    <p className="text-[11px] text-[#94a3b8] m-0 mt-[2px]">Theo danh mục sản phẩm</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => setAddingCategory(true)} style={iconBtnStyle} className="pcp-icon-btn pcp-icon-btn--edit" title="Thêm danh mục">
+                <button type="button" onClick={() => setAddingCategory(true)} className={clsx(iconBtnCls, 'pcp-icon-btn pcp-icon-btn--edit')} title="Thêm danh mục">
                   <Plus size={16} />
                 </button>
               </div>
@@ -1106,13 +1114,13 @@ export const PricingConfigPage: React.FC = () => {
                       onConfirmAdd={handleAddCategory}
                     />
                     {categories.length === 0 && !addingCategory && (
-                      <div style={{ padding: '10px 0', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Chưa có danh mục sản phẩm nào</div>
+                      <div className="py-[10px] px-0 text-center text-[#94a3b8] text-[12px]">Chưa có danh mục sản phẩm nào</div>
                     )}
                     {totalPages > 1 && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                        <button type="button" onClick={() => setCategoryPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} style={pageBtnStyle(safePage <= 1)}>‹</button>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{safePage}/{totalPages}</span>
-                        <button type="button" onClick={() => setCategoryPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} style={pageBtnStyle(safePage >= totalPages)}>›</button>
+                      <div className="flex items-center justify-end gap-[8px] mt-[12px]">
+                        <button type="button" onClick={() => setCategoryPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={pageBtnCls(safePage <= 1)}>‹</button>
+                        <span className="text-[11px] font-bold text-[#64748b]">{safePage}/{totalPages}</span>
+                        <button type="button" onClick={() => setCategoryPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className={pageBtnCls(safePage >= totalPages)}>›</button>
                       </div>
                     )}
                   </>
@@ -1124,37 +1132,40 @@ export const PricingConfigPage: React.FC = () => {
         </div>
 
         {/* Footer sticky — Hủy bỏ + Lưu cấu hình, luôn nổi khi cuộn trang */}
-        <div style={{ position: 'sticky', bottom: '-20px', margin: '0 -20px -20px', padding: '14px 22px', background: '#ffffff', borderTop: '1px solid #e5e7eb', borderRadius: '0 0 16px 16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button type="button" onClick={handleCancelAll} style={btnSecondaryStyle}>
+        <div className="sticky -bottom-[20px] -mx-[20px] -mb-[20px] py-[14px] px-[22px] bg-surface border-t border-[#e5e7eb] rounded-b-[16px] flex justify-end gap-[10px]">
+          <button type="button" onClick={handleCancelAll} className={btnSecondaryCls}>
             <RotateCcw size={13} /> Hủy bỏ
           </button>
-          <button
-            type="button"
-            onClick={handleSaveConfig}
-            disabled={saving || !hasPendingChanges || hasValidationError}
-            title={hasValidationError ? 'Còn field lỗi, sửa trước khi lưu' : undefined}
-            style={{
-              ...btnPrimaryStyle,
-              ...(saved ? { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' } : null),
-              cursor: (saving || !hasPendingChanges || hasValidationError) ? 'default' : 'pointer',
-              opacity: (!saving && (!hasPendingChanges || hasValidationError)) ? 0.5 : 1,
-            }}
-          >
-            {saving ? <Loader2 size={13} className="pcp-spin" /> : <Save size={13} />}
-            {saved ? 'Đã lưu!' : saving ? 'Đang lưu...' : 'Lưu cấu hình'}
-          </button>
+          {(() => {
+            const isSaveDisabled = saving || !hasPendingChanges || hasValidationError;
+            return (
+              <button
+                type="button"
+                onClick={handleSaveConfig}
+                disabled={isSaveDisabled}
+                title={hasValidationError ? 'Còn field lỗi, sửa trước khi lưu' : undefined}
+                className={clsx(
+                  btnPrimaryCls,
+                  saved && 'bg-[#f0fdf4] border-[#bbf7d0] text-[#15803d]',
+                  isSaveDisabled ? 'cursor-default' : 'cursor-pointer',
+                  (!saving && isSaveDisabled) && 'opacity-50',
+                )}
+              >
+                {saving ? <Loader2 size={13} className="pcp-spin" /> : <Save size={13} />}
+                {saved ? 'Đã lưu!' : saving ? 'Đang lưu...' : 'Lưu cấu hình'}
+              </button>
+            );
+          })()}
         </div>
       </div>
 
       {/* Toast thông báo lưu thành công/lỗi */}
       {toast && (
         <div
-          style={{
-            position: 'fixed', bottom: '20px', right: '20px', zIndex: 50,
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: '10px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.18)', background: toast.type === 'success' ? '#16a34a' : '#dc2626',
-            color: '#ffffff', fontSize: '12.5px', fontWeight: 700, maxWidth: '360px',
-          }}
+          className={clsx(
+            'fixed bottom-[20px] right-[20px] z-50 flex items-center gap-[8px] py-[12px] px-[16px] rounded-[10px] shadow-[0_10px_25px_rgba(0,0,0,0.18)] text-surface text-[12.5px] font-bold max-w-[360px]',
+            toast.type === 'success' ? 'bg-[#16a34a]' : 'bg-[#dc2626]',
+          )}
         >
           {toast.type === 'success' ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
           <span>{toast.message}</span>
@@ -1186,36 +1197,36 @@ const CategoryTable: React.FC<{
   onConfirmAdd: () => void;
 }> = ({ items, initialCategories, pendingDeleteIds, editingIds, onLaborCostChange, onVatRateChange, onToggleDelete, onToggleEdit, adding, onCloseAdd, newCategory, setNewCategory, onConfirmAdd }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="flex flex-col">
       {items.map((c) => {
         const original = initialCategories.find((o) => o.id === c.id);
         const markedDelete = pendingDeleteIds.includes(c.id);
         const isDirty = !markedDelete && !!original && ((original.laborCost || 0) !== (c.laborCost || 0) || (original.vatRate || 0) !== (c.vatRate || 0));
         const isEditing = editingIds.includes(c.id);
         return (
-          <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '9px 0', borderBottom: '1px solid #f1f5f9', background: markedDelete ? '#fef2f2' : isDirty ? '#fffbeb' : undefined }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-              <span style={{ fontSize: '12.5px', fontWeight: 700, color: markedDelete ? '#94a3b8' : '#334155', textDecoration: markedDelete ? 'line-through' : 'none' }}>{c.name}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          <div key={c.id} className={clsx('flex flex-col gap-[6px] py-[9px] px-0 border-b border-[#f1f5f9]', markedDelete ? 'bg-[#fef2f2]' : isDirty ? 'bg-[#fffbeb]' : '')}>
+            <div className="flex items-center justify-between gap-[8px]">
+              <span className={clsx('text-[12.5px] font-bold', markedDelete ? 'text-[#94a3b8] line-through' : 'text-[#334155]')}>{c.name}</span>
+              <div className="flex items-center gap-[6px] shrink-0">
                 <EditIconButton onClick={() => onToggleEdit(c.id)} active={isEditing} title={markedDelete ? undefined : (isEditing ? 'Đóng sửa' : 'Sửa')} />
                 <DeleteIconButton onClick={() => onToggleDelete(c.id)} marked={markedDelete} />
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '9.5px', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '2px' }}>Tiền công</label>
+            <div className="flex items-center gap-[8px]">
+              <div className="flex-1">
+                <label className="text-[9.5px] text-[#94a3b8] font-bold block mb-[2px]">Tiền công</label>
                 {isEditing && !markedDelete ? (
                   <MoneyField value={c.laborCost || 0} onChange={(v) => onLaborCostChange(c.id, v)} width="100%" />
                 ) : (
-                  <span style={{ ...valueBoxStyle, display: 'block', width: '100%', boxSizing: 'border-box', fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{formatNumberVN(c.laborCost || 0)}</span>
+                  <span className={clsx(valueBoxCls, 'block w-full box-border text-[12.5px] font-extrabold', isDirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{formatNumberVN(c.laborCost || 0)}</span>
                 )}
               </div>
-              <div style={{ width: '70px', flexShrink: 0 }}>
-                <label style={{ fontSize: '9.5px', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '2px' }}>VAT</label>
+              <div className="w-[70px] shrink-0">
+                <label className="text-[9.5px] text-[#94a3b8] font-bold block mb-[2px]">VAT</label>
                 {isEditing && !markedDelete ? (
                   <PercentField value={c.vatRate || 0} onChange={(v) => onVatRateChange(c.id, v)} width="100%" />
                 ) : (
-                  <span style={{ ...valueBoxStyle, fontSize: '12.5px', fontWeight: 800, color: isDirty ? '#b45309' : '#0f172a' }}>{c.vatRate || 0}%</span>
+                  <span className={clsx(valueBoxCls, 'text-[12.5px] font-extrabold', isDirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{c.vatRate || 0}%</span>
                 )}
               </div>
             </div>
@@ -1223,12 +1234,12 @@ const CategoryTable: React.FC<{
         );
       })}
       {items.length === 0 && !adding && (
-        <div style={{ padding: '10px 0', textAlign: 'center', color: '#cbd5e1', fontSize: '12px' }}>—</div>
+        <div className="py-[10px] px-0 text-center text-[#cbd5e1] text-[12px]">—</div>
       )}
       {adding && (
-        <div className="pcp-add-row" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', borderRadius: '8px', marginTop: '8px' }}>
-          <input autoFocus value={newCategory.name} onChange={(e) => setNewCategory((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="Tên danh mục" />
-          <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="pcp-add-row flex flex-col gap-[8px] p-[10px] rounded-[8px] mt-[8px]">
+          <input autoFocus value={newCategory.name} onChange={(e) => setNewCategory((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="Tên danh mục" />
+          <div className="flex gap-[8px]">
             <MoneyField value={parseFloat(newCategory.laborCost) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, laborCost: String(v) }))} />
             <PercentField value={parseFloat(newCategory.vatRate) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, vatRate: String(v) }))} width="90px" />
           </div>
@@ -1269,16 +1280,16 @@ const StoneGroupTable: React.FC<{
 
   return (
     <div>
-      <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', margin: '0 0 8px 0' }}>{title}</h4>
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
-        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+      <h4 className="text-[12px] font-extrabold text-[#334155] m-0 mb-[8px]">{title}</h4>
+      <div className="overflow-x-auto border border-[#e5e7eb] rounded-[10px]">
+        <table className="w-full table-fixed border-collapse text-[12.5px]">
           <thead>
-            <tr style={tableHeadRowStyle}>
-              <th style={{ ...thStyle, width: '26%' }}>Tên đá</th>
-              <th style={{ ...thStyle, width: '18%' }}>Giác cắt</th>
-              <th style={{ ...thStyle, width: '15%' }}>Size (mm)</th>
-              <th style={{ ...thStyle, width: '26%' }}>Giá (VNĐ)</th>
-              <th style={{ ...thStyle, width: '90px', textAlign: 'center' }}>Thao tác</th>
+            <tr className={tableHeadRowCls}>
+              <th className={clsx(thCls, 'w-[26%]')}>Tên đá</th>
+              <th className={clsx(thCls, 'w-[18%]')}>Giác cắt</th>
+              <th className={clsx(thCls, 'w-[15%]')}>Size (mm)</th>
+              <th className={clsx(thCls, 'w-[26%]')}>Giá (VNĐ)</th>
+              <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -1288,19 +1299,19 @@ const StoneGroupTable: React.FC<{
               const isDirty = !markedDelete && !!original && original.price !== s.price;
               const isEditing = editingIds.includes(s.id);
               return (
-                <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', background: markedDelete ? '#fef2f2' : isDirty ? '#fffbeb' : undefined }}>
-                  <td style={{ ...tdStyle, fontWeight: 800, textDecoration: markedDelete ? 'line-through' : 'none', color: markedDelete ? '#94a3b8' : '#0f172a' }}>{s.name}</td>
-                  <td style={{ ...tdStyle, color: markedDelete ? '#94a3b8' : undefined }}>{s.cut || '—'}</td>
-                  <td style={{ ...tdStyle, color: markedDelete ? '#94a3b8' : undefined }}>{s.size || '—'}</td>
-                  <td style={tdStyle}>
+                <tr key={s.id} className={clsx('border-b border-[#f1f5f9]', markedDelete ? 'bg-[#fef2f2]' : isDirty ? 'bg-[#fffbeb]' : '')}>
+                  <td className={clsx(tdCls, 'font-extrabold', markedDelete ? 'line-through text-[#94a3b8]' : 'text-[#0f172a]')}>{s.name}</td>
+                  <td className={clsx(tdCls, markedDelete && 'text-[#94a3b8]')}>{s.cut || '—'}</td>
+                  <td className={clsx(tdCls, markedDelete && 'text-[#94a3b8]')}>{s.size || '—'}</td>
+                  <td className={tdCls}>
                     {isEditing && !markedDelete ? (
                       <MoneyField value={s.price} onChange={(v) => onPriceChange(s.id, v)} width="160px" />
                     ) : (
                       <ValueDisplay value={s.price} dirty={isDirty} />
                     )}
                   </td>
-                  <td style={tdCenterStyle}>
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <td className={tdCenterCls}>
+                    <div className="flex gap-[10px] justify-center">
                       <EditIconButton onClick={() => onToggleEdit(s.id)} active={isEditing} />
                       <DeleteIconButton onClick={() => onToggleDelete(s.id)} marked={markedDelete} />
                     </div>
@@ -1309,15 +1320,15 @@ const StoneGroupTable: React.FC<{
               );
             })}
             {items.length === 0 && !adding && (
-              <tr><td colSpan={5} style={{ padding: '14px', textAlign: 'center', color: '#94a3b8' }}>Chưa có đá nào</td></tr>
+              <tr><td colSpan={5} className="p-[14px] text-center text-[#94a3b8]">Chưa có đá nào</td></tr>
             )}
             {adding && (
               <tr className="pcp-add-row">
-                <td style={tdStyle}><input autoFocus value={newStone.name} onChange={(e) => setNewStone((s) => ({ ...s, name: e.target.value }))} style={inputStyle} placeholder="Tên đá" /></td>
-                <td style={tdStyle}><input value={newStone.cut} onChange={(e) => setNewStone((s) => ({ ...s, cut: e.target.value }))} style={inputStyle} placeholder="Giác cắt" /></td>
-                <td style={tdStyle}><input value={newStone.size} onChange={(e) => setNewStone((s) => ({ ...s, size: e.target.value }))} style={inputStyle} placeholder="Size" /></td>
-                <td style={tdStyle}><MoneyField value={parseFloat(newStone.price) || 0} onChange={(v) => setNewStone((s) => ({ ...s, price: String(v) }))} width="160px" /></td>
-                <td style={tdCenterStyle}>
+                <td className={tdCls}><input autoFocus value={newStone.name} onChange={(e) => setNewStone((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="Tên đá" /></td>
+                <td className={tdCls}><input value={newStone.cut} onChange={(e) => setNewStone((s) => ({ ...s, cut: e.target.value }))} className={inputCls} placeholder="Giác cắt" /></td>
+                <td className={tdCls}><input value={newStone.size} onChange={(e) => setNewStone((s) => ({ ...s, size: e.target.value }))} className={inputCls} placeholder="Size" /></td>
+                <td className={tdCls}><MoneyField value={parseFloat(newStone.price) || 0} onChange={(v) => setNewStone((s) => ({ ...s, price: String(v) }))} width="160px" /></td>
+                <td className={tdCenterCls}>
                   <ConfirmCancelButtons onConfirm={onConfirmAdd} onCancel={onCloseAdd} />
                 </td>
               </tr>
@@ -1326,8 +1337,8 @@ const StoneGroupTable: React.FC<{
           {!adding && (
             <tfoot>
               <tr className="pcp-add-row">
-                <td colSpan={5} style={{ padding: '8px' }}>
-                  <button type="button" onClick={onOpenAdd} className="pcp-add-trigger" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700, padding: '4px' }}>
+                <td colSpan={5} className="p-[8px]">
+                  <button type="button" onClick={onOpenAdd} className="pcp-add-trigger flex items-center justify-center gap-[6px] w-full bg-transparent border-0 cursor-pointer text-[12px] font-bold p-[4px]">
                     <Plus size={13} /> {addLabel}
                   </button>
                 </td>
@@ -1338,10 +1349,10 @@ const StoneGroupTable: React.FC<{
       </div>
 
       {items.length > STONE_PAGE_SIZE && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
-          <button type="button" onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} style={pageBtnStyle(safePage <= 1)}>‹</button>
-          <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#64748b' }}>Trang {safePage}/{totalPages}</span>
-          <button type="button" onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} style={pageBtnStyle(safePage >= totalPages)}>›</button>
+        <div className="flex items-center justify-end gap-[8px] mt-[10px]">
+          <button type="button" onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={pageBtnCls(safePage <= 1)}>‹</button>
+          <span className="text-[11.5px] font-bold text-[#64748b]">Trang {safePage}/{totalPages}</span>
+          <button type="button" onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className={pageBtnCls(safePage >= totalPages)}>›</button>
         </div>
       )}
     </div>

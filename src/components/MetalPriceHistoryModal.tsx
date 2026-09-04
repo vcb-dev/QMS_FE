@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import { X, History, ArrowUp, ArrowDown } from 'lucide-react';
 import {
@@ -25,16 +26,7 @@ interface MetalPriceHistoryModalProps {
   baseMetals: BaseMetal[];
 }
 
-const dateInputStyle: React.CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  padding: '7px 10px',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: '#334155',
-  outline: 'none',
-};
+const dateInputCls = 'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none';
 
 type QuickRange = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'ALL';
 
@@ -78,12 +70,16 @@ const PriceTooltip: React.FC<any> = ({ active, payload }) => {
   const d = new Date(pt.time);
   const delta = pt.deltaPct;
   return (
-    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 10px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-      <div style={{ fontWeight: 800, color: '#0f172a' }}>{d.toLocaleDateString('vi-VN')}</div>
-      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>{d.toLocaleTimeString('vi-VN')}</div>
-      <div style={{ fontWeight: 700, color: '#0f172a' }}>Giá: {formatCurrency(pt.price)}</div>
+    <div className="bg-surface border border-border rounded-[8px] py-[8px] px-[10px] text-[12px] shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+      <div className="font-extrabold text-[#0f172a]">{d.toLocaleDateString('vi-VN')}</div>
+      <div className="text-[11px] text-faint mb-[4px]">{d.toLocaleTimeString('vi-VN')}</div>
+      <div className="font-bold text-[#0f172a]">Giá: {formatCurrency(pt.price)}</div>
       {delta != null && Math.abs(delta) >= 0.005 && (
-        <div style={{ fontSize: '11.5px', fontWeight: 700, color: delta > 0 ? TREND_UP : TREND_DOWN }}>
+        <div
+          className="text-[11.5px] font-bold"
+          // động — giữ inline
+          style={{ color: delta > 0 ? TREND_UP : TREND_DOWN }}
+        >
           {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(2)}%
         </div>
       )}
@@ -191,39 +187,35 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
 
   if (!isOpen) return null;
 
+  const thBaseCls = 'sticky top-0 bg-[#f8fafc] text-[10.5px] font-extrabold text-muted uppercase tracking-[0.3px]';
+
   // Render qua portal thẳng ra document.body — nếu để lồng trong cây trang bình thường thì
   // .page-transition (App.tsx, animation transform: translateY() fill-mode forwards) biến thành
   // containing block cho mọi phần tử position:fixed bên trong nó, khiến modal-backdrop "fixed"
   // bám theo trang bị cuộn thay vì bám màn hình thật — cuộn trang xuống rồi mở modal là bị lệch/xén.
   return createPortal(
     <div className="modal-backdrop show" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '880px', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-        <div className="modal-header" style={{ flexShrink: 0 }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0, color: '#0f172a' }}><History size={18}/>Lịch Sử Giá Kim Loại</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+      <div className="modal-card max-w-[880px] rounded-[20px] overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header shrink-0">
+          <h2 className="flex items-center gap-[6px] m-0 text-[#0f172a]"><History size={18}/>Lịch Sử Giá Kim Loại</h2>
+          <button onClick={onClose} className="bg-transparent border-0 text-muted cursor-pointer">
             <X size={20} />
           </button>
         </div>
 
         {/* Bộ lọc — filter nhanh Ngày/Tuần/Tháng, khoảng ngày tùy chọn — chung 1 hàng.
             Chọn kim loại chuyển hẳn xuống tab góc phải biểu đồ, khỏi trùng 2 chỗ. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: '14px 20px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="flex items-center gap-[10px] flex-wrap py-[14px] px-[20px] border-b border-border shrink-0">
+          <div className="flex gap-[4px]">
             {QUICK_RANGES.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => applyQuickRange(opt.value)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: quickRange === opt.value ? '#0f172a' : '#f1f5f9',
-                  color: quickRange === opt.value ? '#ffffff' : '#64748b',
-                }}
+                className={clsx(
+                  'py-[6px] px-[12px] rounded-[6px] border-0 text-[11.5px] font-bold cursor-pointer',
+                  quickRange === opt.value ? 'bg-[#0f172a] text-white' : 'bg-[#f1f5f9] text-muted',
+                )}
               >
                 {opt.label}
               </button>
@@ -235,22 +227,22 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
             value={startDate}
             max={endDate || undefined}
             onChange={(e) => { setStartDate(e.target.value); setQuickRange(null); }}
-            style={dateInputStyle}
+            className={dateInputCls}
           />
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>đến</span>
+          <span className="text-[11px] font-bold text-faint">đến</span>
           <input
             type="date"
             value={endDate}
             min={startDate || undefined}
             onChange={(e) => { setEndDate(e.target.value); setQuickRange(null); }}
-            style={dateInputStyle}
+            className={dateInputCls}
           />
 
           {quickRange !== 'THIS_MONTH' && (
             <button
               type="button"
               onClick={() => applyQuickRange('THIS_MONTH')}
-              style={{ background: 'transparent', border: 'none', color: '#b91c1c', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
+              className="bg-transparent border-0 text-[#b91c1c] text-[11.5px] font-bold cursor-pointer"
             >
               Xóa bộ lọc
             </button>
@@ -260,17 +252,21 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
         {/* Biểu đồ kiểu chứng khoán — giá lớn + % thay đổi kiểu ticker, tab đổi kim loại nhanh góc phải,
             Area gradient, trục Y zoom theo khoảng giá (không ép về 0) để thấy rõ dao động thật. */}
         {!loading && !error && chartData.length > 0 && trend && (
-          <div style={{ padding: '16px 20px 4px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '6px' }}>
+          <div className="pt-[16px] px-[20px] pb-[4px] shrink-0">
+            <div className="flex items-start justify-between flex-wrap gap-[10px] mb-[6px]">
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                <div className="text-[11px] font-bold text-faint uppercase tracking-[0.3px]">
                   {baseMetals.find((m) => m.id === metalFilter)?.name || ''}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '2px' }}>
-                  <span style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                <div className="flex items-baseline gap-[10px] mt-[2px]">
+                  <span className="text-[22px] font-black text-[#0f172a] [font-variant-numeric:tabular-nums]">
                     {formatCurrency(trend.last)}
                   </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '12.5px', fontWeight: 700, color: trend.color }}>
+                  <span
+                    className="inline-flex items-center gap-[2px] text-[12.5px] font-bold"
+                    // động — giữ inline
+                    style={{ color: trend.color }}
+                  >
                     {trend.changePct > 0.005 ? <ArrowUp size={13} /> : trend.changePct < -0.005 ? <ArrowDown size={13} /> : null}
                     {trend.changePct.toFixed(2)}%
                   </span>
@@ -278,22 +274,16 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
               </div>
 
               {/* Chọn nhanh kim loại — góc phải biểu đồ */}
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div className="flex gap-[4px]">
                 {baseMetals.map((m) => (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => setMetalFilter(m.id)}
-                    style={{
-                      padding: '5px 11px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      background: metalFilter === m.id ? '#0f172a' : '#f1f5f9',
-                      color: metalFilter === m.id ? '#ffffff' : '#64748b',
-                    }}
+                    className={clsx(
+                      'py-[5px] px-[11px] rounded-[6px] border-0 text-[11.5px] font-bold cursor-pointer',
+                      metalFilter === m.id ? 'bg-[#0f172a] text-white' : 'bg-[#f1f5f9] text-muted',
+                    )}
                   >
                     {m.name}
                   </button>
@@ -335,52 +325,52 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
           </div>
         )}
 
-        <div className="modal-body" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 0, display: 'block' }}>
-          {loading && <p style={{ fontSize: '12.5px', color: '#64748b', padding: '20px' }}>Đang tải...</p>}
-          {error && <p style={{ fontSize: '12.5px', color: '#dc2626', padding: '20px' }}>{error}</p>}
+        <div className="modal-body flex-1 min-h-0 overflow-auto p-0 block">
+          {loading && <p className="text-[12.5px] text-muted p-[20px]">Đang tải...</p>}
+          {error && <p className="text-[12.5px] text-[#dc2626] p-[20px]">{error}</p>}
           {!loading && !error && filteredRows.length === 0 && (
-            <p style={{ fontSize: '12.5px', color: '#94a3b8', padding: '20px' }}>Không có lịch sử thay đổi giá phù hợp bộ lọc.</p>
+            <p className="text-[12.5px] text-faint p-[20px]">Không có lịch sử thay đổi giá phù hợp bộ lọc.</p>
           )}
           {!loading && !error && filteredRows.length > 0 && (
-            <table style={{ width: '100%', minWidth: '620px', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+            <table className="w-full min-w-[620px] table-fixed border-collapse text-[12.5px]">
               <colgroup>
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '17%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '27%' }} />
-                <col style={{ width: '22%' }} />
+                <col className="w-[20%]" />
+                <col className="w-[17%]" />
+                <col className="w-[14%]" />
+                <col className="w-[27%]" />
+                <col className="w-[22%]" />
               </colgroup>
               <thead>
-                <tr style={{ background: '#f8fafc' }}>
-                  <th style={{ position: 'sticky', top: 0, background: '#f8fafc', textAlign: 'left', padding: '10px 20px', fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Kim loại</th>
-                  <th style={{ position: 'sticky', top: 0, background: '#f8fafc', textAlign: 'right', padding: '10px 12px', fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Giá</th>
-                  <th style={{ position: 'sticky', top: 0, background: '#f8fafc', textAlign: 'right', padding: '10px 12px', fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Thay đổi</th>
-                  <th style={{ position: 'sticky', top: 0, background: '#f8fafc', textAlign: 'left', padding: '10px 12px', fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Thời gian</th>
-                  <th style={{ position: 'sticky', top: 0, background: '#f8fafc', textAlign: 'left', padding: '10px 20px', fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Người cập nhật</th>
+                <tr className="bg-[#f8fafc]">
+                  <th className={clsx(thBaseCls, 'text-left py-[10px] px-[20px]')}>Kim loại</th>
+                  <th className={clsx(thBaseCls, 'text-right py-[10px] px-[12px]')}>Giá</th>
+                  <th className={clsx(thBaseCls, 'text-right py-[10px] px-[12px]')}>Thay đổi</th>
+                  <th className={clsx(thBaseCls, 'text-left py-[10px] px-[12px]')}>Thời gian</th>
+                  <th className={clsx(thBaseCls, 'text-left py-[10px] px-[20px]')}>Người cập nhật</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.map((r) => (
-                  <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 20px', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.baseMetalName}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap' }}>{formatCurrency(r.priceVnd)}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                  <tr key={r.id} className="border-t border-[#f1f5f9]">
+                    <td className="py-[10px] px-[20px] font-bold text-[#0f172a] overflow-hidden text-ellipsis whitespace-nowrap">{r.baseMetalName}</td>
+                    <td className="py-[10px] px-[12px] text-right font-extrabold text-[#0f172a] whitespace-nowrap">{formatCurrency(r.priceVnd)}</td>
+                    <td className="py-[10px] px-[12px] text-right">
                       {r.changePct != null && r.changePct !== 0 ? (
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '11.5px', fontWeight: 700,
-                          color: r.changePct > 0 ? '#16a34a' : '#dc2626',
-                        }}>
+                        <span className={clsx(
+                          'inline-flex items-center gap-[2px] text-[11.5px] font-bold',
+                          r.changePct > 0 ? 'text-[#16a34a]' : 'text-[#dc2626]',
+                        )}>
                           {r.changePct > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                           {Math.abs(r.changePct)}%
                         </span>
                       ) : (
-                        <span style={{ color: '#cbd5e1' }}>—</span>
+                        <span className="text-[#cbd5e1]">—</span>
                       )}
                     </td>
-                    <td style={{ padding: '10px 12px', color: '#94a3b8', fontSize: '11.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td className="py-[10px] px-[12px] text-faint text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {new Date(r.createdAt).toLocaleString('vi-VN')}
                     </td>
-                    <td style={{ padding: '10px 20px', color: '#94a3b8', fontSize: '11.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td className="py-[10px] px-[20px] text-faint text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {r.updatedByName || 'Hệ thống'}
                     </td>
                   </tr>
@@ -394,3 +384,4 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
     document.body,
   );
 };
+

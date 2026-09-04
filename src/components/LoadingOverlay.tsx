@@ -10,42 +10,15 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = 'Đang
   <div
     role="alert"
     aria-busy="true"
-    style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 3000,
-      background: 'rgba(15, 23, 42, 0.45)',
-      backdropFilter: 'blur(2px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
+    className="fixed inset-0 z-[3000] bg-[rgba(15,23,42,0.45)] backdrop-blur-[2px] flex items-center justify-center"
   >
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '14px',
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '12px',
-        padding: '18px 22px',
-        boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
-        maxWidth: '320px',
-      }}
+      className="flex items-center gap-[14px] bg-white border border-[#e2e8f0] rounded-[12px] py-[18px] px-[22px] shadow-[0_8px_28px_rgba(0,0,0,0.18)] max-w-[320px]"
     >
       <span
-        style={{
-          width: '22px',
-          height: '22px',
-          borderRadius: '50%',
-          border: '3px solid #e2e8f0',
-          borderTopColor: '#475569',
-          animation: 'spin 0.8s linear infinite',
-          flexShrink: 0,
-        }}
+        className="w-[22px] h-[22px] rounded-full border-[3px] border-solid border-[#e2e8f0] border-t-[#475569] animate-[spin_0.8s_linear_infinite] shrink-0"
       />
-      <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>{message}</span>
+      <span className="text-[13.5px] font-bold text-[#0f172a]">{message}</span>
     </div>
   </div>
 );

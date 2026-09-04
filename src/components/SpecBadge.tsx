@@ -1,4 +1,5 @@
 import React from 'react';
+import clsx from 'clsx';
 
 interface SpecBadgeProps {
   icon: React.ReactNode;
@@ -13,18 +14,13 @@ interface SpecBadgeProps {
 // lưới thông số của DetailPage (Chất liệu, Đá quý, Danh mục, Khối lượng, Số đo, Tỷ lệ chốt...).
 export const SpecBadge: React.FC<SpecBadgeProps> = ({ icon, label, value, fullWidth, valueStyle, title }) => (
   <div
-    style={{
-      gridColumn: fullWidth ? '1 / -1' : undefined,
-      background: '#f8fafc',
-      border: '1px solid #e2e8f0',
-      borderRadius: '10px',
-      padding: '12px',
-    }}
+    className={clsx("bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] p-[12px]", fullWidth && "col-span-full")}
   >
-    <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '5px' }}>
+    <span className="text-[10.5px] font-extrabold text-[#64748b] uppercase flex items-center gap-[5px]">
       {icon} {label}
     </span>
-    <strong style={{ fontSize: '13px', color: '#0f172a', marginTop: '4px', display: 'block', ...valueStyle }} title={title}>
+    {/* động — giữ inline */}
+    <strong className="text-[13px] text-[#0f172a] mt-[4px] block" style={valueStyle} title={title}>
       {value}
     </strong>
   </div>

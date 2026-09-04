@@ -1,6 +1,8 @@
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
+import { clsx } from 'clsx';
 import { ReasonPromptModal } from './ReasonPromptModal';
+import { btnInspPrimaryCls } from '../styles/classNames';
 
 interface ReturnModalProps {
   isOpen: boolean;
@@ -20,8 +22,7 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({ isOpen, onClose, onSub
     placeholder="Nhập lý do cần bổ sung (ví dụ: Ảnh mờ không rõ kiểu chấu đính đá, thiếu kích thước nhẫn...)..."
     validationMsg="BẮT BUỘC nhập lý do trả lại để Sale biết đường bổ sung!"
     errorFallbackMsg="Lỗi trả lại yêu cầu"
-    submitButtonClassName="btn-insp btn-insp-primary"
-    submitButtonStyle={{ background: '#ea580c' }}
+    submitButtonClassName={clsx(btnInspPrimaryCls, '!bg-[#ea580c]')}
     submitIcon={<RotateCcw size={16} />}
     submitLabel="Trả Lại Cho Sale"
   />

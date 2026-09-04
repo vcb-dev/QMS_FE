@@ -8,63 +8,18 @@ import { ProductSpecModal } from '../components/ProductSpecModal';
 import { displayPrice, formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProducts, getAllUsersApi } from '../services/api';
 
-// Cùng phong cách popover "Bộ lọc" như FilterBar.tsx (trang Danh Sách Yêu Cầu) — style trùng tên
-// nhưng khai báo riêng ở đây vì FilterBar không export ra ngoài.
-const selectStyle = (minWidth: string): React.CSSProperties => ({
-  background: '#f8fafc',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  padding: '7px 12px',
-  fontSize: '12.5px',
-  fontWeight: 700,
-  color: '#0f172a',
-  outline: 'none',
-  cursor: 'pointer',
-  minWidth,
-});
+// Cùng phong cách popover "Bộ lọc" như FilterBar.tsx (trang Danh Sách Yêu Cầu)
+const popoverSelectCls =
+  'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[8px] pr-[30px] pl-[12px] text-[12.5px] font-semibold text-[#0f172a] outline-none cursor-pointer w-full appearance-none box-border';
 
-const popoverSelectStyle: React.CSSProperties = {
-  ...selectStyle('100%'),
-  width: '100%',
-  padding: '8px 30px 8px 12px',
-  fontWeight: 600,
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  MozAppearance: 'none',
-  boxSizing: 'border-box',
-};
+const selectArrowCls =
+  'absolute right-[10px] top-1/2 -translate-y-1/2 text-[#64748b] pointer-events-none';
 
-const selectArrowStyle: React.CSSProperties = {
-  position: 'absolute',
-  right: '10px',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  color: '#64748b',
-  pointerEvents: 'none',
-};
+const popoverLabelCls =
+  'text-[10.5px] font-extrabold text-[#94a3b8] uppercase tracking-[0.4px] mb-[5px] block';
 
-const popoverLabelStyle: React.CSSProperties = {
-  fontSize: '10.5px',
-  fontWeight: 800,
-  color: '#94a3b8',
-  textTransform: 'uppercase',
-  letterSpacing: '0.4px',
-  marginBottom: '5px',
-  display: 'block',
-};
-
-const dateInputStyle: React.CSSProperties = {
-  width: '100%',
-  background: '#f8fafc',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  padding: '7px 10px',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: '#334155',
-  outline: 'none',
-  boxSizing: 'border-box',
-};
+const dateInputCls =
+  'w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none box-border';
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   categories,
@@ -191,132 +146,92 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   }, [debouncedSearch, selectedCat, selectedMat, selectedSale, selectedOrder, sortMode, timeRange, startDate, endDate, currentPage, pageSize]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '30px' }}>
+    <div className="flex flex-col gap-[20px] pb-[30px]">
       {/* Header Title */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+      <div className="flex justify-between items-start gap-[12px]">
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
+          <h1 className="text-[24px] font-black text-[#0f172a] m-0 tracking-[-0.3px]">
             {currentRole === 'SALE' ? 'Thư Viện Sản Phẩm' : 'Quản Lý Sản Phẩm'}
           </h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+          <p className="text-[13px] text-[#64748b] mt-[4px] mb-0 mx-0">
             Xếp hạng sản phẩm đã báo giá cho khách theo giá, mốc thời gian và phân loại
           </p>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+      <div className="flex items-center justify-between gap-[10px] flex-wrap">
+        <div className="flex items-center gap-[10px] flex-wrap">
           {/* Search Input */}
-          <div style={{ position: 'relative', width: '260px' }}>
-            <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <div className="relative w-[260px]">
+            <Search size={15} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#94a3b8]" />
             <input
               type="text"
               placeholder="Tìm kiếm sản phẩm ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '7px 12px 7px 36px',
-                fontSize: '12.5px',
-                color: '#0f172a',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="w-full bg-surface border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[12px] pb-[7px] pl-[36px] text-[12.5px] text-[#0f172a] outline-none box-border"
             />
           </div>
 
           {/* Nút Bộ Lọc — gom danh mục/chất liệu/sale/order/thời gian */}
-          <div style={{ position: 'relative' }} ref={panelRef}>
+          <div className="relative" ref={panelRef}>
             <button
               type="button"
               onClick={() => setPanelOpen((v) => !v)}
-              className="fb-btn"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                fontSize: '12.5px',
-              }}
+              className="fb-btn inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]"
             >
               <SlidersHorizontal size={14} />
               Bộ lọc
               {panelFilterCount > 0 && (
-                <span style={{
-                  background: '#cbd5e1',
-                  color: '#0f172a',
-                  borderRadius: '999px',
-                  fontSize: '10.5px',
-                  fontWeight: 900,
-                  padding: '1px 6px',
-                  minWidth: '16px',
-                  textAlign: 'center',
-                }}>
+                <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[10.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
                   {panelFilterCount}
                 </span>
               )}
             </button>
 
             {panelOpen && (
-              <div style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                left: 0,
-                zIndex: 20,
-                width: '300px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                boxShadow: '0 12px 32px rgba(15, 23, 42, 0.16)',
-                padding: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '14px',
-              }}>
+              <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[300px] bg-surface border border-[#e2e8f0] rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
                 {/* Category */}
                 <div>
-                  <label style={popoverLabelStyle}>Danh mục</label>
-                  <div style={{ position: 'relative' }}>
-                    <select value={selectedCat} onChange={(e) => setSelectedCat(e.target.value)} style={popoverSelectStyle}>
+                  <label className={popoverLabelCls}>Danh mục</label>
+                  <div className="relative">
+                    <select value={selectedCat} onChange={(e) => setSelectedCat(e.target.value)} className={popoverSelectCls}>
                       <option value="ALL">Tất cả danh mục</option>
                       {categories.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
-                    <ChevronDown size={14} style={selectArrowStyle} />
+                    <ChevronDown size={14} className={selectArrowCls} />
                   </div>
                 </div>
 
                 {/* Material */}
                 <div>
-                  <label style={popoverLabelStyle}>Chất liệu</label>
-                  <div style={{ position: 'relative' }}>
-                    <select value={selectedMat} onChange={(e) => setSelectedMat(e.target.value)} style={popoverSelectStyle}>
+                  <label className={popoverLabelCls}>Chất liệu</label>
+                  <div className="relative">
+                    <select value={selectedMat} onChange={(e) => setSelectedMat(e.target.value)} className={popoverSelectCls}>
                       <option value="ALL">Tất cả chất liệu</option>
                       {materials.map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
                     </select>
-                    <ChevronDown size={14} style={selectArrowStyle} />
+                    <ChevronDown size={14} className={selectArrowCls} />
                   </div>
                 </div>
 
                 {/* Sale — lọc theo người tạo yêu cầu (role SALE) */}
                 {saleStaff.length > 0 && (
                   <div>
-                    <label style={popoverLabelStyle}>Sale</label>
-                    <div style={{ position: 'relative' }}>
-                      <select value={selectedSale} onChange={(e) => setSelectedSale(e.target.value)} style={popoverSelectStyle}>
+                    <label className={popoverLabelCls}>Sale</label>
+                    <div className="relative">
+                      <select value={selectedSale} onChange={(e) => setSelectedSale(e.target.value)} className={popoverSelectCls}>
                         <option value="ALL">Tất cả Sale</option>
                         {saleStaff.map((u) => (
                           <option key={u.id} value={u.id}>{u.name}</option>
                         ))}
                       </select>
-                      <ChevronDown size={14} style={selectArrowStyle} />
+                      <ChevronDown size={14} className={selectArrowCls} />
                     </div>
                   </div>
                 )}
@@ -324,50 +239,50 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                 {/* Order — lọc theo người xử lý/báo giá (role ORDER) */}
                 {orderStaff.length > 0 && (
                   <div>
-                    <label style={popoverLabelStyle}>Order</label>
-                    <div style={{ position: 'relative' }}>
-                      <select value={selectedOrder} onChange={(e) => setSelectedOrder(e.target.value)} style={popoverSelectStyle}>
+                    <label className={popoverLabelCls}>Order</label>
+                    <div className="relative">
+                      <select value={selectedOrder} onChange={(e) => setSelectedOrder(e.target.value)} className={popoverSelectCls}>
                         <option value="ALL">Tất cả Order</option>
                         {orderStaff.map((u) => (
                           <option key={u.id} value={u.id}>{u.name}</option>
                         ))}
                       </select>
-                      <ChevronDown size={14} style={selectArrowStyle} />
+                      <ChevronDown size={14} className={selectArrowCls} />
                     </div>
                   </div>
                 )}
 
                 {/* Time Range */}
                 <div>
-                  <label style={popoverLabelStyle}>Lọc nhanh theo thời gian</label>
-                  <div style={{ position: 'relative' }}>
-                    <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)} style={popoverSelectStyle}>
+                  <label className={popoverLabelCls}>Lọc nhanh theo thời gian</label>
+                  <div className="relative">
+                    <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)} className={popoverSelectCls}>
                       <option value="ALL">Mọi thời gian</option>
                       <option value="TODAY">Hôm nay</option>
                       <option value="THIS_WEEK">Tuần này</option>
                       <option value="THIS_MONTH">Tháng này</option>
                     </select>
-                    <ChevronDown size={14} style={selectArrowStyle} />
+                    <ChevronDown size={14} className={selectArrowCls} />
                   </div>
                 </div>
 
                 {/* Khoảng ngày tùy chọn — từ ngày → đến ngày (lọc theo ngày báo giá) */}
                 <div>
-                  <label style={popoverLabelStyle}>Khoảng ngày tùy chọn</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label className={popoverLabelCls}>Khoảng ngày tùy chọn</label>
+                  <div className="flex flex-col gap-[8px]">
                     <input
                       type="date"
                       value={startDate}
                       max={endDate || undefined}
                       onChange={(e) => setStartDate(e.target.value)}
-                      style={dateInputStyle}
+                      className={dateInputCls}
                     />
                     <input
                       type="date"
                       value={endDate}
                       min={startDate || undefined}
                       onChange={(e) => setEndDate(e.target.value)}
-                      style={dateInputStyle}
+                      className={dateInputCls}
                     />
                   </div>
                 </div>
@@ -381,18 +296,18 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             onClick={handleResetExtraFilters}
             disabled={!isExtraFiltered}
             title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-            className="fb-btn"
-            style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              padding: '8px 14px', fontSize: '12px', flexShrink: 0,
-            }}
+            className="fb-btn flex items-center gap-[4px] py-[8px] px-[14px] text-[12px] shrink-0"
           >
             <RotateCcw size={13} /> Xóa bộ lọc
           </button>
         </div>
 
         {/* Sort Dropdown — phải */}
-        <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortModeLibrary)} style={selectStyle('150px')}>
+        <select
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as SortModeLibrary)}
+          className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[12.5px] font-bold text-[#0f172a] outline-none cursor-pointer min-w-[150px]"
+        >
           <option value="PRICE_DESC">Giá cao nhất</option>
           <option value="PRICE_ASC">Giá thấp nhất</option>
           <option value="RECENT">Mới nhất</option>
@@ -400,12 +315,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         </select>
       </div>
 
-      {error && <div style={{ color: '#dc2626', fontSize: '13px', textAlign: 'center' }}>{error}</div>}
+      {error && <div className="text-[#dc2626] text-[13px] text-center">{error}</div>}
 
       {/* Product Cards Grid: 5 Columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '16px' }}>
+      <div className="grid grid-cols-5 gap-[16px]">
         {loading ? (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
+          <div className="col-span-full text-center text-[#94a3b8] p-[40px]">
             Đang tải dữ liệu sản phẩm...
           </div>
         ) : products.length > 0 ? (
@@ -417,28 +332,10 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
               <div
                 key={item.key}
                 onClick={() => setDetailItem(item)}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  overflow: 'hidden',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                  cursor: 'pointer',
-                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.08)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
-                }}
+                className="bg-surface border border-border rounded-[14px] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-[transform_0.15s_ease,box-shadow_0.15s_ease] flex flex-col hover:-translate-y-[2px] hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)]"
               >
                 {/* Image Container */}
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', background: '#f8fafc' }}>
+                <div className="relative w-full aspect-square bg-[#f8fafc]">
                   <img
                     src={imgUrl}
                     alt=""
@@ -446,105 +343,76 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       e.currentTarget.onerror = null;
                       e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                     }}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    className="w-full h-full object-cover"
                   />
                   {(sortMode === 'PRICE_DESC' || sortMode === 'MOST_QUOTED') && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: '8px',
-                        background: '#0f172a',
-                        color: '#ffffff',
-                        fontSize: '10px',
-                        fontWeight: 800,
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                      }}
-                    >
+                    <span className="absolute top-[8px] left-[8px] bg-text text-surface text-[10px] font-extrabold py-[2px] px-[8px] rounded-[10px]">
                       #{(currentPage - 1) * pageSize + idx + 1}
                     </span>
                   )}
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      background: 'rgba(15, 23, 42, 0.75)',
-                      backdropFilter: 'blur(4px)',
-                      color: '#ffffff',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: '6px',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
+                  <span className="absolute top-[8px] right-[8px] bg-[rgba(15,23,42,0.75)] backdrop-blur-[4px] text-surface text-[10px] font-bold py-[2px] px-[6px] rounded-[6px] tabular-nums">
                     {item.code}
                   </span>
                 </div>
 
                 {/* Body Details */}
-                <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }} title={item.productName}>
+                <div className="p-[14px] flex flex-col gap-[5px] flex-1">
+                  <div className="flex items-center gap-[6px]">
+                    <h3 className="text-[13.5px] font-extrabold text-text m-0 truncate flex-1" title={item.productName}>
                       {item.productName}
                     </h3>
                     {item.duplicateCount && item.duplicateCount > 1 && (
                       <span
                         title={`Đã báo giá ${item.duplicateCount} lần cho mẫu này`}
-                        style={{
-                          flexShrink: 0, fontSize: '10px', fontWeight: 800, color: '#0369a1',
-                          background: '#e0f2fe', padding: '2px 6px', borderRadius: '8px',
-                        }}
+                        className="shrink-0 text-[10px] font-extrabold text-[#0369a1] bg-[#e0f2fe] py-[2px] px-[6px] rounded-[8px]"
                       >
                         ×{item.duplicateCount}
                       </span>
                     )}
                   </div>
 
-                  <div style={{ marginTop: '1px' }}>
-                    <div style={{ fontSize: '15px', fontWeight: 900, color: '#0f172a' }}>
+                  <div className="mt-[1px]">
+                    <div className="text-[15px] font-black text-text">
                       {formatPriceRange(item.priceMin, item.priceMax, displayPrice(item.option))}
                     </div>
                     {/* {item.priceMaterialMin != null && (
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
+                      <div className="text-[11px] font-semibold text-[#64748b]">
                         Giá chất liệu: {formatPriceRange(item.priceMaterialMin, item.priceMaterialMax, item.priceMaterialMin)}
                       </div>
                     )}
                     {item.priceStoneMin != null && item.priceStoneMax != null && item.priceStoneMax > 0 && (
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>
+                      <div className="text-[11px] font-semibold text-[#64748b]">
                         Giá đá: {formatPriceRange(item.priceStoneMin, item.priceStoneMax, item.priceStoneMin)}
                       </div>
                     )} */}
                     {item.livePriceMin != null && item.livePriceMax != null && (
-                      <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#0369a1', marginTop: '1px' }}>
+                      <div className="text-[11.5px] font-bold text-[#0369a1] mt-[1px]">
                         Hôm nay ~ {formatPriceRange(item.livePriceMin, item.livePriceMax, item.livePriceMax)}
                       </div>
                     )}
                     {/* {item.livePriceMaterialMin != null && (
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8' }}>
+                      <div className="text-[11px] font-semibold text-[#94a3b8]">
                         Giá chất liệu: {formatPriceRange(item.livePriceMaterialMin, item.livePriceMaterialMax, item.livePriceMaterialMin)}
                       </div>
                     )}
                     {item.livePriceStoneMin != null && item.livePriceStoneMax != null && item.livePriceStoneMax > 0 && (
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#94a3b8' }}>
+                      <div className="text-[11px] font-semibold text-[#94a3b8]">
                         Giá đá: {formatPriceRange(item.livePriceStoneMin, item.livePriceStoneMax, item.livePriceStoneMin)}
                       </div>
                     )} */}
                   </div>
 
-                  <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px', lineHeight: '1.4' }}>
+                  <div className="text-[11.5px] text-[#475569] mt-[4px] flex flex-col gap-[3px] leading-[1.4]">
                     <div>
-                      <strong style={{ color: '#64748b' }}>Chất liệu:</strong> {item.matStr}
+                      <strong className="text-[#64748b]">Chất liệu:</strong> {item.matStr}
                     </div>
                     {item.weightDisplay && (
                       <div>
-                        <strong style={{ color: '#64748b' }}>Khối lượng:</strong> <span style={{ fontWeight: 700, color: '#0f172a' }}>{item.weightDisplay}</span>
+                        <strong className="text-[#64748b]">Khối lượng:</strong> <span className="font-bold text-text">{item.weightDisplay}</span>
                       </div>
                     )}
                     <div>
-                      <strong style={{ color: '#64748b' }}>Đá quý:</strong> <span style={{ color: item.stoneDisplay === 'Không đính đá' ? '#94a3b8' : '#0f172a', fontWeight: item.stoneDisplay === 'Không đính đá' ? 500 : 700 }}>{item.stoneDisplay}</span>
+                      <strong className="text-[#64748b]">Đá quý:</strong> <span className={item.stoneDisplay === 'Không đính đá' ? 'text-[#94a3b8] font-medium' : 'text-text font-bold'}>{item.stoneDisplay}</span>
                     </div>
                   </div>
                 </div>
@@ -552,7 +420,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             );
           })
         ) : (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
+          <div className="col-span-full text-center text-[#94a3b8] p-[40px]">
             Chưa có sản phẩm nào trong thư viện
           </div>
         )}
@@ -560,7 +428,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
       {/* Pagination */}
       {totalItems > 0 && (
-        <div style={{ marginTop: '10px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+        <div className="mt-[10px] bg-surface border border-border rounded-[12px]">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

@@ -5,40 +5,10 @@ import { exportQuoteRequestsExcelApi } from '../services/api';
 import { STATUS_CHART_META } from '../constants';
 import { EXPORT_FIELDS } from '../constants/exportFields';
 
-const selectStyle: React.CSSProperties = {
-  width: '100%',
-  background: '#f8fafc',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  padding: '8px 30px 8px 12px',
-  fontSize: '12.5px',
-  fontWeight: 600,
-  color: '#334155',
-  outline: 'none',
-  cursor: 'pointer',
-  boxSizing: 'border-box',
-  appearance: 'none',
-};
-
-const fieldLabelStyle: React.CSSProperties = {
-  fontSize: '10.5px',
-  fontWeight: 800,
-  color: '#94a3b8',
-  textTransform: 'uppercase',
-  letterSpacing: '0.4px',
-  marginBottom: '5px',
-  display: 'block',
-};
-
-const panelStyle: React.CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '12px',
-  padding: '16px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px',
-};
+const selectCls = 'appearance-none w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[30px] pb-[8px] pl-[12px] text-[12.5px] font-semibold text-[#334155] outline-none cursor-pointer box-border';
+const fieldLabelCls = 'text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px] mb-[5px] block';
+const panelCls = 'bg-[#f8fafc] border border-border rounded-[12px] p-[16px] flex flex-col gap-[12px]';
+const selectArrowCls = 'absolute right-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -119,96 +89,94 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div className="modal-backdrop show">
-      <div className="modal-card" style={{ maxWidth: '760px', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-        <div className="modal-header" style={{ flexShrink: 0 }}>
+      <div className="modal-card max-w-[760px] rounded-[20px] overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="modal-header shrink-0">
           <h2>Xuất Excel Yêu Cầu Báo Giá</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+          <button onClick={onClose} className="bg-transparent border-0 text-muted cursor-pointer">
             <X size={20} />
           </button>
         </div>
 
-        <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="modal-body flex-1 overflow-y-auto">
           <div className="modal-grid-2col">
             {/* Cột trái — bộ lọc phạm vi dữ liệu export */}
-            <div style={panelStyle}>
+            <div className={panelCls}>
               <label className="form-label">Bộ lọc dữ liệu export</label>
 
               <div>
-                <span style={fieldLabelStyle}>Trạng thái</span>
-                <div style={{ position: 'relative' }}>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} style={selectStyle}>
+                <span className={fieldLabelCls}>Trạng thái</span>
+                <div className="relative">
+                  <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả trạng thái</option>
                     {STATUS_CHART_META.map((s) => (
                       <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
                   </select>
-                  <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                  <ChevronDown size={14} className={selectArrowCls} />
                 </div>
               </div>
 
               <div>
-                <span style={fieldLabelStyle}>Danh mục</span>
-                <div style={{ position: 'relative' }}>
-                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={selectStyle}>
+                <span className={fieldLabelCls}>Danh mục</span>
+                <div className="relative">
+                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả danh mục</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
-                  <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                  <ChevronDown size={14} className={selectArrowCls} />
                 </div>
               </div>
 
               <div>
-                <span style={fieldLabelStyle}>Chất liệu</span>
-                <div style={{ position: 'relative' }}>
-                  <select value={materialId} onChange={(e) => setMaterialId(e.target.value)} style={selectStyle}>
+                <span className={fieldLabelCls}>Chất liệu</span>
+                <div className="relative">
+                  <select value={materialId} onChange={(e) => setMaterialId(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả chất liệu</option>
                     {materials.map((m) => (
                       <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                   </select>
-                  <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                  <ChevronDown size={14} className={selectArrowCls} />
                 </div>
               </div>
 
               <div>
-                <span style={fieldLabelStyle}>Khoảng thời gian</span>
-                <div style={{ position: 'relative' }}>
-                  <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} style={selectStyle}>
+                <span className={fieldLabelCls}>Khoảng thời gian</span>
+                <div className="relative">
+                  <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả thời gian</option>
                     <option value="TODAY">Hôm nay</option>
                     <option value="THIS_WEEK">Tuần này</option>
                     <option value="THIS_MONTH">Tháng này</option>
                   </select>
-                  <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                  <ChevronDown size={14} className={selectArrowCls} />
                 </div>
               </div>
 
               <div>
-                <span style={fieldLabelStyle}>Khoảng ngày tùy chọn</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-                    <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                <span className={fieldLabelCls}>Khoảng ngày tùy chọn</span>
+                <div className="flex items-center gap-[6px]">
+                  <div className="relative flex-1 min-w-0">
+                    <Calendar size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                     <input
                       type="date"
                       value={startDate}
                       max={endDate || undefined}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="form-control"
-                      style={{ paddingLeft: '32px' }}
+                      className="form-control pl-[32px]"
                     />
                   </div>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>đến</span>
-                  <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-                    <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                  <span className="text-[11px] font-bold text-faint">đến</span>
+                  <div className="relative flex-1 min-w-0">
+                    <Calendar size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                     <input
                       type="date"
                       value={endDate}
                       min={startDate || undefined}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="form-control"
-                      style={{ paddingLeft: '32px' }}
+                      className="form-control pl-[32px]"
                     />
                   </div>
                 </div>
@@ -216,16 +184,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
 
             {/* Cột phải — chọn cột export */}
-            <div style={panelStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className={panelCls}>
+              <div className="flex justify-between items-center">
                 <label className="form-label">Chọn cột export</label>
-                <button type="button" onClick={toggleAll} style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}>
+                <button type="button" onClick={toggleAll} className="bg-transparent border-0 text-primary text-[11.5px] font-bold cursor-pointer">
                   {allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', maxHeight: '300px', overflowY: 'auto', padding: '2px' }}>
+              <div className="grid grid-cols-2 gap-x-[12px] gap-y-[8px] max-h-[300px] overflow-y-auto p-[2px]">
                 {EXPORT_FIELDS.map((f) => (
-                  <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: '#334155', cursor: 'pointer' }}>
+                  <label key={f.key} className="flex items-center gap-[6px] text-[12.5px] text-[#334155] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedFields.has(f.key)}
@@ -239,14 +207,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </div>
         </div>
 
-        <div className="modal-footer" style={{ flexShrink: 0 }}>
+        <div className="modal-footer shrink-0">
           <button type="button" className="tool-btn" onClick={onClose}>Hủy</button>
           <button
             type="button"
-            className="btn-insp btn-insp-primary"
+            className="btn-insp btn-insp-primary w-auto py-[9px] px-[20px]"
             onClick={handleExport}
             disabled={exporting}
-            style={{ width: 'auto', padding: '9px 20px' }}
           >
             <FileSpreadsheet size={16} /> {exporting ? 'Đang xuất...' : 'Xuất Excel'}
           </button>

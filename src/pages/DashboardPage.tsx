@@ -10,7 +10,8 @@ import { UI_CONSTANTS, STATUS_CHART_META } from '../constants';
 import { StatusPill } from '../components/StatusPill';
 import { ChartTooltip } from '../components/ChartTooltip';
 import { DistributionPieCard } from '../components/DistributionPieCard';
-import { cardStyle } from '../styles/card';
+import { clsx } from 'clsx';
+import { cardCls } from '../styles/classNames';
 import { fetchQuoteRequests, fetchQuoteRequestStats, fetchDashboardCharts } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -209,14 +210,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     if (change === null) return null;
     if (change === 'NEW') {
       return (
-        <span style={{ fontSize: '11px', fontWeight: 800, color: dark ? '#4ade80' : '#16a34a' }}>
+        <span className={clsx('text-[11px] font-extrabold', dark ? 'text-[#4ade80]' : 'text-[#16a34a]')}>
           Mới so với kỳ trước
         </span>
       );
     }
     const isUp = change >= 0;
     return (
-      <span style={{ fontSize: '11px', fontWeight: 800, color: isUp ? (dark ? '#4ade80' : '#16a34a') : (dark ? '#f87171' : '#dc2626') }}>
+      <span className={clsx('text-[11px] font-extrabold', isUp ? (dark ? 'text-[#4ade80]' : 'text-[#16a34a]') : (dark ? 'text-[#f87171]' : 'text-[#dc2626]'))}>
         {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(1)}% so với kỳ trước
       </span>
     );
@@ -226,10 +227,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const renderPointChangeBadge = (curr: number, prev: number | undefined) => {
     if (prev === undefined) return null;
     const diff = curr - prev;
-    if (Math.abs(diff) < 0.05) return <span style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>Không đổi so với kỳ trước</span>;
+    if (Math.abs(diff) < 0.05) return <span className="text-[11px] font-extrabold text-[#94a3b8]">Không đổi so với kỳ trước</span>;
     const isUp = diff > 0;
     return (
-      <span style={{ fontSize: '11px', fontWeight: 800, color: isUp ? '#16a34a' : '#dc2626' }}>
+      <span className={clsx('text-[11px] font-extrabold', isUp ? 'text-[#16a34a]' : 'text-[#dc2626]')}>
         {isUp ? '▲' : '▼'} {Math.abs(diff).toFixed(1)} điểm % so với kỳ trước
       </span>
     );
@@ -264,14 +265,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+    <div className="flex flex-col gap-[22px]">
       {/* 1. View Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="flex items-center justify-between">
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h1 className="text-[24px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
             <LayoutDashboard size={22} /> Tổng quan
           </h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+          <p className="text-[13px] text-muted mt-[4px] mr-0 mb-0 ml-0">
             {timeRange === 'THIS_MONTH' && 'Hoạt động trong tháng này'}
             {timeRange === 'TODAY' && 'Hoạt động trong hôm nay'}
             {timeRange === 'THIS_WEEK' && 'Hoạt động trong tuần này'}
@@ -282,26 +283,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {currentRole !== 'SALE' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="flex items-center gap-[10px]">
           {/* Time Range Filter Select Dropdown */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Calendar size={14} style={{ position: 'absolute', left: '12px', color: '#64748b', pointerEvents: 'none' }} />
+          <div className="relative flex items-center">
+            <Calendar size={14} className="absolute left-[12px] text-[#64748b] pointer-events-none" />
             <select
               value={timeRange}
               onChange={(e) => handleTimeRangeChange(e.target.value)}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '8px 14px 8px 32px',
-                fontSize: '12.5px',
-                fontWeight: 700,
-                color: '#334155',
-                cursor: 'pointer',
-                outline: 'none',
-                appearance: 'auto',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-              }}
+              className="bg-surface border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[14px] pb-[8px] pl-[32px] text-[12.5px] font-bold text-[#334155] cursor-pointer outline-none [appearance:auto] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
             >
               <option value="THIS_MONTH">Tháng này</option>
               <option value="TODAY">Hôm nay</option>
@@ -317,48 +306,48 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 2. KPI tổng hợp + Doanh thu — chỉ Admin xem */}
       {currentRole === 'ADMIN' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px' }}>
-          <div style={cardStyle}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div className="grid grid-cols-4 gap-[16px]">
+          <div className={cardCls}>
+            <div className="text-[11px] font-extrabold text-[#64748b] uppercase tracking-[0.5px]">
               Tổng số yêu cầu
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>
+            <div className="text-[26px] font-black text-[#0f172a] mt-[6px]">
               {kpiStats.total}
             </div>
-            <div style={{ marginTop: '6px' }}>
+            <div className="mt-[6px]">
               {renderChangeBadge(kpiStats.total, prevKpiStats?.total, false)}
             </div>
           </div>
-          <div style={cardStyle}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className={cardCls}>
+            <div className="text-[11px] font-extrabold text-[#64748b] uppercase tracking-[0.5px]">
               Tỷ lệ chốt trung bình
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>
+            <div className="text-[26px] font-black text-[#0f172a] mt-[6px]">
               {kpiStats.closeRate.toFixed(1)}%
             </div>
-            <div style={{ marginTop: '6px' }}>
+            <div className="mt-[6px]">
               {renderPointChangeBadge(kpiStats.closeRate, prevKpiStats?.closeRate)}
             </div>
           </div>
-          <div style={cardStyle}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className={cardCls}>
+            <div className="text-[11px] font-extrabold text-[#64748b] uppercase tracking-[0.5px]">
               Doanh thu đã chốt
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>
+            <div className="text-[26px] font-black text-[#0f172a] mt-[6px]">
               {formatCurrency(revenueStats.closedRevenue)}
             </div>
-            <div style={{ marginTop: '6px' }}>
+            <div className="mt-[6px]">
               {renderChangeBadge(revenueStats.closedRevenue, prevRevenueStats?.closedRevenue, false)}
             </div>
           </div>
-          <div style={cardStyle}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div className={cardCls}>
+            <div className="text-[11px] font-extrabold text-[#64748b] uppercase tracking-[0.5px]">
               Giá trị đơn đã báo giá (chưa chốt)
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', marginTop: '6px' }}>
+            <div className="text-[26px] font-black text-[#0f172a] mt-[6px]">
               {formatCurrency(revenueStats.quotedRevenue)}
             </div>
-            <div style={{ marginTop: '6px' }}>
+            <div className="mt-[6px]">
               {renderChangeBadge(revenueStats.quotedRevenue, prevRevenueStats?.quotedRevenue, false)}
             </div>
           </div>
@@ -380,12 +369,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         const CustomDonutLabel = ({ cx, cy }: any) => (
           <>
-            <text x={cx} y={cy - 8} textAnchor="middle" dominantBaseline="middle"
-              style={{ fontSize: 26, fontWeight: 900, fill: '#0f172a' }}>
+            <text
+              x={cx}
+              y={cy - 8}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              // động — recharts
+              style={{ fontSize: 26, fontWeight: 900, fill: '#0f172a' }}
+            >
               {counts.total}
             </text>
-            <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle"
-              style={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8', letterSpacing: 1 }}>
+            <text
+              x={cx}
+              y={cy + 16}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              // động — recharts
+              style={{ fontSize: 11, fontWeight: 700, fill: '#94a3b8', letterSpacing: 1 }}
+            >
               YÊU CẦU
             </text>
           </>
@@ -397,8 +398,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           const pct = counts.total > 0 ? ((d.value / counts.total) * 100).toFixed(1) : '0';
           return (
             <ChartTooltip>
-              <div style={{ color: d.payload.fill, marginBottom: 2 }}>● {d.name}</div>
-              <div>{d.value} yêu cầu <span style={{ color: '#94a3b8' }}>({pct}%)</span></div>
+              <div
+                className="mb-[2px]"
+                // động — giữ inline
+                style={{ color: d.payload.fill }}
+              >
+                ● {d.name}
+              </div>
+              <div>{d.value} yêu cầu <span className="text-[#94a3b8]">({pct}%)</span></div>
             </ChartTooltip>
           );
         };
@@ -410,19 +417,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           if (chartStatusFilter === 'ALL') {
             return (
               <ChartTooltip padding="10px 14px" minWidth="150px">
-                <div style={{ fontSize: 12, color: '#94a3b8', borderBottom: '1px solid #334155', paddingBottom: 4, marginBottom: 6 }}>
+                <div className="text-[12px] text-[#94a3b8] border-b border-[#334155] pb-[4px] mb-[6px]">
                   {label}
                 </div>
-                <div style={{ fontWeight: 900, marginBottom: 6, color: '#38bdf8' }}>
+                <div className="font-black mb-[6px] text-[#38bdf8]">
                   Tổng số: {dataItem.total} yêu cầu
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11.5 }}>
-                  <div style={{ color: '#60a5fa' }}>● Mới tạo: {dataItem.pending}</div>
-                  <div style={{ color: '#fbbf24' }}>● Đang xử lý: {dataItem.processing}</div>
-                  <div style={{ color: '#fb923c' }}>● Cần bổ sung: {dataItem.needMoreInfo}</div>
-                  <div style={{ color: '#4ade80' }}>● Hoàn thành: {dataItem.quoted}</div>
-                  <div style={{ color: '#f87171' }}>● Từ chối: {dataItem.rejected}</div>
-                  <div style={{ color: '#a78bfa' }}>● Đã chốt: {dataItem.closed}</div>
+                <div className="flex flex-col gap-[3px] text-[11.5px]">
+                  <div className="text-[#60a5fa]">● Mới tạo: {dataItem.pending}</div>
+                  <div className="text-[#fbbf24]">● Đang xử lý: {dataItem.processing}</div>
+                  <div className="text-[#fb923c]">● Cần bổ sung: {dataItem.needMoreInfo}</div>
+                  <div className="text-[#4ade80]">● Hoàn thành: {dataItem.quoted}</div>
+                  <div className="text-[#f87171]">● Từ chối: {dataItem.rejected}</div>
+                  <div className="text-[#a78bfa]">● Đã chốt: {dataItem.closed}</div>
                 </div>
               </ChartTooltip>
             );
@@ -431,8 +438,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           const selectedVal = dataItem.value;
           return (
             <ChartTooltip>
-              <div style={{ color: '#94a3b8', marginBottom: 2 }}>{label}</div>
-              <div style={{ color: getStatusColor(chartStatusFilter) }}>
+              <div className="text-[#94a3b8] mb-[2px]">{label}</div>
+              <div
+                // động — giữ inline
+                style={{ color: getStatusColor(chartStatusFilter) }}
+              >
                 ● {getStatusLabel(chartStatusFilter)}: {selectedVal} yêu cầu
               </div>
             </ChartTooltip>
@@ -440,15 +450,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         };
 
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', opacity: loadingStats ? 0.5 : 1, transition: 'opacity 0.15s ease', pointerEvents: loadingStats ? 'none' : 'auto' }}>
+          <div className={clsx('grid grid-cols-2 gap-[16px] transition-opacity duration-150', loadingStats ? 'opacity-50 pointer-events-none' : 'opacity-100 pointer-events-auto')}>
 
             {/* Donut Chart */}
-            <div style={cardStyle}>
-              <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0' }}>
+            <div className={cardCls}>
+              <h2 className="text-[14px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[16px] ml-0">
                 Phân bố trạng thái yêu cầu
               </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div style={{ width: 180, height: 180, flexShrink: 0 }}>
+              <div className="flex items-center gap-[20px]">
+                <div className="w-[180px] h-[180px] shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -475,14 +485,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </div>
 
                 {/* Legend */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                <div className="flex flex-col gap-[10px] flex-1">
                   {chartData.map((d, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: 10, height: 10, borderRadius: 3, background: d.fill, flexShrink: 0 }} />
-                        <span style={{ fontSize: '12px', color: '#475569', fontWeight: 600 }}>{d.name}</span>
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-[8px]">
+                        <div
+                          className="w-[10px] h-[10px] rounded-[3px] shrink-0"
+                          // động — giữ inline
+                          style={{ background: d.fill }}
+                        />
+                        <span className="text-[12px] text-[#475569] font-semibold">{d.name}</span>
                       </div>
-                      <span style={{ fontSize: '13px', fontWeight: 900, color: '#0f172a' }}>{d.value}</span>
+                      <span className="text-[13px] font-black text-[#0f172a]">{d.value}</span>
                     </div>
                   ))}
                 </div>
@@ -490,13 +504,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
 
             {/* Bar Chart - Timeline Comparison */}
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div className={cardCls}>
+              <div className="flex items-center justify-between mb-[12px]">
                 <div>
-                  <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  <h2 className="text-[14px] font-extrabold text-[#0f172a] m-0">
                     {timeRange === 'THIS_YEAR' || timeRange === 'ALL' ? 'So sánh số lượng hàng tháng' : 'So sánh số lượng hàng ngày'}
                   </h2>
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  <span className="text-[11px] text-[#64748b]">
                     {timeRange === 'TODAY' && 'Theo khung giờ trong ngày'}
                     {timeRange === 'THIS_WEEK' && 'Theo các ngày trong tuần'}
                     {timeRange === 'THIS_MONTH' && 'Theo ngày trong tháng này'}
@@ -510,18 +524,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <select
                   value={chartStatusFilter}
                   onChange={(e) => setChartStatusFilter(e.target.value)}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    padding: '5px 10px',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    color: '#334155',
-                    cursor: 'pointer',
-                    outline: 'none',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                  }}
+                  className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[6px] py-[5px] px-[10px] text-[11.5px] font-bold text-[#334155] cursor-pointer outline-none shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
                 >
                   <option value="ALL">Tất cả trạng thái</option>
                   <option value="PENDING">Mới tạo</option>
@@ -562,6 +565,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </>
                   ) : (
                     <Bar dataKey="value" fill={getStatusColor(chartStatusFilter)} radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={600}>
+                      {/* động — recharts */}
                       <LabelList dataKey="value" position="top" style={{ fontSize: 10.5, fontWeight: 900, fill: '#0f172a' }} formatter={(v: any) => (v > 0 ? v : '')} />
                     </Bar>
                   )}
@@ -575,11 +579,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 1.1 Biểu đồ theo Sale — chỉ Admin xem, số yêu cầu tạo & đã chốt của từng Sale */}
       {currentRole === 'ADMIN' && (charts?.saleStats || []).length > 0 && (
-        <div style={cardStyle}>
-          <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
+        <div className={cardCls}>
+          <h2 className="text-[14px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[4px] ml-0">
             Hiệu suất theo Sale
           </h2>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>Số yêu cầu đã tạo và đã chốt của từng Sale (top 8)</span>
+          <span className="text-[11px] text-[#64748b]">Số yêu cầu đã tạo và đã chốt của từng Sale (top 8)</span>
 
           <ResponsiveContainer width="100%" height={Math.max(180, (charts?.saleStats || []).length * 42)}>
             <BarChart
@@ -605,10 +609,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   const closeRate = d.total > 0 ? ((d.closed / d.total) * 100).toFixed(1) : '0';
                   return (
                     <ChartTooltip>
-                      <div style={{ color: '#94a3b8', marginBottom: 2 }}>{label}</div>
-                      <div style={{ color: '#38bdf8' }}>● Đã tạo: {d.total}</div>
-                      <div style={{ color: '#22c55e' }}>● Đã chốt: {d.closed}</div>
-                      <div style={{ color: '#94a3b8', marginTop: 2 }}>Tỷ lệ chốt: {closeRate}%</div>
+                      <div className="text-[#94a3b8] mb-[2px]">{label}</div>
+                      <div className="text-[#38bdf8]">● Đã tạo: {d.total}</div>
+                      <div className="text-[#22c55e]">● Đã chốt: {d.closed}</div>
+                      <div className="text-[#94a3b8] mt-[2px]">Tỷ lệ chốt: {closeRate}%</div>
                     </ChartTooltip>
                   );
                 }}
@@ -623,17 +627,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 1.2 Biểu đồ phân bố sản phẩm — chỉ Admin xem, theo danh mục & khoảng giá */}
       {currentRole === 'ADMIN' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+        <div className="grid grid-cols-3 gap-[16px]">
           <DistributionPieCard title="Phân bố theo danh mục" subtitle="Top 8 danh mục nhiều yêu cầu nhất" data={(charts?.categoryDistribution || []).map((d, idx) => ({ ...d, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))} />
 
           <DistributionPieCard title="Phân bố theo chất liệu" subtitle="Top 8 chất liệu nhiều yêu cầu nhất" data={(charts?.materialDistribution || []).map((d, idx) => ({ ...d, fill: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }))} />
 
           {/* Phân bố theo khoảng giá */}
-          <div style={cardStyle}>
-            <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
+          <div className={cardCls}>
+            <h2 className="text-[14px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[4px] ml-0">
               Phân bố theo khoảng giá
             </h2>
-            <span style={{ fontSize: '11px', color: '#64748b' }}>Số đơn đã báo giá theo từng khoảng</span>
+            <span className="text-[11px] text-[#64748b]">Số đơn đã báo giá theo từng khoảng</span>
 
             <ResponsiveContainer width="100%" height={190}>
               <BarChart data={charts?.priceRangeDistribution || []} margin={{ top: 18, right: 10, left: -20, bottom: 4 }} barCategoryGap="30%">
@@ -645,14 +649,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     if (!active || !payload?.length) return null;
                     return (
                       <ChartTooltip>
-                        <div style={{ color: '#94a3b8' }}>{label}</div>
-                        <div style={{ color: '#2563eb' }}>● {payload[0].value} đơn</div>
+                        <div className="text-[#94a3b8]">{label}</div>
+                        <div className="text-[#2563eb]">● {payload[0].value} đơn</div>
                       </ChartTooltip>
                     );
                   }}
                   cursor={{ fill: '#f8fafc' }}
                 />
                 <Bar dataKey="value" fill="#2563eb" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={600}>
+                  {/* động — recharts */}
                   <LabelList dataKey="value" position="top" style={{ fontSize: 10.5, fontWeight: 900, fill: '#0f172a' }} formatter={(v: any) => (v > 0 ? v : '')} />
                 </Bar>
               </BarChart>
@@ -663,40 +668,30 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 4. Split Content Layout — Admin không cần xem, đã có Doanh thu + Hiệu suất theo Sale ở trên */}
       {currentRole !== 'ADMIN' && (
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '18px' }}>
+      <div className="grid [grid-template-columns:2fr_1fr] gap-[18px]">
         {/* Left 2/3: Yêu cầu gần đây */}
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+        <div className={cardCls}>
+          <div className="flex items-center justify-between mb-[16px]">
+            <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
               Yêu cầu gần đây
             </h2>
             <button
               type="button"
               onClick={onViewAll}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#64748b',
-                fontSize: '12.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
+              className="bg-transparent border-0 text-[#64748b] text-[12.5px] font-bold cursor-pointer flex items-center gap-[4px]"
             >
               Xem tất cả <ArrowRight size={13} />
             </button>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[12.5px]">
               <thead>
-                <tr style={{ borderBottom: '1px solid #f1f5f9', textAlign: 'left' }}>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>MÃ YC / KHÁCH HÀNG</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>SẢN PHẨM</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>NGÀY TẠO</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>TRẠNG THÁI</th>
+                <tr className="border-b border-[#f1f5f9] text-left">
+                  <th className="py-[8px] px-[10px] text-[10.5px] font-extrabold text-[#94a3b8] uppercase">MÃ YC / KHÁCH HÀNG</th>
+                  <th className="py-[8px] px-[10px] text-[10.5px] font-extrabold text-[#94a3b8] uppercase">SẢN PHẨM</th>
+                  <th className="py-[8px] px-[10px] text-[10.5px] font-extrabold text-[#94a3b8] uppercase">NGÀY TẠO</th>
+                  <th className="py-[8px] px-[10px] text-[10.5px] font-extrabold text-[#94a3b8] uppercase text-right">TRẠNG THÁI</th>
                 </tr>
               </thead>
               <tbody>
@@ -709,19 +704,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       <tr
                         key={r.id}
                         onClick={() => onSelectReq(r.id)}
-                        style={{ borderBottom: '1px solid #f8fafc', cursor: 'pointer' }}
-                        className="table-row-hover"
+                        className="table-row-hover border-b border-[#f8fafc] cursor-pointer"
                       >
-                        <td style={{ padding: '12px 10px' }}>
-                          <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>
+                        <td className="py-[12px] px-[10px]">
+                          <div className="font-extrabold text-[#0f172a] text-[13px]">
                             {r.code || `#${r.id}`}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                          <div className="text-[11px] text-[#64748b]">
                             {r.customerName || r.requester?.name || 'Khách hàng'}
                           </div>
                         </td>
-                        <td style={{ padding: '12px 10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <td className="py-[12px] px-[10px]">
+                          <div className="flex items-center gap-[10px]">
                             <img
                               src={imgUrl}
                               alt=""
@@ -729,17 +723,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                 e.currentTarget.onerror = null;
                                 e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                               }}
-                              style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #e2e8f0' }}
+                              className="w-[36px] h-[36px] rounded-[6px] object-cover border border-[#e2e8f0]"
                             />
-                            <span style={{ fontWeight: 700, color: '#1e293b', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span className="font-bold text-[#1e293b] max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap">
                               {r.productName}
                             </span>
                           </div>
                         </td>
-                        <td style={{ padding: '12px 10px', color: '#64748b', fontSize: '12px' }}>
+                        <td className="py-[12px] px-[10px] text-[#64748b] text-[12px]">
                           {formatDateLabel(r.createdAt)}
                         </td>
-                        <td style={{ padding: '12px 10px', textAlign: 'right' }}>
+                        <td className="py-[12px] px-[10px] text-right">
                           {getStatusPill(r.status)}
                         </td>
                       </tr>
@@ -747,7 +741,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                    <td colSpan={4} className="text-center text-[#94a3b8] p-[24px]">
                       Chưa có yêu cầu nào gần đây
                     </td>
                   </tr>
@@ -758,31 +752,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Right 1/3: Sản phẩm nổi bật */}
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+        <div className={cardCls}>
+          <div className="flex items-center justify-between mb-[16px]">
+            <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
               Sản phẩm nổi bật
             </h2>
             <button
               type="button"
               onClick={onOpenLibrary}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#64748b',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
+              className="bg-transparent border-0 text-[#64748b] text-[12px] font-bold cursor-pointer flex items-center gap-[4px]"
             >
               Thư viện <ArrowRight size={13} />
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="grid grid-cols-2 gap-[12px]">
             {(charts?.featuredProducts || []).length > 0 ? (
               (charts?.featuredProducts || []).map((item) => {
                 const rawImg = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
@@ -793,16 +777,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <div
                     key={item.key}
                     // Tạm thời disable — không cho bấm vào sản phẩm nổi bật
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '10px',
-                      overflow: 'hidden',
-                      cursor: 'default',
-                      transition: 'transform 0.15s ease',
-                    }}
+                    className="bg-surface border border-[#e2e8f0] rounded-[10px] overflow-hidden cursor-default transition-transform duration-150"
                   >
-                    <div style={{ width: '100%', aspectRatio: '1', background: '#f8fafc' }}>
+                    <div className="w-full aspect-square bg-[#f8fafc]">
                       <img
                         src={imgUrl}
                         alt=""
@@ -810,14 +787,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                         }}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        className="w-full h-full object-cover block"
                       />
                     </div>
-                    <div style={{ padding: '8px 10px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="py-[8px] px-[10px]">
+                      <div className="text-[12px] font-extrabold text-[#0f172a] overflow-hidden text-ellipsis whitespace-nowrap">
                         {item.productName}
                       </div>
-                      <div style={{ fontSize: '11px', fontWeight: 900, color: '#2563eb', marginTop: '2px' }}>
+                      <div className="text-[11px] font-black text-primary mt-[2px]">
                         {formattedPrice}
                       </div>
                       {item.materialPrice != null && renderPriceBreakdownLines({ material: item.materialPrice, stone: item.stonePrice ?? 0 })}
@@ -826,7 +803,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 );
               })
             ) : (
-              <div style={{ gridColumn: '1 / -1', color: '#94a3b8', fontSize: '12.5px', textAlign: 'center', padding: '24px 0' }}>
+              <div className="[grid-column:1/-1] text-[#94a3b8] text-[12.5px] text-center py-[24px] px-0">
                 Chưa có sản phẩm nổi bật
               </div>
             )}

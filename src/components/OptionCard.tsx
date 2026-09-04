@@ -1,4 +1,5 @@
 import React from 'react';
+import clsx from 'clsx';
 import { Check, Copy } from 'lucide-react';
 import type { QuoteOption } from '../types';
 import { formatCurrency } from '../utils/currency';
@@ -21,46 +22,32 @@ export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus,
   const summary = getOptionSummary(opt);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '12px',
-        padding: '12px 14px',
-        borderRadius: '10px',
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-        <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+    <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] rounded-[10px] bg-white border border-[#e2e8f0]">
+      <div className="flex flex-col gap-[3px]">
+        <span className="text-[13.5px] font-bold text-[#0f172a]">
           {label}
         </span>
         {summary && (
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
+          <span className="text-[11.5px] text-[#64748b] font-semibold">
             {summary}
           </span>
         )}
       </div>
 
-      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+      <span className="flex items-center gap-[8px] shrink-0">
+        <span className="flex flex-col items-end">
           <strong
-            style={{
-              fontSize: '15px',
-              fontWeight: 900,
-              color: isFinalStatus ? '#16a34a' : '#94a3b8',
-              fontStyle: isFinalStatus ? 'normal' : 'italic',
-              opacity: isFinalStatus ? 1 : 0.8,
-            }}
+            className={clsx(
+              "text-[15px] font-black",
+              isFinalStatus ? "text-[#16a34a] not-italic opacity-100" : "text-[#94a3b8] italic opacity-80"
+            )}
           >
             {price}
           </strong>
           {renderPriceBreakdownLines(getPriceBreakdown(opt))}
         </span>
         {!isFinalStatus && (
-          <span style={{ fontSize: '10px', color: '#ea580c', background: '#fff7ed', border: '1px solid #ffedd5', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+          <span className="text-[10px] text-[#ea580c] bg-[#fff7ed] border border-[#ffedd5] py-[1px] px-[5px] rounded-[4px] font-extrabold">
             Chưa duyệt
           </span>
         )}
@@ -69,19 +56,10 @@ export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus,
             type="button"
             title={`Copy dòng chữ: "${label}: ${price}"`}
             onClick={onCopy}
-            style={{
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '26px',
-              height: '26px',
-              borderRadius: '7px',
-              border: '1px solid #cbd5e1',
-              background: copied ? '#dcfce7' : '#ffffff',
-              color: copied ? '#16a34a' : '#475569',
-              cursor: 'pointer',
-            }}
+            className={clsx(
+              "shrink-0 flex items-center justify-center w-[26px] h-[26px] rounded-[7px] border border-[#cbd5e1] cursor-pointer",
+              copied ? "bg-[#dcfce7] text-[#16a34a]" : "bg-white text-[#475569]"
+            )}
           >
             {copied ? <Check size={12} /> : <Copy size={12} />}
           </button>

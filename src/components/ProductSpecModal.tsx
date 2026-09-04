@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import clsx from 'clsx';
 import { X, History, Coins, Copy, Check, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import type { ProductSpecModalProps, QuoteHistoryEntry } from '../types';
 import { UI_CONSTANTS } from '../constants';
@@ -13,8 +14,8 @@ import { fetchLibraryProductHistory } from '../services/api';
 const HISTORY_PAGE_SIZE = 8;
 
 // Chỉ phương án khách CHỐT THẬT (CLOSED) mới gắn tag. SELECTED ("Sale đang nghiêng về") không gắn.
-const STATUS_TAG: Record<string, { label: string; bg: string; color: string }> = {
-  CLOSED: { label: 'Đã chốt', bg: '#dcfce7', color: '#15803d' },
+const STATUS_TAG: Record<string, { label: string; className: string }> = {
+  CLOSED: { label: 'Đã chốt', className: 'bg-[#dcfce7] text-[#15803d]' },
 };
 
 const fmtDate = (s?: string | null) =>
@@ -124,8 +125,8 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
     <div className="modal-backdrop show" onClick={onClose}>
       <div className="modal-card product-spec-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div style={{ minWidth: 0 }}>
-            <h2 style={{ fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.productName}</h2>
+          <div className="min-w-0">
+            <h2 className="text-[15px] overflow-hidden text-ellipsis whitespace-nowrap">{item.productName}</h2>
           </div>
           <button onClick={onClose} aria-label="Đóng" className="spec-close">
             <X size={18} />
@@ -147,7 +148,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                 }}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: images.length > 0 ? 'zoom-in' : 'default' }}
+                className={clsx("w-full h-full object-cover", images.length > 0 ? "cursor-zoom-in" : "cursor-default")}
               />
               {images.length > 1 && (
                 <div className="spec-thumbs">
@@ -240,12 +241,18 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                   const oTag = o.selectionStatus ? STATUS_TAG[o.selectionStatus] : undefined;
                   const dp = o.livePriceDeltaPct ?? 0;
                   const deltaCls = dp > 0 ? 'spec-delta--up' : dp < 0 ? 'spec-delta--down' : 'spec-delta--flat';
+                  // Ngày báo giá của đơn đang chọn — gắn vào nhãn để phân biệt "giá lúc báo giá"
+                  // với "giá hôm nay" (cùng cấu thành chất liệu / đá nên dễ lẫn).
+                  const quotedWhen =
+                    selected?.quotedDate || selected?.quotedAt
+                      ? fmtDate(selected?.quotedDate ?? selected?.quotedAt)
+                      : '';
                   return (
                     <div key={idx} className="spec-opt">
                       <div className="spec-opt__head">
                         <span className="spec-opt__name">{o.optionName}</span>
                         {oTag && (
-                          <span className="spec-badge" style={{ background: oTag.bg, color: oTag.color }}>
+                          <span className={clsx("spec-badge", oTag.className)}>
                             {oTag.label}
                           </span>
                         )}
@@ -259,8 +266,13 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                           {copiedIdx === idx ? <Check size={11} /> : <Copy size={11} />}
                         </button>
                       </div>
-                      <div className="spec-price">{formatCurrency(o.price)}</div>
-                      {renderPriceBreakdownLines(getPriceBreakdown(o))}
+                      <div className="spec-quoted">
+                        <span className="spec-today__label">
+                          Lúc báo giá{quotedWhen ? ` · ${quotedWhen}` : ''}
+                        </span>
+                        <div className="spec-price">{formatCurrency(o.price)}</div>
+                        {renderPriceBreakdownLines(getPriceBreakdown(o))}
+                      </div>
                       {o.livePrice != null && (
                         <div className="spec-today">
                           <div className="spec-today__row">

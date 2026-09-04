@@ -13,7 +13,6 @@ import {
   returnQuoteRequest,
   resubmitQuoteRequest,
   markQuoteClosed,
-  deleteQuoteOption,
 } from '../services/api';
 
 // `listDataEnabled=false` (khi đang ở trang KHÔNG đọc `requests[]` — Thư viện/Máy tính giá/Nhân
@@ -73,8 +72,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
   // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
   // (chỉ mở popup khi có >1 phương án đã báo giá — 1 phương án thì chốt thẳng, không cần hỏi).
   const [closeOptionReqId, setCloseOptionReqId] = useState<string | null>(null);
-  // Yêu cầu đang mở popup quản lý (xóa bớt) các phương án giá nháp — ORDER/ADMIN, lúc đang xử lý.
-  const [manageOptionsReqId, setManageOptionsReqId] = useState<string | null>(null);
 
   // `loading`: chỉ dùng cho các thao tác ghi dữ liệu (blocking overlay che toàn màn hình)
   // `listLoading`: dùng cho việc load/refresh danh sách khi chuyển tab, đổi bộ lọc (thanh tiến trình mỏng, không chặn UI)
@@ -472,10 +469,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     setCloseOptionReqId(null);
   };
 
-  const handleDeleteOption = async (id: string, optionId: string) => {
-    await runAction('Đang xóa phương án báo giá...', 'Lỗi xóa phương án báo giá', () => deleteQuoteOption(id, optionId));
-  };
-
   const selectedReq =
     requests.find((r) => r.id === selectedId || r.code === selectedId) ||
     requests[0] ||
@@ -539,8 +532,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     setReturnReqId,
     closeOptionReqId,
     setCloseOptionReqId,
-    manageOptionsReqId,
-    setManageOptionsReqId,
     handleTabChange,
     handleResetFilters,
     handleOpenCreate,
@@ -557,7 +548,6 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     handleMarkClosed,
     handleMarkClosedClick,
     handleCloseOptionSubmit,
-    handleDeleteOption,
     refreshQuietly: () => loadData(false),
     refreshList: () => loadData(true),
   };

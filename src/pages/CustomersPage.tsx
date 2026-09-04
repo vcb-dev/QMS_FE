@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { clsx } from 'clsx';
 import { Search, Users, TrendingUp, ChevronDown, ChevronUp, MapPin, Phone, Calendar, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { fetchCustomerStats, fetchCustomerMonthComparison, fetchQuoteRequests, fetchProvinces, getAllUsersApi } from '../services/api';
 import type { CustomerStatRow, SortMode, QuoteRequest, StaffUser, CustomerMonthComparisonResponse } from '../types';
@@ -7,56 +8,11 @@ import { Pagination } from '../components/Pagination';
 import { STATUS_BADGE_META as STATUS_META } from '../constants';
 import { StatCard } from '../components/StatCard';
 
-// Cùng phong cách popover "Bộ lọc" như FilterBar.tsx (trang Danh Sách Yêu Cầu) — style trùng tên
-// nhưng khai báo riêng ở đây vì FilterBar không export ra ngoài.
-const selectArrowStyle: React.CSSProperties = {
-  position: 'absolute',
-  right: '10px',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  color: '#64748b',
-  pointerEvents: 'none',
-};
-
-const selectStyle: React.CSSProperties = {
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  MozAppearance: 'none',
-  width: '100%',
-  background: '#f8fafc',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  padding: '8px 30px 8px 12px',
-  fontSize: '12.5px',
-  fontWeight: 600,
-  color: '#334155',
-  outline: 'none',
-  cursor: 'pointer',
-  boxSizing: 'border-box',
-};
-
-const dateInputStyle: React.CSSProperties = {
-  width: '100%',
-  background: '#f8fafc',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  padding: '7px 10px 7px 32px',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: '#334155',
-  outline: 'none',
-  boxSizing: 'border-box',
-};
-
-const popoverLabelStyle: React.CSSProperties = {
-  fontSize: '10.5px',
-  fontWeight: 800,
-  color: '#94a3b8',
-  textTransform: 'uppercase',
-  letterSpacing: '0.4px',
-  marginBottom: '5px',
-  display: 'block',
-};
+// Cùng phong cách popover "Bộ lọc" như FilterBar.tsx (trang Danh Sách Yêu Cầu)
+const selectArrowCls = 'absolute right-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none';
+const selectCls = 'appearance-none w-full bg-page border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[30px] pb-[8px] pl-[12px] text-[12.5px] font-semibold text-[#334155] outline-none cursor-pointer box-border';
+const dateInputCls = 'w-full bg-page border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[10px] pb-[7px] pl-[32px] text-[12px] font-semibold text-[#334155] outline-none box-border';
+const popoverLabelCls = 'text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px] mb-[5px] block';
 
 export const CustomersPage: React.FC = () => {
   const [rows, setRows] = useState<CustomerStatRow[]>([]);
@@ -201,21 +157,21 @@ export const CustomersPage: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   if (error) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}>{error}</div>;
+    return <div className="p-[40px] text-center text-[#dc2626]">{error}</div>;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+    <div className="flex flex-col gap-[22px]">
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
+        <h1 className="text-[24px] font-black text-[#0f172a] m-0 tracking-[-0.3px]">
           Quản Lý Khách Hàng
         </h1>
-        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+        <p className="text-[13px] text-[#64748b] mt-[4px] mr-0 mb-0 ml-0">
           Danh sách khách hàng và lịch sử đơn báo giá
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div className="grid grid-cols-2 gap-[16px]">
         <StatCard
           icon={<Users size={14} />}
           label="Khách hàng hoạt động (tháng này)"
@@ -231,97 +187,67 @@ export const CustomersPage: React.FC = () => {
         />
       </div>
 
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', width: '260px' }}>
-              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+      <div className="bg-surface border border-border rounded-[14px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center justify-between gap-[12px] flex-wrap mb-[14px]">
+          <div className="flex items-center gap-[10px] flex-wrap">
+            <div className="relative w-[260px]">
+              <Search size={14} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-faint" />
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Tìm theo tên hoặc SĐT..."
-                style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', outline: 'none', boxSizing: 'border-box' }}
+                className="w-full pt-[9px] pr-[12px] pb-[9px] pl-[34px] rounded-[8px] border border-[#cbd5e1] text-[12.5px] outline-none box-border"
               />
             </div>
 
             {/* Nút Bộ Lọc — gom tỉnh/thành, nhân viên sale, mốc thời gian, giống FilterBar.tsx ở trang Danh Sách Yêu Cầu */}
-            <div style={{ position: 'relative' }} ref={panelRef}>
+            <div className="relative" ref={panelRef}>
               <button
                 type="button"
                 onClick={() => setPanelOpen((v) => !v)}
-                className="fb-btn"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  fontSize: '12.5px',
-                }}
+                className="fb-btn inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]"
               >
                 <SlidersHorizontal size={14} />
                 Bộ lọc
                 {panelFilterCount > 0 && (
-                  <span style={{
-                    background: '#cbd5e1',
-                    color: '#0f172a',
-                    borderRadius: '999px',
-                    fontSize: '10.5px',
-                    fontWeight: 900,
-                    padding: '1px 6px',
-                    minWidth: '16px',
-                    textAlign: 'center',
-                  }}>
+                  <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[10.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
                     {panelFilterCount}
                   </span>
                 )}
               </button>
 
               {panelOpen && (
-                <div style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  left: 0,
-                  zIndex: 20,
-                  width: '300px',
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  boxShadow: '0 12px 32px rgba(15, 23, 42, 0.16)',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px',
-                }}>
+                <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[300px] bg-surface border border-border rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
                   <div>
-                    <label style={popoverLabelStyle}>Tỉnh/thành</label>
-                    <div style={{ position: 'relative' }}>
-                      <select value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)} style={selectStyle}>
+                    <label className={popoverLabelCls}>Tỉnh/thành</label>
+                    <div className="relative">
+                      <select value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)} className={selectCls}>
                         <option value="ALL">Tất cả tỉnh/thành</option>
                         {provinces.map((p) => (
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                       </select>
-                      <ChevronDown size={14} style={selectArrowStyle} />
+                      <ChevronDown size={14} className={selectArrowCls} />
                     </div>
                   </div>
 
                   <div>
-                    <label style={popoverLabelStyle}>Nhân viên sale phụ trách</label>
-                    <div style={{ position: 'relative' }}>
-                      <select value={requesterFilter} onChange={(e) => setRequesterFilter(e.target.value)} style={selectStyle}>
+                    <label className={popoverLabelCls}>Nhân viên sale phụ trách</label>
+                    <div className="relative">
+                      <select value={requesterFilter} onChange={(e) => setRequesterFilter(e.target.value)} className={selectCls}>
                         <option value="ALL">Tất cả nhân viên sale</option>
                         {saleStaff.map((u) => (
                           <option key={u.id} value={u.id}>{u.name}</option>
                         ))}
                       </select>
-                      <ChevronDown size={14} style={selectArrowStyle} />
+                      <ChevronDown size={14} className={selectArrowCls} />
                     </div>
                   </div>
 
                   <div>
-                    <label style={popoverLabelStyle}>Lọc nhanh theo thời gian</label>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <label className={popoverLabelCls}>Lọc nhanh theo thời gian</label>
+                    <div className="flex gap-[6px] flex-wrap">
                       {([
                         { value: 'TODAY', label: 'Hôm nay' },
                         { value: 'THIS_WEEK', label: 'Tuần này' },
@@ -332,16 +258,12 @@ export const CustomersPage: React.FC = () => {
                           key={opt.value}
                           type="button"
                           onClick={() => { setTimeRangeFilter(opt.value); setStartDateFilter(''); setEndDateFilter(''); }}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            fontSize: '11.5px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            background: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#ffffff' : '#f1f5f9',
-                            color: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '#0f172a' : '#64748b',
-                            border: timeRangeFilter === opt.value && !startDateFilter && !endDateFilter ? '1px solid #0f172a' : '1px solid transparent',
-                          }}
+                          className={clsx(
+                            'py-[6px] px-[12px] rounded-[6px] text-[11.5px] font-bold cursor-pointer',
+                            timeRangeFilter === opt.value && !startDateFilter && !endDateFilter
+                              ? 'bg-surface text-[#0f172a] border border-[#0f172a]'
+                              : 'bg-[#f1f5f9] text-[#64748b] border border-transparent',
+                          )}
                         >
                           {opt.label}
                         </button>
@@ -350,26 +272,26 @@ export const CustomersPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label style={popoverLabelStyle}>Khoảng ngày tùy chọn</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ position: 'relative' }}>
-                        <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                    <label className={popoverLabelCls}>Khoảng ngày tùy chọn</label>
+                    <div className="flex flex-col gap-[8px]">
+                      <div className="relative">
+                        <Calendar size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                         <input
                           type="date"
                           value={startDateFilter}
                           max={endDateFilter || undefined}
                           onChange={(e) => { setStartDateFilter(e.target.value); setTimeRangeFilter('ALL'); }}
-                          style={dateInputStyle}
+                          className={dateInputCls}
                         />
                       </div>
-                      <div style={{ position: 'relative' }}>
-                        <Calendar size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }} />
+                      <div className="relative">
+                        <Calendar size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                         <input
                           type="date"
                           value={endDateFilter}
                           min={startDateFilter || undefined}
                           onChange={(e) => { setEndDateFilter(e.target.value); setTimeRangeFilter('ALL'); }}
-                          style={dateInputStyle}
+                          className={dateInputCls}
                         />
                       </div>
                     </div>
@@ -384,17 +306,13 @@ export const CustomersPage: React.FC = () => {
               onClick={handleResetExtraFilters}
               disabled={!isExtraFiltered}
               title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-              className="fb-btn"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                padding: '8px 14px', fontSize: '12px', flexShrink: 0,
-              }}
+              className="fb-btn flex items-center gap-[4px] py-[8px] px-[14px] text-[12px] shrink-0"
             >
               <RotateCcw size={13} /> Xóa bộ lọc
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div className="flex gap-[6px] flex-wrap">
             {([
               { key: 'TOP_SPEND', label: 'Chi tiêu nhiều nhất' },
               { key: 'MOST_ORDERS', label: 'Nhiều đơn nhất' },
@@ -404,12 +322,12 @@ export const CustomersPage: React.FC = () => {
                 key={opt.key}
                 type="button"
                 onClick={() => setSortMode(opt.key)}
-                style={{
-                  padding: '7px 12px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
-                  background: sortMode === opt.key ? '#ffffff' : '#f1f5f9',
-                  color: sortMode === opt.key ? '#0f172a' : '#475569',
-                  border: sortMode === opt.key ? '1px solid #0f172a' : '1px solid transparent',
-                }}
+                className={clsx(
+                  'py-[7px] px-[12px] rounded-[8px] text-[11.5px] font-bold cursor-pointer',
+                  sortMode === opt.key
+                    ? 'bg-surface text-[#0f172a] border border-[#0f172a]'
+                    : 'bg-[#f1f5f9] text-[#475569] border border-transparent',
+                )}
               >
                 {opt.label}
               </button>
@@ -418,79 +336,80 @@ export const CustomersPage: React.FC = () => {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '30px 0' }}>Đang tải...</div>
+          <div className="text-center text-faint text-[12.5px] py-[30px]">Đang tải...</div>
         ) : rows.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex flex-col gap-[8px]">
             {rows.map((s) => {
               const isExpanded = expandedId === s.customer.id;
               const orderState = customerOrders[s.customer.id];
 
               return (
-                <div key={s.customer.id} style={{ border: '1px solid #f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
+                <div key={s.customer.id} className="border border-[#f1f5f9] rounded-[10px] overflow-hidden">
                   <div
                     onClick={() => handleToggleExpand(s.customer.id)}
-                    style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.3fr auto', gap: '10px', alignItems: 'center', padding: '12px 14px', cursor: 'pointer', background: isExpanded ? '#f8fafc' : '#ffffff' }}
+                    className={clsx(
+                      'grid grid-cols-[2fr_1fr_1fr_1fr_1.3fr_auto] gap-[10px] items-center py-[12px] px-[14px] cursor-pointer',
+                      isExpanded ? 'bg-page' : 'bg-surface',
+                    )}
                   >
                     <div>
-                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>{s.customer.name}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', fontSize: '11px', color: '#64748b' }}>
-                        {s.customer.phone && <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Phone size={11} /> {s.customer.phone}</span>}
-                        {s.customer.province && <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><MapPin size={11} /> {s.customer.province.name}</span>}
+                      <div className="font-extrabold text-[#0f172a] text-[13px]">{s.customer.name}</div>
+                      <div className="flex items-center gap-[10px] mt-[2px] text-[11px] text-muted">
+                        {s.customer.phone && <span className="flex items-center gap-[3px]"><Phone size={11} /> {s.customer.phone}</span>}
+                        {s.customer.province && <span className="flex items-center gap-[3px]"><MapPin size={11} /> {s.customer.province.name}</span>}
                       </div>
                     </div>
-                    <div style={{ fontSize: '12.5px', color: '#334155' }}>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Tổng đơn</div>
+                    <div className="text-[12.5px] text-[#334155]">
+                      <div className="text-[10px] text-faint font-bold uppercase">Tổng đơn</div>
                       {s.totalOrders}
                     </div>
-                    <div style={{ fontSize: '12.5px', color: '#334155' }}>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Đã chốt</div>
+                    <div className="text-[12.5px] text-[#334155]">
+                      <div className="text-[10px] text-faint font-bold uppercase">Đã chốt</div>
                       {s.totalClosed}
                     </div>
-                    <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Đơn gần nhất</div>
+                    <div className="text-[12.5px] text-muted">
+                      <div className="text-[10px] text-faint font-bold uppercase">Đơn gần nhất</div>
                       {s.lastOrder ? new Date(s.lastOrder).toLocaleDateString('vi-VN') : '---'}
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: 900, color: '#15803d' }}>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Giá trị đã chốt</div>
+                    <div className="text-[13px] font-black text-tone-green-text">
+                      <div className="text-[10px] text-faint font-bold uppercase">Giá trị đã chốt</div>
                       {formatCurrency(s.closedValue)}
                     </div>
-                    <div style={{ color: '#94a3b8' }}>
+                    <div className="text-faint">
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </div>
 
                   {isExpanded && (
-                    <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 14px', background: '#fbfcfe' }}>
+                    <div className="border-t border-[#f1f5f9] py-[12px] px-[14px] bg-[#fbfcfe]">
                       {orderState?.loading ? (
-                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '10px 0' }}>
+                        <div className="text-center text-faint text-[12px] py-[10px]">
                           Đang tải danh sách đơn...
                         </div>
                       ) : orderState?.error ? (
-                        <div style={{ textAlign: 'center', color: '#dc2626', fontSize: '12px', padding: '10px 0' }}>
+                        <div className="text-center text-[#dc2626] text-[12px] py-[10px]">
                           {orderState.error}
                         </div>
                       ) : orderState?.data && orderState.data.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div className="flex flex-col gap-[6px]">
                           {[...orderState.data]
                             .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
                             .map((o) => {
                               const meta = STATUS_META[o.status] || { label: o.status, color: '#475569', bg: '#f1f5f9' };
                               return (
-                                <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '110px 1.6fr 1fr 0.9fr 1fr 1fr', gap: '10px', alignItems: 'center', fontSize: '12px', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
-                                  <span style={{ fontFamily: 'monospace', color: '#64748b' }}>{o.code || o.id}</span>
-                                  <span style={{ color: '#334155', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.productName}</span>
-                                  <span style={{ color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.requester?.name || undefined}>{o.requester?.name || 'Chưa gán'}</span>
-                                  <span style={{ color: '#64748b' }}>{o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '---'}</span>
+                                <div key={o.id} className="grid grid-cols-[110px_1.6fr_1fr_0.9fr_1fr_1fr] gap-[10px] items-center text-[12px] py-[6px] border-b border-[#f1f5f9]">
+                                  <span className="font-mono text-muted">{o.code || o.id}</span>
+                                  <span className="text-[#334155] font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{o.productName}</span>
+                                  <span className="text-muted overflow-hidden text-ellipsis whitespace-nowrap" title={o.requester?.name || undefined}>{o.requester?.name || 'Chưa gán'}</span>
+                                  <span className="text-muted">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '---'}</span>
                                   <span
-                                    style={{
-                                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                      padding: '2px 8px', borderRadius: '20px', fontSize: '10.5px', fontWeight: 700,
-                                      color: meta.color, background: meta.bg, width: 'fit-content',
-                                    }}
+                                    className="inline-flex items-center justify-center py-[2px] px-[8px] rounded-[20px] text-[10.5px] font-bold w-fit"
+                                    // động — giữ inline
+                                    style={{ color: meta.color, background: meta.bg }}
                                   >
                                     {meta.label}
                                   </span>
-                                  <span style={{ fontWeight: 700, color: o.status === 'CLOSED' ? '#15803d' : '#334155' }}>
+                                  <span className={clsx('font-bold', o.status === 'CLOSED' ? 'text-tone-green-text' : 'text-[#334155]')}>
                                     {o.quotedPrice ? formatCurrency(Number(o.quotedPrice)) : '---'}
                                   </span>
                                 </div>
@@ -498,7 +417,7 @@ export const CustomersPage: React.FC = () => {
                             })}
                         </div>
                       ) : (
-                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', padding: '10px 0' }}>
+                        <div className="text-center text-faint text-[12px] py-[10px]">
                           Khách hàng chưa có đơn nào
                         </div>
                       )}
@@ -509,11 +428,11 @@ export const CustomersPage: React.FC = () => {
             })}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '30px 0' }}>Không tìm thấy khách hàng nào</div>
+          <div className="text-center text-faint text-[12.5px] py-[30px]">Không tìm thấy khách hàng nào</div>
         )}
 
         {rows.length > 0 && (
-          <div style={{ marginTop: '14px' }}>
+          <div className="mt-[14px]">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

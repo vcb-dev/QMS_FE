@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw } from 'lucide-react';
+import { clsx } from 'clsx';
 import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
 import type { StaffUser, UserStatsResponse, StaffPerformanceResponse, Role } from '../types';
 import { Pagination } from '../components/Pagination';
@@ -20,16 +21,11 @@ const TIME_PRESETS: { value: string; label: string }[] = [
   { value: 'THIS_YEAR', label: 'Năm nay' },
 ];
 
-const dateInputStyle: React.CSSProperties = {
-  background: '#f8fafc',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  padding: '6px 10px',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: '#334155',
-  outline: 'none',
-};
+const dateInputCls = 'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none';
+const cardContainerCls = 'bg-surface border border-border rounded-[14px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]';
+const cardHeadingCls = 'text-[14px] font-extrabold text-[#0f172a] m-0 mb-[4px] flex items-center gap-[8px]';
+const thCls = 'py-[8px] px-[10px] text-[10.5px] font-extrabold text-[#94a3b8] uppercase';
+const emptyTextCls = 'text-center text-faint text-[12.5px] py-[24px] px-0';
 
 // BE đếm riêng theo từng action code (VD CALCULATE_PRICE / CALCULATE_MULTI_MATERIAL_PRICE) —
 // gộp lại theo nhãn hiển thị (ACTION_LABEL) để 2 action cùng tên tiếng Việt không tách 2 dòng.
@@ -166,28 +162,28 @@ export const StaffPage: React.FC = () => {
   const pricerStats = performance?.pricerStats || [];
 
   if (error) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626' }}> {error}</div>;
+    return <div className="p-[40px] text-center text-[#dc2626]"> {error}</div>;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+    <div className="flex flex-col gap-[22px]">
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <h1 className="text-[24px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
           <Users size={22} /> Quản Lý Nhân Viên
         </h1>
-        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+        <p className="text-[13px] text-muted m-0 mt-[4px]">
           Thống kê người dùng và hiệu suất người báo giá
         </p>
       </div>
 
       {/* Bộ lọc thời gian — áp cho toàn trang. BE lọc theo user.createdAt / quoteRequest.createdAt /
           auditLog.createdAt và tính hết số liệu; FE chỉ hiển thị kết quả. */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+      <div className="bg-surface border border-border rounded-[12px] py-[10px] px-[14px] flex items-center gap-[12px] flex-wrap">
+        <span className="text-[11px] font-extrabold text-muted uppercase tracking-[0.4px] inline-flex items-center gap-[6px]">
           <Calendar size={13} /> Khoảng thời gian
         </span>
 
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="flex gap-[6px] flex-wrap">
           {TIME_PRESETS.map((p) => {
             const active = !startDate && !endDate && timeRange === p.value;
             return (
@@ -195,12 +191,10 @@ export const StaffPage: React.FC = () => {
                 key={p.value}
                 type="button"
                 onClick={() => applyPreset(p.value)}
-                style={{
-                  padding: '6px 12px', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
-                  background: active ? '#0f172a' : '#f1f5f9',
-                  color: active ? '#ffffff' : '#64748b',
-                  border: active ? '1px solid #0f172a' : '1px solid transparent',
-                }}
+                className={clsx(
+                  'py-[6px] px-[12px] rounded-[6px] text-[11.5px] font-bold cursor-pointer border',
+                  active ? 'bg-[#0f172a] text-surface border-[#0f172a]' : 'bg-[#f1f5f9] text-muted border-transparent',
+                )}
               >
                 {p.label}
               </button>
@@ -208,21 +202,21 @@ export const StaffPage: React.FC = () => {
           })}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="flex items-center gap-[6px]">
           <input
             type="date"
             value={startDate}
             max={endDate || undefined}
             onChange={(e) => { setStartDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
-            style={dateInputStyle}
+            className={dateInputCls}
           />
-          <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+          <span className="text-faint text-[12px]">—</span>
           <input
             type="date"
             value={endDate}
             min={startDate || undefined}
             onChange={(e) => { setEndDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
-            style={dateInputStyle}
+            className={dateInputCls}
           />
         </div>
 
@@ -230,25 +224,22 @@ export const StaffPage: React.FC = () => {
           <button
             type="button"
             onClick={resetTimeFilter}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px',
-              background: '#ffffff', border: '1px solid #e2e8f0', color: '#475569', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
-            }}
+            className="inline-flex items-center gap-[4px] py-[6px] px-[12px] rounded-[6px] bg-surface border border-border text-[#475569] text-[11.5px] font-bold cursor-pointer"
           >
             <RotateCcw size={12} /> Xóa lọc
           </button>
         )}
 
-        {loading && <span style={{ fontSize: '11.5px', color: '#94a3b8', fontWeight: 600 }}>Đang tải…</span>}
+        {loading && <span className="text-[11.5px] text-faint font-semibold">Đang tải…</span>}
       </div>
 
       {/* 2.1 Thống kê người dùng */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+      <div className="grid grid-cols-4 gap-[16px]">
         <StatCard icon={<Users size={14} />} label="Tổng người dùng" value={totalUsers} />
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Sale / Order</div>
-          <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', marginTop: '8px' }}>
-            {byRole.SALE} <span style={{ color: '#cbd5e1', fontWeight: 700 }}>/</span> {byRole.ORDER}
+        <div className="bg-surface border border-border rounded-[14px] py-[18px] px-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="text-[11px] font-extrabold text-muted uppercase">Sale / Order</div>
+          <div className="text-[18px] font-black text-[#0f172a] mt-[8px]">
+            {byRole.SALE} <span className="text-[#cbd5e1] font-bold">/</span> {byRole.ORDER}
           </div>
         </div>
         <StatCard icon={<UserCheck size={14} />} label="Đã duyệt" value={totalUsers - pendingCount} tone="success" />
@@ -261,81 +252,78 @@ export const StaffPage: React.FC = () => {
       </div>
 
       {/* Quản lý tài khoản — 2 tab: chờ duyệt / đang hoạt động */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className={cardContainerCls}>
+        <h2 className={cardHeadingCls}>
           <ShieldCheck size={16} color="#2563eb" /> Quản lý tài khoản
         </h2>
-        <span style={{ fontSize: '11px', color: '#64748b' }}>Duyệt tài khoản mới hoặc khóa/mở khóa tài khoản đang hoạt động</span>
+        <span className="text-[11px] text-muted">Duyệt tài khoản mới hoặc khóa/mở khóa tài khoản đang hoạt động</span>
 
-        <div style={{ display: 'flex', gap: '8px', marginTop: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+        <div className="flex gap-[8px] mt-[14px] border-b border-[#f1f5f9] pb-[12px]">
           <button
             type="button"
             onClick={() => setAccountTab('PENDING')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px',
-              background: accountTab === 'PENDING' ? '#ffffff' : '#f1f5f9',
-              color: accountTab === 'PENDING' ? '#0f172a' : '#475569',
-              border: accountTab === 'PENDING' ? '1px solid #0f172a' : '1px solid transparent',
-              fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
-            }}
+            className={clsx(
+              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[12.5px] font-bold cursor-pointer border',
+              accountTab === 'PENDING' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
+            )}
           >
             Tài khoản chờ duyệt {pendingUsers.length > 0 && `(${pendingUsers.length})`}
           </button>
           <button
             type="button"
             onClick={() => setAccountTab('ACTIVE')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px',
-              background: accountTab === 'ACTIVE' ? '#ffffff' : '#f1f5f9',
-              color: accountTab === 'ACTIVE' ? '#0f172a' : '#475569',
-              border: accountTab === 'ACTIVE' ? '1px solid #0f172a' : '1px solid transparent',
-              fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
-            }}
+            className={clsx(
+              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[12.5px] font-bold cursor-pointer border',
+              accountTab === 'ACTIVE' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
+            )}
           >
             Tài khoản đang hoạt động ({activeListUsers.length})
           </button>
         </div>
 
         {accountTab === 'PENDING' && (pendingUsers.length > 0 ? (
-          <div style={{ overflowX: 'auto', marginTop: '14px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+          <div className="overflow-x-auto mt-[14px]">
+            <table className="w-full border-collapse text-[12.5px]">
               <thead>
-                <tr style={{ borderBottom: '1px solid #f1f5f9', textAlign: 'left' }}>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Tên</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Email</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Vai trò</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Thao tác</th>
+                <tr className="border-b border-[#f1f5f9] text-left">
+                  <th className={thCls}>Tên</th>
+                  <th className={thCls}>Email</th>
+                  <th className={thCls}>Vai trò</th>
+                  <th className={clsx(thCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {pagedAccountList.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <tr key={u.id} className="border-b border-[#f8fafc]">
+                    <td className="p-[10px] font-bold text-[#0f172a]">
+                      <span className="inline-flex items-center gap-[8px]">
                         <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
                         {u.name}
                       </span>
                     </td>
-                    <td style={{ padding: '10px', color: '#64748b' }}>{u.email}</td>
-                    <td style={{ padding: '10px', color: '#334155' }}>
+                    <td className="p-[10px] text-muted">{u.email}</td>
+                    <td className="p-[10px] text-[#334155]">
                       <select
                         value={approveRole[u.id] || u.role}
                         disabled={actionLoadingId === u.id}
                         onChange={(e) => setApproveRole((prev) => ({ ...prev, [u.id]: e.target.value as Role }))}
-                        style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer' }}
+                        className="py-[5px] px-[8px] rounded-[6px] border border-border bg-surface text-[#334155] text-[11.5px] font-semibold cursor-pointer"
                       >
                         {(['SALE', 'ORDER'] as Role[]).map((r) => (
                           <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
                         ))}
                       </select>
                     </td>
-                    <td style={{ padding: '10px', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '6px' }}>
+                    <td className="p-[10px] text-right">
+                      <div className="inline-flex gap-[6px]">
                         <button
                           type="button"
                           disabled={actionLoadingId === u.id}
                           onClick={() => handleApprove(u.id)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: '6px', border: 'none', background: '#16a34a', color: '#fff', fontSize: '11.5px', fontWeight: 700, cursor: actionLoadingId === u.id ? 'default' : 'pointer', opacity: actionLoadingId === u.id ? 0.6 : 1 }}
+                          className={clsx(
+                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border-0 bg-[#16a34a] text-surface text-[11.5px] font-bold',
+                            actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
+                          )}
                         >
                           <Check size={12} /> Duyệt
                         </button>
@@ -343,7 +331,10 @@ export const StaffPage: React.FC = () => {
                           type="button"
                           disabled={actionLoadingId === u.id}
                           onClick={() => handleReject(u.id)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: '6px', border: '1px solid #fecdd3', background: '#fff1f2', color: '#be123c', fontSize: '11.5px', fontWeight: 700, cursor: actionLoadingId === u.id ? 'default' : 'pointer', opacity: actionLoadingId === u.id ? 0.6 : 1 }}
+                          className={clsx(
+                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border border-[#fecdd3] bg-[#fff1f2] text-[#be123c] text-[11.5px] font-bold',
+                            actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
+                          )}
                         >
                           <X size={12} /> Từ chối
                         </button>
@@ -355,56 +346,50 @@ export const StaffPage: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Không có tài khoản nào chờ duyệt</div>
+          <div className={emptyTextCls}>Không có tài khoản nào chờ duyệt</div>
         ))}
 
         {accountTab === 'ACTIVE' && (activeListUsers.length > 0 ? (
-          <div style={{ overflowX: 'auto', marginTop: '14px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+          <div className="overflow-x-auto mt-[14px]">
+            <table className="w-full border-collapse text-[12.5px]">
               <thead>
-                <tr style={{ borderBottom: '1px solid #f1f5f9', textAlign: 'left' }}>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Tên</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Email</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Vai trò</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Trạng thái</th>
-                  <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Thao tác</th>
+                <tr className="border-b border-[#f1f5f9] text-left">
+                  <th className={thCls}>Tên</th>
+                  <th className={thCls}>Email</th>
+                  <th className={thCls}>Vai trò</th>
+                  <th className={thCls}>Trạng thái</th>
+                  <th className={clsx(thCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {pagedAccountList.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <tr key={u.id} className="border-b border-[#f8fafc]">
+                    <td className="p-[10px] font-bold text-[#0f172a]">
+                      <span className="inline-flex items-center gap-[8px]">
                         <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
                         {u.name}
                       </span>
                     </td>
-                    <td style={{ padding: '10px', color: '#64748b' }}>{u.email}</td>
-                    <td style={{ padding: '10px', color: '#334155' }}>{ROLE_LABEL[u.role] || u.role}</td>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
-                        background: u.isActive ? '#f0fdf4' : '#fff1f2',
-                        color: u.isActive ? '#15803d' : '#be123c',
-                        border: `1px solid ${u.isActive ? '#bbf7d0' : '#fecdd3'}`,
-                      }}>
+                    <td className="p-[10px] text-muted">{u.email}</td>
+                    <td className="p-[10px] text-[#334155]">{ROLE_LABEL[u.role] || u.role}</td>
+                    <td className="p-[10px]">
+                      <span className={clsx(
+                        'inline-flex items-center gap-[4px] py-[3px] px-[8px] rounded-[20px] text-[11px] font-bold border',
+                        u.isActive ? 'bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]' : 'bg-[#fff1f2] text-[#be123c] border-[#fecdd3]',
+                      )}>
                         {u.isActive ? 'Đang hoạt động' : 'Đã khóa'}
                       </span>
                     </td>
-                    <td style={{ padding: '10px', textAlign: 'right' }}>
+                    <td className="p-[10px] text-right">
                       <button
                         type="button"
                         disabled={actionLoadingId === u.id}
                         onClick={() => handleToggleActive(u.id, u.isActive)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: '6px',
-                          border: u.isActive ? '1px solid #fecdd3' : 'none',
-                          background: u.isActive ? '#fff1f2' : '#16a34a',
-                          color: u.isActive ? '#be123c' : '#fff',
-                          fontSize: '11.5px', fontWeight: 700,
-                          cursor: actionLoadingId === u.id ? 'default' : 'pointer',
-                          opacity: actionLoadingId === u.id ? 0.6 : 1,
-                        }}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] text-surface text-[11.5px] font-bold',
+                          u.isActive ? 'border border-[#fecdd3] bg-[#fff1f2] text-[#be123c]' : 'border-0 bg-[#16a34a] text-surface',
+                          actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
+                        )}
                       >
                         {u.isActive ? <><Lock size={12} /> Khóa</> : <><Unlock size={12} /> Mở khóa</>}
                       </button>
@@ -415,11 +400,11 @@ export const StaffPage: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '20px 0' }}>Chưa có tài khoản nào được duyệt</div>
+          <div className="text-center text-faint text-[12.5px] py-[20px] px-0">Chưa có tài khoản nào được duyệt</div>
         ))}
 
         {currentAccountList.length > 0 && (
-          <div style={{ marginTop: '14px' }}>
+          <div className="mt-[14px]">
             <Pagination
               currentPage={accountPage}
               totalPages={accountTotalPages}
@@ -433,88 +418,92 @@ export const StaffPage: React.FC = () => {
       </div>
 
       {/* Phân bố theo bộ phận */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 14px 0' }}>Phân bố theo bộ phận</h2>
+      <div className={cardContainerCls}>
+        <h2 className="text-[14px] font-extrabold text-[#0f172a] m-0 mb-[14px]">Phân bố theo bộ phận</h2>
         {deptStats.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="flex flex-col gap-[10px]">
             {deptStats.map(([name, count]) => (
-              <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '12.5px', color: '#334155', fontWeight: 600, width: '160px', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', height: '10px', overflow: 'hidden' }}>
-                  <div style={{ width: `${(count / (totalUsers || 1)) * 100}%`, background: '#2563eb', height: '100%', borderRadius: '6px' }} />
+              <div key={name} className="flex items-center gap-[12px]">
+                <span className="text-[12.5px] text-[#334155] font-semibold w-[160px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{name}</span>
+                <div className="flex-1 bg-[#f1f5f9] rounded-[6px] h-[10px] overflow-hidden">
+                  <div
+                    className="bg-primary h-full rounded-[6px]"
+                    // động — giữ inline
+                    style={{ width: `${(count / (totalUsers || 1)) * 100}%` }}
+                  />
                 </div>
-                <span style={{ fontSize: '12.5px', fontWeight: 900, color: '#0f172a', width: '24px', textAlign: 'right', flexShrink: 0 }}>{count}</span>
+                <span className="text-[12.5px] font-black text-[#0f172a] w-[24px] text-right shrink-0">{count}</span>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '20px 0' }}>Chưa có dữ liệu</div>
+          <div className="text-center text-faint text-[12.5px] py-[20px] px-0">Chưa có dữ liệu</div>
         )}
       </div>
 
       {/* 2.2 Hiệu suất Sale & Order */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="grid grid-cols-2 gap-[16px]">
+        <div className={cardContainerCls}>
+          <h2 className={cardHeadingCls}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất Sale
           </h2>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>Số yêu cầu đã tạo & đã chốt của từng Sale</span>
+          <span className="text-[11px] text-muted">Số yêu cầu đã tạo & đã chốt của từng Sale</span>
 
           {saleStats.length > 0 ? (
-            <div style={{ overflowX: 'auto', marginTop: '14px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+            <div className="overflow-x-auto mt-[14px]">
+              <table className="w-full border-collapse text-[12.5px]">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #f1f5f9', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Sale</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Đã tạo</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Đã chốt</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Tỷ lệ chốt</th>
+                  <tr className="border-b border-[#f1f5f9] text-left">
+                    <th className={thCls}>Sale</th>
+                    <th className={clsx(thCls, 'text-right')}>Đã tạo</th>
+                    <th className={clsx(thCls, 'text-right')}>Đã chốt</th>
+                    <th className={clsx(thCls, 'text-right')}>Tỷ lệ chốt</th>
                   </tr>
                 </thead>
                 <tbody>
                   {saleStats.map((s) => (
-                    <tr key={s.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>{s.name}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#334155' }}>{s.total}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#334155' }}>{s.closed}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#16a34a', fontWeight: 700 }}>{s.closeRate.toFixed(1)}%</td>
+                    <tr key={s.id} className="border-b border-[#f8fafc]">
+                      <td className="p-[10px] font-bold text-[#0f172a]">{s.name}</td>
+                      <td className="p-[10px] text-right text-[#334155]">{s.total}</td>
+                      <td className="p-[10px] text-right text-[#334155]">{s.closed}</td>
+                      <td className="p-[10px] text-right text-[#16a34a] font-bold">{s.closeRate.toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Chưa có Sale nào trong hệ thống</div>
+            <div className={emptyTextCls}>Chưa có Sale nào trong hệ thống</div>
           )}
         </div>
 
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-          <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className={cardContainerCls}>
+          <h2 className={cardHeadingCls}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
           </h2>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>Thời gian trung bình báo giá & xử lý của từng Order</span>
+          <span className="text-[11px] text-muted">Thời gian trung bình báo giá & xử lý của từng Order</span>
 
           {pricerStats.length > 0 ? (
-            <div style={{ overflowX: 'auto', marginTop: '14px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+            <div className="overflow-x-auto mt-[14px]">
+              <table className="w-full border-collapse text-[12.5px]">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #f1f5f9', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>Order</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>Đã xử lý</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>TB báo giá</th>
-                    <th style={{ padding: '8px 10px', fontSize: '10.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'right' }}>TB xử lý</th>
+                  <tr className="border-b border-[#f1f5f9] text-left">
+                    <th className={thCls}>Order</th>
+                    <th className={clsx(thCls, 'text-right')}>Đã xử lý</th>
+                    <th className={clsx(thCls, 'text-right')}>TB báo giá</th>
+                    <th className={clsx(thCls, 'text-right')}>TB xử lý</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pricerStats.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '10px', fontWeight: 700, color: '#0f172a' }}>{p.name}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#334155' }}>{p.totalHandled}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#0f766e', fontWeight: 700 }}>
+                    <tr key={p.id} className="border-b border-[#f8fafc]">
+                      <td className="p-[10px] font-bold text-[#0f172a]">{p.name}</td>
+                      <td className="p-[10px] text-right text-[#334155]">{p.totalHandled}</td>
+                      <td className="p-[10px] text-right text-[#0f766e] font-bold">
                         {p.avgQuoteMs !== null ? formatDuration(0, p.avgQuoteMs) : '---'}
                       </td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#334155', fontWeight: 700 }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <td className="p-[10px] text-right text-[#334155] font-bold">
+                        <span className="inline-flex items-center gap-[4px]">
                           <Clock size={12} color="#94a3b8" />
                           {p.avgProcessMs !== null ? formatDuration(0, p.avgProcessMs) : '---'}
                         </span>
@@ -525,28 +514,32 @@ export const StaffPage: React.FC = () => {
               </table>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Chưa có Order nào trong hệ thống</div>
+            <div className={emptyTextCls}>Chưa có Order nào trong hệ thống</div>
           )}
         </div>
       </div>
 
       {/* 2.3 + 2.4 gộp — Top hành động theo role (Audit Log) */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className={cardContainerCls}>
+        <h2 className={cardHeadingCls}>
           <Activity size={16} color="#2563eb" /> Top hành động theo role
         </h2>
       
         {Object.keys(actionStats).length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Object.keys(actionStats).length}, 1fr)`, gap: '20px', marginTop: '14px' }}>
+          <div
+            className="grid gap-[20px] mt-[14px]"
+            // động — giữ inline
+            style={{ gridTemplateColumns: `repeat(${Object.keys(actionStats).length}, 1fr)` }}
+          >
             {Object.entries(actionStats).map(([role, rawActions]) => {
               const actions = mergeActionsByLabel(rawActions);
               const maxCount = actions[0]?.count || 1;
               return (
                 <div key={role}>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '10px' }}>
+                  <div className="text-[11px] font-extrabold text-muted uppercase mb-[10px]">
                     {ROLE_LABEL[role] || role}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="flex flex-col gap-[8px]">
                     {actions.slice(0, 6).map((a) => {
                       const key = `${role}:${a.action}`;
                       const isOpen = expandedAction === key;
@@ -554,23 +547,27 @@ export const StaffPage: React.FC = () => {
                         <div key={a.action}>
                           <div
                             onClick={() => setExpandedAction(isOpen ? null : key)}
-                            style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#334155', marginBottom: '3px', cursor: 'pointer' }}
+                            className="flex justify-between text-[11.5px] text-[#334155] mb-[3px] cursor-pointer"
                           >
-                            <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ACTION_LABEL[a.action] || a.action}</span>
-                            <span style={{ fontWeight: 900, color: '#0f172a', flexShrink: 0, marginLeft: '8px' }}>{a.count}</span>
+                            <span className="font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{ACTION_LABEL[a.action] || a.action}</span>
+                            <span className="font-black text-[#0f172a] shrink-0 ml-[8px]">{a.count}</span>
                           </div>
                           <div
                             onClick={() => setExpandedAction(isOpen ? null : key)}
-                            style={{ background: '#f1f5f9', borderRadius: '6px', height: '6px', overflow: 'hidden', cursor: 'pointer' }}
+                            className="bg-[#f1f5f9] rounded-[6px] h-[6px] overflow-hidden cursor-pointer"
                           >
-                            <div style={{ width: `${(a.count / maxCount) * 100}%`, background: isOpen ? '#0f172a' : '#2563eb', height: '100%', borderRadius: '6px' }} />
+                            <div
+                              className={clsx('h-full rounded-[6px]', isOpen ? 'bg-[#0f172a]' : 'bg-primary')}
+                              // động — giữ inline
+                              style={{ width: `${(a.count / maxCount) * 100}%` }}
+                            />
                           </div>
                           {isOpen && (
-                            <div style={{ marginTop: '6px', padding: '8px 10px', background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div className="mt-[6px] py-[8px] px-[10px] bg-[#f8fafc] border border-[#f1f5f9] rounded-[8px] flex flex-col gap-[4px]">
                               {a.byActor.filter((actor) => !actor.actorId || !lockedUserIds.has(actor.actorId)).map((actor) => (
-                                <div key={actor.actorId || actor.actorName} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                                  <span style={{ color: '#334155', fontWeight: 600 }}>{actor.actorName}</span>
-                                  <span style={{ color: '#64748b', fontWeight: 700 }}>{actor.count} lần</span>
+                                <div key={actor.actorId || actor.actorName} className="flex justify-between text-[11px]">
+                                  <span className="text-[#334155] font-semibold">{actor.actorName}</span>
+                                  <span className="text-muted font-bold">{actor.count} lần</span>
                                 </div>
                               ))}
                             </div>
@@ -584,7 +581,7 @@ export const StaffPage: React.FC = () => {
             })}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', padding: '24px 0' }}>Chưa có dữ liệu hành động nào được ghi nhận</div>
+          <div className={emptyTextCls}>Chưa có dữ liệu hành động nào được ghi nhận</div>
         )}
       </div>
     </div>

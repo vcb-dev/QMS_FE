@@ -38,7 +38,8 @@ import { StatusPill } from '../components/StatusPill';
 import { NotFoundPage } from './NotFoundPage';
 import { SpecBadge } from '../components/SpecBadge';
 import { SpecRow } from '../components/SpecRow';
-import { cardStyle } from '../styles/card';
+import { clsx } from 'clsx';
+import { cardCls } from '../styles/classNames';
 import { OptionCard } from '../components/OptionCard';
 import { CHAT_EVENTS } from '../constants/chatEvents';
 import { REALTIME_EVENTS } from '../constants/realtimeEvents';
@@ -53,32 +54,10 @@ const ImageNavButton: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    style={{
-      position: 'absolute',
-      [direction === 'prev' ? 'left' : 'right']: '8px',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      background: 'rgba(15, 23, 42, 0.65)',
-      color: '#ffffff',
-      border: 'none',
-      borderRadius: '50%',
-      width: '30px',
-      height: '30px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer',
-      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-      transition: 'background 0.15s ease, transform 0.15s ease',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)';
-      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = 'rgba(15, 23, 42, 0.65)';
-      e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-    }}
+    className={clsx(
+      'absolute top-1/2 -translate-y-1/2 bg-[rgba(15,23,42,0.65)] text-surface border-0 rounded-full w-[30px] h-[30px] flex items-center justify-center cursor-pointer shadow-[0_2px_6px_rgba(0,0,0,0.3)] transition-[background_0.15s_ease,transform_0.15s_ease] hover:bg-[rgba(15,23,42,0.9)] hover:scale-110',
+      direction === 'prev' ? 'left-[8px]' : 'right-[8px]',
+    )}
     title={title}
   >
     {direction === 'prev' ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
@@ -278,6 +257,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       status={status}
       label={STATUS_BADGE_LABELS[status] || status}
       iconSize={14}
+      // động — props component ngoài
       style={{ padding: '5px 14px', fontSize: '12.5px', fontWeight: 800 }}
     />
   );
@@ -311,40 +291,26 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             : ['Chưa rõ chất liệu'];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+    <div className="flex flex-col gap-[24px] pb-[40px]">
       {/* Top Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div className="flex items-center justify-between border-b border-border pb-[16px]">
+        <div className="flex items-center gap-[14px]">
           <button
             type="button"
             onClick={onBack}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '10px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 700,
-              color: '#334155',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-              transition: 'all 0.15s ease',
-            }}
+            className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[8px] px-[16px] text-[13px] font-bold text-[#334155] cursor-pointer flex items-center gap-[6px] shadow-sm transition-[all_0.15s_ease]"
           >
             <ArrowLeft size={16} /> 
           </button>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+            <div className="flex items-center gap-[10px]">
+              <h1 className="text-[22px] font-black text-text m-0">
                 {selectedReq.code || `#RQ-${selectedReq.id}`}
               </h1>
               {getStatusBadge(selectedReq.status)}
             </div>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+            <p className="text-[13px] text-muted mt-[4px] mr-0 mb-0 ml-0">
               Tạo lúc {selectedReq.createdAt ? new Date(selectedReq.createdAt).toLocaleString('vi-VN') : '---'}
             </p>
           </div>
@@ -356,27 +322,27 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       </div>
 
       {/* Main 2-Column Content Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
+      <div className="grid grid-cols-[2fr_1fr] gap-[24px] items-start">
         {/* Left Column (2/3 width) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="flex flex-col gap-[20px]">
           {/* Reject or Return Reasons Warning Alert */}
           {(selectedReq.status === 'REJECTED' ) && selectedReq.rejectReason && (
-            <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '12px', padding: '16px 20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 800, color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-[12px] py-[16px] px-[20px]">
+              <div className="text-[13px] font-extrabold text-[#be123c] flex items-center gap-[8px]">
                 <XCircle size={18} /> LÝ DO TỪ CHỐI HẲN
               </div>
-              <p style={{ fontSize: '13px', color: '#9f1239', margin: '6px 0 0 0', lineHeight: '1.5' }}>
+              <p className="text-[13px] text-[#9f1239] mt-[6px] mr-0 mb-0 ml-0 leading-[1.5]">
                 {selectedReq.rejectReason}
               </p>
             </div>
           )}
 
           {selectedReq.status === 'NEED_MORE_INFO' && selectedReq.returnReason && (
-            <div style={{ background: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '12px', padding: '16px 20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 800, color: '#c2410c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="bg-[#fff7ed] border border-[#ffedd5] rounded-[12px] py-[16px] px-[20px]">
+              <div className="text-[13px] font-extrabold text-[#c2410c] flex items-center gap-[8px]">
                 <RotateCcw size={18} /> YÊU CẦU BỔ SUNG THÔNG TIN
               </div>
-              <p style={{ fontSize: '13px', color: '#9a3412', margin: '6px 0 0 0', lineHeight: '1.5' }}>
+              <p className="text-[13px] text-[#9a3412] mt-[6px] mr-0 mb-0 ml-0 leading-[1.5]">
                 {selectedReq.returnReason}
               </p>
             </div>
@@ -384,13 +350,13 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
           {/* Cảnh báo giá chưa được xác nhận cho Sale */}
           {selectedReq && (selectedReq.status !== 'QUOTED' && selectedReq.status !== 'CLOSED') && priceVal > 0 && currentRole === 'SALE' && (
-            <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 2px 6px rgba(234, 88, 12, 0.08)' }}>
-              <AlertTriangle size={24} color="#ea580c" style={{ flexShrink: 0 }} />
+            <div className="bg-[#fff7ed] border-[1.5px] border-[#fed7aa] rounded-[12px] py-[16px] px-[20px] flex items-center gap-[14px] shadow-[0_2px_6px_rgba(234,88,12,0.08)]">
+              <AlertTriangle size={24} color="#ea580c" className="shrink-0" />
               <div>
-                <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#c2410c' }}>
+                <div className="text-[13.5px] font-extrabold text-[#c2410c]">
                   GIÁ CHƯA ĐƯỢC XÁC NHẬN BỞI ADMIN / ORDER
                 </div>
-                <p style={{ fontSize: '12.5px', color: '#9a3412', margin: '4px 0 0 0', lineHeight: '1.5', fontWeight: 600 }}>
+                <p className="text-[12.5px] text-[#9a3412] mt-[4px] mr-0 mb-0 ml-0 leading-[1.5] font-semibold">
                   <strong>Lưu ý:</strong> Mức giá bên dưới chỉ là giá tạm tính / ước tính. Giá <strong>chưa được xác nhận, tuyệt đối không được báo cho khách</strong> cho đến khi đơn chuyển sang trạng thái &quot;ĐÃ BÁO GIÁ&quot;.
                 </p>
               </div>
@@ -399,26 +365,19 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
 
           {/* Product Overview Card & Gallery */}
-          <div style={cardStyle}>
-            <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', margin: '0 0 16px 0' }}>
+          <div className={cardCls}>
+            <h2 className="text-[18px] font-black text-text mb-[16px]">
               {selectedReq.productName || 'Sản phẩm mẫu'}
             </h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '20px' }}>
+            <div className="grid grid-cols-[260px_1fr] gap-[20px]">
               {/* Media Preview & Thumbnails (video trước, rồi ảnh) */}
               <div>
                 <div
-                  style={{
-                    width: '100%',
-                    height: '230px',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: currentMedia?.type === 'video' ? '#000' : '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    cursor: currentMedia?.type === 'image' ? 'zoom-in' : 'default',
-                    position: 'relative',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                  }}
+                  className={clsx(
+                    'w-full h-[230px] rounded-[12px] overflow-hidden border border-border relative shadow-[0_2px_8px_rgba(0,0,0,0.04)]',
+                    currentMedia?.type === 'video' ? 'bg-[#000] cursor-default' : 'bg-surface cursor-zoom-in',
+                  )}
                   onClick={() => {
                     if (currentMedia?.type === 'image') setLightboxOpen(true);
                   }}
@@ -428,7 +387,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     <video
                       controls
                       src={currentMedia.url}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                      className="w-full h-full object-contain bg-[#000]"
                     />
                   ) : (
                     <img
@@ -438,38 +397,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                         e.currentTarget.onerror = null;
                         e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                       }}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transition: 'transform 0.25s ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      className="w-full h-full object-cover transition-transform duration-250 ease hover:scale-[1.03]"
                     />
                   )}
 
                   {mediaList.length > 1 && (
                     <>
                       <span
-                        style={{
-                          position: 'absolute',
-                          bottom: '10px',
-                          right: '10px',
-                          background: 'rgba(15, 23, 42, 0.85)',
-                          backdropFilter: 'blur(4px)',
-                          color: '#ffffff',
-                          fontSize: '12.5px',
-                          fontWeight: 800,
-                          padding: '5px 12px',
-                          borderRadius: '20px',
-                          border: '1px solid rgba(255,255,255,0.25)',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          pointerEvents: 'none',
-                        }}
+                        className="absolute bottom-[10px] right-[10px] bg-[rgba(15,23,42,0.85)] backdrop-blur-[4px] text-surface text-[12.5px] font-extrabold py-[5px] px-[12px] rounded-[20px] border border-[rgba(255,255,255,0.25)] shadow-[0_2px_6px_rgba(0,0,0,0.25)] flex items-center gap-[5px] pointer-events-none"
                       >
                         {currentMedia?.type === 'video' ? <Play size={13} /> : <ImageIcon size={13} />}{' '}
                         {currentMediaIdx + 1} / {mediaList.length}
@@ -497,26 +432,21 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 </div>
 
                 {mediaList.length > 1 && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  <div className="flex gap-[8px] mt-[10px] overflow-x-auto pb-[4px]">
                     {mediaList.map((m, idx) => {
                       const selected = currentMediaIdx === idx;
-                      const commonStyle: React.CSSProperties = {
-                        width: '52px',
-                        height: '52px',
-                        borderRadius: '8px',
-                        objectFit: 'cover',
-                        background: m.type === 'video' ? '#000' : '#ffffff',
-                        border: selected ? '2px solid #2563eb' : '1px solid #cbd5e1',
-                        boxShadow: selected ? '0 0 0 2px rgba(37,99,235,0.25)' : 'none',
-                        cursor: 'pointer',
-                        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                        flexShrink: 0,
-                      };
+                      const thumbCls = clsx(
+                        'w-[52px] h-[52px] rounded-[8px] object-cover cursor-pointer transition-[border-color_0.15s_ease,box-shadow_0.15s_ease] shrink-0',
+                        m.type === 'video' ? 'bg-[#000]' : 'bg-surface',
+                        selected
+                          ? 'border-2 border-primary shadow-[0_0_0_2px_rgba(37,99,235,0.25)]'
+                          : 'border border-[#cbd5e1] hover:border-[#94a3b8]',
+                      );
                       return m.type === 'video' ? (
                         <div
                           key={idx}
                           onClick={() => setActiveImageIndex(idx)}
-                          style={{ ...commonStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          className={clsx(thumbCls, 'flex items-center justify-center')}
                           title="Xem video"
                         >
                           <Play size={18} color="#ffffff" />
@@ -531,13 +461,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                             setActiveImageIndex(idx);
                             setLightboxOpen(true);
                           }}
-                          style={commonStyle}
-                          onMouseEnter={(e) => {
-                            if (!selected) e.currentTarget.style.borderColor = '#94a3b8';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!selected) e.currentTarget.style.borderColor = '#cbd5e1';
-                          }}
+                          className={thumbCls}
                           title={`Xem ảnh ${idx - imageOffset + 1}`}
                         />
                       );
@@ -547,7 +471,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               </div>
 
               {/* Product Spec Badges & Details */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="flex flex-col gap-[14px]">
                 {/* Product Spec Badges (6 Badges Grid) */}
                 {(() => {
                   const activeOpt = finalOption || selectedReq.options?.[0];
@@ -569,7 +493,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   const hasCloseRate = selectedReq.closeRatePct !== undefined && selectedReq.closeRatePct !== null;
 
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="grid grid-cols-2 gap-[12px]">
                       {/* Chất liệu & thông số đá quý có độ dài nội dung biến thiên mạnh (VD danh sách
                           nhiều viên đá) — span nguyên hàng để không tạo khoảng trắng thừa so với ô 2 cột. */}
                       <SpecBadge fullWidth icon={<Gem size={14} color="#d97706" />} label="CHẤT LIỆU" value={materialsList.join(', ')} />
@@ -579,6 +503,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                         icon={<Sparkles size={14} color="#059669" />}
                         label="THÔNG SỐ ĐÁ QUÝ"
                         value={stoneDisplay}
+                        // động — component ngoài
                         valueStyle={{ color: stoneDisplay === 'Không đính đá' ? '#64748b' : '#0f172a' }}
                       />
 
@@ -596,6 +521,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                         icon={<Target size={14} color="#ea580c" />}
                         label="TỶ LỆ CHỐT DỰ KIẾN"
                         value={hasCloseRate ? `${selectedReq.closeRatePct}%` : 'Chưa xác định'}
+                        // động — component ngoài
                         valueStyle={{ color: hasCloseRate ? '#0f172a' : '#94a3b8', fontStyle: hasCloseRate ? 'normal' : 'italic' }}
                         title={hasCloseRate ? undefined : 'Sale chưa nhập tỷ lệ chốt dự kiến cho yêu cầu này'}
                       />
@@ -604,11 +530,11 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 })()}
 
                 {/* Additional Description / Customer Notes */}
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                <div className="bg-page border border-border rounded-[10px] p-[14px]">
+                  <span className="text-[11px] font-extrabold text-muted uppercase block mb-[4px]">
                     GHI CHÚ / MÔ TẢ YÊU CẦU CỦA KHÁCH HÀNG
                   </span>
-                  <p style={{ fontSize: '12.5px', color: '#334155', margin: 0, lineHeight: '1.5' }}>
+                  <p className="text-[12.5px] text-[#334155] m-0 leading-[1.5]">
                     {selectedReq.desiredLeadTime || 'Không có ghi chú thêm.'}
                   </p>
                 </div>
@@ -620,30 +546,26 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               đã chốt với khách (CLOSED) thì thôi, chỉ còn giá cuối. Ẩn ở PENDING vì lúc đó "option"
               (nếu có) chỉ là giá Sale tự ước tính lúc tạo yêu cầu qua Calculator, chưa ai duyệt. */}
           {selectedReq.status !== 'CLOSED' && selectedReq.status !== 'PENDING' && pricedOptions.length > 0 && (
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className={cardCls}>
+              <div className="flex items-center justify-between mb-[16px]">
+                <h3 className="text-[16px] font-extrabold text-text m-0 flex items-center gap-[8px]">
                   <Layers size={18} color="#d97706" /> Các Phương Án Báo Giá ({pricedOptions.length})
                 </h3>
                 {pricedOptions.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleCopyAllOptions(pricedOptions)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      padding: '6px 12px', borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: copiedAllOpt ? '#dcfce7' : '#ffffff',
-                      color: copiedAllOpt ? '#16a34a' : '#334155',
-                      fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                    }}
+                    className={clsx(
+                      'flex items-center gap-[6px] py-[6px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[12px] font-bold cursor-pointer',
+                      copiedAllOpt ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-surface text-[#334155]',
+                    )}
                   >
                     {copiedAllOpt ? <Check size={13} /> : <Copy size={13} />} {copiedAllOpt ? 'Đã copy hết' : 'Copy hết'}
                   </button>
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="flex flex-col gap-[8px]">
                 {pricedOptions.map((opt, idx) => (
                   <OptionCard
                     key={opt.id || idx}
@@ -660,43 +582,34 @@ export const DetailPage: React.FC<DetailPageProps> = ({
         </div>
 
         {/* Right Column (1/3 width) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Right Column (1/3 width) */}
+        <div className="flex flex-col gap-[20px]">
           {/* Financial Cost Breakdown Card */}
           <div
-            style={{
-              background: '#F3F4F6',
-              color: '#111827',
-              border: '1px solid #e5e7eb',
-              borderRadius: '16px',
-              padding: '24px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
+            className="bg-[#F3F4F6] text-[#111827] border border-[#e5e7eb] rounded-[16px] p-[24px] shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex flex-col gap-[16px]"
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-[12px]">
+              <span className="text-[14px] font-extrabold text-[#111827] flex items-center gap-[6px]">
                 <BarChart3 size={16} color="#4b5563" /> Bảng Kê Giá & VAT
               </span>
-              <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#4b5563', background: '#ffffff', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+              <span className="text-[11px] font-mono text-[#4b5563] bg-surface py-[2px] px-[8px] rounded-[6px] border border-[#e5e7eb]">
                 {selectedReq.code || `#${selectedReq.id}`}
               </span>
             </div>
 
-            <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', border: '1px solid #e5e7eb', marginTop: '4px' }}>
-              <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#6b7280', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block' }}>
+            <div className="bg-surface rounded-[12px] p-[16px] border border-[#e5e7eb] mt-[4px]">
+              <span className="text-[10.5px] font-extrabold text-[#6b7280] tracking-[0.5px] uppercase block">
                 TỔNG BÁO GIÁ CHỐT
               </span>
               <div
-                style={{
-                  fontSize: '26px',
-                  fontWeight: 900,
-                  color: priceVal > 0 ? (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED' ? '#16a34a' : '#94a3b8') : '#d97706',
-                  fontStyle: priceVal > 0 && selectedReq.status !== 'QUOTED' && selectedReq.status !== 'CLOSED' ? 'italic' : 'normal',
-                  opacity: priceVal > 0 && selectedReq.status !== 'QUOTED' && selectedReq.status !== 'CLOSED'  ? 0.75 : 1,
-                  marginTop: '4px'
-                }}
+                className={clsx(
+                  'text-[26px] font-black mt-[4px]',
+                  priceVal > 0
+                    ? (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'
+                        ? 'text-[#16a34a] not-italic opacity-100'
+                        : 'text-[#94a3b8] italic opacity-75')
+                    : 'text-[#d97706] not-italic opacity-100',
+                )}
               >
                 {priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có giá chốt'}
               </div>
@@ -706,7 +619,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               
               {/* Sale chỉ cần biết có VAT hay không, không cần xem % chi tiết (ORDER/ADMIN mới xem chi tiết bên dưới) */}
               {currentRole === 'SALE' && finalOption && finalOption.vat != null && (
-                <div style={{ marginTop: '8px', fontSize: '11.5px', fontWeight: 700, color: finalOption.vat > 0 ? '#0f172a' : '#94a3b8' }}>
+                <div className={clsx('mt-[8px] text-[11.5px] font-bold', finalOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#94a3b8]')}>
                   {finalOption.vat > 0 ? 'Có VAT' : 'Không VAT'}
                 </div>
               )}
@@ -714,12 +627,12 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               {/* Chi tiết cấu thành giá — chỉ ORDER/ADMIN xem, vẫn hiện kể cả khi đã CLOSED (Sale chỉ thấy tổng) */}
               {(currentRole === 'ORDER' || currentRole === 'ADMIN') && finalOption &&
                (finalOption.weightChi != null || finalOption.totalMetalCost != null || finalOption.laborCost != null || finalOption.stonePrice != null || finalOption.stoneCost != null || finalOption.vat != null) && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0', fontSize: '11.5px', color: '#475569' }}>
+                <div className="flex flex-col gap-[5px] mt-[10px] pt-[10px] border-t border-dashed border-border text-[11.5px] text-[#475569]">
                   {finalOption.materials && finalOption.materials.length > 1 ? (
-                    <div style={{ background: '#f8fafc', padding: '6px 8px', borderRadius: '6px', marginBottom: '4px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontWeight: 800, color: '#475569', marginBottom: '3px' }}>Chi tiết từng kim loại:</div>
+                    <div className="bg-page py-[6px] px-[8px] rounded-[6px] mb-[4px] border border-border">
+                      <div className="font-extrabold text-[#475569] mb-[3px]">Chi tiết từng kim loại:</div>
                       {finalOption.materials.map((m: QuoteOptionMaterial, idx: number) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', marginTop: '2px' }}>
+                        <div key={idx} className="flex justify-between text-[#334155] mt-[2px]">
                           <span>• {m.materialName || m.material?.name || 'Kim loại'}:</span>
                           <strong>{m.weightChi != null ? `${m.weightChi} chỉ` : '---'}</strong>
                         </div>
@@ -727,6 +640,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     </div>
                   ) : null}
                   {finalOption.materialName && (
+                    // động — component ngoài
                     <SpecRow label="Chất liệu" value={finalOption.materialName} valueStyle={{ textAlign: 'right' }} />
                   )}
                   {finalOption.weightChi != null && (
@@ -744,6 +658,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                       />
                       <SpecRow
                         label="Tiền lãi kim loại"
+                        // động — component ngoài
                         labelStyle={{ color: '#15803d', fontWeight: 700 }}
                         valueStyle={{ color: '#15803d' }}
                         value={formatCurrency(finalOption.costBreakdown.metalProfit)}
@@ -755,13 +670,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                       value={formatCurrency(Number(finalOption.totalMetalCost))}
                     />
                   )}
-                  <div style={{ borderTop: '1px dashed #e2e8f0', margin: '4px 0' }} />
+                  <div className="border-t border-dashed border-border my-[4px]" />
                   {finalOption.costBreakdown && finalOption.stonePrice != null && finalOption.stoneCost != null ? (
                     <>
                       <SpecRow label="Đá quý (giá gốc)" value={formatCurrency(Number(finalOption.stoneCost))} />
                       <SpecRow label="VAT đá quý" value={formatCurrency(finalOption.costBreakdown.stoneVatAmount)} />
                       <SpecRow
                         label="Tiền lãi đá quý"
+                        // động — component ngoài
                         labelStyle={{ color: '#15803d', fontWeight: 700 }}
                         valueStyle={{ color: '#15803d' }}
                         value={formatCurrency(finalOption.costBreakdown.stoneProfit)}
@@ -780,7 +696,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     <SpecRow label="VAT" value={`${finalOption.vat}%`} />
                   )}
                   {finalOption.totalMetalCost != null && finalOption.metalRawCost == null && (finalOption.laborCost != null || finalOption.vat != null) && (
-                    <div style={{ fontSize: '10.5px', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>
+                    <div className="text-[10.5px] text-[#94a3b8] italic mt-[2px]">
                       {finalOption.laborCost != null && `Trong đó tiền công vốn: ${formatCurrency(Number(finalOption.laborCost))}`}
                       {finalOption.laborCost != null && finalOption.vat != null && ' · '}
                       {finalOption.vat != null && `VAT ${finalOption.vat}%`}
@@ -793,78 +709,78 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
 
           {/* Customer & Request Meta Card */}
-          <div style={cardStyle}>
-            <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 14px 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+          <div className={cardCls}>
+            <h3 className="text-[15px] font-extrabold text-[#0f172a] mb-[14px] border-b border-[#f1f5f9] pb-[10px]">
               Thông Tin Đơn Yêu Cầu
             </h3>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
+            <div className="flex flex-col gap-[12px] text-[13px]">
               <div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>THÔNG TIN KHÁCH HÀNG</span>
-                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="text-[11px] text-[#64748b] font-bold uppercase">THÔNG TIN KHÁCH HÀNG</span>
+                <div className="font-extrabold text-[#0f172a] text-[14px] mt-[2px] flex items-center gap-[6px]">
                   <UserIcon size={15} color="#2563eb" /> {selectedReq.customerName || selectedReq.customer?.name || 'Khách hàng lẻ'}
                 </div>
                 {selectedReq.customer?.phone && (
-                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className="text-[12px] text-[#475569] mt-[4px] flex items-center gap-[6px]">
                     <Phone size={13} color="#64748b" /> SĐT: {selectedReq.customer.phone}
                   </div>
                 )}
                 {selectedReq.customer?.province && (
-                  <div style={{ fontSize: '12px', color: '#475569', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className="text-[12px] text-[#475569] font-bold mt-[4px] flex items-center gap-[6px]">
                     <Building2 size={13} color="#1d4ed8" /> Tỉnh/TP: {selectedReq.customer.province.name}
                   </div>
                 )}
                 {(selectedReq.customer?.address || selectedReq.customer?.ward) && (
-                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className="text-[12px] text-[#475569] mt-[4px] flex items-center gap-[6px]">
                     <MapPin size={13} color="#ea580c" /> Địa chỉ: {[selectedReq.customer?.address, selectedReq.customer?.ward?.name].filter(Boolean).join(', ')}
                   </div>
                 )}
               </div>
 
-              <div style={{ height: '1px', background: '#f1f5f9' }} />
+              <div className="h-[1px] bg-[#f1f5f9]" />
 
               {/* Ngày mong muốn nhận hàng là mối quan tâm của khách hàng, không phải dữ liệu xử lý
                   nội bộ — nhóm chung với thông tin khách hàng ở trên thay vì kẹp giữa các mốc thời
                   gian nội bộ bên dưới. */}
               <div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>NGÀY MONG MUỐN NHẬN HÀNG</span>
-                <div style={{ fontWeight: 800, color: '#e11d48', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="text-[11px] text-[#64748b] font-bold uppercase">NGÀY MONG MUỐN NHẬN HÀNG</span>
+                <div className="font-extrabold text-[#e11d48] mt-[2px] flex items-center gap-[6px]">
                   <Calendar size={15} /> {selectedReq.desiredDate || selectedReq.desiredLeadTime || 'Gấp trong 3 ngày'}
                 </div>
               </div>
 
               {/* Ranh giới rõ ràng hơn giữa mối quan tâm của khách hàng (trên) và dữ liệu xử lý nội
                   bộ (dưới) — nhãn nhóm riêng thay vì chỉ 1 divider mảnh như giữa các field cùng nhóm. */}
-              <div style={{ marginTop: '4px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              <div className="mt-[4px] pt-[14px] border-t border-border">
+                <span className="text-[10px] font-extrabold text-[#94a3b8] uppercase tracking-[0.6px]">
                   Xử Lý Nội Bộ
                 </span>
               </div>
 
               <div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>NGƯỜI TẠO YÊU CẦU</span>
-                <div style={{ fontWeight: 800, color: '#334155', marginTop: '2px' }}>
+                <span className="text-[11px] text-[#64748b] font-bold uppercase">NGƯỜI TẠO YÊU CẦU</span>
+                <div className="font-extrabold text-[#334155] mt-[2px]">
                   {selectedReq.requester?.name || selectedReq.createdBy?.name || 'Kinh Doanh'}
                 </div>
-                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="text-[11.5px] text-[#64748b] mt-[2px] flex items-center gap-[6px]">
                   <Building2 size={13} color="#64748b" /> {selectedReq.requester?.department?.name || 'Store VCB'}
                 </div>
               </div>
 
-              <div style={{ height: '1px', background: '#f1f5f9' }} />
+              <div className="h-[1px] bg-[#f1f5f9]" />
 
               <div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>CHUYÊN VIÊN BÁO GIÁ</span>
-                <div style={{ fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
+                <span className="text-[11px] text-[#64748b] font-bold uppercase">CHUYÊN VIÊN BÁO GIÁ</span>
+                <div className="font-extrabold text-[#2563eb] mt-[2px]">
                   {selectedReq.assignee?.name || 'Chưa phân công'}
                 </div>
               </div>
 
               {(timeToAccept !== null || timeToQuote !== null || timeToReturn !== null || timeToReject !== null) && (
                 <>
-                  <div style={{ height: '1px', background: '#f1f5f9' }} />
+                  <div className="h-[1px] bg-[#f1f5f9]" />
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span className="text-[11px] text-[#64748b] font-bold uppercase inline-flex items-center gap-[4px]">
                       THỜI GIAN XỬ LÝ
                       <span
                         title={
@@ -873,23 +789,23 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                           'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.\n' +
                           'Từ chối sau: từ lúc tiếp nhận đến lúc từ chối.'
                         }
-                        style={{ display: 'inline-flex', cursor: 'help', color: '#94a3b8' }}
+                        className="inline-flex cursor-help text-[#94a3b8]"
                       >
                         <HelpCircle size={12} />
                       </span>
                     </span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                    <div className="flex flex-col gap-[4px] mt-[4px]">
                       {timeToAccept !== null && (
-                        <div style={{ fontWeight: 700, color: '#334155' }}>Nhận xử lý sau {timeToAccept}</div>
+                        <div className="font-bold text-[#334155]">Nhận xử lý sau {timeToAccept}</div>
                       )}
                       {timeToQuote !== null && (
-                        <div style={{ fontWeight: 700, color: '#0f766e' }}>Báo giá sau {timeToQuote}</div>
+                        <div className="font-bold text-[#0f766e]">Báo giá sau {timeToQuote}</div>
                       )}
                       {timeToReturn !== null && (
-                        <div style={{ fontWeight: 700, color: '#c2410c' }}>Trả lại sau {timeToReturn}</div>
+                        <div className="font-bold text-[#c2410c]">Trả lại sau {timeToReturn}</div>
                       )}
                       {timeToReject !== null && (
-                        <div style={{ fontWeight: 700, color: '#be123c' }}>Từ chối sau {timeToReject}</div>
+                        <div className="font-bold text-[#be123c]">Từ chối sau {timeToReject}</div>
                       )}
                     </div>
                   </div>

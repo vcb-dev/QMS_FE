@@ -11,32 +11,15 @@ interface ToastProps {
 export const Toast: React.FC<ToastProps> = ({ message, onClose }) => (
   <div
     role="status"
-    style={{
-      position: 'fixed',
-      bottom: '24px',
-      right: '24px',
-      zIndex: 4000,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      maxWidth: '340px',
-      background: '#ffffff',
-      border: '1px solid #cbd5e1',
-      borderRadius: '10px',
-      padding: '12px 14px',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-      fontSize: '13px',
-      fontWeight: 600,
-      color: '#0f172a',
-    }}
+    className="fixed bottom-[24px] right-[24px] z-[4000] flex items-center gap-[10px] max-w-[340px] bg-white border border-[#cbd5e1] rounded-[10px] py-[12px] px-[14px] shadow-[0_4px_16px_rgba(0,0,0,0.1)] text-[13px] font-semibold text-[#0f172a]"
   >
-    <Check size={16} color="#475569" style={{ flexShrink: 0 }} />
-    <span style={{ flex: 1 }}>{message}</span>
+    <Check size={16} color="#475569" className="shrink-0" />
+    <span className="flex-1">{message}</span>
     <button
       type="button"
       onClick={onClose}
       title="Đóng"
-      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}
+      className="bg-transparent border-none cursor-pointer text-[#94a3b8] flex p-0"
     >
       <X size={14} />
     </button>

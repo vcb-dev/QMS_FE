@@ -1,9 +1,19 @@
 import React, { useEffect, useState } from 'react';
+import clsx from 'clsx';
 import { X, Award, Check } from 'lucide-react';
 import type { QuoteOption } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { getOptionLabel, getOptionSummary } from '../utils/quoteOption';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import {
+  modalBackdropCls,
+  modalCardCls,
+  modalHeaderCls,
+  modalBodyCls,
+  modalFooterCls,
+  toolBtnCls,
+  btnInspPrimaryCls,
+} from '../styles/classNames';
 
 interface MarkClosedModalProps {
   isOpen: boolean;
@@ -38,20 +48,20 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
   };
 
   return (
-    <div className="modal-backdrop show">
-      <div className="modal-card" style={{ maxWidth: '480px' }}>
-        <div className="modal-header">
+    <div className={modalBackdropCls}>
+      <div className={clsx(modalCardCls, '!max-w-[480px]')}>
+        <div className={modalHeaderCls}>
           <h2>Chọn Phương Án Khách Đã Chốt{reqCode ? ` — ${reqCode}` : ''}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+          <button onClick={onClose} className="bg-transparent border-none text-[#64748b] cursor-pointer">
             <X size={20} />
           </button>
         </div>
 
-        <div className="modal-body">
-          <p style={{ fontSize: '12.5px', color: '#64748b', margin: '0 0 12px 0' }}>
+        <div className={modalBodyCls}>
+          <p className="text-[12.5px] text-[#64748b] m-0 mb-[12px]">
             Yêu cầu này có {options.length} phương án đã báo giá — chọn đúng phương án khách đồng ý mua trước khi đánh dấu Đã Chốt.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex flex-col gap-[8px]">
             {options.map((opt, idx) => {
               const label = getOptionLabel(opt, idx);
               const summary = getOptionSummary(opt);
@@ -62,30 +72,22 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
                   key={opt.id || idx}
                   type="button"
                   onClick={() => opt.id && setSelectedId(opt.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    background: isChosen ? '#f5f3ff' : '#ffffff',
-                    border: isChosen ? '1.5px solid #6d28d9' : '1px solid #e2e8f0',
-                  }}
+                  className={clsx(
+                    "flex items-center justify-between gap-[12px] px-[14px] py-[12px] rounded-[10px] text-left cursor-pointer",
+                    isChosen ? "bg-[#f5f3ff] border-[1.5px] border-solid border-[#6d28d9]" : "bg-white border border-[#e2e8f0]"
+                  )}
                 >
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>{label}</span>
+                  <span className="flex flex-col gap-[3px]">
+                    <span className="text-[13.5px] font-bold text-[#0f172a]">{label}</span>
                     {summary && (
-                      <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
+                      <span className="text-[11.5px] text-[#64748b] font-semibold">
                         {summary}
                       </span>
                     )}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      <strong style={{ fontSize: '14px', fontWeight: 900, color: '#16a34a' }}>
+                  <span className="flex items-center gap-[8px] shrink-0">
+                    <div className="flex flex-col items-end">
+                      <strong className="text-[14px] font-black text-[#16a34a]">
                         {formatCurrency(Number(opt.quotedPrice))}
                       </strong>
                       {renderPriceBreakdownLines(getPriceBreakdown(opt))}
@@ -98,12 +100,11 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
           </div>
         </div>
 
-        <div className="modal-footer">
-          <button type="button" className="tool-btn" onClick={onClose}>Hủy</button>
+        <div className={modalFooterCls}>
+          <button type="button" className={toolBtnCls} onClick={onClose}>Hủy</button>
           <button
             type="button"
-            className="btn-insp btn-insp-primary"
-            style={{ background: '#07063f' }}
+            className={clsx(btnInspPrimaryCls, '!bg-[#07063f]')}
             onClick={handleConfirm}
             disabled={submitting || !selectedId}
           >

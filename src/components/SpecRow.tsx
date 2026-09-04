@@ -10,8 +10,10 @@ interface SpecRowProps {
 // Dòng "nhãn bên trái / giá trị đậm bên phải" — dùng lặp lại nhiều lần trong khối cấu thành giá
 // (Bảng Kê Giá & VAT) của DetailPage.
 export const SpecRow: React.FC<SpecRowProps> = ({ label, value, labelStyle, valueStyle }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+  <div className="flex justify-between gap-[8px]">
+    {/* động — giữ inline */}
     <span style={labelStyle}>{label}</span>
-    <strong style={{ color: '#0f172a', ...valueStyle }}>{value}</strong>
+    {/* động — giữ inline */}
+    <strong className="text-[#0f172a]" style={valueStyle}>{value}</strong>
   </div>
 );

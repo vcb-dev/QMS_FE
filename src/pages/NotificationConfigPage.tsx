@@ -35,14 +35,15 @@ import {
   type LarkWebhookInput,
   type LarkWebhookQuery,
 } from '../services/api';
+import { clsx } from 'clsx';
 import {
-  btnPrimaryStyle,
-  inputStyle,
-  thStyle,
-  tdStyle,
-  tableHeadRowStyle,
-  iconBtnStyle,
-} from '../styles/card';
+  btnPrimaryCls,
+  inputCls,
+  thCls,
+  tdCls,
+  tableHeadRowCls,
+  iconBtnCls,
+} from '../styles/classNames';
 
 const HOOK_PREFIX = 'https://open.larksuite.com/open-apis/bot/v2/hook/';
 
@@ -93,28 +94,20 @@ const isHttps = (s: string) => {
 
 const Badge: React.FC<{ on: boolean }> = ({ on }) => (
   <span
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '6px',
-      fontSize: '11.5px',
-      fontWeight: 700,
-      padding: '3px 9px',
-      borderRadius: '999px',
-      background: on ? '#ecfdf5' : '#f8fafc',
-      color: on ? '#15803d' : '#94a3b8',
-      border: `1px solid ${on ? '#bbf7d0' : '#e5e7eb'}`,
-    }}
+    className={clsx(
+      'inline-flex items-center gap-[6px] text-[11.5px] font-bold py-[3px] px-[9px] rounded-full',
+      on
+        ? 'bg-[#ecfdf5] text-[#15803d] border border-[#bbf7d0]'
+        : 'bg-[#f8fafc] text-[#94a3b8] border border-[#e5e7eb]',
+    )}
   >
     <span
-      style={{
-        width: '6px',
-        height: '6px',
-        borderRadius: '50%',
-        background: on ? '#16a34a' : 'transparent',
-        border: on ? 'none' : '1px solid #cbd5e1',
-        animation: on ? 'livePulse 1.4s ease-in-out infinite' : undefined,
-      }}
+      className={clsx(
+        'w-[6px] h-[6px] rounded-full',
+        on ? 'bg-[#16a34a] border-0' : 'bg-transparent border border-[#cbd5e1]',
+      )}
+      // động — giữ inline
+      style={on ? { animation: 'livePulse 1.4s ease-in-out infinite' } : undefined}
     />
     {on ? 'Đang bật' : 'Đã tắt'}
   </span>
@@ -366,7 +359,7 @@ export const NotificationConfigPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="flex flex-col">
       <style>{`
         @keyframes ncp-spin { to { transform: rotate(360deg); } }
         .ncp-spin { animation: ncp-spin .8s linear infinite; }
@@ -377,122 +370,47 @@ export const NotificationConfigPage: React.FC = () => {
         .ncp-sub:hover { background: #fafafa; }
       `}</style>
 
-      <div
-        style={{
-          background: '#fff',
-          border: '1px solid #e5e7eb',
-          borderRadius: '16px',
-        }}
-      >
+      <div className="bg-surface border border-[#e5e7eb] rounded-[16px]">
         {/* header */}
-        <div style={{ padding: '22px 22px 0' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap',
-            }}
-          >
+        <div className="pt-[22px] px-[22px] pb-0">
+          <div className="flex items-start justify-between gap-[16px] flex-wrap">
             <div>
-              <h1
-                style={{
-                  fontSize: '24px',
-                  fontWeight: 900,
-                  color: '#0f172a',
-                  margin: '0 0 4px',
-                  letterSpacing: '-0.3px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
+              <h1 className="text-[24px] font-black text-[#0f172a] mb-[4px] tracking-[-0.3px] flex items-center gap-[10px]">
                 <Bell size={22} /> Cấu hình thông báo Lark
               </h1>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '12.5px',
-                  color: '#64748b',
-                  maxWidth: '620px',
-                  lineHeight: 1.5,
-                }}
-              >
+              <p className="m-0 text-[12.5px] text-[#64748b] max-w-[620px] leading-[1.5]">
                 Mỗi dòng là một nhóm Lark. Khi thêm hoặc sửa, chọn luôn nhóm đó
                 nhận thông báo cho những hành động nào.
               </p>
             </div>
-            <button type="button" style={btnPrimaryStyle} onClick={openAdd}>
+            <button type="button" className={btnPrimaryCls} onClick={openAdd}>
               <Plus size={14} /> Thêm webhook
             </button>
           </div>
         </div>
 
-        <div
-          style={{
-            padding: '18px 22px 22px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
+        <div className="pt-[18px] px-[22px] pb-[22px] flex flex-col gap-[16px]">
           {error && (
-            <div
-              style={{
-                display: 'flex',
-                gap: '6px',
-                alignItems: 'flex-start',
-                color: '#b91c1c',
-                fontSize: '12px',
-                background: '#fef2f2',
-                border: '1px solid #fca5a5',
-                padding: '9px 11px',
-                borderRadius: '8px',
-              }}
-            >
+            <div className="flex gap-[6px] items-start text-[#b91c1c] text-[12px] bg-[#fef2f2] border border-[#fca5a5] py-[9px] px-[11px] rounded-[8px]">
               <AlertTriangle
                 size={14}
-                style={{ flexShrink: 0, marginTop: '1px' }}
+                className="shrink-0 mt-[1px]"
               />
               <span>{error}</span>
             </div>
           )}
 
           {/* summary */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '10px',
-            }}
-          >
+          <div className="grid grid-cols-3 gap-[10px]">
             {statCards.map((c, i) => (
               <div
                 key={i}
-                style={{
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '10px',
-                  padding: '12px 14px',
-                }}
+                className="border border-[#e5e7eb] rounded-[10px] py-[12px] px-[14px]"
               >
-                <div
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
+                <div className="text-[18px] font-extrabold text-[#0f172a] tabular-nums">
                   {c.num}
                 </div>
-                <div
-                  style={{
-                    fontSize: '11.5px',
-                    color: '#64748b',
-                    marginTop: '2px',
-                  }}
-                >
+                <div className="text-[11.5px] text-[#64748b] mt-[2px]">
                   {c.label}
                 </div>
               </div>
@@ -501,52 +419,21 @@ export const NotificationConfigPage: React.FC = () => {
 
           {/* list */}
           <div>
-            <h3
-              style={{
-                fontSize: '13.5px',
-                fontWeight: 800,
-                color: '#0f172a',
-                margin: '0 0 10px',
-              }}
-            >
+            <h3 className="text-[13.5px] font-extrabold text-[#0f172a] mb-[10px]">
               Danh sách webhook
             </h3>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '10px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div
-                style={{
-                  position: 'relative',
-                  width: '220px',
-                  maxWidth: '100%',
-                }}
-              >
+            <div className="flex items-center gap-[8px] mb-[10px] flex-wrap">
+              <div className="relative w-[220px] max-w-full">
                 <Search
                   size={14}
-                  style={{
-                    position: 'absolute',
-                    left: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#94a3b8',
-                  }}
+                  className="absolute left-[10px] top-1/2 -translate-y-1/2 text-[#94a3b8]"
                 />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Tìm theo tên nhóm / bot…"
-                  style={{
-                    ...inputStyle,
-                    paddingLeft: '30px',
-                    fontWeight: 500,
-                  }}
+                  className={clsx(inputCls, 'pl-[30px] font-medium')}
                 />
               </div>
 
@@ -555,7 +442,7 @@ export const NotificationConfigPage: React.FC = () => {
                 onChange={(e) =>
                   setStatusFilter(e.target.value as 'all' | 'on' | 'off')
                 }
-                style={{ ...inputStyle, width: 'auto', cursor: 'pointer' }}
+                className={clsx(inputCls, '!w-auto cursor-pointer')}
               >
                 <option value="all">Mọi trạng thái</option>
                 <option value="on">Đang bật</option>
@@ -565,7 +452,7 @@ export const NotificationConfigPage: React.FC = () => {
               <select
                 value={updaterFilter}
                 onChange={(e) => setUpdaterFilter(e.target.value)}
-                style={{ ...inputStyle, width: 'auto', cursor: 'pointer' }}
+                className={clsx(inputCls, '!w-auto cursor-pointer')}
               >
                 <option value="all">Mọi người cập nhật</option>
                 {updaterOpts.map((u) => (
@@ -582,7 +469,7 @@ export const NotificationConfigPage: React.FC = () => {
                     e.target.value as 'all' | '24h' | '7d' | '30d',
                   )
                 }
-                style={{ ...inputStyle, width: 'auto', cursor: 'pointer' }}
+                className={clsx(inputCls, '!w-auto cursor-pointer')}
               >
                 <option value="all">Mọi thời gian</option>
                 <option value="24h">Cập nhật trong 24 giờ</option>
@@ -606,33 +493,27 @@ export const NotificationConfigPage: React.FC = () => {
               )}
             </div>
 
-            <div
-              style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: '12px',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="border border-[#e5e7eb] rounded-[12px] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr style={tableHeadRowStyle}>
-                      <th style={{ ...thStyle, padding: '10px 16px' }}>
+                    <tr className={tableHeadRowCls}>
+                      <th className={clsx(thCls, 'py-[10px] px-[16px]')}>
                         Nhóm Lark
                       </th>
-                      <th style={{ ...thStyle, padding: '10px 16px' }}>
+                      <th className={clsx(thCls, 'py-[10px] px-[16px]')}>
                         Webhook URL
                       </th>
-                      <th style={{ ...thStyle, padding: '10px 16px' }}>
+                      <th className={clsx(thCls, 'py-[10px] px-[16px]')}>
                         Nhận thông báo cho
                       </th>
-                      <th style={{ ...thStyle, padding: '10px 16px' }}>
+                      <th className={clsx(thCls, 'py-[10px] px-[16px]')}>
                         Trạng thái
                       </th>
-                      <th style={{ ...thStyle, padding: '10px 16px' }}>
+                      <th className={clsx(thCls, 'py-[10px] px-[16px]')}>
                         Cập nhật
                       </th>
-                      <th style={{ ...thStyle, padding: '10px 16px' }} />
+                      <th className={clsx(thCls, 'py-[10px] px-[16px]')} />
                     </tr>
                   </thead>
                   <tbody>
@@ -640,20 +521,11 @@ export const NotificationConfigPage: React.FC = () => {
                       <tr>
                         <td
                           colSpan={6}
-                          style={{
-                            padding: '38px',
-                            textAlign: 'center',
-                            color: '#64748b',
-                            fontSize: '13px',
-                          }}
+                          className="p-[38px] text-center text-[#64748b] text-[13px]"
                         >
                           <Loader2
                             size={16}
-                            className="ncp-spin"
-                            style={{
-                              verticalAlign: 'middle',
-                              marginRight: '8px',
-                            }}
+                            className="ncp-spin align-middle mr-[8px]"
                           />
                           Đang tải…
                         </td>
@@ -662,31 +534,19 @@ export const NotificationConfigPage: React.FC = () => {
                       <tr>
                         <td
                           colSpan={6}
-                          style={{
-                            padding: '48px 20px',
-                            textAlign: 'center',
-                            color: '#64748b',
-                          }}
+                          className="py-[48px] px-[20px] text-center text-[#64748b]"
                         >
                           <Bell
                             size={30}
-                            style={{ color: '#94a3b8', marginBottom: '8px' }}
+                            className="text-[#94a3b8] mb-[8px]"
                           />
-                          <div
-                            style={{
-                              color: '#0f172a',
-                              fontWeight: 700,
-                              fontSize: '13.5px',
-                            }}
-                          >
+                          <div className="text-[#0f172a] font-bold text-[13.5px]">
                             {stats.total === 0
                               ? 'Chưa có webhook nào'
                               : 'Không tìm thấy webhook phù hợp'}
                           </div>
                           {stats.total === 0 && (
-                            <div
-                              style={{ fontSize: '12.5px', marginTop: '2px' }}
-                            >
+                            <div className="text-[12.5px] mt-[2px]">
                               Thêm webhook đầu tiên để bắt đầu nhận thông báo
                               trên Lark.
                             </div>
@@ -697,126 +557,52 @@ export const NotificationConfigPage: React.FC = () => {
                       list.map((w) => (
                         <tr
                           key={w.id}
-                          className="ncp-row"
-                          style={{ borderBottom: '1px solid #f1f5f9' }}
+                          className="ncp-row border-b border-[#f1f5f9]"
                         >
-                          <td
-                            style={{
-                              ...tdStyle,
-                              padding: '12px 16px',
-                              verticalAlign: 'top',
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontWeight: 700,
-                                color: '#0f172a',
-                                fontSize: '13px',
-                              }}
-                            >
+                          <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
+                            <div className="font-bold text-[#0f172a] text-[13px]">
                               {w.chatName || '(chưa đặt tên)'}
                             </div>
-                            <div
-                              style={{
-                                fontSize: '11px',
-                                color: '#94a3b8',
-                                marginTop: '1px',
-                              }}
-                            >
+                            <div className="text-[11px] text-[#94a3b8] mt-[1px]">
                               {w.botName
                                 ? `Bot: ${w.botName}`
                                 : 'Chưa đặt tên bot'}
                             </div>
                           </td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              padding: '12px 16px',
-                              verticalAlign: 'top',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                              }}
-                            >
+                          <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
+                            <div className="flex items-center gap-[6px]">
                               <code
                                 title={w.webhookUrl}
-                                style={{
-                                  fontSize: '11.5px',
-                                  color: '#64748b',
-                                  background: '#f1f5f9',
-                                  padding: '3px 7px',
-                                  borderRadius: '6px',
-                                  fontFamily: 'monospace',
-                                }}
+                                className="text-[11.5px] text-[#64748b] bg-[#f1f5f9] py-[3px] px-[7px] rounded-[6px] font-mono"
                               >
                                 {maskUrl(w.webhookUrl)}
                               </code>
                               <button
                                 type="button"
-                                className="ncp-ib"
-                                style={iconBtnStyle}
+                                className={clsx('ncp-ib', iconBtnCls)}
                                 title="Sao chép URL"
                                 onClick={() => copyUrl(w)}
                               >
                                 <Copy size={13} />
                               </button>
                             </div>
-                            <div
-                              style={{
-                                fontSize: '11px',
-                                color: '#94a3b8',
-                                marginTop: '4px',
-                              }}
-                            >
+                            <div className="text-[11px] text-[#94a3b8] mt-[4px]">
                               {w.hasSecret
                                 ? 'Có signing secret'
                                 : 'Không đặt secret'}
                             </div>
                           </td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              padding: '12px 16px',
-                              verticalAlign: 'top',
-                            }}
-                          >
+                          <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
                             {w.actions.length === 0 ? (
-                              <span
-                                style={{
-                                  fontSize: '12px',
-                                  color: '#94a3b8',
-                                  fontStyle: 'italic',
-                                }}
-                              >
+                              <span className="text-[12px] text-[#94a3b8] italic">
                                 Chưa chọn hành động nào
                               </span>
                             ) : (
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  flexWrap: 'wrap',
-                                  gap: '5px',
-                                  maxWidth: '320px',
-                                }}
-                              >
+                              <div className="flex flex-wrap gap-[5px] max-w-[320px]">
                                 {w.actions.map((a) => (
                                   <span
                                     key={a}
-                                    style={{
-                                      fontSize: '11px',
-                                      fontWeight: 600,
-                                      color: '#475569',
-                                      background: '#f1f5f9',
-                                      border: '1px solid #e5e7eb',
-                                      borderRadius: '999px',
-                                      padding: '2px 8px',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                    }}
+                                    className="text-[11px] font-semibold text-[#475569] bg-[#f1f5f9] border border-[#e5e7eb] rounded-full py-[2px] px-[8px] inline-flex items-center"
                                   >
                                     {labelOf(a)}
                                   </span>
@@ -824,13 +610,7 @@ export const NotificationConfigPage: React.FC = () => {
                               </div>
                             )}
                           </td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              padding: '12px 16px',
-                              verticalAlign: 'top',
-                            }}
-                          >
+                          <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
                             <button
                               type="button"
                               onClick={() => toggleEnabled(w)}
@@ -840,49 +620,25 @@ export const NotificationConfigPage: React.FC = () => {
                                   ? 'Bấm để tắt webhook'
                                   : 'Bấm để bật webhook'
                               }
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                opacity: busyRow === w.id ? 0.5 : 1,
-                              }}
+                              className={clsx(
+                                'bg-transparent border-0 p-0 cursor-pointer',
+                                busyRow === w.id ? 'opacity-50' : 'opacity-100',
+                              )}
                             >
                               <Badge on={w.isEnabled} />
                             </button>
                           </td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              padding: '12px 16px',
-                              fontSize: '12px',
-                              color: '#64748b',
-                              verticalAlign: 'top',
-                            }}
-                          >
-                            <div style={{ color: '#0f172a', fontWeight: 500 }}>
+                          <td className={clsx(tdCls, 'py-[12px] px-[16px] text-[12px] text-[#64748b] align-top')}>
+                            <div className="text-[#0f172a] font-medium">
                               {w.updatedByName || '—'}
                             </div>
                             <div>{fmtTime(w.updatedAt)}</div>
                           </td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              padding: '12px 16px',
-                              verticalAlign: 'top',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                gap: '2px',
-                                justifyContent: 'flex-end',
-                              }}
-                            >
+                          <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
+                            <div className="flex gap-[2px] justify-end">
                               <button
                                 type="button"
-                                className="ncp-ib"
-                                style={iconBtnStyle}
+                                className={clsx('ncp-ib', iconBtnCls)}
                                 title="Gửi thử"
                                 disabled={busyRow === w.id}
                                 onClick={() => testRow(w)}
@@ -895,8 +651,7 @@ export const NotificationConfigPage: React.FC = () => {
                               </button>
                               <button
                                 type="button"
-                                className="ncp-ib"
-                                style={iconBtnStyle}
+                                className={clsx('ncp-ib', iconBtnCls)}
                                 title="Chỉnh sửa"
                                 onClick={() => openEdit(w)}
                               >
@@ -904,8 +659,7 @@ export const NotificationConfigPage: React.FC = () => {
                               </button>
                               <button
                                 type="button"
-                                className="ncp-ib danger"
-                                style={iconBtnStyle}
+                                className={clsx('ncp-ib danger', iconBtnCls)}
                                 title="Xóa"
                                 onClick={() => setDeleteTarget(w)}
                               >
@@ -937,67 +691,28 @@ export const NotificationConfigPage: React.FC = () => {
         createPortal(
           <div className="modal-backdrop show" onClick={closeForm}>
             <div
-              className="modal-card"
-              style={{
-                maxWidth: '560px',
-                width: '560px',
-                height: 'min(680px, 92vh)',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
+              className="modal-card max-w-[560px] w-[560px] h-[min(680px,92vh)] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-header" style={{ flexShrink: 0 }}>
-                <h2
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    margin: 0,
-                  }}
-                >
+              <div className="modal-header shrink-0">
+                <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
                   {editing ? 'Chỉnh sửa webhook' : 'Thêm webhook'}
                 </h2>
                 <button
                   type="button"
                   onClick={closeForm}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                  }}
+                  className="bg-transparent border-0 text-[#64748b] cursor-pointer"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div
-                className="modal-body"
-                style={{
-                  gap: '13px',
-                  padding: '18px 20px',
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '12px',
-                  }}
-                >
+              <div className="modal-body gap-[13px] py-[18px] px-[20px] flex-1 min-h-0 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-[12px]">
                   <div className="form-group">
                     <label className="form-label">Tên nhóm Lark</label>
                     <input
-                      className="form-control"
-                      style={
-                        formErr.chatName
-                          ? { borderColor: '#ef4444' }
-                          : undefined
-                      }
+                      className={clsx('form-control', formErr.chatName && '!border-[#ef4444]')}
                       value={form.chatName}
                       maxLength={120}
                       onChange={(e) =>
@@ -1006,7 +721,7 @@ export const NotificationConfigPage: React.FC = () => {
                       placeholder="Nhóm Báo Giá VCB"
                     />
                     {formErr.chatName && (
-                      <span style={{ fontSize: '11.5px', color: '#ef4444' }}>
+                      <span className="text-[11.5px] text-[#ef4444]">
                         {formErr.chatName}
                       </span>
                     )}
@@ -1015,7 +730,7 @@ export const NotificationConfigPage: React.FC = () => {
                   <div className="form-group">
                     <label className="form-label">
                       Tên bot{' '}
-                      <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                      <span className="font-normal text-[#94a3b8]">
                         (tùy chọn)
                       </span>
                     </label>
@@ -1032,38 +747,20 @@ export const NotificationConfigPage: React.FC = () => {
                 </div>
 
                 <div className="form-group">
-                  <label
-                    className="form-label"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      gap: '8px',
-                    }}
-                  >
+                  <label className="form-label flex items-baseline gap-[8px]">
                     Webhook URL
                     {urlWarn && !formErr.url && (
-                      <span
-                        style={{
-                          fontWeight: 400,
-                          fontSize: '11px',
-                          color: '#94a3b8',
-                        }}
-                      >
+                      <span className="font-normal text-[11px] text-[#94a3b8]">
                         không giống link webhook Lark
                       </span>
                     )}
                   </label>
                   <input
-                    className="form-control"
-                    style={{
-                      fontFamily: 'monospace',
-                      fontSize: '12px',
-                      ...(formErr.url
-                        ? { borderColor: '#ef4444' }
-                        : urlWarn
-                          ? { borderColor: '#f59e0b' }
-                          : {}),
-                    }}
+                    className={clsx(
+                      'form-control font-mono text-[12px]',
+                      formErr.url && '!border-[#ef4444]',
+                      !formErr.url && urlWarn && '!border-[#f59e0b]',
+                    )}
                     value={form.webhookUrl}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, webhookUrl: e.target.value }))
@@ -1073,7 +770,7 @@ export const NotificationConfigPage: React.FC = () => {
                     autoComplete="off"
                   />
                   {formErr.url && (
-                    <span style={{ fontSize: '11.5px', color: '#ef4444' }}>
+                    <span className="text-[11.5px] text-[#ef4444]">
                       {formErr.url}
                     </span>
                   )}
@@ -1081,21 +778,12 @@ export const NotificationConfigPage: React.FC = () => {
 
                 <div className="form-group">
                   <label className="form-label">Signing secret</label>
-                  <span
-                    style={{
-                      fontSize: '11.5px',
-                      color: '#64748b',
-                      lineHeight: 1.45,
-                      display: 'block',
-                      marginBottom: '4px',
-                    }}
-                  >
+                  <span className="text-[11.5px] text-[#64748b] leading-[1.45] block mb-[4px]">
                   </span>
-                  <div style={{ position: 'relative' }}>
+                  <div className="relative">
                     <input
-                      className="form-control"
+                      className="form-control font-mono pr-[36px]"
                       type={showSecret ? 'text' : 'password'}
-                      style={{ fontFamily: 'monospace', paddingRight: '36px' }}
                       value={form.secret}
                       onChange={(e) => {
                         setForm((f) => ({ ...f, secret: e.target.value }));
@@ -1111,14 +799,7 @@ export const NotificationConfigPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowSecret((v) => !v)}
-                      style={{
-                        ...iconBtnStyle,
-                        position: 'absolute',
-                        right: '6px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#94a3b8',
-                      }}
+                      className={clsx(iconBtnCls, 'absolute right-[6px] top-1/2 -translate-y-1/2 text-[#94a3b8]')}
                     >
                       {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
@@ -1126,7 +807,7 @@ export const NotificationConfigPage: React.FC = () => {
                   {editing?.hasSecret &&
                     secretTouched &&
                     form.secret === '' && (
-                      <span style={{ fontSize: '11.5px', color: '#b45309' }}>
+                      <span className="text-[11.5px] text-[#b45309]">
                         Để trống sẽ xóa secret đang lưu.
                       </span>
                     )}
@@ -1134,54 +815,25 @@ export const NotificationConfigPage: React.FC = () => {
 
                 {/* hành động — ô tìm kiếm kiểu combobox, gõ tên để lọc rồi chọn */}
                 <div className="form-group">
-                  <label className="form-label" style={{ margin: 0 }}>
+                  <label className="form-label m-0">
                     Nhận thông báo cho hành động
-                    <span
-                      style={{
-                        fontWeight: 400,
-                        color: '#94a3b8',
-                        marginLeft: '6px',
-                      }}
-                    >
+                    <span className="font-normal text-[#94a3b8] ml-[6px]">
                       đã chọn {form.actions.length}/{catalog.length}
                     </span>
                   </label>
 
                   {form.actions.length > 0 && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '5px',
-                        marginTop: '2px',
-                      }}
-                    >
+                    <div className="flex flex-wrap gap-[5px] mt-[2px]">
                       {form.actions.map((a) => (
                         <span
                           key={a}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '11px',
-                            fontWeight: 500,
-                            color: '#0f172a',
-                            background: '#f1f5f9',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '999px',
-                            padding: '2px 4px 2px 9px',
-                          }}
+                          className="inline-flex items-center gap-[5px] text-[11px] font-medium text-[#0f172a] bg-[#f1f5f9] border border-[#e5e7eb] rounded-full pt-[2px] pr-[4px] pb-[2px] pl-[9px]"
                         >
                           {labelOf(a)}
                           <button
                             type="button"
                             onClick={() => toggleAction(a)}
-                            className="ncp-ib"
-                            style={{
-                              ...iconBtnStyle,
-                              padding: '1px',
-                              color: '#64748b',
-                            }}
+                            className={clsx('ncp-ib', iconBtnCls, 'p-[1px] text-[#64748b]')}
                             aria-label="Bỏ chọn"
                           >
                             <X size={11} />
@@ -1191,20 +843,13 @@ export const NotificationConfigPage: React.FC = () => {
                     </div>
                   )}
 
-                  <div style={{ position: 'relative', marginTop: '2px' }}>
+                  <div className="relative mt-[2px]">
                     <Search
                       size={14}
-                      style={{
-                        position: 'absolute',
-                        left: '11px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: '#94a3b8',
-                      }}
+                      className="absolute left-[11px] top-1/2 -translate-y-1/2 text-[#94a3b8]"
                     />
                     <input
-                      className="form-control"
-                      style={{ paddingLeft: '32px' }}
+                      className="form-control pl-[32px]"
                       placeholder="Gõ tên hành động để lọc…"
                       value={actionQuery}
                       onChange={(e) => setActionQuery(e.target.value)}
@@ -1217,23 +862,9 @@ export const NotificationConfigPage: React.FC = () => {
                       c.label.toLowerCase().includes(q),
                     );
                     return (
-                      <div
-                        style={{
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '10px',
-                          marginTop: '4px',
-                          maxHeight: '166px',
-                          overflowY: 'auto',
-                        }}
-                      >
+                      <div className="border border-[#e5e7eb] rounded-[10px] mt-[4px] max-h-[166px] overflow-y-auto">
                           {hits.length === 0 ? (
-                            <div
-                              style={{
-                                padding: '12px',
-                                fontSize: '12px',
-                                color: '#94a3b8',
-                              }}
-                            >
+                            <div className="p-[12px] text-[12px] text-[#94a3b8]">
                               Không có hành động khớp
                               {actionQuery ? ` "${actionQuery}"` : ''}.
                             </div>
@@ -1244,45 +875,19 @@ export const NotificationConfigPage: React.FC = () => {
                                 <button
                                   type="button"
                                   key={c.action}
-                                  className="ncp-sub"
+                                  className="ncp-sub flex items-center gap-[9px] w-full py-[7px] px-[12px] bg-transparent border-0 border-b border-[#f1f5f9] cursor-pointer text-left"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => toggleAction(c.action)}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '9px',
-                                    width: '100%',
-                                    padding: '7px 12px',
-                                    background: 'none',
-                                    border: 'none',
-                                    borderBottom: '1px solid #f1f5f9',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                  }}
                                 >
                                   <span
-                                    style={{
-                                      width: '15px',
-                                      height: '15px',
-                                      borderRadius: '4px',
-                                      border: '1.5px solid #cbd5e1',
-                                      background: on ? '#0f172a' : '#fff',
-                                      borderColor: on ? '#0f172a' : '#cbd5e1',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      flexShrink: 0,
-                                    }}
+                                    className={clsx(
+                                      'w-[15px] h-[15px] rounded-[4px] flex items-center justify-center shrink-0 border-[1.5px]',
+                                      on ? 'bg-[#0f172a] border-[#0f172a]' : 'bg-surface border-[#cbd5e1]',
+                                    )}
                                   >
                                     {on && <Check size={11} color="#fff" />}
                                   </span>
-                                  <span
-                                    style={{
-                                      fontSize: '12.5px',
-                                      fontWeight: 500,
-                                      color: '#0f172a',
-                                    }}
-                                  >
+                                  <span className="text-[12.5px] font-medium text-[#0f172a]">
                                     {c.label}
                                   </span>
                                 </button>
@@ -1295,28 +900,20 @@ export const NotificationConfigPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ flexShrink: 0 }}>
+              <div className="modal-footer shrink-0">
                 <button
                   type="button"
-                  className="btn-insp"
-                  style={{
-                    width: 'auto',
-                    background: '#f1f5f9',
-                    color: '#334155',
-                    border: '1px solid #cbd5e1',
-                  }}
+                  className="btn-insp w-auto bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]"
                   onClick={closeForm}
                 >
                   Hủy
                 </button>
                 <button
                   type="button"
-                  className="btn-insp btn-insp-primary"
-                  style={{
-                    width: 'auto',
-                    background: '#0f172a',
-                    opacity: saving ? 0.6 : 1,
-                  }}
+                  className={clsx(
+                    'btn-insp btn-insp-primary w-auto bg-[#0f172a]',
+                    saving ? 'opacity-60' : 'opacity-100',
+                  )}
                   onClick={save}
                   disabled={saving}
                 >
@@ -1337,43 +934,23 @@ export const NotificationConfigPage: React.FC = () => {
             onClick={() => setDeleteTarget(null)}
           >
             <div
-              className="modal-card"
-              style={{ maxWidth: '380px' }}
+              className="modal-card max-w-[380px]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="modal-header">
-                <h2
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    margin: 0,
-                  }}
-                >
+                <h2 className="text-[15px] font-extrabold text-[#0f172a] m-0">
                   Xóa webhook này?
                 </h2>
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(null)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                  }}
+                  className="bg-transparent border-0 text-[#64748b] cursor-pointer"
                 >
                   <X size={18} />
                 </button>
               </div>
               <div className="modal-body">
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: '12.5px',
-                    color: '#64748b',
-                    lineHeight: 1.55,
-                  }}
-                >
+                <p className="m-0 text-[12.5px] text-[#64748b] leading-[1.55]">
                   Webhook của "{deleteTarget.chatName}" và mọi đăng ký hành động
                   của nhóm này sẽ bị xóa. Hành động này không thể hoàn tác.
                 </p>
@@ -1381,21 +958,17 @@ export const NotificationConfigPage: React.FC = () => {
               <div className="modal-footer">
                 <button
                   type="button"
-                  className="btn-insp"
-                  style={{
-                    width: 'auto',
-                    background: '#f1f5f9',
-                    color: '#334155',
-                    border: '1px solid #cbd5e1',
-                  }}
+                  className="btn-insp w-auto bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]"
                   onClick={() => setDeleteTarget(null)}
                 >
                   Hủy
                 </button>
                 <button
                   type="button"
-                  className="btn-insp btn-insp-danger"
-                  style={{ width: 'auto', opacity: deleting ? 0.6 : 1 }}
+                  className={clsx(
+                    'btn-insp btn-insp-danger w-auto',
+                    deleting ? 'opacity-60' : 'opacity-100',
+                  )}
                   onClick={confirmDelete}
                   disabled={deleting}
                 >
@@ -1412,24 +985,10 @@ export const NotificationConfigPage: React.FC = () => {
       {toast &&
         createPortal(
           <div
-            style={{
-              position: 'fixed',
-              bottom: '24px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: toast.err ? '#dc2626' : '#0f172a',
-              color: '#fff',
-              padding: '11px 18px',
-              borderRadius: '10px',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '9px',
-              boxShadow: '0 10px 30px rgba(0,0,0,.25)',
-              zIndex: 1100,
-              maxWidth: '90vw',
-            }}
+            className={clsx(
+              'fixed bottom-[24px] left-1/2 -translate-x-1/2 text-surface py-[11px] px-[18px] rounded-[10px] text-[12.5px] font-semibold flex items-center gap-[9px] shadow-[0_10px_30px_rgba(0,0,0,0.25)] z-[1100] max-w-[90vw]',
+              toast.err ? 'bg-[#dc2626]' : 'bg-[#0f172a]',
+            )}
           >
             {toast.err ? <XCircle size={15} /> : <CheckCircle2 size={15} />}
             {toast.msg}

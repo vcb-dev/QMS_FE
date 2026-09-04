@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
+import clsx from 'clsx';
 import { X } from 'lucide-react';
+import {
+  modalBackdropCls,
+  modalCardCls,
+  modalHeaderCls,
+  modalBodyCls,
+  modalFooterCls,
+  formGroupCls,
+  formLabelCls,
+  formReqCls,
+  formControlCls,
+  toolBtnCls,
+} from '../styles/classNames';
 
 interface ReasonPromptModalProps {
   isOpen: boolean;
@@ -60,21 +73,24 @@ export const ReasonPromptModal: React.FC<ReasonPromptModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop show">
-      <div className="modal-card" style={{ maxWidth: '500px' }}>
-        <div className="modal-header" style={{ background: '#ffffff', color: headerColor }}>
+    <div className={modalBackdropCls}>
+      <div className={clsx(modalCardCls, '!max-w-[500px]')}>
+        {/* động — giữ inline */}
+        <div className={modalHeaderCls} style={{ color: headerColor }}>
+          {/* động — giữ inline */}
           <h2 style={{ color: headerColor }}>{title}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: headerColor, cursor: 'pointer' }}>
+          {/* động — giữ inline */}
+          <button onClick={onClose} className="bg-transparent border-none cursor-pointer" style={{ color: headerColor }}>
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            <div className="form-group">
-              <label className="form-label">{label} <span className="req">{requiredNote}</span></label>
+          <div className={modalBodyCls}>
+            <div className={formGroupCls}>
+              <label className={formLabelCls}>{label} <span className={formReqCls}>{requiredNote}</span></label>
               <textarea
-                className="form-control"
+                className={formControlCls}
                 rows={4}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -84,8 +100,8 @@ export const ReasonPromptModal: React.FC<ReasonPromptModalProps> = ({
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button type="button" className="tool-btn" onClick={onClose}>Hủy</button>
+          <div className={modalFooterCls}>
+            <button type="button" className={toolBtnCls} onClick={onClose}>Hủy</button>
             <button type="submit" className={submitButtonClassName} style={submitButtonStyle} disabled={submitting}>
               {submitIcon} {submitLabel}
             </button>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import { MessageCircle, X, Send, Image as ImageIcon } from 'lucide-react';
 import type { ChatMessage, ChatPopupProps } from '../types';
@@ -213,26 +214,12 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
       <button
         type="button"
         onClick={toggleOpen}
-        style={{
-          position: 'fixed', bottom: '24px', right: '24px', zIndex: 9990,
-          width: '54px', height: '54px', borderRadius: '50%',
-          background: '#2563eb', color: '#ffffff', border: 'none',
-          boxShadow: '0 6px 16px rgba(37,99,235,0.4)', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        className="fixed bottom-[24px] right-[24px] z-[9990] w-[54px] h-[54px] rounded-full bg-primary text-white border-0 shadow-[0_6px_16px_rgba(37,99,235,0.4)] cursor-pointer flex items-center justify-center transition-[transform_0.15s_ease,box-shadow_0.15s_ease] hover:scale-105"
         title={connected ? 'Trao đổi với Sale/Order' : 'Không thể kết nối'}
       >
-        <MessageCircle size={24} style={{ opacity: connected ? 1 : 0.5 }} />
+        <MessageCircle size={24} className={connected ? 'opacity-100' : 'opacity-50'} />
         {!isOpen && connected && unreadCount > 0 && (
-          <span style={{
-            position: 'absolute', top: '-2px', right: '-2px',
-            background: '#ef4444', color: '#ffffff', borderRadius: '999px',
-            fontSize: '11px', fontWeight: 800, minWidth: '20px', height: '20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
-          }}>
+          <span className="absolute top-[-2px] right-[-2px] bg-[#ef4444] text-white rounded-full text-[11px] font-extrabold min-w-[20px] h-[20px] flex items-center justify-center py-0 px-[4px]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -240,70 +227,54 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
 
       {/* Khung Chat Popup luôn cố định góc phải màn hình */}
       {isOpen && (
-        <div style={{
-          position: 'fixed', bottom: '90px', right: '24px', zIndex: 9990,
-          width: '340px', height: '440px', background: '#ffffff',
-          borderRadius: '14px', boxShadow: '0 12px 32px rgba(0,0,0,0.2)',
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        }}>
-          <div style={{
-            background: '#0f172a', color: '#ffffff', padding: '12px 16px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 700, fontSize: '13.5px' }}>Trao đổi</span>
-              <span style={{
-                width: '7px', height: '7px', borderRadius: '50%',
-                background: connected ? '#22c55e' : '#ef4444',
-              }} />
+        <div className="fixed bottom-[90px] right-[24px] z-[9990] w-[340px] h-[440px] bg-surface rounded-[14px] shadow-[0_12px_32px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
+          <div className="bg-[#0f172a] text-white py-[12px] px-[16px] flex items-center justify-between">
+            <div className="flex items-center gap-[8px]">
+              <span className="font-bold text-[13.5px]">Trao đổi</span>
+              <span className={clsx('w-[7px] h-[7px] rounded-full', connected ? 'bg-[#22c55e]' : 'bg-[#ef4444]')} />
             </div>
-            <button onClick={toggleOpen} style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer' }}>
+            <button onClick={toggleOpen} className="bg-transparent border-0 text-white cursor-pointer">
               <X size={18} />
             </button>
           </div>
 
-          <div ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-[12px] flex flex-col gap-[8px]">
             {messages.map((m) => {
               const mine = m.senderId === currentUserId;
               const isSending = m.status === 'sending';
               const isFailed = m.status === 'failed';
 
               return (
-                <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
-                  <div style={{
-                    maxWidth: '80%', padding: '8px 12px', borderRadius: '12px',
-                    background: isFailed ? '#fee2e2' : mine ? '#2563eb' : '#f1f5f9',
-                    color: isFailed ? '#991b1b' : mine ? '#ffffff' : '#0f172a', fontSize: '13px',
-                    opacity: isSending ? 0.75 : 1,
-                    transition: 'opacity 0.2s ease',
-                    border: isFailed ? '1px solid #f87171' : 'none',
-                  }}>
+                <div key={m.id} className={clsx('flex flex-col', mine ? 'items-end' : 'items-start')}>
+                  <div
+                    className={clsx(
+                      'max-w-[80%] py-[8px] px-[12px] rounded-[12px] text-[13px] transition-opacity duration-200',
+                      isSending ? 'opacity-75' : 'opacity-100',
+                      isFailed
+                        ? 'bg-[#fee2e2] text-[#991b1b] border border-[#f87171]'
+                        : mine
+                          ? 'bg-primary text-white border-0'
+                          : 'bg-[#f1f5f9] text-[#0f172a] border-0',
+                    )}
+                  >
                     {m.imageUrl && (
                       <img
                         src={m.imageUrl}
                         alt="Ảnh đính kèm"
                         onClick={() => setZoomedImage(m.imageUrl)}
-                        style={{
-                          maxWidth: '180px',
-                          maxHeight: '180px',
-                          borderRadius: '8px',
-                          marginBottom: m.content ? '6px' : 0,
-                          cursor: 'zoom-in',
-                          objectFit: 'cover',
-                          display: 'block',
-                          transition: 'transform 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        className={clsx(
+                          'max-w-[180px] max-h-[180px] rounded-[8px] cursor-zoom-in object-cover block transition-transform duration-150 hover:scale-[1.02]',
+                          m.content ? 'mb-[6px]' : 'mb-0',
+                        )}
                         title="Bấm để xem phóng to"
                       />
                     )}
                     {m.content}
                   </div>
-                  <span style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="text-[10px] text-faint mt-[2px] flex items-center gap-[4px]">
                     {m.senderName} · {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                    {isSending && <span style={{ color: '#3b82f6', fontStyle: 'italic' }}>· Đang gửi...</span>}
-                    {isFailed && <span style={{ color: '#ef4444', fontWeight: 600 }}>· Gửi lỗi</span>}
+                    {isSending && <span className="text-[#3b82f6] italic">· Đang gửi...</span>}
+                    {isFailed && <span className="text-[#ef4444] font-semibold">· Gửi lỗi</span>}
                   </span>
                 </div>
               );
@@ -311,24 +282,27 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
           </div>
 
           {!connected && (
-            <div style={{ padding: '4px 12px', fontSize: '11px', color: '#ef4444', background: '#fef2f2' }}>
+            <div className="py-[4px] px-[12px] text-[11px] text-[#ef4444] bg-[#fef2f2]">
               Mất kết nối... Đang tự động kết nối lại
             </div>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px', borderTop: '1px solid #e2e8f0' }}>
+          <div className="flex items-center gap-[6px] p-[10px] border-t border-border">
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              style={{ display: 'none' }}
+              className="hidden"
               onChange={handleFileChange}
             />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || !connected}
-              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: connected ? 'pointer' : 'not-allowed', padding: '6px', opacity: connected ? 1 : 0.5 }}
+              className={clsx(
+                'bg-transparent border-0 text-muted p-[6px]',
+                connected ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-50',
+              )}
               title="Đính kèm ảnh"
             >
               <ImageIcon size={18} />
@@ -341,13 +315,19 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
               placeholder={connected ? 'Nhắn gì đó...' : 'Đang kết nối...'}
               maxLength={2000}
               disabled={!connected}
-              style={{ flex: 1, border: '1px solid #cbd5e1', borderRadius: '20px', padding: '8px 14px', fontSize: '13px', outline: 'none', opacity: connected ? 1 : 0.6 }}
+              className={clsx(
+                'flex-1 border border-[#cbd5e1] rounded-[20px] py-[8px] px-[14px] text-[13px] outline-none',
+                connected ? 'opacity-100' : 'opacity-60',
+              )}
             />
             <button
               type="button"
               onClick={handleSend}
               disabled={!connected}
-              style={{ background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: connected ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: connected ? 1 : 0.5 }}
+              className={clsx(
+                'bg-primary text-white border-0 rounded-full w-[32px] h-[32px] flex items-center justify-center shrink-0',
+                connected ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-50',
+              )}
             >
               <Send size={14} />
             </button>

@@ -571,7 +571,6 @@ export interface RequestsPageProps {
   onResubmit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMarkClosed?: (id: string) => void;
-  onManageOptions?: (id: string) => void;
   onOpenCreate: () => void;
   // Không truyền khi role không được export (SALE) — RequestsPage ẩn nút khi prop vắng.
   onOpenExport?: () => void;

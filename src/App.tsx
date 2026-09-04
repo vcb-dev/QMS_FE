@@ -21,7 +21,6 @@ const PricingModal = lazy(() => import('./components/PricingModal').then((m) => 
 const RejectModal = lazy(() => import('./components/RejectModal').then((m) => ({ default: m.RejectModal })));
 const ReturnModal = lazy(() => import('./components/ReturnModal').then((m) => ({ default: m.ReturnModal })));
 const MarkClosedModal = lazy(() => import('./components/MarkClosedModal').then((m) => ({ default: m.MarkClosedModal })));
-const ManageOptionsModal = lazy(() => import('./components/ManageOptionsModal').then((m) => ({ default: m.ManageOptionsModal })));
 const ExportModal = lazy(() => import('./components/ExportModal').then((m) => ({ default: m.ExportModal })));
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -68,13 +67,12 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
     listLoading, toastMessage, setToastMessage, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
     returnReqId, setReturnReqId, closeOptionReqId, setCloseOptionReqId,
-    manageOptionsReqId, setManageOptionsReqId, handleTabChange, handleResetFilters,
+    handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handleQuoteNow,
     handlePricingSubmit,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
     handleMarkClosedClick, handleCloseOptionSubmit,
-    handleDeleteOption,
     refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole, listDataEnabled);
 
@@ -87,14 +85,6 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
   const closeOptionPricedOptions = useMemo(
     () => (closeOptionTarget?.options || []).filter((o) => o.quotedPrice != null),
     [closeOptionTarget],
-  );
-  const manageOptionsTarget = useMemo(
-    () => requests.find((r) => r.id === manageOptionsReqId),
-    [requests, manageOptionsReqId],
-  );
-  const manageOptionsPricedOptions = useMemo(
-    () => (manageOptionsTarget?.options || []).filter((o) => o.quotedPrice != null),
-    [manageOptionsTarget],
   );
 
   // Socket /realtime — 1 kết nối duy nhất suốt phiên đăng nhập (dùng chung cho cả Realtime trạng thái & Chat)
@@ -225,7 +215,6 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 onResubmit={handleResubmitDirect}
                 onDelete={handleDeleteRequest}
                 onMarkClosed={handleMarkClosedClick}
-                onManageOptions={(id) => setManageOptionsReqId(id)}
                 onOpenCreate={handleOpenCreate}
                 onOpenExport={currentRole === 'SALE' ? undefined : () => setIsExportOpen(true)}
                 onResetFilters={() => { handleResetFilters(); setScopeFilter('ALL'); }}
@@ -310,16 +299,6 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
             options={closeOptionPricedOptions}
             onClose={() => setCloseOptionReqId(null)}
             onSubmit={handleCloseOptionSubmit}
-          />
-        )}
-
-        {manageOptionsReqId !== null && (
-          <ManageOptionsModal
-            isOpen
-            reqCode={manageOptionsTarget?.code}
-            options={manageOptionsPricedOptions}
-            onClose={() => setManageOptionsReqId(null)}
-            onDelete={(optionId) => manageOptionsReqId && handleDeleteOption(manageOptionsReqId, optionId)}
           />
         )}
 

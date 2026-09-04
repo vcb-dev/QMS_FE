@@ -86,3 +86,6 @@ export const CLOSE_RATE_OPTIONS: { value: string; label: string; pct: number | n
   { value: 'SURE', label: 'Chắc chắn 100% lấy hàng', pct: 100 },
   { value: 'NO_QUOTE', label: 'Không thực hiện báo giá', pct: null },
 ];
+
+export const PRIMARY_BLUE = '#2563eb';
+export const PRIMARY_DARK = '#0f172a';
