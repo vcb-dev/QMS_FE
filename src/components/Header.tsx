@@ -295,10 +295,10 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <div className="text-right leading-[1.2]">
               <span className="text-[13px] font-extrabold text-[#0f172a] block">
-                {user.name || 'Nguyen Van A'}
+                {user.name || user.email}
               </span>
               <span className="text-[10.5px] text-muted block">
-                {currentRole === 'SALE' ? 'Store Associate' : currentRole === 'ORDER' ? 'Order Specialist' : 'System Admin'}
+                {currentRole === 'SALE' ? 'Nhân viên Sale' : currentRole === 'ORDER' ? 'Nhân viên Order' : 'Quản trị viên'}
               </span>
             </div>
 

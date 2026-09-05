@@ -1,32 +1,66 @@
-# React + TypeScript + Vite
+# Hệ Thống Quản Lý Báo Giá Trang Sức (QMS) — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend cho hệ thống quản lý báo giá trang sức của Viễn Chí Bảo. Hỗ trợ 3 vai trò:
 
-Currently, two official plugins are available:
+- **SALE** — tạo yêu cầu báo giá, dùng máy tính giá, tra cứu thư viện sản phẩm.
+- **ORDER** — báo giá cho yêu cầu, cấu hình giá kim loại/đá/công.
+- **ADMIN** — toàn quyền: quản lý nhân viên, khách hàng, cấu hình giá, cấu hình thông báo Lark.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+- React 19 + TypeScript + Vite
+- Tailwind CSS v4 (`@tailwindcss/vite`)
+- react-router-dom, axios, socket.io-client (realtime), recharts (biểu đồ)
+- `oxlint` cho lint
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Yêu cầu
 
-## Expanding the Oxlint configuration
+- Node.js, **pnpm** (không dùng `npm`)
+- Backend `qms_be` (thư mục anh em, `../qms_be`) chạy sẵn ở `http://localhost:8000`
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Cài đặt & chạy
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm install
+pnpm dev        # dev server, mặc định http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Biến môi trường (`.env`):
+
+```
+VITE_API_BASE=http://localhost:8000/api
+VITE_API_PROXY_TARGET=http://localhost:8000
+```
+
+## Scripts
+
+| Lệnh | Mô tả |
+|---|---|
+| `pnpm dev` | Chạy dev server (Vite + HMR) |
+| `pnpm build` | `tsc -b && vite build` — build production, có type-check |
+| `pnpm lint` | `oxlint` |
+| `pnpm preview` | Xem thử bản build production |
+
+## Cấu trúc thư mục
+
+```
+src/
+├── pages/       ← 1 file / 1 route (RequestsPage, DetailPage, CalculatorPage, ...)
+├── components/  ← component dùng chung (modal, bảng, header, sidebar...)
+├── hooks/       ← state + logic dùng chung nhiều nơi (useQuoteRequests, useMaterialStoneRows...)
+├── services/    ← api.ts — toàn bộ lời gọi API tới qms_be
+├── styles/      ← classNames.ts — hằng className Tailwind dùng chung
+├── types/       ← type dùng chung toàn app
+├── constants/   ← hằng số / bảng dữ liệu tĩnh
+├── utils/       ← hàm thuần (format tiền, ngày, breakdown giá...)
+├── auth/        ← AuthGate — quản lý phiên đăng nhập
+└── index.css    ← @theme token Tailwind + reset + @keyframes (không chứa class CSS viết tay)
+```
+
+## Quy ước quan trọng
+
+- **Tailwind-only**: không viết class CSS tay mới. Class dùng chung/lặp lại ≥2 lần → `src/styles/classNames.ts`. Bảng tra cứu chi tiết: `doc/TAILWIND_CHEATSHEET.md`.
+- **FE không tính giá**: mọi công thức tính giá/VAT/lãi nằm ở backend. Frontend chỉ hiển thị số backend trả về, không cộng/trừ/nhân/chia trên số tiền.
+- **Tiền tệ**: luôn định dạng qua `utils/currency.ts` (dạng Việt Nam, VD `1.234.567 đ`).
+- **`pnpm`, không `npm`.**
+- Quy tắc tuân thủ FE đầy đủ (đồng thời là UI-kit FE): `doc/CONVENTIONS.md`.
