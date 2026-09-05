@@ -2,6 +2,8 @@ import React from 'react';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
+const DEFAULT_PAGE_SIZE_OPTIONS = [6, 8, 12, 16, 24, 48];
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -9,6 +11,7 @@ interface PaginationProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  pageSizeOptions?: number[];
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -18,6 +21,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
 }) => {
   if (totalItems === 0) return null;
 
@@ -58,12 +62,9 @@ export const Pagination: React.FC<PaginationProps> = ({
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
             className="py-[4px] px-[8px] rounded-[6px] border border-[#cbd5e1] bg-[#f8fafc] text-[12px] font-semibold outline-none cursor-pointer"
           >
-            <option value={6}>6</option>
-            <option value={8}>8</option>
-            <option value={12}>12</option>
-            <option value={16}>16</option>
-            <option value={24}>24</option>
-            <option value={48}>48</option>
+            {pageSizeOptions.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
           </select>
         </div>
       </div>

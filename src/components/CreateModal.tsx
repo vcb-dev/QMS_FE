@@ -6,11 +6,19 @@ import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStone
 import { X, Upload, PlusCircle } from 'lucide-react';
 import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
+import {
+  modalBackdropCls,
+  modalCardCls,
+  modalGrid2ColCls,
+  formGroupCls,
+  formLabelCls,
+  formReqCls,
+  formControlCls,
+  emptyStoneNoticeCls,
+  checkboxSmallCls,
+} from '../styles/classNames';
 
-const emptyStoneNoticeCls = 'py-[16px] px-[8px] text-[12px] text-faint text-center';
-const checkboxSmallCls = 'w-[15px] h-[15px] cursor-pointer accent-[#475569]';
-
-// Chip "✓ tên" cho chất liệu/đá đã chọn — 2 chỗ trước đây tự viết lặp lại y hệt, chỉ khác điều
+// Chip "✓ tên" cho chất liệu/đá đã chọn — dùng cho cả material và stone, khác nhau ở điều
 // kiện ẩn nút xóa (material dựa vào calculatorData.materials/materialType, stone dựa cả object).
 const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle?: string }> = ({ label, onRemove, removeTitle }) => (
   <span className="bg-[#f1f5f9] border border-[#cbd5e1] text-[#334155] py-[4px] px-[10px] rounded-[16px] text-[11.5px] font-bold inline-flex items-center gap-[6px]">
@@ -518,8 +526,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop show">
-      <div className="modal-card max-w-[920px] rounded-[20px] overflow-hidden flex flex-col max-h-[90vh]">
+    <div className={modalBackdropCls}>
+      <div className={clsx(modalCardCls, '!max-w-[920px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}>
         {/* Header matching design */}
         <div className="shrink-0 bg-surface text-[#0f172a] py-[18px] px-[24px] flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-[14px]">
@@ -547,7 +555,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
           {/* Scrollable Form Body */}
           <div className="flex-1 overflow-y-auto bg-[#f8fafc] p-[20px]">
             {/* 2-Column Grid Layout matching screenshot */}
-            <div className="modal-grid-2col">
+            <div className={modalGrid2ColCls}>
             
             {/* Left Card: THÔNG TIN ĐƠN HÀNG */}
             <div className="bg-surface border border-border rounded-[16px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col gap-[16px]">
@@ -580,17 +588,18 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               />
 
               {/* Sale Name */}
-              <div className="form-group">
-                <label className="form-label">Người hỏi giá (Sale) <span className="req">*</span></label>
-                <input type="text" className="form-control bg-[#f1f5f9]" value={saleName} readOnly />
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Người hỏi giá (Sale) <span className={formReqCls}>*</span></label>
+                <input type="text" className={clsx(formControlCls, '!bg-[#f1f5f9]')} value={saleName} readOnly />
               </div>
 
               {/* Danh Mục Sản Phẩm - DB Loaded */}
-              <div className="form-group">
-                <label className="form-label">Danh mục sản phẩm <span className="req">*</span></label>
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Danh mục sản phẩm <span className={formReqCls}>*</span></label>
                 <select
                   className={clsx(
-                    'form-control w-full',
+                    formControlCls,
+                    'w-full',
                     calculatorData?.categoryId ? 'opacity-75 cursor-not-allowed' : 'opacity-100 cursor-pointer'
                   )}
                   value={selectedCategoryId}
@@ -607,10 +616,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
                 {selectedCategoryId === 'OTHER' && (
                   <div className="mt-[8px]">
-                    <label className="form-label">Tên danh mục mới <span className="req">*</span></label>
+                    <label className={formLabelCls}>Tên danh mục mới <span className={formReqCls}>*</span></label>
                     <input
                       type="text"
-                      className="form-control"
+                      className={formControlCls}
                       placeholder="Tên danh mục mới..."
                       value={newCategoryName}
                       maxLength={30}
@@ -621,9 +630,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {/* Chất liệu Khách muốn chế tác - Multi-Select Dropdown */}
-              <div className="form-group">
-                <label className="form-label">
-                  Chất liệu Khách muốn chế tác <span className="req">*</span> (Có thể chọn nhiều)
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>
+                  Chất liệu Khách muốn chế tác <span className={formReqCls}>*</span> (Có thể chọn nhiều)
                 </label>
                 <div ref={materialDropdownRef} className="relative">
                   <button
@@ -631,7 +640,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     onClick={() => setMaterialDropdownOpen((prev) => !prev)}
                     disabled={!!(calculatorData?.materials?.length || calculatorData?.materialType)}
                     className={clsx(
-                      'form-control w-full text-left font-bold bg-surface',
+                      formControlCls,
+                      'w-full text-left font-bold bg-surface',
                       (calculatorData?.materials?.length || calculatorData?.materialType) ? 'opacity-75 cursor-not-allowed' : 'opacity-100 cursor-pointer'
                     )}
                   >
@@ -689,8 +699,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {/* Loại đá Khách muốn (đá chủ / đá tấm) - không bắt buộc */}
-              <div className="form-group">
-                <label className="form-label">Loại đá</label>
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Loại đá</label>
                 <div ref={stoneDropdownRef} className="relative">
                   <button
                     ref={stoneDropdownTriggerRef}
@@ -705,7 +715,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     // không phản ánh đá vừa thêm.
                     disabled={!!calculatorData}
                     className={clsx(
-                      'form-control w-full text-left font-bold bg-surface',
+                      formControlCls,
+                      'w-full text-left font-bold bg-surface',
                       calculatorData ? 'opacity-75 cursor-not-allowed' : 'opacity-100 cursor-pointer'
                     )}
                   >
@@ -841,11 +852,11 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </h3>
 
               {/* Size, Urgency & Close Rate */}
-              <div className="form-group">
-                <label className="form-label">Số đo / Kích thước <span className="req">*</span></label>
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Số đo / Kích thước <span className={formReqCls}>*</span></label>
                 <input
                   type="text"
-                  className="form-control"
+                  className={formControlCls}
                   placeholder="VD: Ni tay 12, 18cm..."
                   value={customerMeasurements}
                   maxLength={200}
@@ -854,9 +865,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               <div className="grid grid-cols-[1fr_1fr] gap-[12px]">
-                <div className="form-group">
-                  <label className="form-label">Thời gian muốn nhận <span className="req">*</span></label>
-                  <select className="form-control" value={leadTime} onChange={(e) => setLeadTime(e.target.value)}>
+                <div className={formGroupCls}>
+                  <label className={formLabelCls}>Thời gian muốn nhận <span className={formReqCls}>*</span></label>
+                  <select className={formControlCls} value={leadTime} onChange={(e) => setLeadTime(e.target.value)}>
                     <option value="<3 NGÀY (RẤT GẤP)">&lt;3 NGÀY (RẤT GẤP)</option>
                     <option value="3-7 NGÀY (GẤP)">3-7 NGÀY (GẤP)</option>
                     <option value="7-15 NGÀY (Tiêu chuẩn)">7-15 NGÀY (Tiêu chuẩn)</option>
@@ -865,9 +876,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Khách tỷ lệ chốt <span className="req">*</span></label>
-                  <select className="form-control" value={closeRateValue} onChange={(e) => setCloseRateValue(e.target.value)}>
+                <div className={formGroupCls}>
+                  <label className={formLabelCls}>Khách tỷ lệ chốt <span className={formReqCls}>*</span></label>
+                  <select className={formControlCls} value={closeRateValue} onChange={(e) => setCloseRateValue(e.target.value)}>
                     {CLOSE_RATE_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
@@ -876,8 +887,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {/* Multiple Images Upload Zone */}
-              <div className="form-group flex-1">
-                <label className="form-label">
+              <div className={clsx(formGroupCls, 'flex-1')}>
+                <label className={formLabelCls}>
                   Ảnh sản phẩm / mẫu thực tế ({totalImageCount}/{MAX_IMAGES} ảnh)
                 </label>
                 <input
@@ -981,8 +992,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {/* Video Upload Zone — chỉ 1 video/yêu cầu */}
-              <div className="form-group">
-                <label className="form-label">Video sản phẩm / mẫu thực tế (không bắt buộc)</label>
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Video sản phẩm / mẫu thực tế (không bắt buộc)</label>
                 <input
                   type="file"
                   ref={videoInputRef}

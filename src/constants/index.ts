@@ -7,14 +7,15 @@ export const UI_CONSTANTS = {
   DEFAULT_PRICER_EMAIL: import.meta.env.VITE_DEFAULT_PRICER_EMAIL || '',
 
   PRODUCT_LIBRARY: {
-    DEFAULT_PAGE_SIZE: 8,
-    PAGE_SIZE_OPTIONS: [8, 12, 16, 24, 48],
-    GRID_COLUMNS_DESKTOP: 4,
+    // Lưới sản phẩm cố định 5 cột (grid-cols-5) — page size là bội số 5 để hàng cuối luôn đầy.
+    DEFAULT_PAGE_SIZE: 10,
+    PAGE_SIZE_OPTIONS: [10, 15, 20, 30, 45],
+    GRID_COLUMNS_DESKTOP: 5,
   },
 
   DASHBOARD: {
     RECENT_REQUESTS_LIMIT: 5,
-    RECENT_PRODUCTS_LIMIT: 4,
+    RECENT_PRODUCTS_LIMIT: 2,
     GRID_COLUMNS_DESKTOP: 4,
   },
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { CompareRow } from '../types';
 
 // State + CRUD cho danh sách "phương án loại vàng khác" (so sánh tham khảo) — dùng
-// chung CalculatorPage + PricingModal. Trước đây 2 file khai báo độc lập y hệt.
+// chung CalculatorPage + PricingModal.
 export function useCompareRows(dbMaterials: { id: string; name: string }[]) {
   const [compareRows, setCompareRows] = useState<CompareRow[]>([]);
 

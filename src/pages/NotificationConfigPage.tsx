@@ -43,6 +43,21 @@ import {
   tdCls,
   tableHeadRowCls,
   iconBtnCls,
+  modalBackdropCls,
+  modalCardCls,
+  modalHeaderCls,
+  modalBodyCls,
+  modalFooterCls,
+  formGroupCls,
+  formLabelCls,
+  formControlCls,
+  toolBtnCls,
+  btnInspCls,
+  btnInspPrimaryCls,
+  btnInspDangerCls,
+  ncpIconBtnCls,
+  ncpIconBtnDangerCls,
+  ncpRowHoverCls,
 } from '../styles/classNames';
 
 const HOOK_PREFIX = 'https://open.larksuite.com/open-apis/bot/v2/hook/';
@@ -360,16 +375,6 @@ export const NotificationConfigPage: React.FC = () => {
 
   return (
     <div className="flex flex-col">
-      <style>{`
-        @keyframes ncp-spin { to { transform: rotate(360deg); } }
-        .ncp-spin { animation: ncp-spin .8s linear infinite; }
-        .ncp-ib { color: #94a3b8; transition: color .15s ease, background .15s ease; border-radius: 6px; }
-        .ncp-ib:hover { color: #0f172a; background: #f1f5f9; }
-        .ncp-ib.danger:hover { color: #dc2626; background: #fef2f2; }
-        .ncp-row:hover { background: #fafafa; }
-        .ncp-sub:hover { background: #fafafa; }
-      `}</style>
-
       <div className="bg-surface border border-[#e5e7eb] rounded-[16px]">
         {/* header */}
         <div className="pt-[22px] px-[22px] pb-0">
@@ -480,7 +485,7 @@ export const NotificationConfigPage: React.FC = () => {
               {filterActive && (
                 <button
                   type="button"
-                  className="tool-btn"
+                  className={toolBtnCls}
                   onClick={() => {
                     setSearch('');
                     setStatusFilter('all');
@@ -525,7 +530,7 @@ export const NotificationConfigPage: React.FC = () => {
                         >
                           <Loader2
                             size={16}
-                            className="ncp-spin align-middle mr-[8px]"
+                            className="animate-[spin_0.8s_linear_infinite] align-middle mr-[8px]"
                           />
                           Đang tải…
                         </td>
@@ -557,7 +562,7 @@ export const NotificationConfigPage: React.FC = () => {
                       list.map((w) => (
                         <tr
                           key={w.id}
-                          className="ncp-row border-b border-[#f1f5f9]"
+                          className={clsx(ncpRowHoverCls, 'border-b border-[#f1f5f9]')}
                         >
                           <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
                             <div className="font-bold text-[#0f172a] text-[13px]">
@@ -579,7 +584,7 @@ export const NotificationConfigPage: React.FC = () => {
                               </code>
                               <button
                                 type="button"
-                                className={clsx('ncp-ib', iconBtnCls)}
+                                className={ncpIconBtnCls}
                                 title="Sao chép URL"
                                 onClick={() => copyUrl(w)}
                               >
@@ -638,20 +643,20 @@ export const NotificationConfigPage: React.FC = () => {
                             <div className="flex gap-[2px] justify-end">
                               <button
                                 type="button"
-                                className={clsx('ncp-ib', iconBtnCls)}
+                                className={ncpIconBtnCls}
                                 title="Gửi thử"
                                 disabled={busyRow === w.id}
                                 onClick={() => testRow(w)}
                               >
                                 {busyRow === w.id ? (
-                                  <Loader2 size={13} className="ncp-spin" />
+                                  <Loader2 size={13} className="animate-[spin_0.8s_linear_infinite]" />
                                 ) : (
                                   <Send size={13} />
                                 )}
                               </button>
                               <button
                                 type="button"
-                                className={clsx('ncp-ib', iconBtnCls)}
+                                className={ncpIconBtnCls}
                                 title="Chỉnh sửa"
                                 onClick={() => openEdit(w)}
                               >
@@ -659,7 +664,7 @@ export const NotificationConfigPage: React.FC = () => {
                               </button>
                               <button
                                 type="button"
-                                className={clsx('ncp-ib danger', iconBtnCls)}
+                                className={clsx(ncpIconBtnCls, ncpIconBtnDangerCls)}
                                 title="Xóa"
                                 onClick={() => setDeleteTarget(w)}
                               >
@@ -689,12 +694,12 @@ export const NotificationConfigPage: React.FC = () => {
       {/* ---- add / edit modal ---- */}
       {formOpen &&
         createPortal(
-          <div className="modal-backdrop show" onClick={closeForm}>
+          <div className={modalBackdropCls} onClick={closeForm}>
             <div
-              className="modal-card max-w-[560px] w-[560px] h-[min(680px,92vh)] flex flex-col"
+              className={clsx(modalCardCls, '!max-w-[560px] w-[560px] h-[min(680px,92vh)] flex flex-col')}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-header shrink-0">
+              <div className={clsx(modalHeaderCls, 'shrink-0')}>
                 <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
                   {editing ? 'Chỉnh sửa webhook' : 'Thêm webhook'}
                 </h2>
@@ -707,12 +712,12 @@ export const NotificationConfigPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="modal-body gap-[13px] py-[18px] px-[20px] flex-1 min-h-0 overflow-y-auto">
+              <div className={clsx(modalBodyCls, '!gap-[13px] !py-[18px] !px-[20px] flex-1 min-h-0 overflow-y-auto')}>
                 <div className="grid grid-cols-2 gap-[12px]">
-                  <div className="form-group">
-                    <label className="form-label">Tên nhóm Lark</label>
+                  <div className={formGroupCls}>
+                    <label className={formLabelCls}>Tên nhóm Lark</label>
                     <input
-                      className={clsx('form-control', formErr.chatName && '!border-[#ef4444]')}
+                      className={clsx(formControlCls, formErr.chatName && '!border-[#ef4444]')}
                       value={form.chatName}
                       maxLength={120}
                       onChange={(e) =>
@@ -727,15 +732,15 @@ export const NotificationConfigPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">
+                  <div className={formGroupCls}>
+                    <label className={formLabelCls}>
                       Tên bot{' '}
                       <span className="font-normal text-[#94a3b8]">
                         (tùy chọn)
                       </span>
                     </label>
                     <input
-                      className="form-control"
+                      className={formControlCls}
                       value={form.botName}
                       maxLength={120}
                       onChange={(e) =>
@@ -746,8 +751,8 @@ export const NotificationConfigPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label flex items-baseline gap-[8px]">
+                <div className={formGroupCls}>
+                  <label className={clsx(formLabelCls, 'flex items-baseline gap-[8px]')}>
                     Webhook URL
                     {urlWarn && !formErr.url && (
                       <span className="font-normal text-[11px] text-[#94a3b8]">
@@ -757,7 +762,8 @@ export const NotificationConfigPage: React.FC = () => {
                   </label>
                   <input
                     className={clsx(
-                      'form-control font-mono text-[12px]',
+                      formControlCls,
+                      'font-mono text-[12px]',
                       formErr.url && '!border-[#ef4444]',
                       !formErr.url && urlWarn && '!border-[#f59e0b]',
                     )}
@@ -776,13 +782,13 @@ export const NotificationConfigPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Signing secret</label>
+                <div className={formGroupCls}>
+                  <label className={formLabelCls}>Signing secret</label>
                   <span className="text-[11.5px] text-[#64748b] leading-[1.45] block mb-[4px]">
                   </span>
                   <div className="relative">
                     <input
-                      className="form-control font-mono pr-[36px]"
+                      className={clsx(formControlCls, 'font-mono pr-[36px]')}
                       type={showSecret ? 'text' : 'password'}
                       value={form.secret}
                       onChange={(e) => {
@@ -791,8 +797,8 @@ export const NotificationConfigPage: React.FC = () => {
                       }}
                       placeholder={
                         editing?.hasSecret
-                          ? 'Đã đặt — để trống nếu giữ nguyên'
-                          : 'Dán secret nếu bot bật ký xác thực'
+                           ? 'Đã đặt — để trống nếu giữ nguyên'
+                           : 'Dán secret nếu bot bật ký xác thực'
                       }
                       autoComplete="off"
                     />
@@ -814,8 +820,8 @@ export const NotificationConfigPage: React.FC = () => {
                 </div>
 
                 {/* hành động — ô tìm kiếm kiểu combobox, gõ tên để lọc rồi chọn */}
-                <div className="form-group">
-                  <label className="form-label m-0">
+                <div className={formGroupCls}>
+                  <label className={clsx(formLabelCls, 'm-0')}>
                     Nhận thông báo cho hành động
                     <span className="font-normal text-[#94a3b8] ml-[6px]">
                       đã chọn {form.actions.length}/{catalog.length}
@@ -833,7 +839,7 @@ export const NotificationConfigPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => toggleAction(a)}
-                            className={clsx('ncp-ib', iconBtnCls, 'p-[1px] text-[#64748b]')}
+                            className={clsx(ncpIconBtnCls, 'p-[1px]')}
                             aria-label="Bỏ chọn"
                           >
                             <X size={11} />
@@ -849,7 +855,7 @@ export const NotificationConfigPage: React.FC = () => {
                       className="absolute left-[11px] top-1/2 -translate-y-1/2 text-[#94a3b8]"
                     />
                     <input
-                      className="form-control pl-[32px]"
+                      className={clsx(formControlCls, 'pl-[32px]')}
                       placeholder="Gõ tên hành động để lọc…"
                       value={actionQuery}
                       onChange={(e) => setActionQuery(e.target.value)}
@@ -875,7 +881,7 @@ export const NotificationConfigPage: React.FC = () => {
                                 <button
                                   type="button"
                                   key={c.action}
-                                  className="ncp-sub flex items-center gap-[9px] w-full py-[7px] px-[12px] bg-transparent border-0 border-b border-[#f1f5f9] cursor-pointer text-left"
+                                  className={clsx(ncpRowHoverCls, 'flex items-center gap-[9px] w-full py-[7px] px-[12px] bg-transparent border-0 border-b border-[#f1f5f9] cursor-pointer text-left')}
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => toggleAction(c.action)}
                                 >
@@ -900,10 +906,10 @@ export const NotificationConfigPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-footer shrink-0">
+              <div className={clsx(modalFooterCls, 'shrink-0')}>
                 <button
                   type="button"
-                  className="btn-insp w-auto bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]"
+                  className={clsx(btnInspCls, 'w-auto bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]')}
                   onClick={closeForm}
                 >
                   Hủy
@@ -911,13 +917,14 @@ export const NotificationConfigPage: React.FC = () => {
                 <button
                   type="button"
                   className={clsx(
-                    'btn-insp btn-insp-primary w-auto bg-[#0f172a]',
+                    btnInspPrimaryCls,
+                    'w-auto bg-[#0f172a]',
                     saving ? 'opacity-60' : 'opacity-100',
                   )}
                   onClick={save}
                   disabled={saving}
                 >
-                  {saving ? <Loader2 size={13} className="ncp-spin" /> : null}{' '}
+                  {saving ? <Loader2 size={13} className="animate-[spin_0.8s_linear_infinite]" /> : null}{' '}
                   Lưu webhook
                 </button>
               </div>
@@ -930,14 +937,14 @@ export const NotificationConfigPage: React.FC = () => {
       {deleteTarget &&
         createPortal(
           <div
-            className="modal-backdrop show"
+            className={modalBackdropCls}
             onClick={() => setDeleteTarget(null)}
           >
             <div
-              className="modal-card max-w-[380px]"
+              className={clsx(modalCardCls, '!max-w-[380px]')}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-header">
+              <div className={modalHeaderCls}>
                 <h2 className="text-[15px] font-extrabold text-[#0f172a] m-0">
                   Xóa webhook này?
                 </h2>
@@ -949,16 +956,16 @@ export const NotificationConfigPage: React.FC = () => {
                   <X size={18} />
                 </button>
               </div>
-              <div className="modal-body">
+              <div className={modalBodyCls}>
                 <p className="m-0 text-[12.5px] text-[#64748b] leading-[1.55]">
                   Webhook của "{deleteTarget.chatName}" và mọi đăng ký hành động
                   của nhóm này sẽ bị xóa. Hành động này không thể hoàn tác.
                 </p>
               </div>
-              <div className="modal-footer">
+              <div className={modalFooterCls}>
                 <button
                   type="button"
-                  className="btn-insp w-auto bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]"
+                  className={clsx(btnInspCls, 'w-auto bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]')}
                   onClick={() => setDeleteTarget(null)}
                 >
                   Hủy
@@ -966,13 +973,14 @@ export const NotificationConfigPage: React.FC = () => {
                 <button
                   type="button"
                   className={clsx(
-                    'btn-insp btn-insp-danger w-auto',
+                    btnInspDangerCls,
+                    'w-auto',
                     deleting ? 'opacity-60' : 'opacity-100',
                   )}
                   onClick={confirmDelete}
                   disabled={deleting}
                 >
-                  {deleting ? <Loader2 size={13} className="ncp-spin" /> : null}{' '}
+                  {deleting ? <Loader2 size={13} className="animate-[spin_0.8s_linear_infinite]" /> : null}{' '}
                   Xóa
                 </button>
               </div>

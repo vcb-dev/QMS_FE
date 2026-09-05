@@ -5,10 +5,21 @@ import { X, History, Coins, Copy, Check, Image as ImageIcon, ArrowUp, ArrowDown 
 import type { ProductSpecModalProps, QuoteHistoryEntry } from '../types';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
-import { getPriceBreakdown, getLivePriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { getPriceBreakdown, getLivePriceBreakdown } from '../utils/priceBreakdown';
 import { ImageLightbox } from './ImageLightbox';
 import { formatPriceRange, formatOptionCopyLine } from '../utils/quoteOption';
 import { fetchLibraryProductHistory } from '../services/api';
+import {
+  modalBackdropCls,
+  modalCardCls,
+  modalHeaderCls,
+  modalCloseIconBtnCls,
+  specColCls,
+  specEyebrowCls,
+  specEyebrowLabelCls,
+  specEmptyCls,
+  specHistCardLineCls,
+} from '../styles/classNames';
 
 // Cột lịch sử tải từng lô nhỏ, cuộn tới đáy thì tự tải lô kế (infinite scroll) — không nút bấm.
 const HISTORY_PAGE_SIZE = 8;
@@ -33,6 +44,11 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
   const [histLoading, setHistLoading] = useState(false);
   const [selIdx, setSelIdx] = useState(0);
   const selected = history[selIdx] ?? history[0];
+  // Ngày báo giá của đơn đang chọn — hiện 1 lần ở đầu cột "Giá phương án" (mọi phương án cùng ngày).
+  const quotedWhen =
+    selected?.quotedDate || selected?.quotedAt
+      ? fmtDate(selected?.quotedDate ?? selected?.quotedAt)
+      : '';
 
   // Infinite scroll cột lịch sử. loadingRef chặn tải trùng (state chưa kịp cập nhật giữa 2 render).
   const gridRef = useRef<HTMLDivElement>(null);
@@ -122,24 +138,33 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
 
   return createPortal(
     <>
-    <div className="modal-backdrop show" onClick={onClose}>
-      <div className="modal-card product-spec-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <div className={modalBackdropCls} onClick={onClose}>
+      <div
+        className={clsx(
+          modalCardCls,
+          'w-[min(1000px,96vw)] max-w-[min(1000px,96vw)] h-auto max-h-[92vh] overflow-hidden flex flex-col',
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={clsx(modalHeaderCls, 'shrink-0')}>
           <div className="min-w-0">
             <h2 className="text-[15px] overflow-hidden text-ellipsis whitespace-nowrap">{item.productName}</h2>
           </div>
-          <button onClick={onClose} aria-label="Đóng" className="spec-close">
+          <button onClick={onClose} aria-label="Đóng" className={modalCloseIconBtnCls}>
             <X size={18} />
           </button>
         </div>
 
-        <div className="product-spec-grid" ref={gridRef}>
+        <div
+          className="grid [grid-template-columns:minmax(240px,3fr)_minmax(0,3.5fr)_minmax(0,3.5fr)] [grid-template-rows:minmax(0,1fr)] flex-1 min-h-0 overflow-hidden max-[860px]:!flex max-[860px]:!flex-col max-[860px]:!overflow-y-auto"
+          ref={gridRef}
+        >
           {/* Cột 1 — hình ảnh sản phẩm của đơn đang chọn */}
-          <section className="spec-col spec-col--image">
-            <div className="spec-eyebrow">
-              <span className="spec-eyebrow__label"><ImageIcon size={13} /> Hình ảnh</span>
+          <section className={clsx(specColCls, 'items-center bg-[#fafafa] max-[860px]:order-1')}>
+            <div className={specEyebrowCls}>
+              <span className={specEyebrowLabelCls}><ImageIcon size={13} /> Hình ảnh</span>
             </div>
-            <div className="product-spec-image-frame">
+            <div className="w-full max-w-[300px] aspect-square shrink-0 relative bg-[#f1f5f9] rounded-[14px] overflow-hidden max-[860px]:!max-w-[260px]">
               <img
                 src={mainImgUrl}
                 alt=""
@@ -151,13 +176,13 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                 className={clsx("w-full h-full object-cover", images.length > 0 ? "cursor-zoom-in" : "cursor-default")}
               />
               {images.length > 1 && (
-                <div className="spec-thumbs">
+                <div className="absolute left-[10px] right-[10px] bottom-[10px] flex gap-[6px] overflow-x-auto">
                   {images.map((img, idx) => (
                     <img
                       key={img.id}
                       src={img.imageUrl}
                       alt=""
-                      className="spec-thumb"
+                      className="w-[44px] h-[44px] shrink-0 rounded-[8px] object-cover cursor-pointer border-2 border-[rgba(255,255,255,0.8)] opacity-70 shadow-[0_2px_6px_rgba(0,0,0,0.25)] data-[active]:opacity-100 data-[active]:border-white data-[active]:shadow-[0_0_0_2px_#0f172a]"
                       data-active={idx === activeIdx || undefined}
                       onClick={() => setActiveIdx(idx)}
                     />
@@ -167,7 +192,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
             </div>
 
             {/* Thông số gộp của nhóm sản phẩm — lấp khoảng trống dưới ảnh, cân với cột phải */}
-            <dl className="spec-meta">
+            <dl className="w-full mt-[18px] flex flex-col [&>div]:flex [&>div]:justify-between [&>div]:gap-[12px] [&>div]:py-[8px] [&>div]:border-t [&>div]:border-border [&>div:last-child]:border-b [&>div:last-child]:border-border [&_dt]:shrink-0 [&_dt]:pt-[1px] [&_dt]:text-[10px] [&_dt]:font-bold [&_dt]:tracking-[0.5px] [&_dt]:uppercase [&_dt]:text-faint [&_dd]:min-w-0 [&_dd]:text-[11.5px] [&_dd]:font-bold [&_dd]:text-[#0f172a] [&_dd]:text-right">
               <div><dt>Chất liệu</dt><dd>{item.matStr || '—'}</dd></div>
               <div><dt>Khối lượng</dt><dd>{item.weightDisplay || '—'}</dd></div>
               <div><dt>Đá</dt><dd>{item.stoneDisplay || 'Không đính đá'}</dd></div>
@@ -177,41 +202,44 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
           </section>
 
           {/* Cột 2 — lịch sử báo giá (mới → cũ); chọn 1 đơn để đổi ảnh + bảng giá */}
-          <section className="spec-col spec-col--history" ref={histColRef}>
-            <div className="spec-eyebrow">
-              <span className="spec-eyebrow__label"><History size={13} /> Lịch sử báo giá</span>
+          <section className={clsx(specColCls, 'max-[860px]:order-3')} ref={histColRef}>
+            <div className={specEyebrowCls}>
+              <span className={specEyebrowLabelCls}><History size={13} /> Lịch sử báo giá</span>
             </div>
             {history.length === 0 ? (
-              <div className="spec-empty">{histLoading ? 'Đang tải lịch sử…' : 'Chưa có lịch sử báo giá'}</div>
+              <div className={specEmptyCls}>{histLoading ? 'Đang tải lịch sử…' : 'Chưa có lịch sử báo giá'}</div>
             ) : (
-              <div className="spec-hist-list">
+              <div className="flex flex-col gap-[8px]">
                 {history.map((h, idx) => (
                   <button
                     key={h.requestId}
                     type="button"
-                    className="spec-hist-card"
+                    className="flex flex-col gap-[3px] py-[12px] px-[13px] font-[inherit] text-left bg-white border border-border border-l-[3px] border-l-transparent rounded-[10px] cursor-pointer transition-[border-color,background] duration-[120ms] hover:border-[#94a3b8] aria-selected:bg-[#f1f5f9] aria-selected:border-[#0f172a] aria-selected:border-l-[#0f172a]"
                     aria-selected={idx === selIdx}
                     onClick={() => setSelIdx(idx)}
                   >
-                    <div className="spec-hist-card__top">
-                      <span className="spec-hist-card__code">{h.code}</span>
-                      <span className="spec-hist-card__date">
+                    <div className="flex items-baseline justify-between gap-[8px] mb-[1px]">
+                      <span className="text-[10.5px] font-bold text-muted [font-variant-numeric:tabular-nums] tracking-[0.2px]">{h.code}</span>
+                      <span className="shrink-0 text-[12px] font-extrabold text-[#0f172a] [font-variant-numeric:tabular-nums] text-right">
                         {fmtDate(h.quotedDate ?? h.quotedAt)}
                         {h.weightDisplay ? ` · ${h.weightDisplay}` : ''}
                       </span>
                     </div>
-                    <div className="spec-hist-card__line">Sale <strong>{h.saleName || '—'}</strong></div>
-                    <div className="spec-hist-card__line">Báo giá <strong>{h.pricerName || '—'}</strong></div>
-                    <div className="spec-hist-card__line" title={item.stoneDisplay || 'Không đính đá'}>
+                    <div className={specHistCardLineCls}>Sale <strong>{h.saleName || '—'}</strong></div>
+                    <div className={specHistCardLineCls}>Báo giá <strong>{h.pricerName || '—'}</strong></div>
+                    <div className={specHistCardLineCls} title={item.stoneDisplay || 'Không đính đá'}>
                       Đá <strong>{item.stoneDisplay || 'Không đính đá'}</strong>
                     </div>
-                    <div className="spec-hist-card__total">
+                    <div className="mt-[5px] pt-[6px] border-t border-dashed border-border text-[11.5px] text-muted [&_strong]:text-[#0f172a] [&_strong]:font-extrabold">
                       Đã báo <strong>{formatPriceRange(h.priceMin, h.priceMax, h.options[0]?.price ?? 0)}</strong>
                     </div>
                   </button>
                 ))}
                 {histPage < histTotalPages && (
-                  <div ref={histSentinelRef} className="spec-hist-more">
+                  <div
+                    ref={histSentinelRef}
+                    className="flex items-center justify-center min-h-[34px] mt-[2px] text-[10.5px] font-bold tracking-[0.5px] uppercase text-faint"
+                  >
                     {histLoading ? 'Đang tải thêm…' : ''}
                   </div>
                 )}
@@ -220,13 +248,13 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
           </section>
 
           {/* Cột 3 — bảng giá theo phương án chất liệu của đơn đang chọn */}
-          <section className="spec-col spec-col--prices">
-            <div className="spec-eyebrow">
-              <span className="spec-eyebrow__label"><Coins size={13} /> Giá phương án</span>
+          <section className={clsx(specColCls, 'max-[860px]:order-2')}>
+            <div className={specEyebrowCls}>
+              <span className={specEyebrowLabelCls}><Coins size={13} /> Giá phương án</span>
               {selected && selected.options.length > 1 && (
                 <button
                   type="button"
-                  className="spec-copyall"
+                  className="flex items-center gap-[5px] shrink-0 py-[4px] px-[9px] text-[10px] font-bold tracking-[0.3px] text-muted bg-white border border-border rounded-[7px] cursor-pointer data-[copied]:text-[#15803d] data-[copied]:bg-[#dcfce7] data-[copied]:border-[#bbf7d0]"
                   data-copied={copiedAll || undefined}
                   onClick={() => handleCopyAll(selected.options)}
                   title="Copy giá hôm nay của tất cả phương án"
@@ -236,29 +264,43 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
               )}
             </div>
             {selected && selected.options.length > 0 ? (
-              <div className="spec-opt-list">
+              <div className="flex flex-col">
+                {quotedWhen && (
+                  <div className="text-[10px] font-extrabold uppercase tracking-[0.4px] text-faint mb-[10px]">
+                    Báo giá ngày {quotedWhen}
+                  </div>
+                )}
                 {selected.options.map((o, idx) => {
                   const oTag = o.selectionStatus ? STATUS_TAG[o.selectionStatus] : undefined;
                   const dp = o.livePriceDeltaPct ?? 0;
-                  const deltaCls = dp > 0 ? 'spec-delta--up' : dp < 0 ? 'spec-delta--down' : 'spec-delta--flat';
-                  // Ngày báo giá của đơn đang chọn — gắn vào nhãn để phân biệt "giá lúc báo giá"
-                  // với "giá hôm nay" (cùng cấu thành chất liệu / đá nên dễ lẫn).
-                  const quotedWhen =
-                    selected?.quotedDate || selected?.quotedAt
-                      ? fmtDate(selected?.quotedDate ?? selected?.quotedAt)
-                      : '';
+                  const deltaCls = dp > 0 ? 'text-[#15803d]' : dp < 0 ? 'text-[#b91c1c]' : 'text-muted';
+                  const hasLive = o.livePrice != null;
+                  const bdQ = getPriceBreakdown(o);
+                  const bdL = getLivePriceBreakdown(o);
+                  const money = (v: number | null | undefined) => (v == null ? '—' : formatCurrency(v));
+                  // Nhãn cột trái của bảng giá (Tổng / Kim loại / Đá)
+                  const rowLabelCls = 'text-left text-[9.5px] font-bold uppercase tracking-[0.3px]';
+                  const numCls = 'text-right pl-[10px] whitespace-nowrap';
                   return (
-                    <div key={idx} className="spec-opt">
-                      <div className="spec-opt__head">
-                        <span className="spec-opt__name">{o.optionName}</span>
+                    <div
+                      key={idx}
+                      className="flex flex-col gap-[6px] py-[14px] first:pt-[2px] [&:not(:first-child)]:border-t [&:not(:first-child)]:border-border"
+                    >
+                      <div className="flex items-center gap-[6px]">
+                        <span className="flex-1 min-w-0 text-[12px] text-muted truncate">{o.optionName}</span>
                         {oTag && (
-                          <span className={clsx("spec-badge", oTag.className)}>
+                          <span
+                            className={clsx(
+                              'shrink-0 py-[2px] px-[7px] text-[9.5px] font-extrabold tracking-[0.3px] rounded-full',
+                              oTag.className,
+                            )}
+                          >
                             {oTag.label}
                           </span>
                         )}
                         <button
                           type="button"
-                          className="spec-iconbtn"
+                          className="shrink-0 flex items-center justify-center w-[24px] h-[24px] text-muted bg-white border border-border rounded-[7px] cursor-pointer data-[copied]:text-[#15803d] data-[copied]:bg-[#dcfce7] data-[copied]:border-[#bbf7d0]"
                           data-copied={copiedIdx === idx || undefined}
                           onClick={() => handleCopyOption(idx, o)}
                           title={`Copy "${formatOptionCopyLine(o, { useLive: true })}"`}
@@ -266,26 +308,41 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                           {copiedIdx === idx ? <Check size={11} /> : <Copy size={11} />}
                         </button>
                       </div>
-                      <div className="spec-quoted">
-                        <span className="spec-today__label">
-                          Lúc báo giá{quotedWhen ? ` · ${quotedWhen}` : ''}
-                        </span>
-                        <div className="spec-price">{formatCurrency(o.price)}</div>
-                        {renderPriceBreakdownLines(getPriceBreakdown(o))}
-                      </div>
-                      {o.livePrice != null && (
-                        <div className="spec-today">
-                          <div className="spec-today__row">
-                            <span className="spec-today__label">Hôm nay</span>
-                            <span className={`spec-delta ${deltaCls}`}>
-                              {dp > 0 ? <ArrowUp size={12} /> : dp < 0 ? <ArrowDown size={12} /> : null}
-                              {formatCurrency(o.livePrice)}
-                              {dp !== 0 && (
-                                <span className="spec-delta__pct">{dp > 0 ? '+' : ''}{dp}%</span>
-                              )}
-                            </span>
-                          </div>
-                          {renderPriceBreakdownLines(getLivePriceBreakdown(o), { live: true })}
+                      <table className="w-full text-[11.5px] [font-variant-numeric:tabular-nums] border-collapse [&_td]:py-[2px] [&_th]:py-[2px]">
+                        <thead>
+                          <tr className="text-[9px] font-extrabold uppercase tracking-[0.4px] text-faint">
+                            <th className="font-[inherit]" />
+                            <th className={clsx(numCls, 'font-[inherit]')}>Lúc báo giá</th>
+                            {hasLive && <th className={clsx(numCls, 'font-[inherit]')}>Hôm nay</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="font-extrabold text-[#0f172a] [&_td]:border-b [&_td]:border-[#f1f5f9]">
+                            <td className={clsx(rowLabelCls, 'text-muted')}>Tổng</td>
+                            <td className={numCls}>{money(o.price)}</td>
+                            {hasLive && <td className={numCls}>{money(o.livePrice)}</td>}
+                          </tr>
+                          <tr className="text-muted">
+                            <td className={rowLabelCls}>Kim loại</td>
+                            <td className={numCls}>{money(bdQ?.material)}</td>
+                            {hasLive && <td className={numCls}>{money(bdL?.material)}</td>}
+                          </tr>
+                          <tr className="text-muted">
+                            <td className={rowLabelCls}>Đá</td>
+                            <td className={numCls}>{money(bdQ?.stone)}</td>
+                            {hasLive && <td className={numCls}>{money(bdL?.stone)}</td>}
+                          </tr>
+                        </tbody>
+                      </table>
+                      {hasLive && dp !== 0 && (
+                        <div
+                          className={clsx(
+                            'flex items-center justify-end gap-[3px] text-[10.5px] font-bold [&_svg]:shrink-0',
+                            deltaCls,
+                          )}
+                        >
+                          {dp > 0 ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+                          {Math.abs(dp)}% so với lúc báo giá
                         </div>
                       )}
                     </div>
@@ -293,7 +350,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                 })}
               </div>
             ) : (
-              <div className="spec-empty">Không có phương án</div>
+              <div className={specEmptyCls}>Không có phương án</div>
             )}
           </section>
         </div>

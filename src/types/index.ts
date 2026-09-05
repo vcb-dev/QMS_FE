@@ -66,8 +66,7 @@ export interface ProductCategory {
   id: string;
   name: string;
   laborCost?: number | null;
-  // VAT chuẩn theo danh mục sản phẩm — thay cho pricing_config.defaultVatRate cũ (1 giá trị
-  // global duy nhất), mỗi danh mục có thể có mức VAT riêng, giống hệt laborCost
+  // VAT chuẩn theo danh mục sản phẩm — mỗi danh mục có thể có mức VAT riêng (giống laborCost)
   vatRate?: number | null;
 }
 
@@ -315,33 +314,6 @@ export type CalcResult = {
   breakdown?: { materialId: string; materialName: string; weightChi: number; cost: number }[];
 };
 
-// Response của POST /quote-options/calculate — khớp PricingCalculationResult (BE
-// quote-requests/dto/calculate-price.dto.ts). Role SALE chỉ nhận materialNameOrKey/quotedPrice
-// (BE tự cắt bớt phần cấu thành giá), các field còn lại optional để phản ánh đúng thực tế đó.
-export type CalculatePriceResult = {
-  materialNameOrKey: string;
-  quotedPrice: number;
-  metalPricePerChi?: number;
-  totalMetalCost?: number;
-  metalRawCost?: number;
-  laborCost?: number;
-  stoneCost?: number;
-  stonePrice?: number;
-  materialPrice?: number;
-  stoneMarginLabel?: string;
-  totalProductionCost?: number;
-  profitMarginDivisor?: number;
-  profitMarginLabel?: string;
-  subtotalPrice?: number;
-  vatRate?: number;
-  vatAmount?: number;
-  metalVatAmount?: number;
-  metalProfit?: number;
-  stoneVatAmount?: number;
-  stoneProfit?: number;
-};
-
-
 export type SortMode = 'RECENT' | 'TOP_SPEND' | 'MOST_ORDERS';
 
 export interface DashboardPageProps {
@@ -512,8 +484,7 @@ export type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
 export type MarginTier = { maxCost: number; divisor: number; margin: string };
 export type PricingFormulaType = 'MARGIN_TIERS' | 'MULTIPLIER';
 // Công thức tính lãi gắn theo NHÓM chất liệu (Material.pricingFormulaId) — MARGIN_TIERS dùng
-// `config.tiers`, MULTIPLIER dùng `config.multipliers`. Thay cho bảng lợi nhuận/hệ số nhân Bạc
-// cũ từng gom chung 1 JSON tách rời trong pricing_config.
+// `config.tiers`, MULTIPLIER dùng `config.multipliers`.
 export type PricingFormula = {
   id: string;
   name: string;

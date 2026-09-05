@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
@@ -8,6 +8,13 @@ import { formatDuration } from '../utils/currency';
 import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
 import { StatCard } from '../components/StatCard';
 import { UserAvatar } from '../components/UserAvatar';
+import {
+  dateInputPy6Cls,
+  cardContainerCls,
+  cardHeadingCls,
+  staffThCls,
+  emptyTextCls,
+} from '../styles/classNames';
 
 type ActionStat = { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] };
 
@@ -20,12 +27,6 @@ const TIME_PRESETS: { value: string; label: string }[] = [
   { value: 'LAST_MONTH', label: 'Tháng trước' },
   { value: 'THIS_YEAR', label: 'Năm nay' },
 ];
-
-const dateInputCls = 'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none';
-const cardContainerCls = 'bg-surface border border-border rounded-[14px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]';
-const cardHeadingCls = 'text-[14px] font-extrabold text-[#0f172a] m-0 mb-[4px] flex items-center gap-[8px]';
-const thCls = 'py-[8px] px-[10px] text-[10.5px] font-extrabold text-[#94a3b8] uppercase';
-const emptyTextCls = 'text-center text-faint text-[12.5px] py-[24px] px-0';
 
 // BE đếm riêng theo từng action code (VD CALCULATE_PRICE / CALCULATE_MULTI_MATERIAL_PRICE) —
 // gộp lại theo nhãn hiển thị (ACTION_LABEL) để 2 action cùng tên tiếng Việt không tách 2 dòng.
@@ -69,6 +70,8 @@ export const StaffPage: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(true);
   const isFiltered = timeRange !== 'ALL' || Boolean(startDate) || Boolean(endDate);
+  // Đếm request để bỏ qua response trả về trễ (race condition khi đổi mốc thời gian liên tục)
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     setAccountPage(1);
@@ -76,6 +79,7 @@ export const StaffPage: React.FC = () => {
 
   useEffect(() => {
     const filter = { timeRange, startDate, endDate };
+    const myRequestId = ++requestIdRef.current;
     setLoading(true);
     Promise.all([
       getAllUsersApi(filter),
@@ -84,14 +88,23 @@ export const StaffPage: React.FC = () => {
       getAuditStatsApi(filter).catch(() => ({})),
     ])
       .then(([userList, stats, perf, auditStats]) => {
+        if (myRequestId !== requestIdRef.current) return;
         setUsers(userList || []);
         setUserStats(stats);
         setPerformance(perf);
         setActionStats(auditStats || {});
         setError(null);
       })
-      .catch((err) => setError(err.message || 'Không thể tải dữ liệu nhân viên'))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (myRequestId === requestIdRef.current) {
+          setError(err.message || 'Không thể tải dữ liệu nhân viên');
+        }
+      })
+      .finally(() => {
+        if (myRequestId === requestIdRef.current) {
+          setLoading(false);
+        }
+      });
   }, [timeRange, startDate, endDate]);
 
   const applyPreset = (value: string) => {
@@ -208,7 +221,7 @@ export const StaffPage: React.FC = () => {
             value={startDate}
             max={endDate || undefined}
             onChange={(e) => { setStartDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
-            className={dateInputCls}
+            className={dateInputPy6Cls}
           />
           <span className="text-faint text-[12px]">—</span>
           <input
@@ -216,7 +229,7 @@ export const StaffPage: React.FC = () => {
             value={endDate}
             min={startDate || undefined}
             onChange={(e) => { setEndDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
-            className={dateInputCls}
+            className={dateInputPy6Cls}
           />
         </div>
 
@@ -286,10 +299,10 @@ export const StaffPage: React.FC = () => {
             <table className="w-full border-collapse text-[12.5px]">
               <thead>
                 <tr className="border-b border-[#f1f5f9] text-left">
-                  <th className={thCls}>Tên</th>
-                  <th className={thCls}>Email</th>
-                  <th className={thCls}>Vai trò</th>
-                  <th className={clsx(thCls, 'text-right')}>Thao tác</th>
+                  <th className={staffThCls}>Tên</th>
+                  <th className={staffThCls}>Email</th>
+                  <th className={staffThCls}>Vai trò</th>
+                  <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -354,11 +367,11 @@ export const StaffPage: React.FC = () => {
             <table className="w-full border-collapse text-[12.5px]">
               <thead>
                 <tr className="border-b border-[#f1f5f9] text-left">
-                  <th className={thCls}>Tên</th>
-                  <th className={thCls}>Email</th>
-                  <th className={thCls}>Vai trò</th>
-                  <th className={thCls}>Trạng thái</th>
-                  <th className={clsx(thCls, 'text-right')}>Thao tác</th>
+                  <th className={staffThCls}>Tên</th>
+                  <th className={staffThCls}>Email</th>
+                  <th className={staffThCls}>Vai trò</th>
+                  <th className={staffThCls}>Trạng thái</th>
+                  <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -454,10 +467,10 @@ export const StaffPage: React.FC = () => {
               <table className="w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="border-b border-[#f1f5f9] text-left">
-                    <th className={thCls}>Sale</th>
-                    <th className={clsx(thCls, 'text-right')}>Đã tạo</th>
-                    <th className={clsx(thCls, 'text-right')}>Đã chốt</th>
-                    <th className={clsx(thCls, 'text-right')}>Tỷ lệ chốt</th>
+                    <th className={staffThCls}>Sale</th>
+                    <th className={clsx(staffThCls, 'text-right')}>Đã tạo</th>
+                    <th className={clsx(staffThCls, 'text-right')}>Đã chốt</th>
+                    <th className={clsx(staffThCls, 'text-right')}>Tỷ lệ chốt</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -488,10 +501,10 @@ export const StaffPage: React.FC = () => {
               <table className="w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="border-b border-[#f1f5f9] text-left">
-                    <th className={thCls}>Order</th>
-                    <th className={clsx(thCls, 'text-right')}>Đã xử lý</th>
-                    <th className={clsx(thCls, 'text-right')}>TB báo giá</th>
-                    <th className={clsx(thCls, 'text-right')}>TB xử lý</th>
+                    <th className={staffThCls}>Order</th>
+                    <th className={clsx(staffThCls, 'text-right')}>Đã xử lý</th>
+                    <th className={clsx(staffThCls, 'text-right')}>TB báo giá</th>
+                    <th className={clsx(staffThCls, 'text-right')}>TB xử lý</th>
                   </tr>
                 </thead>
                 <tbody>

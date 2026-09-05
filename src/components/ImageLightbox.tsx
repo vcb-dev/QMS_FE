@@ -15,7 +15,7 @@ interface ImageLightboxProps {
 // nhiều ảnh. Nơi gọi chỉ cần tự quản lý index ảnh đang xem (activeIndex) + có mở lightbox hay không.
 //
 // Zoom/pan dựng bằng CSS transform (translate + scale) trên chính thẻ <img>, KHÔNG dùng
-// overflow:auto + scrollLeft/scrollTop — cách cũ bị lệch vì container canh giữa bằng flexbox
+// overflow:auto + scrollLeft/scrollTop — cách đó bị lệch vì container canh giữa bằng flexbox
 // (justify-content/align-items: center) khiến vùng cuộn thực tế không khớp toạ độ con trỏ, kéo
 // cảm giác như đang kéo cả màn hình chứ không phải kéo ảnh.
 export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeIndex, onIndexChange, onClose }) => {

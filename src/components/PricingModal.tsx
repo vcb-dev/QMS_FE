@@ -17,9 +17,7 @@ import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
 import { clsx } from 'clsx';
-import { modalCloseIconBtnCls } from '../styles/classNames';
-
-const labelUppercaseCls = 'text-[11px] font-extrabold text-[#475569] uppercase';
+import { modalCloseIconBtnCls, modalBackdropCls, modalCardCls, modalHeaderCls, labelUppercaseCls } from '../styles/classNames';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -51,8 +49,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     !!materialId && dbMaterials.find((m) => m.id === materialId)?.baseMetal?.name === 'Bạc';
   const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
   const [silverMultipliers, setSilverMultipliers] = useState<number[]>([]);
-  // VAT giờ lấy theo danh mục sản phẩm của yêu cầu đang báo giá (ProductCategory.vatRate),
-  // không còn 1 giá trị mặc định global — fallback về PRICING_DEFAULTS nếu danh mục chưa cấu hình
+  // VAT lấy theo danh mục sản phẩm của yêu cầu đang báo giá (ProductCategory.vatRate),
+  // fallback về PRICING_DEFAULTS nếu danh mục chưa cấu hình
   const defaultVatRate = selectedReq?.category?.vatRate ?? PRICING_DEFAULTS.VAT_PCT;
 
   // 1. Danh sách các phương án báo giá hiện tại
@@ -62,8 +60,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // 2. Khối máy tính để tạo phương án mới
   const [showCalculator, setShowCalculator] = useState(true);
   // State + CRUD của chất liệu/đá dùng chung với CalculatorPage qua hook này (xem
-  // hooks/useMaterialStoneRows.ts) — alias lại tên cũ (calcMaterialRows/calcStoneRows...) để không
-  // phải sửa lại toàn bộ chỗ dùng bên dưới.
+  // hooks/useMaterialStoneRows.ts) — alias tên nội bộ thành calcMaterialRows/calcStoneRows...
   const {
     materialRows: calcMaterialRows,
     setMaterialRows: setCalcMaterialRows,
@@ -241,8 +238,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Gộp thẳng phương án mới tính được vào "Các Phương Án Báo Giá" — không còn bước xem trước/bấm
-  // "Thêm" thủ công nữa. Phương án trùng giá với phương án đã có bị bỏ qua (không có ý nghĩa so
+  // Gộp thẳng phương án mới tính được vào "Các Phương Án Báo Giá" (không có bước xem trước/bấm
+  // "Thêm" thủ công). Phương án trùng giá với phương án đã có bị bỏ qua (không có ý nghĩa so
   // sánh thêm). Nếu danh sách chưa có phương án nào được chọn, phương án ĐẦU TIÊN không bị khóa
   // (đúng chất liệu Sale yêu cầu) tự động được chọn làm giá chính; các phương án khác chất liệu
   // (locked=true) vẫn được thêm vào cùng danh sách để hiện dạng "OPTION ĐÍNH KÈM — CHỈ THAM KHẢO".
@@ -589,9 +586,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     });
 
   return (
-    <div className="modal-backdrop show">
-      <div className="modal-card max-w-[860px] w-[95%] max-h-[92vh] overflow-y-auto">
-        <div className="modal-header py-[16px] px-[20px]">
+    <div className={modalBackdropCls}>
+      <div className={clsx(modalCardCls, '!max-w-[860px] !w-[95%] !max-h-[92vh] overflow-y-auto')}>
+        <div className={clsx(modalHeaderCls, '!py-[16px] !px-[20px]')}>
           <div>
             <h2 className="m-0 text-[17px] font-extrabold text-[#0f172a]">
               Báo Giá Yêu Cầu {selectedReq?.code || ''}

@@ -1,14 +1,26 @@
 import React, { useState } from 'react';
+import { clsx } from 'clsx';
 import { X, FileSpreadsheet, Calendar, ChevronDown } from 'lucide-react';
 import type { Material, ProductCategory } from '../types';
 import { exportQuoteRequestsExcelApi } from '../services/api';
 import { STATUS_CHART_META } from '../constants';
 import { EXPORT_FIELDS } from '../constants/exportFields';
-
-const selectCls = 'appearance-none w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[30px] pb-[8px] pl-[12px] text-[12.5px] font-semibold text-[#334155] outline-none cursor-pointer box-border';
-const fieldLabelCls = 'text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px] mb-[5px] block';
-const panelCls = 'bg-[#f8fafc] border border-border rounded-[12px] p-[16px] flex flex-col gap-[12px]';
-const selectArrowCls = 'absolute right-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none';
+import {
+  modalBackdropCls,
+  modalCardCls,
+  modalHeaderCls,
+  modalBodyCls,
+  modalFooterCls,
+  modalGrid2ColCls,
+  formLabelCls,
+  formControlCls,
+  toolBtnCls,
+  btnInspPrimaryCls,
+  selectCls,
+  selectArrowCls,
+  panelCls,
+  popoverLabelCls,
+} from '../styles/classNames';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -88,23 +100,23 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop show">
-      <div className="modal-card max-w-[760px] rounded-[20px] overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="modal-header shrink-0">
+    <div className={modalBackdropCls}>
+      <div className={clsx(modalCardCls, '!max-w-[760px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}>
+        <div className={clsx(modalHeaderCls, 'shrink-0')}>
           <h2>Xuất Excel Yêu Cầu Báo Giá</h2>
           <button onClick={onClose} className="bg-transparent border-0 text-muted cursor-pointer">
             <X size={20} />
           </button>
         </div>
 
-        <div className="modal-body flex-1 overflow-y-auto">
-          <div className="modal-grid-2col">
+        <div className={clsx(modalBodyCls, 'flex-1 overflow-y-auto')}>
+          <div className={modalGrid2ColCls}>
             {/* Cột trái — bộ lọc phạm vi dữ liệu export */}
             <div className={panelCls}>
-              <label className="form-label">Bộ lọc dữ liệu export</label>
+              <label className={formLabelCls}>Bộ lọc dữ liệu export</label>
 
               <div>
-                <span className={fieldLabelCls}>Trạng thái</span>
+                <span className={popoverLabelCls}>Trạng thái</span>
                 <div className="relative">
                   <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả trạng thái</option>
@@ -117,7 +129,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
 
               <div>
-                <span className={fieldLabelCls}>Danh mục</span>
+                <span className={popoverLabelCls}>Danh mục</span>
                 <div className="relative">
                   <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả danh mục</option>
@@ -130,7 +142,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
 
               <div>
-                <span className={fieldLabelCls}>Chất liệu</span>
+                <span className={popoverLabelCls}>Chất liệu</span>
                 <div className="relative">
                   <select value={materialId} onChange={(e) => setMaterialId(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả chất liệu</option>
@@ -143,7 +155,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
 
               <div>
-                <span className={fieldLabelCls}>Khoảng thời gian</span>
+                <span className={popoverLabelCls}>Khoảng thời gian</span>
                 <div className="relative">
                   <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className={selectCls}>
                     <option value="ALL">Tất cả thời gian</option>
@@ -156,7 +168,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               </div>
 
               <div>
-                <span className={fieldLabelCls}>Khoảng ngày tùy chọn</span>
+                <span className={popoverLabelCls}>Khoảng ngày tùy chọn</span>
                 <div className="flex items-center gap-[6px]">
                   <div className="relative flex-1 min-w-0">
                     <Calendar size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
@@ -165,7 +177,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                       value={startDate}
                       max={endDate || undefined}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="form-control pl-[32px]"
+                      className={clsx(formControlCls, '!pl-[32px]')}
                     />
                   </div>
                   <span className="text-[11px] font-bold text-faint">đến</span>
@@ -176,7 +188,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                       value={endDate}
                       min={startDate || undefined}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="form-control pl-[32px]"
+                      className={clsx(formControlCls, '!pl-[32px]')}
                     />
                   </div>
                 </div>
@@ -186,7 +198,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             {/* Cột phải — chọn cột export */}
             <div className={panelCls}>
               <div className="flex justify-between items-center">
-                <label className="form-label">Chọn cột export</label>
+                <label className={formLabelCls}>Chọn cột export</label>
                 <button type="button" onClick={toggleAll} className="bg-transparent border-0 text-primary text-[11.5px] font-bold cursor-pointer">
                   {allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                 </button>
@@ -207,11 +219,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </div>
         </div>
 
-        <div className="modal-footer shrink-0">
-          <button type="button" className="tool-btn" onClick={onClose}>Hủy</button>
+        <div className={clsx(modalFooterCls, 'shrink-0')}>
+          <button type="button" className={toolBtnCls} onClick={onClose}>Hủy</button>
           <button
             type="button"
-            className="btn-insp btn-insp-primary w-auto py-[9px] px-[20px]"
+            className={clsx(btnInspPrimaryCls, '!w-auto !py-[9px] !px-[20px]')}
             onClick={handleExport}
             disabled={exporting}
           >

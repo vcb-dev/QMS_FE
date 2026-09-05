@@ -7,6 +7,14 @@ import { formatCurrency, formatDuration } from '../utils/currency';
 import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { getPrimaryOption } from '../utils/quoteOption';
+import {
+  statusPillCls,
+  statusPillNewCls,
+  statusPillProcessCls,
+  statusPillDoneCls,
+  statusPillRejectCls,
+  quoteChipCls,
+} from '../styles/classNames';
 
 // Các field dưới trùng nguyên xi kiểu dữ liệu với RequestsPageProps (types/index.ts) — Pick thẳng
 // thay vì khai tay lại. 3 field còn lại khai riêng vì lệch với nguồn: onSelect khác tên onSelectReq,
@@ -76,7 +84,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   }, [isDragging]);
 
   // Chỉ Order cần cột thiết yếu (mã, tên, ảnh, chất liệu, loại sản phẩm, thời gian,
-  // trạng thái, số đo, bộ phận, giá, VAT) — Sale và Admin xem đủ cột như cũ, thứ tự cột giữ nguyên.
+  // trạng thái, số đo, bộ phận, giá, VAT). Sale và Admin xem đủ mọi cột.
   const isCompactView = currentRole === 'ORDER';
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
@@ -248,14 +256,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   // Chất liệu nhiều hơn 1: chỉ hiện cái đầu + "...", bấm vào xổ dọc xuống dưới (không tràn ngang)
   const MaterialsCell: React.FC<{ materials: string[] }> = ({ materials }) => {
     const [expanded, setExpanded] = useState(false);
-    const chipCls = 'bg-[#f1f5f9] text-[#334155] py-[3px] px-[7px] rounded-[6px] text-[11px] font-semibold inline-block';
 
     if (materials.length === 0) {
-      return <span className={chipCls}>---</span>;
+      return <span className={quoteChipCls}>---</span>;
     }
 
     if (materials.length === 1) {
-      return <span className={chipCls}>{materials[0]}</span>;
+      return <span className={quoteChipCls}>{materials[0]}</span>;
     }
 
     if (!expanded) {
@@ -266,7 +273,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           className="inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer"
           title="Bấm để xem tất cả chất liệu"
         >
-          <span className={chipCls}>{materials[0]}</span>
+          <span className={quoteChipCls}>{materials[0]}</span>
           <span className="text-faint font-extrabold text-[13px]">...</span>
         </button>
       );
@@ -279,7 +286,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
         title="Bấm để thu gọn"
       >
         {materials.map((m, idx) => (
-          <span key={idx} className={chipCls}>{m}</span>
+          <span key={idx} className={quoteChipCls}>{m}</span>
         ))}
       </div>
     );
@@ -336,42 +343,42 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       switch (r.status) {
         case 'PENDING':
           return (
-            <span className="status-pill new">
+            <span className={clsx(statusPillCls, statusPillNewCls)}>
               <FilePlus size={13} color="#1d4ed8" /> Yêu cầu mới
             </span>
           );
         case 'PROCESSING':
           return (
-            <span className="status-pill process">
+            <span className={clsx(statusPillCls, statusPillProcessCls)}>
               <Clock size={13} color="#b45309" /> Đang xử lý
             </span>
           );
         case 'QUOTED':
           return (
-            <span className="status-pill done">
+            <span className={clsx(statusPillCls, statusPillDoneCls)}>
               <CheckCircle size={13} color="#15803d" /> Đã báo giá
             </span>
           );
         case 'REJECTED':
           return (
-            <span className="status-pill reject">
+            <span className={clsx(statusPillCls, statusPillRejectCls)}>
               <XCircle size={13} color="#be123c" /> Từ chối
             </span>
           );
         case 'NEED_MORE_INFO':
           return (
-            <span className="status-pill process bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]">
+            <span className={clsx(statusPillCls, 'bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]')}>
               <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
             </span>
           );
         case 'CLOSED':
           return (
-            <span className="status-pill closed bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]">
+            <span className={clsx(statusPillCls, 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]')}>
               <Award size={13} color="#6d28d9" /> Đã chốt
             </span>
           );
         default:
-          return <span className="status-pill new">{r.status}</span>;
+          return <span className={clsx(statusPillCls, statusPillNewCls)}>{r.status}</span>;
       }
     }
 
@@ -401,7 +408,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
       if (currentRole === 'ORDER' && !isAssignedToCurrentPricing) {
         return (
-          <span className="status-pill process" title="Yêu cầu đang do nhân sự Order khác xử lý">
+          <span className={clsx(statusPillCls, statusPillProcessCls)} title="Yêu cầu đang do nhân sự Order khác xử lý">
             <Clock size={13} color="#b45309" /> Đang xử lý
           </span>
         );
@@ -427,7 +434,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'NEED_MORE_INFO') {
       return (
-        <span className="status-pill process bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]">
+        <span className={clsx(statusPillCls, 'bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]')}>
           <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
         </span>
       );
@@ -435,7 +442,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'QUOTED') {
       return (
-        <span className="status-pill done" title="Trạng thái hoàn tất">
+        <span className={clsx(statusPillCls, statusPillDoneCls)} title="Trạng thái hoàn tất">
           <CheckCircle size={13} color="#15803d" /> Đã báo giá
         </span>
       );
@@ -443,7 +450,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'CLOSED') {
       return (
-        <span className="status-pill closed bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]" title="Khách đã chốt mua">
+        <span className={clsx(statusPillCls, 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]')} title="Khách đã chốt mua">
           <Award size={13} color="#6d28d9" /> Đã chốt
         </span>
       );
@@ -451,18 +458,18 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
     if (r.status === 'REJECTED') {
       return (
-        <span className="status-pill reject" title="Trạng thái từ chối">
+        <span className={clsx(statusPillCls, statusPillRejectCls)} title="Trạng thái từ chối">
           <XCircle size={13} color="#be123c" /> Từ chối hẳn
         </span>
       );
     }
 
-    return <span className="status-pill new">{r.status}</span>;
+    return <span className={clsx(statusPillCls, statusPillNewCls)}>{r.status}</span>;
   };
 
   return (
-    <div className="table-scroll-wrapper">
-      <table className="quote-table">
+    <div className="w-full overflow-x-auto border border-border rounded-[10px]">
+      <table className="w-full min-w-[1500px] border-collapse text-[12.5px] [&_th]:text-left [&_th]:py-[6px] [&_th]:px-[10px] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:py-[6px] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]">
         <thead>
           <tr>
             <th>Mã Hỏi Giá</th>
@@ -528,7 +535,10 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             return (
               <tr
                 key={r.id}
-                className={isSelected ? 'selected' : ''}
+                className={clsx(
+                  isSelected && '!bg-[#eff6ff]',
+                  isRejected && '!bg-[#fff1f2] hover:!bg-[#ffe4e6] [&_td]:!border-[#fecdd3]',
+                )}
                 onClick={() => onSelect(r.id)}
               >
                 <td><strong className="font-mono text-[12px] text-[#1e293b]">{r.code || r.id}</strong></td>
@@ -555,7 +565,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   <div className="relative inline-block">
                     <img
                       src={r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE}
-                      className="thumb-img cursor-zoom-in"
+                      className="w-[30px] h-[30px] rounded-[6px] object-cover border border-border cursor-zoom-in"
                       alt="SP"
                       onClick={(e) => {
                         e.stopPropagation();

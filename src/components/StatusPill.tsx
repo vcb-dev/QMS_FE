@@ -1,6 +1,8 @@
 import React from 'react';
+import { clsx } from 'clsx';
 import { FilePlus, Clock, CheckCircle, XCircle, RotateCcw, Award } from 'lucide-react';
 import { STATUS_BADGE_META } from '../constants';
+import { statusPillCls, statusPillNewCls } from '../styles/classNames';
 
 const STATUS_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   PENDING: FilePlus,
@@ -27,12 +29,12 @@ export const StatusPill: React.FC<StatusPillProps> = ({ status, label, iconSize 
   const Icon = STATUS_ICONS[status];
 
   if (!meta) {
-    return <span className="status-pill new" title={title}>{label}</span>;
+    return <span className={clsx(statusPillCls, statusPillNewCls)} title={title}>{label}</span>;
   }
 
   return (
     <span
-      className="status-pill border border-solid"
+      className={clsx(statusPillCls, 'border border-solid')}
       title={title}
       // động — giữ inline
       style={{

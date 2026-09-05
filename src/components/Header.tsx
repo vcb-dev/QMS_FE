@@ -3,13 +3,23 @@ import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { Role, User, QuoteRequest, HeaderSearchProduct } from '../types';
-import { LogOut, User as UserIcon, ShieldCheck, Bell, X, Search, ChevronRight } from 'lucide-react';
+import { LogOut, User as UserIcon, ShieldCheck, X, Search, ChevronRight } from 'lucide-react';
 import { fetchQuoteRequests } from '../services/api';
 import { StatusPill } from './StatusPill';
 import { STATUS_BADGE_META } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { UserAvatar } from './UserAvatar';
+import {
+  modalBackdropCls,
+  modalCardCls,
+  modalHeaderCls,
+  modalBodyCls,
+  modalFooterCls,
+  modalCloseIconBtnCls,
+  btnInspPrimaryCls,
+  dropdownItemHoverCls,
+} from '../styles/classNames';
 
 const SEARCH_SECTION_LIMIT = 5;
 
@@ -161,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
   const productSection = productResults.slice(0, SEARCH_SECTION_LIMIT);
 
   return (
-    <header className="titlebar relative bg-surface border-b border-border h-[64px] py-0 px-[24px] box-border flex items-center justify-end">
+    <header className="relative bg-white text-[#0f172a] border-b border-border h-[64px] py-0 px-[24px] box-border flex items-center justify-end select-none transition-all duration-300">
 
       {/* Search tổng — chỉ hiện ở Tổng Quan, canh giữa header. Gộp 2 mục: Yêu Cầu (mã đơn/tên
           khách hàng) và Sản Phẩm (danh mục/chất liệu đã báo giá) từ cùng 1 kết quả search. */}
@@ -207,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({
                       key={r.id}
                       type="button"
                       onClick={() => handleSelectSearchResult(r.id)}
-                      className="dropdown-item-hover w-full flex items-center justify-between gap-[10px] py-[10px] px-[12px] rounded-[8px] border-0 bg-transparent cursor-pointer text-left"
+                      className={clsx('w-full flex items-center justify-between gap-[10px] py-[10px] px-[12px] rounded-[8px] border-0 bg-transparent cursor-pointer text-left', dropdownItemHoverCls)}
                     >
                       <div className="min-w-0">
                         <div className="text-[12.5px] font-extrabold text-[#0f172a]">{r.code}</div>
@@ -224,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={handleViewMoreRequests}
-                    className="dropdown-item-hover w-full flex items-center justify-center gap-[4px] py-[8px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#b45309] text-[11.5px] font-bold cursor-pointer"
+                    className={clsx('w-full flex items-center justify-center gap-[4px] py-[8px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#b45309] text-[11.5px] font-bold cursor-pointer', dropdownItemHoverCls)}
                   >
                     Xem thêm yêu cầu <ChevronRight size={13} />
                   </button>
@@ -246,7 +256,7 @@ export const Header: React.FC<HeaderProps> = ({
                       key={p.key}
                       type="button"
                       onClick={() => handleSelectProductResult(p.productName)}
-                      className="dropdown-item-hover w-full flex items-center justify-between gap-[10px] py-[10px] px-[12px] rounded-[8px] border-0 bg-transparent cursor-pointer text-left"
+                      className={clsx('w-full flex items-center justify-between gap-[10px] py-[10px] px-[12px] rounded-[8px] border-0 bg-transparent cursor-pointer text-left', dropdownItemHoverCls)}
                     >
                       <div className="min-w-0 text-[12.5px] font-bold text-[#0f172a] whitespace-nowrap overflow-hidden text-ellipsis">
                         {p.productName}
@@ -262,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={handleViewMoreProducts}
-                    className="dropdown-item-hover w-full flex items-center justify-center gap-[4px] py-[8px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#b45309] text-[11.5px] font-bold cursor-pointer"
+                    className={clsx('w-full flex items-center justify-center gap-[4px] py-[8px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#b45309] text-[11.5px] font-bold cursor-pointer', dropdownItemHoverCls)}
                   >
                     Xem thêm sản phẩm <ChevronRight size={13} />
                   </button>
@@ -276,16 +286,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Action Bar */}
       <div className="flex items-center gap-[14px]">
-        {/* Bell notification button */}
-        <button
-          type="button"
-          className="bg-[#f8fafc] border border-border rounded-full w-[36px] h-[36px] flex items-center justify-center cursor-pointer relative text-[#475569]"
-          title="Notifications"
-        >
-          <Bell size={17} />
-          <span className="absolute top-[7px] right-[7px] w-[7px] h-[7px] bg-[#ef4444] rounded-full border-[1.5px] border-surface" />
-        </button>
-
         {/* Profile Avatar Dropdown Trigger */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -309,7 +309,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Popup Dropdown Menu */}
           {isDropdownOpen && (
             <div
-              className="absolute top-[calc(100%+8px)] right-0 w-[230px] bg-surface border border-border rounded-[12px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12),0_8px_10px_-6px_rgba(0,0,0,0.05)] p-[8px] z-[1000] animate-[fadeIn_0.15s_ease-out]"
+              className="absolute top-[calc(100%+8px)] right-0 w-[230px] bg-surface border border-border rounded-[12px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12),0_8px_10px_-6px_rgba(0,0,0,0.05)] p-[8px] z-[1000] animate-fade-in"
             >
               {/* User Summary Header */}
               <div className="p-[10px] bg-[#f8fafc] rounded-[8px] mb-[6px]">
@@ -328,7 +328,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsDropdownOpen(false);
                   setShowProfileModal(true);
                 }}
-                className="dropdown-item-hover w-full flex items-center gap-[10px] py-[9px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#334155] text-[12.5px] font-semibold cursor-pointer text-left"
+                className={clsx('w-full flex items-center gap-[10px] py-[9px] px-[12px] rounded-[8px] border-0 bg-transparent text-[#334155] text-[12.5px] font-semibold cursor-pointer text-left', dropdownItemHoverCls)}
               >
                 <UserIcon size={15} color="#2563eb" /> Hồ Sơ Cá Nhân
               </button>
@@ -353,15 +353,15 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* User Profile Modal */}
       {showProfileModal && (
-        <div className="modal-backdrop" onClick={() => setShowProfileModal(false)}>
-          <div className="modal-card max-w-[400px]" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className={modalBackdropCls} onClick={() => setShowProfileModal(false)}>
+          <div className={clsx(modalCardCls, '!max-w-[400px]')} onClick={(e) => e.stopPropagation()}>
+            <div className={modalHeaderCls}>
               <h3 className="m-0 text-[16px] font-extrabold flex items-center gap-[8px]">
                 <UserIcon size={18} color="#2563eb" /> Thông Tin Tài Khoản
               </h3>
-              <button className="icon-btn" onClick={() => setShowProfileModal(false)}><X size={18} /></button>
+              <button className={modalCloseIconBtnCls} onClick={() => setShowProfileModal(false)}><X size={18} /></button>
             </div>
-            <div className="modal-body flex flex-col gap-[12px] text-[13px]">
+            <div className={clsx(modalBodyCls, 'flex flex-col !gap-[12px] text-[13px]')}>
               <div className="text-center py-[14px] px-0">
                 <UserAvatar
                   src={user.avatar}
@@ -389,8 +389,8 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
             </div>
-            <div className="modal-footer justify-end">
-              <button className="btn-insp btn-insp-primary w-auto py-[8px] px-[20px]" onClick={() => setShowProfileModal(false)}>
+            <div className={modalFooterCls}>
+              <button className={clsx(btnInspPrimaryCls, '!w-auto !py-[8px] !px-[20px]')} onClick={() => setShowProfileModal(false)}>
                 Đóng
               </button>
             </div>

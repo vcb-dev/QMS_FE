@@ -29,8 +29,8 @@ interface StatCardProps {
   deltaLabel?: string;
 }
 
-// Card "icon + nhãn nhỏ chữ hoa / số liệu lớn" dùng chung — StaffPage và CustomersPage trước đây
-// tự viết lặp lại y hệt (kể cả 2 biến thể màu default/success), chỉ khác nội dung.
+// Card "icon + nhãn nhỏ chữ hoa / số liệu lớn" dùng chung cho StaffPage và CustomersPage
+// (2 biến thể màu: default / success).
 export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, tone = 'default', deltaPct, deltaLabel = 'so với tháng trước' }) => {
   const t = TONE_CLASSES[tone];
   const hasDelta = deltaPct !== undefined;

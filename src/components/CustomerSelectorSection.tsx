@@ -2,8 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
 import { UserPlus, Users, Search, Check } from 'lucide-react';
 import type { Customer } from '../types';
-
-const subLabelCls = 'text-[11px] font-bold text-[#334155]';
+import {
+  formGroupCls,
+  formLabelCls,
+  formControlCls,
+  dropdownItemHoverCls,
+  subLabelCls,
+} from '../styles/classNames';
 
 interface CustomerSelectorSectionProps {
   isNewCustomerMode: boolean;
@@ -77,9 +82,9 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
   }, []);
 
   return (
-    <div className="form-group">
+    <div className={formGroupCls}>
       <div className="flex items-center justify-between mb-[6px]">
-        <label className="form-label">
+        <label className={formLabelCls}>
           {isNewCustomerMode ? 'Thông Tin Khách Hàng Mới' : 'Thông Tin Khách Hàng'}
         </label>
         {isNewCustomerMode && (
@@ -99,7 +104,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             <Search size={14} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
             <input
               type="text"
-              className="form-control pl-[30px] text-[12px]"
+              className={clsx(formControlCls, '!pl-[30px] !text-[12px]')}
               placeholder="Gõ tìm tên hoặc SĐT khách hàng..."
               value={customerSearch}
               onChange={(e) => {
@@ -119,7 +124,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                   <div className="p-[10px] text-[12px] text-faint">Đang tìm...</div>
                 )}
                 {!customerSearchLoading && customerList.length === 0 && (
-                  <div className="p-[10px] text-[12px] text-faint">Không tìm thấy khách hàng nào</div>
+                  <div className="py-[6px] px-[10px] text-[12px] text-faint">Không tìm thấy khách hàng nào</div>
                 )}
                 {!customerSearchLoading && customerList.map((cust) => {
                   const fullAddr = [cust.address, cust.ward?.name, cust.province?.name].filter(Boolean).join(', ');
@@ -134,7 +139,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                       }}
                       className={clsx(
                         'w-full flex items-center justify-between gap-[8px] py-[8px] px-[10px] rounded-[8px] border-0 text-[#0f172a] text-[12px] cursor-pointer text-left',
-                        isSelected ? 'bg-[#eff6ff]' : 'bg-transparent dropdown-item-hover',
+                        isSelected ? 'bg-[#eff6ff]' : clsx('bg-transparent', dropdownItemHoverCls),
                       )}
                     >
                       <span>
@@ -146,6 +151,24 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                     </button>
                   );
                 })}
+                {/* Luôn có sẵn dù đã tìm ra khách trùng tên — trường hợp trùng tên nhưng là 2 khách khác nhau */}
+                {!customerSearchLoading && (
+                  <div className={clsx('p-[6px]', customerList.length > 0 && 'border-t border-border mt-[2px] pt-[8px]')}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleStartNewCustomerFromSearch();
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center justify-center gap-[6px] py-[8px] px-[10px] rounded-[8px] border-[1.5px] border-dashed border-[#10b981] bg-[#f0fdf4] text-[#15803d] text-[12px] font-bold cursor-pointer"
+                    >
+                      <UserPlus size={13} />
+                      {customerSearch.trim()
+                        ? `Tạo khách hàng mới "${customerSearch.trim()}"`
+                        : 'Tạo khách hàng mới'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -176,7 +199,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
               <label className={subLabelCls}>Tên Khách Hàng</label>
               <input
                 type="text"
-                className="form-control"
+                className={formControlCls}
                 placeholder="Để trống sẽ lưu là &quot;Khách lẻ&quot;"
                 value={newCustomerName}
                 maxLength={100}
@@ -187,7 +210,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
               <label className={subLabelCls}>Số Điện Thoại</label>
               <input
                 type="text"
-                className="form-control"
+                className={formControlCls}
                 placeholder="Ví dụ: 0987654321"
                 value={newCustomerPhone}
                 maxLength={15}
@@ -200,7 +223,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             <div>
               <label className={subLabelCls}>Tỉnh / Thành Phố</label>
               <select
-                className="form-control"
+                className={formControlCls}
                 value={newCustomerProvince}
                 onChange={(e) => setNewCustomerProvince(e.target.value)}
               >
@@ -217,7 +240,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
               <label className={subLabelCls}>Xã / Phường / Huyện</label>
               {wards.length > 0 ? (
                 <select
-                  className="form-control"
+                  className={formControlCls}
                   value={newCustomerWard}
                   onChange={(e) => setNewCustomerWard(e.target.value)}
                   disabled={!newCustomerProvince}
@@ -232,7 +255,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
               ) : (
                 <input
                   type="text"
-                  className="form-control"
+                  className={formControlCls}
                   placeholder={!newCustomerProvince ? 'Chọn Tỉnh/TP trước...' : 'Nhập Phường / Xã...'}
                   value={newCustomerWard}
                   maxLength={100}
@@ -247,7 +270,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             <label className={subLabelCls}>Địa Chỉ Cụ Thể (Số nhà, tên đường...)</label>
             <input
               type="text"
-              className="form-control"
+              className={formControlCls}
               placeholder="Ví dụ: 123 Nguyễn Trãi"
               value={newCustomerAddress}
               maxLength={200}

@@ -16,9 +16,16 @@ import {
 } from '../services/api';
 
 // `listDataEnabled=false` (khi đang ở trang KHÔNG đọc `requests[]` — Thư viện/Máy tính giá/Nhân
-// viên/Khách hàng/Cấu hình giá): vẫn fetch để lấy `counts` cho Sidebar nhưng kéo bản NHẸ (limit 1
-// + lite) thay vì hydrate 8 dòng kèm option/chất liệu/đá rồi vứt.
-export function useQuoteRequests(currentUser: User | null, currentRole: Role, listDataEnabled: boolean = true) {
+// viên/Khách hàng/Cấu hình giá): vẫn fetch để lấy `counts` nhưng kéo bản NHẸ (limit 1 + lite)
+// thay vì hydrate 8 dòng kèm option/chất liệu/đá rồi vứt.
+// `countsEnabled=false`: không cần cả counts (VD Tổng quan của ADMIN — mọi số liệu lấy từ /stats do
+// DashboardPage tự gọi) -> không gọi request đó.
+export function useQuoteRequests(
+  currentUser: User | null,
+  currentRole: Role,
+  listDataEnabled: boolean = true,
+  masterDataEnabled: boolean = true,
+) {
   // Multi-Filter State
   const [currentFilter, setCurrentFilter] = useState<string>('OVERVIEW');
   const [statusSubFilter, setStatusSubFilter] = useState<string>('ALL');
@@ -110,11 +117,10 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
     if (!currentUser) return;
 
-    // Trang KHÔNG đọc requests[] (Cấu hình giá / Thư viện / Nhân viên / Khách hàng): chỉ cần
-    // `counts` cho Sidebar, mà counts không đổi khi chỉ xem sang trang khác. Bỏ qua fetch trừ khi
-    // needCountsRef bật (lần đầu, hoặc sau mutation tạo/duyệt/chốt đơn) — tiết kiệm ~0.5-1s mỗi lần
-    // điều hướng tới các trang này (BE `findAll` vẫn chạy groupBy + count dù limit=1).
-    if (!listDataEnabled && !needCountsRef.current) return;
+    // `counts` chỉ trang Danh sách + Tổng quan SALE dùng (đều listDataEnabled=true). Trang khác
+    // (Cấu hình thông báo / Cấu hình giá / Thư viện / Nhân viên / Khách hàng / Máy tính giá) không
+    // đọc requests[] lẫn counts -> không gọi gì cả.
+    if (!listDataEnabled) return;
 
     const myRequestId = ++requestIdRef.current;
 
@@ -210,17 +216,21 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
     }
   };
 
-  // Load Master Data 1 lần khi login
+  // Master data (danh mục + chất liệu) chỉ cần cho: dropdown lọc ở Danh sách + Thư viện, và modal
+  // tạo/sửa đơn. KHÔNG tải lúc login — chờ tới đúng ngữ cảnh, tránh giành pool kết nối với các
+  // request khác lúc mới vào. (fetchMasterData có cache nên gọi lại rẻ.)
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser?.id && (masterDataEnabled || isCreateOpen)) {
       loadMasterDataOnce();
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, masterDataEnabled, isCreateOpen]);
 
-  // Load danh sách: 0ms delay với Tab/Filter, 300ms debounce với search text
+  // Load danh sách: 50ms gộp với Tab/Filter, 300ms debounce với search text. 50ms để 1 thao tác
+  // đổi nhiều state cùng lúc (VD vào /requests: cờ route đổi + handleTabChange reset filter) chỉ
+  // bắn 1 request thay vì 2.
   useEffect(() => {
-    if (!currentUser) return;
-    const delay = searchTerm ? 300 : 0;
+    if (!currentUser?.id) return;
+    const delay = searchTerm ? 300 : 50;
     const timer = setTimeout(() => {
       loadData(true);
     }, delay);
@@ -243,7 +253,7 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
   ]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
     if (requests.length > 0) {
       const urlId = getInitialSelectedId();
       if (urlId && (selectedId === urlId || !selectedId)) {
@@ -256,6 +266,9 @@ export function useQuoteRequests(currentUser: User | null, currentRole: Role, li
         setSelectedId(requests[0].id);
       }
     }
+    // requests/selectedId cố ý không đưa vào deps: effect này tự gọi setSelectedId nên thêm
+    // selectedId sẽ khiến nó chạy lặp; requests đã được đồng bộ lại selectedId ngay trong loadData().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     currentUser?.id,
     currentPage,

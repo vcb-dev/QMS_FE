@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
+import {
+  fbBtnCls,
+  selectArrowCls,
+  selectCls,
+  dateInputIconCls,
+  popoverLabelCls,
+} from '../styles/classNames';
 import { Search, Users, TrendingUp, ChevronDown, ChevronUp, MapPin, Phone, Calendar, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { fetchCustomerStats, fetchCustomerMonthComparison, fetchQuoteRequests, fetchProvinces, getAllUsersApi } from '../services/api';
 import type { CustomerStatRow, SortMode, QuoteRequest, StaffUser, CustomerMonthComparisonResponse } from '../types';
@@ -7,12 +14,6 @@ import { formatCurrency } from '../utils/currency';
 import { Pagination } from '../components/Pagination';
 import { STATUS_BADGE_META as STATUS_META } from '../constants';
 import { StatCard } from '../components/StatCard';
-
-// Cùng phong cách popover "Bộ lọc" như FilterBar.tsx (trang Danh Sách Yêu Cầu)
-const selectArrowCls = 'absolute right-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none';
-const selectCls = 'appearance-none w-full bg-page border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[30px] pb-[8px] pl-[12px] text-[12.5px] font-semibold text-[#334155] outline-none cursor-pointer box-border';
-const dateInputCls = 'w-full bg-page border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[10px] pb-[7px] pl-[32px] text-[12px] font-semibold text-[#334155] outline-none box-border';
-const popoverLabelCls = 'text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px] mb-[5px] block';
 
 export const CustomersPage: React.FC = () => {
   const [rows, setRows] = useState<CustomerStatRow[]>([]);
@@ -206,7 +207,7 @@ export const CustomersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setPanelOpen((v) => !v)}
-                className="fb-btn inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]"
+                className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]')}
               >
                 <SlidersHorizontal size={14} />
                 Bộ lọc
@@ -281,7 +282,7 @@ export const CustomersPage: React.FC = () => {
                           value={startDateFilter}
                           max={endDateFilter || undefined}
                           onChange={(e) => { setStartDateFilter(e.target.value); setTimeRangeFilter('ALL'); }}
-                          className={dateInputCls}
+                          className={dateInputIconCls}
                         />
                       </div>
                       <div className="relative">
@@ -291,7 +292,7 @@ export const CustomersPage: React.FC = () => {
                           value={endDateFilter}
                           min={startDateFilter || undefined}
                           onChange={(e) => { setEndDateFilter(e.target.value); setTimeRangeFilter('ALL'); }}
-                          className={dateInputCls}
+                          className={dateInputIconCls}
                         />
                       </div>
                     </div>
@@ -306,7 +307,7 @@ export const CustomersPage: React.FC = () => {
               onClick={handleResetExtraFilters}
               disabled={!isExtraFiltered}
               title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-              className="fb-btn flex items-center gap-[4px] py-[8px] px-[14px] text-[12px] shrink-0"
+              className={clsx(fbBtnCls, 'flex items-center gap-[4px] py-[8px] px-[14px] text-[12px] shrink-0')}
             >
               <RotateCcw size={13} /> Xóa bộ lọc
             </button>

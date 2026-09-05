@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { clsx } from 'clsx';
+import {
+  fbBtnCls,
+  popoverSelectCls,
+  selectArrowCls,
+  popoverLabelCls,
+  dateInputCls,
+} from '../styles/classNames';
 import { useSearchParams } from 'react-router-dom';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard, StaffUser } from '../types';
 import { Search, SlidersHorizontal, RotateCcw, ChevronDown } from 'lucide-react';
@@ -8,19 +16,6 @@ import { ProductSpecModal } from '../components/ProductSpecModal';
 import { displayPrice, formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProducts, getAllUsersApi } from '../services/api';
 
-// Cùng phong cách popover "Bộ lọc" như FilterBar.tsx (trang Danh Sách Yêu Cầu)
-const popoverSelectCls =
-  'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[8px] pr-[30px] pl-[12px] text-[12.5px] font-semibold text-[#0f172a] outline-none cursor-pointer w-full appearance-none box-border';
-
-const selectArrowCls =
-  'absolute right-[10px] top-1/2 -translate-y-1/2 text-[#64748b] pointer-events-none';
-
-const popoverLabelCls =
-  'text-[10.5px] font-extrabold text-[#94a3b8] uppercase tracking-[0.4px] mb-[5px] block';
-
-const dateInputCls =
-  'w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none box-border';
-
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   categories,
   materials,
@@ -28,7 +23,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   initialTimeRange,
 }) => {
   // Seed từ khóa ban đầu từ URL (?q=...) khi nhảy tới đây từ "Xem thêm" ở search tổng Header —
-  // chỉ đọc 1 lần lúc mount, sau đó searchTerm là state nội bộ bình thường như cũ.
+  // chỉ đọc 1 lần lúc mount, sau đó searchTerm là state nội bộ bình thường.
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
   const [selectedCat, setSelectedCat] = useState('ALL');
@@ -52,6 +47,8 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Đếm request để bỏ qua response trả về trễ (race condition khi đổi lọc/trang liên tục)
+  const requestIdRef = useRef(0);
 
   // Nút "Bộ Lọc" gom danh mục/chất liệu/sale/order/thời gian vào popover — cùng cơ chế với
   // FilterBar.tsx (trang Danh Sách Yêu Cầu) và CustomersPage.tsx.
@@ -114,7 +111,8 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
   // Luôn lấy giá SỐNG (tính theo giá kim loại/đá hiện tại) — BE tự tính lại mỗi lần gọi, không
   // còn phụ thuộc nút bấm tay.
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    const myRequestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const res = await fetchLibraryProducts({
@@ -130,20 +128,25 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         page: currentPage,
         limit: pageSize,
       });
+      if (myRequestId !== requestIdRef.current) return;
       setProducts(res.data || []);
       setTotalItems(res.meta?.total || 0);
       setTotalPages(res.meta?.totalPages || 1);
       setError(null);
     } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách sản phẩm');
+      if (myRequestId === requestIdRef.current) {
+        setError(err.message || 'Không thể tải danh sách sản phẩm');
+      }
     } finally {
-      setLoading(false);
+      if (myRequestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [debouncedSearch, selectedCat, selectedMat, selectedSale, selectedOrder, sortMode, timeRange, startDate, endDate, currentPage, pageSize]);
 
   useEffect(() => {
     loadData();
-  }, [debouncedSearch, selectedCat, selectedMat, selectedSale, selectedOrder, sortMode, timeRange, startDate, endDate, currentPage, pageSize]);
+  }, [loadData]);
 
   return (
     <div className="flex flex-col gap-[20px] pb-[30px]">
@@ -179,7 +182,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             <button
               type="button"
               onClick={() => setPanelOpen((v) => !v)}
-              className="fb-btn inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]"
+              className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]')}
             >
               <SlidersHorizontal size={14} />
               Bộ lọc
@@ -296,7 +299,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             onClick={handleResetExtraFilters}
             disabled={!isExtraFiltered}
             title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-            className="fb-btn flex items-center gap-[4px] py-[8px] px-[14px] text-[12px] shrink-0"
+            className={clsx(fbBtnCls, 'flex items-center gap-[4px] py-[8px] px-[14px] text-[12px] shrink-0')}
           >
             <RotateCcw size={13} /> Xóa bộ lọc
           </button>
@@ -334,7 +337,8 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                 onClick={() => setDetailItem(item)}
                 className="bg-surface border border-border rounded-[14px] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-[transform_0.15s_ease,box-shadow_0.15s_ease] flex flex-col hover:-translate-y-[2px] hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)]"
               >
-                {/* Image Container */}
+                {/* Image Container — img absolute inset-0 để khung aspect-square giữ tỉ lệ vuông
+                    bất kể ảnh gốc dọc hay ngang. */}
                 <div className="relative w-full aspect-square bg-[#f8fafc]">
                   <img
                     src={imgUrl}
@@ -343,7 +347,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       e.currentTarget.onerror = null;
                       e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                     }}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                   {(sortMode === 'PRICE_DESC' || sortMode === 'MOST_QUOTED') && (
                     <span className="absolute top-[8px] left-[8px] bg-text text-surface text-[10px] font-extrabold py-[2px] px-[8px] rounded-[10px]">
@@ -436,6 +440,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
+            pageSizeOptions={UI_CONSTANTS.PRODUCT_LIBRARY.PAGE_SIZE_OPTIONS}
           />
         </div>
       )}

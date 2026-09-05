@@ -3,11 +3,15 @@ import { clsx } from 'clsx';
 import type { Material, ProductCategory, StatusCounts } from '../types';
 import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
-
-const selectArrowCls = 'absolute right-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none';
-const selectCls = 'appearance-none w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[30px] pb-[8px] pl-[12px] text-[12.5px] font-semibold text-[#334155] outline-none cursor-pointer box-border';
-const dateInputCls = 'w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[10px] pb-[7px] pl-[32px] text-[12px] font-semibold text-[#334155] outline-none box-border';
-const popoverLabelCls = 'text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px] mb-[5px] block';
+import {
+  fbBtnCls,
+  selectArrowCls,
+  selectCls,
+  dateInputIconCls,
+  popoverLabelCls,
+  fbSquareBaseCls,
+  fbSquareActiveCls,
+} from '../styles/classNames';
 
 const STATUS_SQUARES: { value: string; label: string; color: string; countKey: keyof StatusCounts }[] =
   STATUS_CHART_META.map((s) => ({ ...s, countKey: STATUS_COUNT_KEYS[s.value] as keyof StatusCounts }));
@@ -105,7 +109,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <button
           type="button"
           onClick={() => onStatusSubFilterChange('ALL')}
-          className={statusSubFilter === 'ALL' ? 'fb-square active' : 'fb-square'}
+          className={clsx(fbSquareBaseCls, statusSubFilter === 'ALL' && fbSquareActiveCls)}
         >
           <div className="text-[10.5px] font-bold text-muted uppercase tracking-[0.3px] mb-[2px]">
             Tất cả
@@ -122,7 +126,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               key={s.value}
               type="button"
               onClick={() => onStatusSubFilterChange(s.value)}
-              className={isActive ? 'fb-square active' : 'fb-square'}
+              className={clsx(fbSquareBaseCls, isActive && fbSquareActiveCls)}
             >
               <div className="text-[10.5px] font-bold text-muted uppercase tracking-[0.3px] mb-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
                 {s.label}
@@ -155,7 +159,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               type="button"
               onClick={() => setPanelOpen((v) => !v)}
-              className="fb-btn inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]"
+              className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] !py-[8px] !px-[14px] !text-[12.5px]')}
             >
               <SlidersHorizontal size={14} />
               Bộ lọc
@@ -279,7 +283,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         value={startDateFilter}
                         max={endDateFilter || undefined}
                         onChange={(e) => onStartDateChange?.(e.target.value)}
-                        className={dateInputCls}
+                        className={dateInputIconCls}
                       />
                     </div>
                     <div className="relative">
@@ -289,7 +293,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         value={endDateFilter}
                         min={startDateFilter || undefined}
                         onChange={(e) => onEndDateChange?.(e.target.value)}
-                        className={dateInputCls}
+                        className={dateInputIconCls}
                       />
                     </div>
                   </div>
@@ -303,7 +307,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="button"
             onClick={onResetFilters}
             disabled={!isFiltered}
-            className="fb-btn py-[8px] px-[14px] text-[12px] flex items-center gap-[4px] shrink-0"
+            className={clsx(fbBtnCls, '!py-[8px] !px-[14px] !text-[12px] flex items-center gap-[4px] shrink-0')}
             title={isFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
           >
             <RotateCcw size={13} /> Xóa bộ lọc

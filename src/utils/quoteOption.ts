@@ -36,7 +36,7 @@ export const getOptionLabel = (opt: QuoteOption, idx: number): string =>
   cleanOptionLabel(opt) || stripAppliedPct(opt.optionName) || `Phương án ${idx + 1}`;
 
 // Dòng tóm tắt "Chất liệu: X · KL: Y · Đá: Z" dưới nhãn phương án — dùng chung ở OptionCard
-// và MarkClosedModal (trước đây mỗi nơi tự tính riêng cùng 1 logic).
+// và MarkClosedModal.
 export const getOptionSummary = (opt: QuoteOption): string => {
   const optMaterial =
     opt.materials && opt.materials.length > 0

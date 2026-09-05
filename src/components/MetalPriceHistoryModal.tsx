@@ -6,8 +6,16 @@ import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { fetchBaseMetalHistory } from '../services/api';
-import type { BaseMetal, BaseMetalPriceHistoryItem } from '../types';
 import { formatCurrency } from '../utils/currency';
+import {
+  modalBackdropCls,
+  modalCardCls,
+  modalHeaderCls,
+  modalBodyCls,
+  dateInputNoFullCls,
+  metalThBaseCls,
+} from '../styles/classNames';
+import type { BaseMetal, BaseMetalPriceHistoryItem } from '../types';
 
 const TREND_UP = '#16a34a';
 const TREND_DOWN = '#dc2626';
@@ -25,8 +33,6 @@ interface MetalPriceHistoryModalProps {
   onClose: () => void;
   baseMetals: BaseMetal[];
 }
-
-const dateInputCls = 'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none';
 
 type QuickRange = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'ALL';
 
@@ -92,8 +98,8 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Chỉ xem 1 kim loại/lần — không còn chế độ "Tất cả" gộp chung, dễ nhìn xu hướng hơn là
-  // 3 đường chồng lên nhau. metalFilter luôn là 1 baseMetal.id cụ thể.
+  // Chỉ xem 1 kim loại/lần cho dễ nhìn xu hướng (không chồng 3 đường lên nhau).
+  // metalFilter luôn là 1 baseMetal.id cụ thể.
   const [metalFilter, setMetalFilter] = useState('');
   const [quickRange, setQuickRange] = useState<QuickRange | null>('THIS_MONTH');
   const [startDate, setStartDate] = useState(() => computeQuickRange('THIS_MONTH').start);
@@ -114,9 +120,8 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
     }
   }, [isOpen, baseMetals, metalFilter]);
 
-  // Gọi 1 lần cho CẢ 3 kim loại (bỏ baseMetalId, limit đủ lớn cho tổng 3 kim loại) thay vì gọi lại
-  // API mỗi lần đổi tab — trước đây đổi tab Vàng/Bạc/Bạch kim là phải chờ loading lại từ đầu.
-  // Lọc theo kim loại đang chọn làm ở client (filteredRows bên dưới).
+  // Gọi 1 lần cho CẢ 3 kim loại (bỏ baseMetalId, limit đủ lớn cho tổng 3 kim loại) để đổi tab
+  // Vàng/Bạc/Bạch kim không phải chờ load lại. Lọc theo kim loại đang chọn làm ở client (filteredRows bên dưới).
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
@@ -187,16 +192,14 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
 
   if (!isOpen) return null;
 
-  const thBaseCls = 'sticky top-0 bg-[#f8fafc] text-[10.5px] font-extrabold text-muted uppercase tracking-[0.3px]';
-
   // Render qua portal thẳng ra document.body — nếu để lồng trong cây trang bình thường thì
   // .page-transition (App.tsx, animation transform: translateY() fill-mode forwards) biến thành
   // containing block cho mọi phần tử position:fixed bên trong nó, khiến modal-backdrop "fixed"
   // bám theo trang bị cuộn thay vì bám màn hình thật — cuộn trang xuống rồi mở modal là bị lệch/xén.
   return createPortal(
-    <div className="modal-backdrop show" onClick={onClose}>
-      <div className="modal-card max-w-[880px] rounded-[20px] overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header shrink-0">
+    <div className={modalBackdropCls} onClick={onClose}>
+      <div className={clsx(modalCardCls, '!max-w-[880px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')} onClick={(e) => e.stopPropagation()}>
+        <div className={clsx(modalHeaderCls, 'shrink-0')}>
           <h2 className="flex items-center gap-[6px] m-0 text-[#0f172a]"><History size={18}/>Lịch Sử Giá Kim Loại</h2>
           <button onClick={onClose} className="bg-transparent border-0 text-muted cursor-pointer">
             <X size={20} />
@@ -227,7 +230,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
             value={startDate}
             max={endDate || undefined}
             onChange={(e) => { setStartDate(e.target.value); setQuickRange(null); }}
-            className={dateInputCls}
+            className={dateInputNoFullCls}
           />
           <span className="text-[11px] font-bold text-faint">đến</span>
           <input
@@ -235,7 +238,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
             value={endDate}
             min={startDate || undefined}
             onChange={(e) => { setEndDate(e.target.value); setQuickRange(null); }}
-            className={dateInputCls}
+            className={dateInputNoFullCls}
           />
 
           {quickRange !== 'THIS_MONTH' && (
@@ -325,7 +328,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
           </div>
         )}
 
-        <div className="modal-body flex-1 min-h-0 overflow-auto p-0 block">
+        <div className={clsx(modalBodyCls, 'flex-1 min-h-0 overflow-auto !p-0 block')}>
           {loading && <p className="text-[12.5px] text-muted p-[20px]">Đang tải...</p>}
           {error && <p className="text-[12.5px] text-[#dc2626] p-[20px]">{error}</p>}
           {!loading && !error && filteredRows.length === 0 && (
@@ -342,11 +345,11 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
               </colgroup>
               <thead>
                 <tr className="bg-[#f8fafc]">
-                  <th className={clsx(thBaseCls, 'text-left py-[10px] px-[20px]')}>Kim loại</th>
-                  <th className={clsx(thBaseCls, 'text-right py-[10px] px-[12px]')}>Giá</th>
-                  <th className={clsx(thBaseCls, 'text-right py-[10px] px-[12px]')}>Thay đổi</th>
-                  <th className={clsx(thBaseCls, 'text-left py-[10px] px-[12px]')}>Thời gian</th>
-                  <th className={clsx(thBaseCls, 'text-left py-[10px] px-[20px]')}>Người cập nhật</th>
+                  <th className={clsx(metalThBaseCls, 'text-left py-[10px] px-[20px]')}>Kim loại</th>
+                  <th className={clsx(metalThBaseCls, 'text-right py-[10px] px-[12px]')}>Giá</th>
+                  <th className={clsx(metalThBaseCls, 'text-right py-[10px] px-[12px]')}>Thay đổi</th>
+                  <th className={clsx(metalThBaseCls, 'text-left py-[10px] px-[12px]')}>Thời gian</th>
+                  <th className={clsx(metalThBaseCls, 'text-left py-[10px] px-[20px]')}>Người cập nhật</th>
                 </tr>
               </thead>
               <tbody>

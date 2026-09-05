@@ -23,7 +23,7 @@ export const tdCenterCls = 'py-[10px] px-[6px] text-center min-h-[38px] align-mi
 export const tableHeadRowCls = 'text-[#94a3b8] text-[10.5px] uppercase tracking-[0.04em] border-b border-[#e5e7eb]';
 export const modalCloseIconBtnCls = 'bg-transparent border-0 text-[#64748b] cursor-pointer';
 
-// ---- Modal shell (index.css .modal-*) ----
+// ---- Modal shell (.modal-*) ----
 export const modalBackdropCls =
   'fixed inset-0 w-screen h-screen bg-[rgba(15,23,42,0.65)] backdrop-blur-[5px] z-[1000] flex items-center justify-center p-[20px] opacity-100 pointer-events-auto max-[768px]:!p-[10px] max-[768px]:!items-end';
 export const modalCardCls =
@@ -37,7 +37,7 @@ export const modalFooterCls =
 export const modalGrid2ColCls =
   'grid grid-cols-2 gap-[20px] items-start max-[768px]:!grid-cols-1 max-[768px]:!gap-[14px]';
 
-// ---- Form primitives (index.css .form-*) ----
+// ---- Form primitives (.form-*) ----
 export const formGroupCls = 'flex flex-col gap-[6px]';
 export const formLabelCls = 'text-[12.5px] font-bold text-[#0f172a]';
 export const formReqCls = 'text-[#ef4444]';
@@ -68,3 +68,108 @@ export const fbBtnCls =
 
 // ---- Dropdown item hover (.dropdown-item-hover:hover) ----
 export const dropdownItemHoverCls = 'hover:!bg-[#f1f5f9] hover:!text-[#0f172a]';
+
+// ---- Select / Popover controls (ExportModal, FilterBar, CustomersPage, LibraryPage) ----
+export const selectCls =
+  'appearance-none w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[30px] pb-[8px] pl-[12px] text-[12.5px] font-semibold text-[#334155] outline-none cursor-pointer box-border';
+export const selectArrowCls =
+  'absolute right-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none';
+export const popoverLabelCls =
+  'text-[10.5px] font-extrabold text-faint uppercase tracking-[0.4px] mb-[5px] block';
+export const popoverSelectCls =
+  'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[8px] pr-[30px] pl-[12px] text-[12.5px] font-semibold text-[#0f172a] outline-none cursor-pointer w-full appearance-none box-border';
+
+// ---- Date inputs ----
+// dateInputIconCls: w-full có thụt lề pl-[32px] chừa chỗ cho icon lịch (FilterBar, CustomersPage)
+export const dateInputIconCls =
+  'w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[10px] pb-[7px] pl-[32px] text-[12px] font-semibold text-[#334155] outline-none box-border';
+// dateInputCls: w-full tiêu chuẩn không icon (LibraryPage)
+export const dateInputCls =
+  'w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none box-border';
+// dateInputNoFullCls: inline width, py-[7px] (MetalPriceHistoryModal)
+export const dateInputNoFullCls =
+  'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none';
+// dateInputPy6Cls: inline width, py-[6px] (StaffPage)
+export const dateInputPy6Cls =
+  'bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] px-[10px] text-[12px] font-semibold text-[#334155] outline-none';
+
+// ---- FilterBar square cards (FilterBar.tsx) ----
+export const fbSquareBaseCls =
+  'bg-white border border-[#e2e8f0] rounded-[10px] py-[6px] px-[10px] cursor-pointer text-left transition-[background,border-color,box-shadow] duration-[120ms] hover:bg-[#f8fafc] hover:border-[#cbd5e1]';
+export const fbSquareActiveCls =
+  '!bg-[#f8fafc] !border-[#0f172a] shadow-[inset_0_0_0_1px_#0f172a]';
+
+// ---- ExportModal panel ----
+export const panelCls =
+  'bg-[#f8fafc] border border-border rounded-[12px] p-[16px] flex flex-col gap-[12px]';
+
+// ---- CreateModal helpers ----
+export const emptyStoneNoticeCls = 'py-[16px] px-[8px] text-[12px] text-faint text-center';
+export const checkboxSmallCls = 'w-[15px] h-[15px] cursor-pointer accent-[#475569]';
+
+// ---- CustomerSelectorSection ----
+export const subLabelCls = 'text-[11px] font-bold text-[#334155]';
+
+// ---- MetalPriceHistoryModal ----
+export const metalThBaseCls =
+  'sticky top-0 bg-[#f8fafc] text-[10.5px] font-extrabold text-muted uppercase tracking-[0.3px]';
+
+// ---- PricingModal ----
+export const labelUppercaseCls = 'text-[11px] font-extrabold text-[#475569] uppercase';
+
+// ---- ProductSpecModal ----
+export const specColCls =
+  'flex flex-col min-w-0 min-h-0 py-[18px] px-[20px] overflow-y-auto [&:not(:first-child)]:border-l [&:not(:first-child)]:border-border max-[860px]:!flex-none max-[860px]:!overflow-y-visible max-[860px]:[&:not(:first-child)]:!border-l-0 max-[860px]:[&:not(:first-child)]:!border-t';
+export const specEyebrowCls =
+  'flex items-center justify-between gap-[8px] w-full min-h-[22px] mb-[16px] pb-[12px] border-b border-border text-[10.5px] font-extrabold tracking-[0.9px] uppercase text-muted';
+export const specEyebrowLabelCls =
+  'flex items-center gap-[6px] whitespace-nowrap [&_svg]:shrink-0';
+export const specEmptyCls = 'text-[13px] text-faint';
+export const specTodayLabelCls = 'text-[10px] font-bold tracking-[0.5px] uppercase text-faint';
+export const specHistCardLineCls =
+  'text-[11.5px] text-muted truncate [&_strong]:text-[#0f172a] [&_strong]:font-bold';
+
+// ---- QuoteTable ----
+export const quoteChipCls =
+  'bg-[#f1f5f9] text-[#334155] py-[3px] px-[7px] rounded-[6px] text-[11px] font-semibold inline-block';
+
+// ---- Sidebar ----
+export const navBtnBaseCls =
+  'w-full border border-transparent bg-transparent py-[11px] px-[14px] rounded-[12px] text-left text-[13.5px] font-semibold text-[#64748b] cursor-pointer flex items-center justify-start transition-all duration-150 [&_svg]:shrink-0 hover:bg-[#f1f5f9] hover:text-[#0f172a]';
+export const navBtnActiveCls =
+  '!bg-[#eff6ff] !border-[#bfdbfe] !text-[#1d4ed8] font-bold [&_svg]:!text-[#1d4ed8]';
+export const navLabelCls =
+  'block min-w-0 flex-1 truncate opacity-0 whitespace-nowrap transition-opacity duration-150 group-hover/sidebar:opacity-100';
+
+// ---- NotificationConfigPage (.ncp-*) ----
+export const ncpIconBtnCls = clsx(
+  iconBtnCls,
+  'text-[#94a3b8] rounded-[6px] transition-colors duration-150 hover:text-[#0f172a] hover:bg-[#f1f5f9]',
+);
+export const ncpIconBtnDangerCls = 'hover:!text-[#dc2626] hover:!bg-[#fef2f2]';
+// .ncp-row:hover / .ncp-sub:hover — cùng một hiệu ứng nền
+export const ncpRowHoverCls = 'hover:bg-[#fafafa]';
+
+// ---- PricingConfigPage (.pcp-*) ----
+export const pcpIconBtnCls = clsx(
+  iconBtnCls,
+  'text-[#9ca3af] transition-colors duration-150 hover:text-[#dc2626]',
+);
+export const pcpIconBtnEditCls = 'hover:!text-primary';
+export const pcpIconBtnUndoCls = 'hover:!text-[#334155]';
+// input[type=number] ẩn nút spinner (webkit + moz)
+export const numInputCls =
+  '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:m-0';
+export const pcpTabCls =
+  'py-[10px] px-[4px] border-0 border-b-2 border-b-transparent text-[13px] font-bold cursor-pointer text-[#94a3b8] bg-transparent hover:text-[#475569]';
+export const pcpTabActiveCls = '!text-[#0f172a] !border-b-[#0f172a]';
+export const pcpAddRowCls = 'bg-[#f8fafc] border-t border-dashed border-t-[#cbd5e1]';
+
+// ---- StaffPage ----
+export const cardContainerCls =
+  'bg-surface border border-border rounded-[14px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]';
+export const cardHeadingCls =
+  'text-[14px] font-extrabold text-[#0f172a] m-0 mb-[4px] flex items-center gap-[8px]';
+export const staffThCls =
+  'py-[8px] px-[10px] text-[10.5px] font-extrabold text-[#94a3b8] uppercase';
+export const emptyTextCls = 'text-center text-faint text-[12.5px] py-[24px] px-0';

@@ -25,8 +25,8 @@ import {
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
 import type{BaseMetal, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
-import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE, PRIMARY_BLUE} from "../constants/index";
-import { thCls, tdCls, tdCenterCls, tableHeadRowCls, labelCls, btnPrimaryCls, btnSecondaryCls, btnGhostSmallCls, iconBtnCls, pageBtnCls, inputCls, valueBoxCls, suffixCls, fieldErrorCls } from '../styles/classNames';
+import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE} from "../constants/index";
+import { thCls, tdCls, tdCenterCls, tableHeadRowCls, labelCls, btnPrimaryCls, btnSecondaryCls, btnGhostSmallCls, pageBtnCls, inputCls, valueBoxCls, suffixCls, fieldErrorCls, pcpIconBtnCls, pcpIconBtnEditCls, pcpIconBtnUndoCls, numInputCls, pcpTabCls, pcpTabActiveCls, pcpAddRowCls } from '../styles/classNames';
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 // Chặn thật sự ngay lúc gõ (không chỉ báo lỗi) — kẹp giá trị về đúng khoảng 0-100% (VAT/lợi nhuận,
 // công thức margin dùng (100-pct)/100 nên không được vượt 100)
@@ -68,18 +68,18 @@ const RuleCard: React.FC<{ title: string; subtitle?: string; action?: React.Reac
 );
 
 const EditIconButton: React.FC<{ onClick: () => void; active?: boolean; title?: string }> = ({ onClick, active, title }) => (
-  <button type="button" onClick={onClick} className={clsx('pcp-icon-btn pcp-icon-btn--edit', iconBtnCls)} title={title || (active ? 'Đóng sửa' : 'Sửa')}>
+  <button type="button" onClick={onClick} className={clsx(pcpIconBtnCls, pcpIconBtnEditCls)} title={title || (active ? 'Đóng sửa' : 'Sửa')}>
     <Pencil size={13} />
   </button>
 );
 
 const DeleteIconButton: React.FC<{ onClick: () => void; marked?: boolean; title?: string }> = ({ onClick, marked, title }) => (
-  <button type="button" onClick={onClick} className={clsx('pcp-icon-btn', marked && 'pcp-icon-btn--undo', iconBtnCls)} title={title || (marked ? 'Bỏ đánh dấu xóa' : 'Đánh dấu xóa')}>
+  <button type="button" onClick={onClick} className={clsx(pcpIconBtnCls, marked && pcpIconBtnUndoCls)} title={title || (marked ? 'Bỏ đánh dấu xóa' : 'Đánh dấu xóa')}>
     {marked ? <RotateCcw size={13} /> : <Trash2 size={13} />}
   </button>
 );
 
-// Banner lỗi màu đỏ dùng chung — 4 chỗ trong trang này trước đây tự viết lặp lại y hệt.
+// Banner lỗi màu đỏ dùng chung cho các chỗ báo lỗi trong trang.
 const ErrorBanner: React.FC<{ message: string; className?: string }> = ({ message, className }) => (
   <div className={clsx('flex items-start gap-[6px] text-[#b91c1c] text-[11.5px] bg-[#fef2f2] border border-[#fca5a5] py-[8px] px-[10px] rounded-[8px]', className)}>
     <AlertTriangle size={14} className="shrink-0 mt-[1px]" />
@@ -87,13 +87,13 @@ const ErrorBanner: React.FC<{ message: string; className?: string }> = ({ messag
   </div>
 );
 
-// Cặp nút Check/X "Xác nhận thêm / Hủy" dùng chung cho hàng "thêm mới" — 3 chỗ trước đây tự viết lặp lại y hệt.
+// Cặp nút Check/X "Xác nhận thêm / Hủy" dùng chung cho các hàng "thêm mới".
 const ConfirmCancelButtons: React.FC<{ onConfirm: () => void; onCancel: () => void; justify?: 'center' | 'flex-end' }> = ({ onConfirm, onCancel, justify = 'center' }) => (
   <div className={clsx('flex gap-[10px]', justify === 'flex-end' ? 'justify-end' : 'justify-center')}>
-    <button type="button" onClick={onConfirm} className={clsx(iconBtnCls, 'pcp-icon-btn pcp-icon-btn--edit')} title="Xác nhận thêm">
+    <button type="button" onClick={onConfirm} className={clsx(pcpIconBtnCls, pcpIconBtnEditCls)} title="Xác nhận thêm">
       <Check size={14} />
     </button>
-    <button type="button" onClick={onCancel} className={clsx(iconBtnCls, 'pcp-icon-btn')} title="Hủy">
+    <button type="button" onClick={onCancel} className={pcpIconBtnCls} title="Hủy">
       <X size={14} />
     </button>
   </div>
@@ -107,8 +107,7 @@ const ValueDisplay: React.FC<{ value: number; unit?: string; dirty?: boolean }> 
 );
 
 // Input số dùng chung cho cả 2 biến thể tiền/phần trăm — cùng khung ngoài (cột + lỗi inline) và vị
-// trí suffix, chỉ khác cách nhập/định dạng/kẹp giá trị. MoneyField/PercentField bên dưới là 2 lớp vỏ
-// mỏng giữ nguyên API cũ (props/behavior y hệt trước) để không phải đổi lại ~12 chỗ đang gọi.
+// trí suffix, chỉ khác cách nhập/định dạng/kẹp giá trị. MoneyField/PercentField bên dưới là 2 lớp vỏ mỏng.
 const NumberField: React.FC<{
   value: number;
   onChange: (v: number) => void;
@@ -142,7 +141,7 @@ const NumberField: React.FC<{
       ) : (
         <input
           type="number"
-          className={clsx('pcp-num-input', inputCls, error ? 'border-[#dc2626]' : 'border-[#cbd5e1]')}
+          className={clsx(numInputCls, inputCls, error ? 'border-[#dc2626]' : 'border-[#cbd5e1]')}
           min={0}
           max={100}
           step={step}
@@ -222,8 +221,7 @@ export const PricingConfigPage: React.FC = () => {
   const [addingMaterial, setAddingMaterial] = useState(false);
   const [newMaterial, setNewMaterial] = useState<{ name: string; priceRatioPct: string; pricingFormulaId: string; baseMetalId: string }>({ name: '', priceRatioPct: '100', pricingFormulaId: '', baseMetalId: '' });
   const [materialError, setMaterialError] = useState<string | null>(null);
-  // Công thức tính lãi — gắn theo NHÓM (Material.pricingFormulaId), thay bảng lợi nhuận/hệ số
-  // nhân Bạc cũ vốn gom chung 1 JSON tách rời trong pricing_config
+  // Công thức tính lãi — gắn theo NHÓM (Material.pricingFormulaId).
   const [formulas, setFormulas] = useState<PricingFormula[]>([]);
   const [initialFormulas, setInitialFormulas] = useState<PricingFormula[]>([]);
   const [editingFormulaIds, setEditingFormulaIds] = useState<string[]>([]);
@@ -658,25 +656,6 @@ export const PricingConfigPage: React.FC = () => {
 
   return (
     <div className="flex flex-col">
-      <style>{`
-        @keyframes pcp-spin { to { transform: rotate(360deg); } }
-        .pcp-spin { animation: pcp-spin 0.8s linear infinite; }
-        .pcp-icon-btn { color: #9ca3af; transition: color 0.15s ease; }
-        .pcp-icon-btn:hover { color: #dc2626; }
-        .pcp-icon-btn--edit:hover { color: ${PRIMARY_BLUE}; }
-        .pcp-icon-btn.pcp-icon-btn--undo:hover { color: #334155; }
-        .pcp-num-input::-webkit-inner-spin-button,
-        .pcp-num-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .pcp-num-input { -moz-appearance: textfield; }
-        .pcp-tab { padding: 10px 4px; border: none; border-bottom: 2px solid transparent; font-size: 13px; font-weight: 700; cursor: pointer; color: #94a3b8; background: transparent; }
-        .pcp-tab:hover { color: #475569; }
-        .pcp-tab--active { color: #0f172a; border-bottom-color: #0f172a; }
-        .pcp-add-row { background: #f8fafc; border-top: 1px dashed #cbd5e1; }
-        .pcp-add-trigger { color: #64748b; }
-        .pcp-add-trigger:hover { color: ${PRIMARY_BLUE}; }
-        @media (max-width: 760px) { .pcp-rules-grid { grid-template-columns: 1fr !important; } }
-      `}</style>
-
       {error && <ErrorBanner message={error} className="mb-[14px]" />}
 
       {/* Panel duy nhất — header + tabs + nội dung + footer sticky, giống mockup */}
@@ -686,10 +665,10 @@ export const PricingConfigPage: React.FC = () => {
           <p className="text-[13px] text-muted m-0">Quản lý nguồn giá gốc và quy tắc tính giá bán cho hệ thống kho.</p>
 
           <div className="flex gap-[22px] mt-[18px] border-b border-[#e5e7eb]">
-            <button type="button" className={`pcp-tab${activeTab === 'SOURCE' ? ' pcp-tab--active' : ''}`} onClick={() => setActiveTab('SOURCE')}>
+            <button type="button" className={clsx(pcpTabCls, activeTab === 'SOURCE' && pcpTabActiveCls)} onClick={() => setActiveTab('SOURCE')}>
               Nguồn giá gốc (Giá vốn)
             </button>
-            <button type="button" className={`pcp-tab${activeTab === 'RULES' ? ' pcp-tab--active' : ''}`} onClick={() => setActiveTab('RULES')}>
+            <button type="button" className={clsx(pcpTabCls, activeTab === 'RULES' && pcpTabActiveCls)} onClick={() => setActiveTab('RULES')}>
               Quy tắc tính giá bán
             </button>
           </div>
@@ -786,7 +765,7 @@ export const PricingConfigPage: React.FC = () => {
                             <td className={tdCls}>
                               {isEditing ? (
                                 <div className="flex flex-col gap-[2px]">
-                                  <input type="number" className={clsx('pcp-num-input', inputCls, ratioError ? 'border-[#dc2626]' : 'border-[#cbd5e1]')} min={0} max={1000} step="0.001" value={m.priceRatioPct} onChange={(e) => updateMaterialRatio(m.id, clampMaterialRatio(parseFloat(e.target.value) || 0))} />
+                                  <input type="number" className={clsx(numInputCls, inputCls, ratioError ? 'border-[#dc2626]' : 'border-[#cbd5e1]')} min={0} max={1000} step="0.001" value={m.priceRatioPct} onChange={(e) => updateMaterialRatio(m.id, clampMaterialRatio(parseFloat(e.target.value) || 0))} />
                                   {ratioError && <span className={fieldErrorCls}>{ratioError}</span>}
                                 </div>
                               ) : (
@@ -816,7 +795,7 @@ export const PricingConfigPage: React.FC = () => {
                         <tr><td colSpan={5} className="p-[14px] text-center text-[#94a3b8]">Chưa có chất liệu nào</td></tr>
                       )}
                       {addingMaterial && (
-                        <tr className="pcp-add-row">
+                        <tr className={pcpAddRowCls}>
                           <td className={tdCls}><input autoFocus value={newMaterial.name} onChange={(e) => setNewMaterial((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="VD: Vàng 16K" /></td>
                           <td className={tdCls}>
                             <select value={newMaterial.baseMetalId} onChange={(e) => setNewMaterial((s) => ({ ...s, baseMetalId: e.target.value }))} className={inputCls}>
@@ -826,7 +805,7 @@ export const PricingConfigPage: React.FC = () => {
                               ))}
                             </select>
                           </td>
-                          <td className={tdCls}><input type="number" className={clsx('pcp-num-input', inputCls)} min={0} max={1000} step="0.001" value={newMaterial.priceRatioPct} onChange={(e) => setNewMaterial((s) => ({ ...s, priceRatioPct: e.target.value }))} /></td>
+                          <td className={tdCls}><input type="number" className={clsx(numInputCls, inputCls)} min={0} max={1000} step="0.001" value={newMaterial.priceRatioPct} onChange={(e) => setNewMaterial((s) => ({ ...s, priceRatioPct: e.target.value }))} /></td>
                           <td className={tdCls}>
                             <select value={newMaterial.pricingFormulaId} onChange={(e) => setNewMaterial((s) => ({ ...s, pricingFormulaId: e.target.value }))} className={inputCls}>
                               {formulas.length === 0 && <option value="">Chưa có công thức</option>}
@@ -869,7 +848,7 @@ export const PricingConfigPage: React.FC = () => {
                       }}
                     />
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importing} className={clsx(btnGhostSmallCls, importing && 'opacity-60')}>
-                      {importing ? <Loader2 size={12} className="pcp-spin" /> : <Upload size={12} />} Nhập Excel
+                      {importing ? <Loader2 size={12} className="animate-[spin_0.8s_linear_infinite]" /> : <Upload size={12} />} Nhập Excel
                     </button>
                   </>
                 }
@@ -927,7 +906,7 @@ export const PricingConfigPage: React.FC = () => {
           )}
 
           {activeTab === 'RULES' && (
-            <div className="pcp-rules-grid grid [grid-template-columns:minmax(0,3fr)_minmax(280px,2fr)] gap-[20px] items-start py-[22px] px-0">
+            <div className="grid [grid-template-columns:minmax(0,3fr)_minmax(280px,2fr)] max-[760px]:![grid-template-columns:1fr] gap-[20px] items-start py-[22px] px-0">
             <div className="flex flex-col gap-[20px]">
               {/* VAT giờ cấu hình theo từng danh mục sản phẩm — xem panel "Tiền công / VAT" bên phải */}
 
@@ -979,7 +958,7 @@ export const PricingConfigPage: React.FC = () => {
                                   <td className={tdCls}>
                                     {isEditing ? (
                                       <div className="flex flex-col gap-[2px]">
-                                        <input type="number" className={clsx('pcp-num-input', inputCls, '!w-[100px]', multError ? 'border-[#dc2626]' : 'border-[#cbd5e1]')} min={0} step="0.1" value={mult} onChange={(e) => updateMultiplier(f.id, idx, Math.max(0, parseFloat(e.target.value) || 0))} />
+                                        <input type="number" className={clsx(numInputCls, inputCls, '!w-[100px]', multError ? 'border-[#dc2626]' : 'border-[#cbd5e1]')} min={0} step="0.1" value={mult} onChange={(e) => updateMultiplier(f.id, idx, Math.max(0, parseFloat(e.target.value) || 0))} />
                                         {multError && <span className={fieldErrorCls}>{multError}</span>}
                                       </div>
                                     ) : (
@@ -1088,7 +1067,7 @@ export const PricingConfigPage: React.FC = () => {
                     <p className="text-[11px] text-[#94a3b8] m-0 mt-[2px]">Theo danh mục sản phẩm</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => setAddingCategory(true)} className={clsx(iconBtnCls, 'pcp-icon-btn pcp-icon-btn--edit')} title="Thêm danh mục">
+                <button type="button" onClick={() => setAddingCategory(true)} className={clsx(pcpIconBtnCls, pcpIconBtnEditCls)} title="Thêm danh mục">
                   <Plus size={16} />
                 </button>
               </div>
@@ -1151,7 +1130,7 @@ export const PricingConfigPage: React.FC = () => {
                   (!saving && isSaveDisabled) && 'opacity-50',
                 )}
               >
-                {saving ? <Loader2 size={13} className="pcp-spin" /> : <Save size={13} />}
+                {saving ? <Loader2 size={13} className="animate-[spin_0.8s_linear_infinite]" /> : <Save size={13} />}
                 {saved ? 'Đã lưu!' : saving ? 'Đang lưu...' : 'Lưu cấu hình'}
               </button>
             );
@@ -1237,7 +1216,7 @@ const CategoryTable: React.FC<{
         <div className="py-[10px] px-0 text-center text-[#cbd5e1] text-[12px]">—</div>
       )}
       {adding && (
-        <div className="pcp-add-row flex flex-col gap-[8px] p-[10px] rounded-[8px] mt-[8px]">
+        <div className={clsx(pcpAddRowCls, 'flex flex-col gap-[8px] p-[10px] rounded-[8px] mt-[8px]')}>
           <input autoFocus value={newCategory.name} onChange={(e) => setNewCategory((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="Tên danh mục" />
           <div className="flex gap-[8px]">
             <MoneyField value={parseFloat(newCategory.laborCost) || 0} onChange={(v) => setNewCategory((s) => ({ ...s, laborCost: String(v) }))} />
@@ -1251,7 +1230,7 @@ const CategoryTable: React.FC<{
 };
 
 // ==========================
-// Bảng đá theo loại (Đá Chủ / Đá Tấm) — luôn hiển thị đồng thời, không còn tab chuyển đổi
+// Bảng đá theo loại (Đá Chủ / Đá Tấm) — hiển thị đồng thời cả hai
 // ==========================
 
 const StoneGroupTable: React.FC<{
@@ -1323,7 +1302,7 @@ const StoneGroupTable: React.FC<{
               <tr><td colSpan={5} className="p-[14px] text-center text-[#94a3b8]">Chưa có đá nào</td></tr>
             )}
             {adding && (
-              <tr className="pcp-add-row">
+              <tr className={pcpAddRowCls}>
                 <td className={tdCls}><input autoFocus value={newStone.name} onChange={(e) => setNewStone((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="Tên đá" /></td>
                 <td className={tdCls}><input value={newStone.cut} onChange={(e) => setNewStone((s) => ({ ...s, cut: e.target.value }))} className={inputCls} placeholder="Giác cắt" /></td>
                 <td className={tdCls}><input value={newStone.size} onChange={(e) => setNewStone((s) => ({ ...s, size: e.target.value }))} className={inputCls} placeholder="Size" /></td>
@@ -1336,9 +1315,9 @@ const StoneGroupTable: React.FC<{
           </tbody>
           {!adding && (
             <tfoot>
-              <tr className="pcp-add-row">
+              <tr className={pcpAddRowCls}>
                 <td colSpan={5} className="p-[8px]">
-                  <button type="button" onClick={onOpenAdd} className="pcp-add-trigger flex items-center justify-center gap-[6px] w-full bg-transparent border-0 cursor-pointer text-[12px] font-bold p-[4px]">
+                  <button type="button" onClick={onOpenAdd} className="text-[#64748b] hover:text-primary flex items-center justify-center gap-[6px] w-full bg-transparent border-0 cursor-pointer text-[12px] font-bold p-[4px]">
                     <Plus size={13} /> {addLabel}
                   </button>
                 </td>

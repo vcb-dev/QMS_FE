@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, CalculatePriceResult, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE ;
@@ -56,8 +56,8 @@ export function getCookie(name: string): string | null {
   return null;
 }
 
-// Request Interceptor: đính kèm X-CSRF-Token — JWT tự động gửi qua httpOnly cookie (crmspd_at),
-// không cần đọc/gắn Authorization header từ storage nữa (token không còn lưu ở client-side JS).
+// Request Interceptor: đính kèm X-CSRF-Token — JWT tự gửi qua httpOnly cookie (crmspd_at),
+// không cần Authorization header từ storage (token không nằm ở client-side JS).
 api.interceptors.request.use((config) => {
   const csrfToken = getCookie('crmspd_csrf');
   if (csrfToken && config.headers) {
@@ -114,8 +114,8 @@ api.interceptors.response.use(
 // Đọc: ưu tiên sessionStorage trước, rồi mới tới localStorage — loginApi lưu vào localStorage khi
 // rememberMe=true (mặc định của form đăng nhập), nếu ở đây chỉ đọc sessionStorage thì y hệt trường
 // hợp "đã đăng nhập nhớ tôi" vẫn bị đá về login mỗi lần F5, vì user nằm ở localStorage nhưng hàm
-// đọc chưa bao giờ nhìn vào đó. JWT không còn lưu ở đây nữa — nằm hoàn toàn trong httpOnly cookie
-// (crmspd_at), JS phía client không đọc/ghi được, chống lộ token qua XSS.
+// đọc chưa bao giờ nhìn vào đó. JWT nằm trong httpOnly cookie (crmspd_at), JS phía client
+// không đọc/ghi được, chống lộ token qua XSS.
 export function getStoredUser(): User | null {
   const data = sessionStorage.getItem(STORAGE_KEYS.USER) || localStorage.getItem(STORAGE_KEYS.USER);
   if (!data) return null;
@@ -444,7 +444,7 @@ export async function acceptQuoteRequest(id: string, version: number) {
   return changeQuoteStatus(id, { action: 'ACCEPT', version });
 }
 
-// BE UpdateQuoteStatusDto không còn nhận quotedPrice/vat cấp ngoài (đã dồn hết vào options[]),
+// BE UpdateQuoteStatusDto nhận quotedPrice/vat trong options[] (không ở cấp ngoài),
 // và QuoteOptionItemDto chỉ nhận đúng tập field cố định — options[] gửi lên phải lọc bỏ các field
 // hiển thị-only (materialName...) kẻo NestJS whitelist reject. isSelected/stoneDescription được
 // giữ lại có chủ đích — BE dùng isSelected để set QuoteOption.selectionStatus, stoneDescription
@@ -646,8 +646,7 @@ export async function updateMaterial(id: string, patch: { name?: string; priceRa
   return apiCall(api.patch(`/materials/${id}`, patch), 'Không thể cập nhật chất liệu');
 }
 
-// Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu dùng chung 1 công thức (thay bảng lợi
-// nhuận/hệ số nhân Bạc cũ vốn gom chung 1 JSON tách rời trong pricing-config)
+// Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu dùng chung 1 công thức.
 export async function fetchPricingFormulas() {
   return apiCall(dedupedGet('/pricing-formulas'), 'Không thể tải công thức tính lãi');
 }
@@ -660,21 +659,6 @@ export async function createPricingFormula(payload: { name: string; formulaType:
 
 export async function updatePricingFormula(id: string, patch: { name?: string; config?: PricingFormulaConfig; isDefault?: boolean }) {
   return apiCall(api.patch(`/pricing-formulas/${id}`, patch), 'Không thể cập nhật công thức tính lãi');
-}
-
-export async function calculatePriceApi(payload: {
-  materialNameOrKey: string;
-  weightChi: number;
-  laborCost?: number;
-  // Đá nhập tổng tay. Khi có `stones` (đá chọn từ danh mục) thì BE tự cộng, bỏ qua field này.
-  stoneCost?: number;
-  stones?: { stoneId: string; quantity: number }[];
-  vatRate?: number;
-  includeVat?: boolean;
-  categoryId?: string;
-  silverMultiplier?: number;
-}): Promise<CalculatePriceResult> {
-  return apiCall(api.post('/quote-options/calculate', payload), 'Lỗi khi tính giá từ hệ thống');
 }
 
 export interface CalculateBatchResultItem {
@@ -701,7 +685,7 @@ export interface CalculateBatchResultItem {
 }
 
 // Tính NHIỀU phương án (phương án chính + các "loại vàng khác") trong 1 request — thay N lần gọi
-// calculatePriceApi (mỗi lần ~1–5s qua pooler). Kết quả trả về theo ĐÚNG thứ tự items gửi lên.
+// /quote-options/calculate riêng lẻ (mỗi lần ~1–5s qua pooler). Kết quả trả về theo ĐÚNG thứ tự items gửi lên.
 export async function calculatePriceBatchApi(payload: {
   categoryId?: string;
   includeVat?: boolean;
@@ -968,6 +952,8 @@ export async function testLarkWebhook(
 }
 
 // Công tắc tổng cầu chat web <-> Lark DM (ADMIN).
+// Chưa có UI nào gọi 2 hàm này (0 nơi dùng trong src/) — khớp với doc/LARK_DM_CHAT_BRIDGE_PLAN.md,
+// có thể là tính năng cầu chat Lark DM đang làm dở phía FE.
 export async function fetchDmBridgeStatus(): Promise<LarkDmBridgeStatus> {
   return apiCall(
     api.get('/lark-webhooks/dm-bridge'),

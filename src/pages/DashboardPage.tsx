@@ -39,7 +39,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [apiRequests, setApiRequests] = React.useState<QuoteRequest[]>(initialRequests);
   const [loadingStats, setLoadingStats] = React.useState<boolean>(false);
   const [prevStats, setPrevStats] = React.useState<{ total: number; closeRate: number; closedRevenue: number; quotedRevenue: number } | null>(null);
+  // Admin: số liệu KPI kỳ hiện tại lấy thẳng từ endpoint /stats (BE cộng bằng SQL) — không kéo
+  // cả danh sách đơn về client để cộng tay như trước.
+  const [curStats, setCurStats] = React.useState<{ total: number; closeRate: number; closedRevenue: number; quotedRevenue: number } | null>(null);
   const [charts, setCharts] = React.useState<DashboardChartsResponse | null>(null);
+  // Đếm request để bỏ qua response trả về trễ (race condition khi đổi mốc thời gian liên tục)
+  const timeRangeRequestIdRef = React.useRef(0);
 
   // Kỳ trước để so sánh % — TODAY→hôm qua, THIS_WEEK→tuần trước, THIS_MONTH→tháng trước,
   // LAST_MONTH→tháng trước nữa, THIS_YEAR→năm trước. ALL không có kỳ trước để so sánh.
@@ -74,38 +79,59 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // Fetch real counts & request items from backend API when timeRange changes
   const handleTimeRangeChange = async (newRange: string) => {
+    const myRequestId = ++timeRangeRequestIdRef.current;
     setTimeRange(newRange);
     setLoadingStats(true);
     try {
+      if (currentRole === 'ADMIN') {
+        // Admin chỉ xem card KPI + biểu đồ tổng hợp — không render bảng "Yêu cầu gần đây" /
+        // "Sản phẩm nổi bật". Lấy số đã cộng sẵn ở BE (/stats), khỏi kéo cả danh sách đơn về.
+        const [curRes, chartsRes] = await Promise.all([
+          fetchQuoteRequestStats({ timeRange: newRange }),
+          fetchDashboardCharts({ timeRange: newRange }),
+        ]);
+        const prevQuery = getPreviousPeriodQuery(newRange);
+        const prevRes = prevQuery ? await fetchQuoteRequestStats(prevQuery) : null;
+        // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)
+        if (myRequestId !== timeRangeRequestIdRef.current) return;
+        if (curRes?.counts) setCounts(curRes.counts);
+        setCurStats(
+          curRes
+            ? {
+                total: curRes.total,
+                closeRate: curRes.closeRate,
+                closedRevenue: curRes.closedRevenue,
+                quotedRevenue: curRes.quotedRevenue,
+              }
+            : null,
+        );
+        setCharts(chartsRes);
+        setPrevStats(prevRes || null);
+        return;
+      }
+
+      // ORDER: chỉ cần 5 dòng cho bảng "Yêu cầu gần đây" + counts cho Sidebar.
       const res = await fetchQuoteRequests({
         timeRange: newRange,
         includeCounts: true,
-        limit: 500,
+        limit: 20,
         lite: true,
       });
+      const chartsRes = await fetchDashboardCharts({ timeRange: newRange });
+      if (myRequestId !== timeRangeRequestIdRef.current) return;
       if (res.meta?.counts) {
         setCounts(res.meta.counts);
       }
       if (res.data) {
         setApiRequests(res.data);
       }
-
-      const chartsRes = await fetchDashboardCharts({ timeRange: newRange });
       setCharts(chartsRes);
-
-      if (currentRole === 'ADMIN') {
-        const prevQuery = getPreviousPeriodQuery(newRange);
-        if (prevQuery) {
-          const prevRes = await fetchQuoteRequestStats(prevQuery);
-          setPrevStats(prevRes || null);
-        } else {
-          setPrevStats(null);
-        }
-      }
     } catch (err) {
       console.error('Error fetching stats count from backend API:', err);
     } finally {
-      setLoadingStats(false);
+      if (myRequestId === timeRangeRequestIdRef.current) {
+        setLoadingStats(false);
+      }
     }
   };
 
@@ -145,8 +171,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
 
   const recentRequests = React.useMemo(() => {
-    return apiRequests.slice(0, 5);
+    return apiRequests.slice(0, UI_CONSTANTS.DASHBOARD.RECENT_REQUESTS_LIMIT);
   }, [apiRequests]);
+
+  const featuredProducts = (charts?.featuredProducts || []).slice(0, UI_CONSTANTS.DASHBOARD.RECENT_PRODUCTS_LIMIT);
 
   // Doanh thu (Admin Analytics) — tổng tiền đơn đã chốt & tổng tiền đơn đã báo giá (chưa chốt)
   const sumRevenue = (list: QuoteRequest[]) => {
@@ -160,7 +188,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return { closedRevenue, quotedRevenue };
   };
 
-  const revenueStats = React.useMemo(() => sumRevenue(apiRequests), [apiRequests]);
+  const revenueStats = React.useMemo(() => {
+    if (currentRole === 'ADMIN') {
+      return {
+        closedRevenue: curStats?.closedRevenue ?? 0,
+        quotedRevenue: curStats?.quotedRevenue ?? 0,
+      };
+    }
+    return sumRevenue(apiRequests);
+  }, [currentRole, curStats, apiRequests]);
   // Kỳ trước lấy thẳng từ API stats (chỉ số tổng hợp), không kéo full list rồi tính tay
   const prevRevenueStats = React.useMemo(
     () => (prevStats ? { closedRevenue: prevStats.closedRevenue, quotedRevenue: prevStats.quotedRevenue } : null),
@@ -175,7 +211,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return { total, closeRate };
   };
 
-  const kpiStats = React.useMemo(() => sumKpi(apiRequests), [apiRequests]);
+  const kpiStats = React.useMemo(() => {
+    if (currentRole === 'ADMIN') {
+      return { total: curStats?.total ?? 0, closeRate: curStats?.closeRate ?? 0 };
+    }
+    return sumKpi(apiRequests);
+  }, [currentRole, curStats, apiRequests]);
   const prevKpiStats = React.useMemo(
     () => (prevStats ? { total: prevStats.total, closeRate: prevStats.closeRate } : null),
     [prevStats]
@@ -668,9 +709,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 4. Split Content Layout — Admin không cần xem, đã có Doanh thu + Hiệu suất theo Sale ở trên */}
       {currentRole !== 'ADMIN' && (
-      <div className="grid [grid-template-columns:2fr_1fr] gap-[18px]">
+      <div className="grid [grid-template-columns:2fr_1fr] gap-[18px] items-stretch">
         {/* Left 2/3: Yêu cầu gần đây */}
-        <div className={cardCls}>
+        <div className={clsx(cardCls, 'h-full flex flex-col')}>
           <div className="flex items-center justify-between mb-[16px]">
             <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
               Yêu cầu gần đây
@@ -752,7 +793,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         {/* Right 1/3: Sản phẩm nổi bật */}
-        <div className={cardCls}>
+        <div className={clsx(cardCls, 'h-full flex flex-col')}>
           <div className="flex items-center justify-between mb-[16px]">
             <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
               Sản phẩm nổi bật
@@ -767,8 +808,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-[12px]">
-            {(charts?.featuredProducts || []).length > 0 ? (
-              (charts?.featuredProducts || []).map((item) => {
+            {featuredProducts.length > 0 ? (
+              featuredProducts.map((item) => {
                 const rawImg = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
                 const imgUrl = rawImg || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                 const formattedPrice = item.price > 0 ? formatCurrency(item.price) : '---';
@@ -776,10 +817,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 return (
                   <div
                     key={item.key}
-                    // Tạm thời disable — không cho bấm vào sản phẩm nổi bật
+                    // Không cho bấm vào sản phẩm nổi bật
                     className="bg-surface border border-[#e2e8f0] rounded-[10px] overflow-hidden cursor-default transition-transform duration-150"
                   >
-                    <div className="w-full aspect-square bg-[#f8fafc]">
+                    <div className="relative w-full aspect-square bg-[#f8fafc]">
                       <img
                         src={imgUrl}
                         alt=""
@@ -787,7 +828,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
                         }}
-                        className="w-full h-full object-cover block"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     </div>
                     <div className="py-[8px] px-[10px]">

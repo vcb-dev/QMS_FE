@@ -4,9 +4,7 @@ import type { MaterialRow, StoneRow, StoneCatalogItem } from '../types';
 const genRowId = () => `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
 // Gom state + CRUD cho 2 mảng "chất liệu" và "đá" dùng chung giữa CalculatorPage (Sale tự tính giá)
-// và PricingModal (Order xử lý đơn) — trước đây 2 file khai báo độc lập cùng 1 logic thêm/sửa/xóa
-// dòng gần như y hệt nhau, sửa 1 bên dễ quên sửa bên kia (đúng nguyên nhân PricingModal phải sửa
-// đi sửa lại nhiều lượt liên tiếp trong 1 buổi làm việc trước).
+// và PricingModal (Order xử lý đơn).
 export function useMaterialStoneRows(
   dbMaterials: { id: string; name: string }[],
   stoneCatalog: StoneCatalogItem[],

@@ -17,8 +17,8 @@ import {
 } from '../styles/classNames';
 
 // Khối "nhãn + icon + input" dùng chung cho 8/10 field trong 4 form đăng nhập/đăng ký/quên-đặt lại
-// mật khẩu — trước đây lặp lại y hệt cấu trúc DOM này ở từng form. Field có nút hiện/ẩn mật khẩu
-// hoặc dùng <select> thay <input> giữ nguyên JSX riêng, không ép qua đây.
+// mật khẩu. Field có nút hiện/ẩn mật khẩu hoặc dùng <select> thay <input> giữ nguyên JSX riêng,
+// không ép qua đây.
 const LabeledIconField: React.FC<{
   label: string;
   icon: React.ReactNode;

@@ -8,9 +8,9 @@ import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { formatOptionCopyLine, cleanOptionLabel, batchResultToOption } from '../utils/quoteOption';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
-import type {CalculatorPageProps, StoneRow,StoneCatalogItem,CalcResult,QuoteOption} from '../types';
+import type { CalculatorPageProps, StoneRow, StoneCatalogItem, CalcResult, QuoteOption } from '../types';
 import { clsx } from 'clsx';
-import { cardCls } from '../styles/classNames';
+import { cardCls, formGroupCls, formLabelCls } from '../styles/classNames';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
 
@@ -34,8 +34,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
   // Form Input States
   const [categoryId, setCategoryId] = useState('');
-  // State + CRUD của materialRows/stoneRows dùng chung với PricingModal qua hook này (xem
-  // hooks/useMaterialStoneRows.ts) — trước đây 2 file tự viết riêng cùng 1 logic add/update/remove.
+  // State + CRUD của materialRows/stoneRows dùng chung với PricingModal qua hook này
+  // (xem hooks/useMaterialStoneRows.ts).
   const {
     materialRows,
     setMaterialRows,
@@ -66,7 +66,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   const [silverMultipliers, setSilverMultipliers] = useState<number[]>([]);
   const [selectedSilverMultiplier, setSelectedSilverMultiplier] = useState<number>(3);
 
-  // Phương án so sánh loại vàng khác — người dùng TỰ thêm, không còn tự sinh từ BE. Mỗi dòng chọn
+  // Phương án so sánh loại vàng khác — người dùng TỰ thêm (không tự sinh từ BE). Mỗi dòng chọn
   // 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau). Tính
   // riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo).
   const { compareRows, addCompareRow, updateCompareRow, removeCompareRow } = useCompareRows(dbMaterials);
@@ -149,12 +149,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
       setInitialDataReady(true);
     });
-  }, []);
+  }, [setMaterialRows]);
 
-  // VAT & tiền công chuẩn nạp theo danh mục sản phẩm đang chọn (ProductCategory.vatRate/laborCost)
-  // — không còn 1 giá trị mặc định global. Đổi danh mục thì đổi luôn VAT/công gợi ý, và vì cả 2
+  // VAT & tiền công chuẩn nạp theo danh mục sản phẩm đang chọn (ProductCategory.vatRate/laborCost).
+  // Đổi danh mục thì đổi luôn VAT/công gợi ý, và vì cả 2
   // đều nằm trong dependencies của effect tính giá debounce bên dưới nên đổi danh mục sẽ tự tính
-  // lại giá luôn (trước đây laborCost không đồng bộ theo danh mục nên đổi danh mục không đổi giá).
+  // lại giá luôn.
   useEffect(() => {
     if (!categoryId) return;
     const cat = dbCategories.find((c) => c.id === categoryId);
@@ -217,7 +217,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   };
 
   // Các phương án "loại vàng khác" (compareRows) — bỏ qua dòng chưa nhập khối lượng, tính TẤT CẢ
-  // trong 1 request /quote-options/calculate-batch (trước đây mỗi dòng 1 request /calculate).
+  // trong 1 request /quote-options/calculate-batch.
   const buildCompareOptions = async (
     vatValNum: number,
     sharedStones: { stoneId: string; quantity: number }[] | undefined,
@@ -449,7 +449,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-[18px] pb-[30px] font-['Inter','Roboto',-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
+    <div className="flex flex-col gap-[18px] pb-[30px]">
       <div>
         <h1 className="text-[24px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
           <Calculator size={22} /> Máy Tính Giá
@@ -463,7 +463,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
       {!isSale && <VnGoldPriceTicker />}
 
       {/* Layout chính: trái nhập liệu, phải bảng báo giá sống (sticky) */}
-      <div className="pricing-calc-grid">
+      <div className="grid [grid-template-columns:1.6fr_1fr] gap-[20px] items-start max-[960px]:!grid-cols-1">
         {/* Cột trái: nhập liệu */}
         <div className="flex flex-col gap-[16px]">
 
@@ -481,8 +481,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
             </div>
 
             {/* Danh mục sản phẩm */}
-            <div className="form-group mb-[16px]">
-              <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase block mb-[6px]">
+            <div className={clsx(formGroupCls, 'mb-[16px]')}>
+              <label className={clsx(formLabelCls, 'text-[11px] font-extrabold text-[#64748b] uppercase block mb-[6px]')}>
                 DANH MỤC SẢN PHẨM
               </label>
               <select
@@ -704,7 +704,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
           {/* Section 2 + 3: Đá quý & Chế tác — gộp lưới 2 cột con để giảm chiều cao trang. Bạc dùng chung công/đá, chỉ ẩn riêng ô VAT (Bạc không tính VAT). */}
           {(
-            <div className={clsx('pricing-calc-subgrid', isSale && '![grid-template-columns:1fr]')}>
+            <div className={clsx('grid grid-cols-2 gap-[18px] max-[960px]:!grid-cols-1', isSale && '![grid-template-columns:1fr]')}>
               {/* Section 2: Thông số Đá quý — 2 phương thức nhập theo mục 3.1: nhập tổng trực tiếp, hoặc bảng tính từng viên */}
               <div className={cardCls}>
                 <div className="flex items-center justify-between mb-[14px]">
@@ -740,8 +740,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
                 {stoneInputMode === 'total' ? (
                   /* Nhập tổng tiền đá trực tiếp — đã biết giá, khỏi khai từng viên */
-                  <div className="form-group">
-                    <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase">
+                  <div className={formGroupCls}>
+                    <label className={clsx(formLabelCls, 'text-[11px] font-extrabold text-[#64748b] uppercase')}>
                       TỔNG TIỀN ĐÁ (VNĐ)
                     </label>
                     <input
@@ -843,8 +843,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <h3 className="text-[15px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[16px] ml-0">Chế tác & Phí dịch vụ</h3>
 
                   <div className="flex flex-col gap-[16px]">
-                    <div className="form-group">
-                      <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase">
+                    <div className={formGroupCls}>
+                      <label className={clsx(formLabelCls, 'text-[11px] font-extrabold text-[#64748b] uppercase')}>
                         TIỀN CÔNG CHẾ TÁC (VNĐ)
                       </label>
                       <input
@@ -855,8 +855,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       />
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label text-[11px] font-extrabold text-[#64748b] uppercase">
+                    <div className={formGroupCls}>
+                      <label className={clsx(formLabelCls, 'text-[11px] font-extrabold text-[#64748b] uppercase')}>
                         THUẾ VAT (%)
                       </label>
                       <input

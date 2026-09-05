@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { connectRealtimeSocket } from './services/realtimeSocket';
 import { REALTIME_EVENTS } from './constants/realtimeEvents';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
@@ -51,9 +51,15 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Chỉ Tổng Quan (/) và Danh Sách Yêu Cầu (/requests, /requests/:id) mới thực sự đọc `requests[]`.
-  // Trang khác chỉ cần `counts` cho Sidebar -> useQuoteRequests kéo bản nhẹ, không hydrate cả trang.
-  const listDataEnabled = location.pathname === '/' || location.pathname.startsWith('/requests');
+  // Danh Sách Yêu Cầu (/requests) luôn đọc `requests[]` + `counts`. Tổng Quan (/) chỉ SALE/ORDER
+  // cần list (bảng "Yêu cầu gần đây") — ADMIN lấy hết số liệu từ /stats do DashboardPage tự gọi,
+  // không cần list lẫn counts từ hook nên bỏ qua request đó.
+  const onDashboard = location.pathname === '/';
+  const onRequestsList = location.pathname.startsWith('/requests');
+  const listDataEnabled = onRequestsList || (onDashboard && currentRole !== 'ADMIN');
+  // Danh mục/chất liệu: chỉ dropdown lọc ở Danh sách + Thư viện dùng prop này (modal tạo/sửa tự
+  // kích hoạt qua isCreateOpen trong hook). Không tải lúc login.
+  const masterDataEnabled = onRequestsList || location.pathname.startsWith('/library');
 
   const {
     requests, categories, materials, selectedId, setSelectedId,
@@ -74,7 +80,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
     handleMarkClosedClick, handleCloseOptionSubmit,
     refreshQuietly,
-  } = useQuoteRequests(currentUser, currentRole, listDataEnabled);
+  } = useQuoteRequests(currentUser, currentRole, listDataEnabled, masterDataEnabled);
 
   // Chỉ tính lại khi requests hoặc id popup đang mở thay đổi — tránh find()+filter() mỗi lần
   // AppShell render (VD gõ tìm kiếm, đổi trang) dù 2 popup này thường đang đóng.
@@ -90,12 +96,19 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
   // Socket /realtime — 1 kết nối duy nhất suốt phiên đăng nhập (dùng chung cho cả Realtime trạng thái & Chat)
   const [globalSocket, setGlobalSocket] = useState<any>(null);
 
+  // refreshQuietly được tạo lại mỗi render của useQuoteRequests — giữ bản mới nhất qua ref để
+  // effect dưới không phải reconnect socket mỗi lần nó đổi tham chiếu.
+  const refreshQuietlyRef = useRef(refreshQuietly);
   useEffect(() => {
-    if (!currentUser) return;
+    refreshQuietlyRef.current = refreshQuietly;
+  }, [refreshQuietly]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
     const socket = connectRealtimeSocket();
     setGlobalSocket(socket);
 
-    const handleStatusChanged = () => refreshQuietly();
+    const handleStatusChanged = () => refreshQuietlyRef.current();
     socket.on(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
 
     return () => {
@@ -165,7 +178,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
         onOpenCreate={handleOpenCreate}
       />
 
-      <div className="flex-1 flex flex-col h-screen overflow-visible min-w-0">
+      <div className="flex-1 flex flex-col h-screen overflow-visible min-w-0 ml-[72px]">
         <Header
           user={currentUser!}
           currentRole={currentRole}
@@ -175,7 +188,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
           onSearchRequests={handleSearchRequestsFromHeader}
         />
 
-        <main className="content page-transition flex-1 overflow-y-auto p-5 flex flex-col gap-5 box-border" key={location.pathname}>
+        <main className="flex-1 min-w-0 p-[20px] overflow-y-auto flex flex-col gap-[20px] box-border animate-page-fade" key={location.pathname}>
           <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={

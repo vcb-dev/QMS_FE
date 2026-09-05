@@ -10,7 +10,7 @@ interface UserAvatarProps {
   style?: React.CSSProperties;
 }
 
-// "Nguyen Van A" -> "NA" (giống getInitials cũ trong Header).
+// "Nguyen Van A" -> "NA".
 function initialsOf(name: string): string {
   if (!name) return 'U';
   const parts = name.trim().split(/\s+/);

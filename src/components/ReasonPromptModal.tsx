@@ -32,7 +32,7 @@ interface ReasonPromptModalProps {
 }
 
 // Modal "nhập lý do bắt buộc rồi xác nhận" dùng chung — RejectModal (từ chối) và ReturnModal (trả
-// lại Sale bổ sung) trước đây là 2 file gần như byte-identical, chỉ khác màu/chữ/label.
+// lại Sale bổ sung), khác nhau ở màu/chữ/label.
 export const ReasonPromptModal: React.FC<ReasonPromptModalProps> = ({
   isOpen,
   onClose,
