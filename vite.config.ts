@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
-  const proxyTarget = env.VITE_API_PROXY_TARGET
+  const proxyTarget = env.VITE_API_BASE ? new URL(env.VITE_API_BASE).origin : undefined
 
   return {
     plugins: [react(), tailwindcss()],

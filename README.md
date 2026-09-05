@@ -29,7 +29,6 @@ Biến môi trường (`.env`):
 
 ```
 VITE_API_BASE=http://localhost:8000/api
-VITE_API_PROXY_TARGET=http://localhost:8000
 ```
 
 ## Scripts
