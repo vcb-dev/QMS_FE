@@ -45,8 +45,6 @@ interface AppShellProps {
 
 function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
   const [isExportOpen, setIsExportOpen] = useState(false);
-  // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả
-  const [scopeFilter, setScopeFilter] = useState(currentRole === 'SALE' ? 'MY_REQ' : 'ALL');
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -108,10 +106,17 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
     const socket = connectRealtimeSocket();
     setGlobalSocket(socket);
 
-    const handleStatusChanged = () => refreshQuietlyRef.current();
+    // Nhiều đơn đổi trạng thái dồn dập (1 người xử lý hàng loạt, hoặc nhiều người thao tác cùng lúc)
+    // sẽ bắn 1 loạt STATUS_CHANGED. Debounce ~800ms: cả loạt gộp thành đúng 1 lần refresh danh sách.
+    let statusChangedTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleStatusChanged = () => {
+      if (statusChangedTimer) clearTimeout(statusChangedTimer);
+      statusChangedTimer = setTimeout(() => refreshQuietlyRef.current(), 800);
+    };
     socket.on(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
 
     return () => {
+      if (statusChangedTimer) clearTimeout(statusChangedTimer);
       socket.off(REALTIME_EVENTS.STATUS_CHANGED, handleStatusChanged);
       socket.disconnect();
       setGlobalSocket(null);
@@ -213,9 +218,8 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 currentPage={currentPage} setCurrentPage={setCurrentPage}
                 pageSize={pageSize} setPageSize={setPageSize}
                 totalRecords={totalRecords} totalPages={totalPages}
-                scopeFilter={scopeFilter}
+                scopeFilter={ownerFilter}
                 setScopeFilter={(sc) => {
-                  setScopeFilter(sc);
                   setOwnerFilter(sc === 'MY_REQ' ? 'MY_REQ' : 'ALL');
                   setCurrentPage(1);
                 }}
@@ -230,7 +234,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 onMarkClosed={handleMarkClosedClick}
                 onOpenCreate={handleOpenCreate}
                 onOpenExport={currentRole === 'SALE' ? undefined : () => setIsExportOpen(true)}
-                onResetFilters={() => { handleResetFilters(); setScopeFilter('ALL'); }}
+                onResetFilters={() => { handleResetFilters(); }}
                 selectedId={selectedReq?.id || selectedId || null}
               />
             } />

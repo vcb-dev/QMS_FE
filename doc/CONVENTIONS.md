@@ -250,9 +250,12 @@ gọi thẳng API thật. Nếu về sau cần dựng UI trước khi BE có end
 
 ## 10. Cấu hình môi trường
 
-- Biến build qua `import.meta.env.VITE_*` (`VITE_API_BASE`,
-  `VITE_API_PROXY_TARGET`, `VITE_DEFAULT_PRICER_EMAIL`). Đổi giá trị cần
-  build/deploy lại frontend.
+- Biến build qua `import.meta.env.VITE_*` (`VITE_API_BASE` — bắt buộc, là
+  `baseURL` axios + endpoint socket; `VITE_DEFAULT_PRICER_EMAIL` — tuỳ
+  chọn). Đổi giá trị cần build/deploy lại frontend.
+- FE gọi backend cross-origin trực tiếp (`VITE_API_BASE` là URL tuyệt đối),
+  **không** qua dev-server proxy — `vite.config.ts` không cấu hình
+  `server.proxy`; CORS mở phía backend (`FRONTEND_URL`).
 - Không hardcode URL backend trong component — đi qua `API_BASE` ở `api.ts`.
 - `vite.config.ts` chia vendor chunk sẵn (`vendor-react`, `vendor-charts`,
   `vendor-network`, `vendor-icons`); thêm thư viện lớn cân nhắc khai group

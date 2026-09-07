@@ -32,8 +32,11 @@ export function useQuoteRequests(
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [materialFilter, setMaterialFilter] = useState<string>('ALL');
-  // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả
-  const [ownerFilter, setOwnerFilter] = useState<string>(currentRole === 'SALE' ? 'MY_REQ' : 'ALL');
+  // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả. Dùng lại giá trị này mỗi khi
+  // reset bộ lọc (đổi tab / "Xóa bộ lọc") — reset về 'ALL' cứng sẽ âm thầm bỏ phạm vi mặc định
+  // của SALE trong khi dropdown vẫn hiện "Chỉ yêu cầu của tôi".
+  const roleDefaultOwnerFilter = currentRole === 'SALE' ? 'MY_REQ' : 'ALL';
+  const [ownerFilter, setOwnerFilter] = useState<string>(roleDefaultOwnerFilter);
   const [timeRangeFilter, setTimeRangeFilter] = useState<string>('ALL');
   const [startDateFilter, setStartDateFilter] = useState<string>('');
   const [endDateFilter, setEndDateFilter] = useState<string>('');
@@ -84,7 +87,12 @@ export function useQuoteRequests(
   // `listLoading`: dùng cho việc load/refresh danh sách khi chuyển tab, đổi bộ lọc (thanh tiến trình mỏng, không chặn UI)
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState('Đang tải dữ liệu từ hệ thống VCB...');
-  const [listLoading, setListLoading] = useState<boolean>(Boolean(currentUser));
+  // Chỉ bật khi trang thực sự tải danh sách (listDataEnabled). Bật true vô điều kiện lúc login rồi
+  // đáp ở trang không tải list (Tổng quan ADMIN, Thư viện, Cấu hình...) khiến loadData return sớm,
+  // không chỗ nào tắt -> thanh NavProgressBar chạy mãi.
+  const [listLoading, setListLoading] = useState<boolean>(
+    Boolean(currentUser) && listDataEnabled,
+  );
 
   // Thông báo thành công dạng nhẹ (toast góc màn hình), tự ẩn sau vài giây.
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -98,8 +106,16 @@ export function useQuoteRequests(
   const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
   filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
+  // Chữ ký bộ lọc ảnh hưởng tới counts sidebar (nằm trong countsWhere của BE — đã strip status).
+  // Khác lần trước mới xin BE tính lại counts; phân trang / đổi tab trạng thái giữ nguyên chữ ký.
+  const countsSigRef = useRef<string>('');
   // Đếm request để bỏ qua response trả về trễ (race condition khi chuyển tab/lọc liên tục)
   const requestIdRef = useRef(0);
+  // Số lần load DANH SÁCH (foreground) đang chạy — thanh NavProgressBar bật khi > 0, tắt khi về 0.
+  // Không đếm refreshQuietly (nền): trước đây finally tắt spinner bị guard theo requestId, mà mỗi
+  // refreshQuietly do socket cũng ++requestId -> 1 loạt event làm finally của load foreground bị bỏ
+  // qua -> thanh tiến trình kẹt chạy mãi tới khi đổi trang.
+  const listLoadInFlightRef = useRef(0);
 
   // 1. Load Master Data ONCE on user login
   const loadMasterDataOnce = async () => {
@@ -113,18 +129,24 @@ export function useQuoteRequests(
   };
 
   // 2. Load Quote Requests dùng ref để đọc state mới nhất
-  const loadData = async (showLoading = true) => {
+  const loadData = async (showLoading = true, forceCounts = false) => {
     const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
     if (!currentUser) return;
 
     // `counts` chỉ trang Danh sách + Tổng quan SALE dùng (đều listDataEnabled=true). Trang khác
     // (Cấu hình thông báo / Cấu hình giá / Thư viện / Nhân viên / Khách hàng / Máy tính giá) không
     // đọc requests[] lẫn counts -> không gọi gì cả.
-    if (!listDataEnabled) return;
+    if (!listDataEnabled) {
+      // Rời trang danh sách khi 1 lượt load đang chạy -> tắt thanh tiến trình, reset bộ đếm.
+      listLoadInFlightRef.current = 0;
+      setListLoading(false);
+      return;
+    }
 
     const myRequestId = ++requestIdRef.current;
 
     if (showLoading) {
+      listLoadInFlightRef.current += 1;
       setListLoading(true);
     }
     try {
@@ -139,8 +161,18 @@ export function useQuoteRequests(
 
       const ownerId = (currentFilter === 'MY_REQ' || ownerFilter === 'MY_REQ') ? currentUser.id : undefined;
 
-      const includeCounts = needCountsRef.current;
-      needCountsRef.current = false; // Reset sau lần đầu
+      // Counts sidebar chỉ đổi theo bộ lọc nằm trong countsWhere của BE (đã strip status) — KHÔNG
+      // đổi khi phân trang hay đổi tab trạng thái. Xin BE tính lại khi chữ ký lọc đổi, lần đầu,
+      // hoặc socket refresh (forceCounts — trạng thái đơn vừa đổi). Đỡ 2 query mỗi lần phân trang.
+      const countsSig = JSON.stringify([
+        searchTerm, categoryFilter, materialFilter, ownerId,
+        timeRangeFilter, startDateFilter, endDateFilter, includeLocked,
+      ]);
+      const includeCounts =
+        forceCounts || needCountsRef.current || countsSig !== countsSigRef.current;
+      needCountsRef.current = false;
+      // countsSigRef cập nhật SAU khi response về (dưới) — nếu cập nhật ở đây rồi request bị 1 request
+      // mới hơn vượt mặt, lần sau sẽ tưởng đã có counts cho bộ lọc này mà thật ra chưa.
       // Trang không đọc requests[]: chỉ cần counts -> kéo 1 dòng + lite, khỏi hydrate cả trang.
       const effectiveLimit = !listDataEnabled ? 1 : currentFilter === 'LIBRARY' ? 8 : pageSize;
 
@@ -164,6 +196,8 @@ export function useQuoteRequests(
       // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)
       if (myRequestId !== requestIdRef.current) return;
 
+      if (includeCounts) countsSigRef.current = countsSig;
+
       const items: QuoteRequest[] = quoteRes.data || [];
       const meta = quoteRes.meta || {};
 
@@ -176,7 +210,7 @@ export function useQuoteRequests(
       setServerTotalPages(meta.totalPages || 1);
       if (meta.counts) {
         setCounts(meta.counts);
-      } else if (listDataEnabled && items) {
+      } else if (includeCounts && listDataEnabled && items) {
         const pending = items.filter((r) => r.status === 'PENDING').length;
         const processing = items.filter((r) => r.status === 'PROCESSING').length;
         const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
@@ -210,8 +244,9 @@ export function useQuoteRequests(
         console.error('Error loading data from API:', err);
       }
     } finally {
-      if (myRequestId === requestIdRef.current) {
-        setListLoading(false);
+      if (showLoading) {
+        listLoadInFlightRef.current = Math.max(0, listLoadInFlightRef.current - 1);
+        if (listLoadInFlightRef.current === 0) setListLoading(false);
       }
     }
   };
@@ -287,7 +322,7 @@ export function useQuoteRequests(
     setStatusSubFilter('ALL');
     setCategoryFilter('ALL');
     setMaterialFilter('ALL');
-    setOwnerFilter('ALL');
+    setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
     setStartDateFilter('');
     setEndDateFilter('');
@@ -300,7 +335,7 @@ export function useQuoteRequests(
     setStatusSubFilter('ALL');
     setCategoryFilter('ALL');
     setMaterialFilter('ALL');
-    setOwnerFilter('ALL');
+    setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
     setStartDateFilter('');
     setEndDateFilter('');
@@ -561,7 +596,8 @@ export function useQuoteRequests(
     handleMarkClosed,
     handleMarkClosedClick,
     handleCloseOptionSubmit,
-    refreshQuietly: () => loadData(false),
+    // Socket STATUS_CHANGED: trạng thái 1 đơn vừa đổi -> counts sidebar cũng đổi, ép lấy lại counts.
+    refreshQuietly: () => loadData(false, true),
     refreshList: () => loadData(true),
   };
 }

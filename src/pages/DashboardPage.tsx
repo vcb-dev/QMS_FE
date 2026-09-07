@@ -86,12 +86,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       if (currentRole === 'ADMIN') {
         // Admin chỉ xem card KPI + biểu đồ tổng hợp — không render bảng "Yêu cầu gần đây" /
         // "Sản phẩm nổi bật". Lấy số đã cộng sẵn ở BE (/stats), khỏi kéo cả danh sách đơn về.
+        const prevQuery = getPreviousPeriodQuery(newRange);
         const [curRes, chartsRes] = await Promise.all([
           fetchQuoteRequestStats({ timeRange: newRange }),
           fetchDashboardCharts({ timeRange: newRange }),
         ]);
-        const prevQuery = getPreviousPeriodQuery(newRange);
-        const prevRes = prevQuery ? await fetchQuoteRequestStats(prevQuery) : null;
         // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)
         if (myRequestId !== timeRangeRequestIdRef.current) return;
         if (curRes?.counts) setCounts(curRes.counts);
@@ -106,18 +105,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             : null,
         );
         setCharts(chartsRes);
-        setPrevStats(prevRes || null);
+
+        // prevStats chỉ nuôi badge "so kỳ trước" bên cạnh card KPI — không chặn render trang. Fetch
+        // riêng, set khi về; xoá trước để không hiện delta của kỳ cũ trong lúc chờ. Vẫn kiểm race
+        // theo timeRangeRequestIdRef như luồng chính.
+        setPrevStats(null);
+        if (prevQuery) {
+          fetchQuoteRequestStats(prevQuery)
+            .then((prevRes) => {
+              if (myRequestId === timeRangeRequestIdRef.current) {
+                setPrevStats(prevRes || null);
+              }
+            })
+            .catch(() => {
+              if (myRequestId === timeRangeRequestIdRef.current) setPrevStats(null);
+            });
+        }
         return;
       }
 
       // ORDER: chỉ cần 5 dòng cho bảng "Yêu cầu gần đây" + counts cho Sidebar.
-      const res = await fetchQuoteRequests({
-        timeRange: newRange,
-        includeCounts: true,
-        limit: 20,
-        lite: true,
-      });
-      const chartsRes = await fetchDashboardCharts({ timeRange: newRange });
+      const [res, chartsRes] = await Promise.all([
+        fetchQuoteRequests({
+          timeRange: newRange,
+          includeCounts: true,
+          limit: 20,
+          lite: true,
+        }),
+        fetchDashboardCharts({ timeRange: newRange }),
+      ]);
       if (myRequestId !== timeRangeRequestIdRef.current) return;
       if (res.meta?.counts) {
         setCounts(res.meta.counts);
