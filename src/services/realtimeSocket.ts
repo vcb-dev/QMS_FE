@@ -9,6 +9,8 @@ export function connectRealtimeSocket(): Socket {
   return io(SOCKET_BASE_URL, {
     autoConnect: true,
     withCredentials: true,
-    transports: ['websocket'], // bỏ long-polling, tránh kẹt poll khi host không nâng cấp được WS
+    // Để mặc định polling -> websocket. Khi FE deploy sau proxy tĩnh (Vercel) không nâng cấp được
+    // WS thì socket giữ ở long-polling qua rewrite '/socket.io/*'; nối thẳng backend thì tự lên WS.
+    transports: ['polling', 'websocket'],
   });
 }
