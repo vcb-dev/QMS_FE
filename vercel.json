@@ -5,7 +5,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://vcb-qms-be-production.up.railway.app/:path*"
+      "destination": "https://qms-be-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/socket.io/:path*",
+      "destination": "https://qms-be-production.up.railway.app/socket.io/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
