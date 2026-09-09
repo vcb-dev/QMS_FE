@@ -11,6 +11,8 @@ import { Sidebar } from './components/Sidebar';
 import { NavProgressBar } from './components/NavProgressBar';
 import { Toast } from './components/Toast';
 import { LoadingOverlay } from './components/LoadingOverlay';
+import { RouteFallback } from './components/RouteFallback';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { LoginPage } from './pages/LoginPage';
 
@@ -194,7 +196,8 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
         />
 
         <main className="flex-1 min-w-0 p-[20px] overflow-y-auto flex flex-col gap-[20px] box-border animate-page-fade" key={location.pathname}>
-          <Suspense fallback={null}>
+          <ErrorBoundary inline>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={
               <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
@@ -282,11 +285,12 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
 
       {/* Global Modals — chỉ mount khi đang mở (state !== null / true) */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingOverlay message="Đang mở..." />}>
         {isCreateOpen && (
           <CreateModal isOpen onClose={() => setIsCreateOpen(false)}
             onSubmit={handleCreateOrUpdateSubmit} categories={categories} materials={materials}

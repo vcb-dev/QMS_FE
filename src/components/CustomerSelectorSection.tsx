@@ -229,7 +229,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
               >
                 <option value="">-- Chọn Tỉnh / Thành Phố --</option>
                 {provinces.map((p) => (
-                  <option key={p.id} value={p.name}>
+                  <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
@@ -247,7 +247,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                 >
                   <option value="">-- Chọn Xã / Phường --</option>
                   {wards.map((w: any) => (
-                    <option key={w.id} value={w.name}>
+                    <option key={w.id} value={w.id}>
                       {w.name}
                     </option>
                   ))}

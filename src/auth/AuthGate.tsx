@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Role, User } from '../types';
-import { getStoredUser, getProfileApi, logoutApi } from '../services/api';
+import { getStoredUser, getProfileApi, logoutApi, setSessionExpiredHandler } from '../services/api';
 
 interface AuthState {
   currentUser: User | null;
@@ -30,6 +30,14 @@ export function useAuth(): AuthState {
     return () => {
       alive = false;
     };
+  }, []);
+
+  // Phiên hết hạn hẳn (401 và refresh token cũng fail): api interceptor gọi handler này để về
+  // màn đăng nhập bằng điều hướng SPA (xoá currentUser -> App render <Navigate to="/login">),
+  // thay cho window.location.reload() vốn chớp trắng và mất state form đang nhập.
+  useEffect(() => {
+    setSessionExpiredHandler(() => setCurrentUser(null));
+    return () => setSessionExpiredHandler(null);
   }, []);
 
   const handleLoginSuccess = (user: User) => {

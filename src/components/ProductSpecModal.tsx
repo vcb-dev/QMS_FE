@@ -9,6 +9,7 @@ import { getPriceBreakdown, getLivePriceBreakdown } from '../utils/priceBreakdow
 import { ImageLightbox } from './ImageLightbox';
 import { formatPriceRange, formatOptionCopyLine } from '../utils/quoteOption';
 import { fetchLibraryProductHistory } from '../services/api';
+import { useModalA11y } from '../hooks/useModalA11y';
 import {
   modalBackdropCls,
   modalCardCls,
@@ -35,6 +36,9 @@ const fmtDate = (s?: string | null) =>
 export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose, filters }) => {
   const [activeIdx, setActiveIdx] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
+  // Khi ImageLightbox (zoomOpen) đang mở thì để nó tự xử lý Esc — tắt hành vi Esc/khoá-cuộn của
+  // modal này để Esc lần đầu chỉ đóng lightbox, không đóng luôn cả modal.
+  const dialogRef = useModalA11y(onClose, !zoomOpen);
 
   // Lịch sử báo giá — KHÔNG gửi kèm list nữa (nhóm có thể vài nghìn đơn). Lazy-load theo trang khi
   // mở modal; nút "Tải thêm" tải trang tiếp theo. Truyền cùng bộ lọc ngoài để khớp view đang lọc.
@@ -140,6 +144,11 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
     <>
     <div className={modalBackdropCls} onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Thông số sản phẩm — ${item.productName}`}
+        tabIndex={-1}
         className={clsx(
           modalCardCls,
           'w-[min(1000px,96vw)] max-w-[min(1000px,96vw)] h-auto max-h-[92vh] overflow-hidden flex flex-col',

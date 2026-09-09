@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
+import { useModalA11y } from '../hooks/useModalA11y';
 import { X, Upload, PlusCircle } from 'lucide-react';
 import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
@@ -36,6 +37,11 @@ const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle
   </span>
 );
 
+// Khoá nhóm kim loại gốc của 1 chất liệu. Chất liệu phi kim loại (baseMetalId null) mỗi cái là
+// một nhóm riêng nên không ghép được với bất kỳ chất liệu nào khác.
+const materialGroupKey = (m: { id: string; baseMetalId?: string | null }) =>
+  m.baseMetalId ?? `__nonmetal__${m.id}`;
+
 export const CreateModal: React.FC<CreateModalProps> = ({
   isOpen,
   onClose,
@@ -47,6 +53,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   calculatorData,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useModalA11y(onClose, isOpen);
 
   const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -131,10 +138,24 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   }, [materialDropdownOpen]);
 
   const toggleMaterialId = (id: string) => {
-    setSelectedMaterialIds((prev) =>
-      prev.includes(id) ? prev.filter((mId) => mId !== id) : [...prev, id]
-    );
+    setSelectedMaterialIds((prev) => {
+      if (prev.includes(id)) return prev.filter((mId) => mId !== id);
+      const first = prev.length > 0 ? materials.find((m) => m.id === prev[0]) : null;
+      const cand = materials.find((m) => m.id === id);
+      // Chốt chặn: chỉ ghép được chất liệu cùng một kim loại gốc.
+      if (first && cand && materialGroupKey(first) !== materialGroupKey(cand)) return prev;
+      return [...prev, id];
+    });
   };
+
+  // Nhóm kim loại gốc đang bị "chốt" theo chất liệu đầu tiên đã chọn — null khi chưa chọn gì.
+  const firstSelectedMaterial =
+    selectedMaterialIds.length > 0
+      ? materials.find((m) => m.id === selectedMaterialIds[0])
+      : undefined;
+  const selectedMaterialGroupKey = firstSelectedMaterial
+    ? materialGroupKey(firstSelectedMaterial)
+    : null;
 
   // Loại đá (đá chủ/đá tấm) — không bắt buộc. Chọn loại xong mới tải danh mục đá cụ thể của loại đó.
   // Panel render qua createPortal ra document.body (position: fixed, tọa độ tự tính từ nút bấm) —
@@ -480,7 +501,9 @@ export const CreateModal: React.FC<CreateModalProps> = ({
           name: newCustomerName.trim() || 'Khách lẻ',
           phone: newCustomerPhone.trim() || undefined,
           provinceId: newCustomerProvince || undefined,
-          wardId: newCustomerWard || undefined,
+          // Ô ward khi tỉnh không có danh mục xã/phường là input gõ tay — giá trị đó không phải id
+          // thật, gửi lên sẽ vỡ FK ward_id. Chỉ gửi khi khớp một ward trong danh mục vừa tải.
+          wardId: wards.some((w) => w.id === newCustomerWard) ? newCustomerWard : undefined,
           address: newCustomerAddress.trim() || undefined,
         });
 
@@ -527,7 +550,14 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   return (
     <div className={modalBackdropCls}>
-      <div className={clsx(modalCardCls, '!max-w-[920px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalCreateTitle"
+        tabIndex={-1}
+        className={clsx(modalCardCls, '!max-w-[920px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}
+      >
         {/* Header matching design */}
         <div className="shrink-0 bg-surface text-[#0f172a] py-[18px] px-[24px] flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-[14px]">
@@ -657,20 +687,31 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       {materials.length === 0 && (
                         <div className="p-[8px] text-[12px] text-faint">Chưa có chất liệu nào</div>
                       )}
-                      {materials.map((m) => (
-                        <label
-                          key={m.id}
-                          className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[13px] font-semibold text-[#334155] cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedMaterialIds.includes(m.id)}
-                            onChange={() => toggleMaterialId(m.id)}
-                            className={checkboxSmallCls}
-                          />
-                          {m.name}
-                        </label>
-                      ))}
+                      {materials.map((m) => {
+                        const blocked =
+                          selectedMaterialGroupKey !== null &&
+                          !selectedMaterialIds.includes(m.id) &&
+                          materialGroupKey(m) !== selectedMaterialGroupKey;
+                        return (
+                          <label
+                            key={m.id}
+                            title={blocked ? 'Phải cùng kim loại gốc với chất liệu đã chọn' : undefined}
+                            className={clsx(
+                              'flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[13px] font-semibold text-[#334155]',
+                              blocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={blocked}
+                              checked={selectedMaterialIds.includes(m.id)}
+                              onChange={() => toggleMaterialId(m.id)}
+                              className={checkboxSmallCls}
+                            />
+                            {m.name}
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

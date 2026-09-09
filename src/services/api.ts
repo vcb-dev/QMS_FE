@@ -8,10 +8,17 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 export const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true, // Gửi cookie HTTP-Only tự động
+  // Request treo vô hạn khi BE chậm / cold-start làm UI kẹt spinner không lối thoát. Chốt trần 30s
+  // cho call thường; upload ảnh-video và export file lớn tự tắt timeout riêng (NO_TIMEOUT) bên dưới.
+  timeout: 30_000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Upload ảnh/video (tối đa 100MB) hoặc tải file export lớn vượt 30s là bình thường — tắt timeout
+// cho riêng nhóm call này thay vì nới trần toàn cục.
+const NO_TIMEOUT = { timeout: 0 } as const;
 
 // Gộp các request GET trùng lặp đang bay cùng lúc (VD: React.StrictMode / lazy-mount kích hoạt effect
 // nhiều lần) thành 1 request thật duy nhất — các lệnh gọi sau chỉ "ăn theo" promise đang chờ, không bắn
@@ -104,7 +111,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !isAuthRequest && !originalRequest?.skipAuthRedirect) {
       clearSession();
       if (!window.location.pathname.includes('/login')) {
-        window.location.reload();
+        if (sessionExpiredHandler) {
+          sessionExpiredHandler();
+        } else {
+          window.location.reload();
+        }
       }
     }
     return Promise.reject(error);
@@ -129,6 +140,15 @@ export function getStoredUser(): User | null {
 export function clearSession() {
   sessionStorage.removeItem(STORAGE_KEYS.USER);
   localStorage.removeItem(STORAGE_KEYS.USER);
+}
+
+// AuthGate đăng ký hàm này lúc mount. Interceptor gọi khi phiên hết hạn hẳn (401 + refresh cũng
+// fail) để điều hướng SPA về /login (xoá currentUser -> App render <Navigate>) thay vì
+// window.location.reload() — không chớp trắng, không mất history router. Chưa đăng ký (lỗi xảy ra
+// trước khi React mount) thì interceptor fallback reload như cũ.
+let sessionExpiredHandler: (() => void) | null = null;
+export function setSessionExpiredHandler(fn: (() => void) | null) {
+  sessionExpiredHandler = fn;
 }
 
 export async function logoutApi(): Promise<void> {
@@ -177,7 +197,9 @@ let larkRedirecting = false;
 export function redirectToLarkLogin() {
   if (larkRedirecting) return;
   larkRedirecting = true;
-  window.location.href = `${API_BASE}/auth/lark`;
+  // API_BASE có thể là đường dẫn tương đối ('/api') hoặc URL tuyệt đối (VITE_API_BASE) — resolve
+  // thành URL đầy đủ theo origin hiện tại trước khi điều hướng, không phụ thuộc thẻ <base> của trang.
+  window.location.href = new URL(`${API_BASE}/auth/lark`, window.location.origin).toString();
 }
 
 export async function registerApi(payload: { name: string; email: string; password: string; role?: string }): Promise<{ user: User; message: string }> {
@@ -409,7 +431,7 @@ function buildQuoteRequestBody(payload: any): any {
 
 export async function createQuoteRequest(payload: any) {
   const body = buildQuoteRequestBody(payload);
-  const config = body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+  const config = body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' }, ...NO_TIMEOUT } : undefined;
   return apiCall(api.post('/quote-requests', body, config), 'Lỗi khi tạo yêu cầu báo giá');
 }
 
@@ -419,7 +441,7 @@ export async function deleteQuoteRequest(id: string) {
 
 export async function updateQuoteRequest(id: string, payload: any) {
   const body = buildQuoteRequestBody(payload);
-  const config = body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+  const config = body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' }, ...NO_TIMEOUT } : undefined;
   return apiCall(api.patch(`/quote-requests/${id}`, body, config), 'Lỗi khi cập nhật yêu cầu báo giá');
 }
 
@@ -757,6 +779,7 @@ export async function importStonesExcel(file: File) {
   try {
     const res = await api.post('/stones/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      ...NO_TIMEOUT,
     });
     return res.data;
   } catch (err: any) {
@@ -832,7 +855,7 @@ export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { cat
   if (filter?.fields?.length) params.fields = filter.fields.join(',');
 
   try {
-    const res = await api.get('/quote-requests/export', { params, responseType: 'blob' });
+    const res = await api.get('/quote-requests/export', { params, responseType: 'blob', ...NO_TIMEOUT });
 
     const disposition = res.headers['content-disposition'] as string | undefined;
     const filenameMatch = disposition?.match(/filename="?([^";]+)"?/);
@@ -863,7 +886,7 @@ export async function uploadChatImage(quoteRequestId: string, file: File): Promi
   const formData = new FormData();
   formData.append('file', file);
   return apiCall(
-    api.post(`/quote-chat/${quoteRequestId}/upload-image`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post(`/quote-chat/${quoteRequestId}/upload-image`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, ...NO_TIMEOUT }),
     'Không thể tải ảnh lên',
   );
 }

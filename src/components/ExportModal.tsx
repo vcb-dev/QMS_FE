@@ -5,6 +5,7 @@ import type { Material, ProductCategory } from '../types';
 import { exportQuoteRequestsExcelApi } from '../services/api';
 import { STATUS_CHART_META } from '../constants';
 import { EXPORT_FIELDS } from '../constants/exportFields';
+import { useModalA11y } from '../hooks/useModalA11y';
 import {
   modalBackdropCls,
   modalCardCls,
@@ -56,6 +57,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     new Set(EXPORT_FIELDS.map((f) => f.key)),
   );
   const [exporting, setExporting] = useState(false);
+  const dialogRef = useModalA11y(onClose, isOpen);
 
   if (!isOpen) return null;
 
@@ -101,7 +103,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div className={modalBackdropCls}>
-      <div className={clsx(modalCardCls, '!max-w-[760px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Xuất Excel yêu cầu báo giá"
+        tabIndex={-1}
+        className={clsx(modalCardCls, '!max-w-[760px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}
+      >
         <div className={clsx(modalHeaderCls, 'shrink-0')}>
           <h2>Xuất Excel Yêu Cầu Báo Giá</h2>
           <button onClick={onClose} className="bg-transparent border-0 text-muted cursor-pointer">

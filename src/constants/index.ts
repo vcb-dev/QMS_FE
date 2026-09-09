@@ -79,13 +79,13 @@ export const CATEGORY_PAGE_SIZE = 10;
 // Giá trị đại diện "không giới hạn" cho bậc lợi nhuận cuối cùng — hiển thị dạng ∞/toggle thay vì bắt nhập số khổng lồ
 export const UNLIMITED_MAX_COST = 999_999_999_999;
 
-// Map lựa chọn "Khách tỷ lệ chốt" (CreateModal) sang closeRatePct gửi BE.
-// pct = null → không gửi field (khách không thực hiện báo giá).
-export const CLOSE_RATE_OPTIONS: { value: string; label: string; pct: number | null }[] = [
-  { value: 'NOT_YET', label: 'Khách chưa chốt báo giá', pct: 0 },
-  { value: 'DEPOSITED', label: 'Khách đã đặt cọc', pct: 90 },
-  { value: 'SURE', label: 'Chắc chắn 100% lấy hàng', pct: 100 },
-  { value: 'NO_QUOTE', label: 'Không thực hiện báo giá', pct: null },
+// Map lựa chọn "Khách tỷ lệ chốt" (CreateModal) sang closeRatePct (%) gửi BE.
+// Mọi lựa chọn đều có pct → luôn gửi field khi tạo/sửa đơn.
+export const CLOSE_RATE_OPTIONS: { value: string; label: string; pct: number }[] = [
+  { value: 'NOT_YET', label: 'Khách chưa chốt báo giá', pct: 50 },
+  { value: 'DEPOSITED', label: 'Khách đã đặt cọc', pct: 100 },
+  { value: 'SURE', label: 'Chắc chắn lấy hàng', pct: 90 },
+  { value: 'REFERENCE', label: 'Khách đang tham khảo giá', pct: 25 },
 ];
 
 export const PRIMARY_BLUE = '#2563eb';

@@ -4,6 +4,9 @@ import { RotateCcw, Home, ShieldAlert, Copy, Check, ChevronDown, ChevronUp, Bug 
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
+  // true = fallback gọn nằm trong luồng nội dung (giữ nguyên Sidebar/Header xung quanh) — dùng cho
+  // ranh giới bọc từng route. Bỏ trống = fallback full-screen, dùng cho ranh giới gốc bọc cả app.
+  inline?: boolean;
 }
 
 interface ErrorBoundaryState {
@@ -40,6 +43,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     window.location.href = '/';
   };
 
+  // Ranh giới inline: thử render lại nội dung route mà không nạp lại cả trang. Nếu route vẫn lỗi
+  // thì bắt lại ngay; đường phục hồi chính là bấm sang mục khác ở Sidebar (route đổi -> <main>
+  // đổi key -> boundary này remount sạch).
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null, showDetails: false });
+  };
+
   handleCopyError = () => {
     const errorDetails = `[VCB QMS Error Report]
 Time: ${new Date().toISOString()}
@@ -59,6 +69,47 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
   };
 
   render() {
+    if (this.state.hasError && this.props.inline) {
+      const { error } = this.state;
+
+      return (
+        <div className="flex-1 flex items-center justify-center p-[24px] box-border">
+          <div className="w-full max-w-[440px] bg-surface border border-border rounded-[16px] p-[24px] text-center">
+            <div className="w-[52px] h-[52px] rounded-[16px] bg-[#fef2f2] border border-[#fee2e2] flex items-center justify-center text-[#dc2626] mx-auto mb-[14px]">
+              <ShieldAlert size={26} />
+            </div>
+            <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0 mb-[6px]">
+              Trang này gặp lỗi hiển thị
+            </h2>
+            <p className="text-[13px] text-muted m-0 mb-[16px] leading-[1.5]">
+              Các phần khác vẫn dùng được. Thử tải lại nội dung, hoặc chuyển sang mục khác ở thanh bên.
+            </p>
+            <div className="flex gap-[10px] justify-center flex-wrap">
+              <button
+                type="button"
+                onClick={this.handleRetry}
+                className="inline-flex items-center gap-[7px] bg-[#0f172a] text-white border-0 rounded-[10px] py-[9px] px-[16px] text-[13px] font-bold cursor-pointer"
+              >
+                <RotateCcw size={15} /> Tải lại nội dung
+              </button>
+              <button
+                type="button"
+                onClick={this.handleGoHome}
+                className="inline-flex items-center gap-[7px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[10px] py-[9px] px-[16px] text-[13px] font-bold cursor-pointer"
+              >
+                <Home size={15} /> Về trang chủ
+              </button>
+            </div>
+            {error?.message && (
+              <p className="mt-[14px] mb-0 text-[11.5px] font-mono text-[#dc2626] [word-break:break-word]">
+                {error.name || 'Lỗi'}: {error.message}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     if (this.state.hasError) {
       const { error, errorInfo, copied, showDetails } = this.state;
 

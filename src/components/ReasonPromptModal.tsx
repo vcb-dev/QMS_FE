@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import {
   modalBackdropCls,
   modalCardCls,
@@ -51,6 +52,7 @@ export const ReasonPromptModal: React.FC<ReasonPromptModalProps> = ({
 }) => {
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const dialogRef = useModalA11y(onClose, isOpen);
 
   if (!isOpen) return null;
 
@@ -74,7 +76,14 @@ export const ReasonPromptModal: React.FC<ReasonPromptModalProps> = ({
 
   return (
     <div className={modalBackdropCls}>
-      <div className={clsx(modalCardCls, '!max-w-[500px]')}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className={clsx(modalCardCls, '!max-w-[500px]')}
+      >
         {/* động — giữ inline */}
         <div className={modalHeaderCls} style={{ color: headerColor }}>
           {/* động — giữ inline */}

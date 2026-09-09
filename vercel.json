@@ -8,8 +8,8 @@
       "destination": "https://qms-be-production.up.railway.app/api/:path*"
     },
     {
-      "source": "/socket.io/:path*",
-      "destination": "https://qms-be-production.up.railway.app/socket.io/:path*"
+      "source": "/socket.io/(.*)",
+      "destination": "https://qms-be-production.up.railway.app/socket.io/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

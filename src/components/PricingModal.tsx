@@ -18,6 +18,7 @@ import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
 import { clsx } from 'clsx';
 import { modalCloseIconBtnCls, modalBackdropCls, modalCardCls, modalHeaderCls, labelUppercaseCls } from '../styles/classNames';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -42,6 +43,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   currentRole: _currentRole,
   materials: initialMaterialsList = [],
 }) => {
+  const dialogRef = useModalA11y(onClose, isOpen);
+
   // Master data
   const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetal?: { name: string } | null }[]>(initialMaterialsList);
   
@@ -587,7 +590,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   return (
     <div className={modalBackdropCls}>
-      <div className={clsx(modalCardCls, '!max-w-[860px] !w-[95%] !max-h-[92vh] overflow-y-auto')}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Báo giá yêu cầu ${selectedReq?.code || ''}`.trim()}
+        tabIndex={-1}
+        className={clsx(modalCardCls, '!max-w-[860px] !w-[95%] !max-h-[92vh] overflow-y-auto')}
+      >
         <div className={clsx(modalHeaderCls, '!py-[16px] !px-[20px]')}>
           <div>
             <h2 className="m-0 text-[17px] font-extrabold text-[#0f172a]">

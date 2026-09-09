@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import { fetchBaseMetalHistory } from '../services/api';
 import { formatCurrency } from '../utils/currency';
+import { useModalA11y } from '../hooks/useModalA11y';
 import {
   modalBackdropCls,
   modalCardCls,
@@ -97,6 +98,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
   const [rows, setRows] = useState<BaseMetalPriceHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useModalA11y(onClose, isOpen);
 
   // Chỉ xem 1 kim loại/lần cho dễ nhìn xu hướng (không chồng 3 đường lên nhau).
   // metalFilter luôn là 1 baseMetal.id cụ thể.
@@ -198,7 +200,15 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
   // bám theo trang bị cuộn thay vì bám màn hình thật — cuộn trang xuống rồi mở modal là bị lệch/xén.
   return createPortal(
     <div className={modalBackdropCls} onClick={onClose}>
-      <div className={clsx(modalCardCls, '!max-w-[880px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Lịch sử giá kim loại"
+        tabIndex={-1}
+        className={clsx(modalCardCls, '!max-w-[880px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={clsx(modalHeaderCls, 'shrink-0')}>
           <h2 className="flex items-center gap-[6px] m-0 text-[#0f172a]"><History size={18}/>Lịch Sử Giá Kim Loại</h2>
           <button onClick={onClose} className="bg-transparent border-0 text-muted cursor-pointer">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { X, Award, Check } from 'lucide-react';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { QuoteOption } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { getOptionLabel, getOptionSummary } from '../utils/quoteOption';
@@ -26,6 +27,7 @@ interface MarkClosedModalProps {
 export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCode, options, onClose, onSubmit }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const dialogRef = useModalA11y(onClose, isOpen);
 
   // Reset lựa chọn mỗi lần mở lại popup (kể cả khi mở cho 1 yêu cầu khác)
   useEffect(() => {
@@ -49,7 +51,14 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
 
   return (
     <div className={modalBackdropCls}>
-      <div className={clsx(modalCardCls, '!max-w-[480px]')}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Chọn phương án khách đã chốt"
+        tabIndex={-1}
+        className={clsx(modalCardCls, '!max-w-[480px]')}
+      >
         <div className={modalHeaderCls}>
           <h2>Chọn Phương Án Khách Đã Chốt{reqCode ? ` — ${reqCode}` : ''}</h2>
           <button onClick={onClose} className="bg-transparent border-none text-[#64748b] cursor-pointer">
