@@ -31,6 +31,7 @@ import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { renderTextWithLinks } from '../utils/linkify';
 import { getPrimaryOption, formatOptionCopyLine } from '../utils/quoteOption';
 import { ChatPopup } from '../components/ChatPopup';
 import { ImageLightbox } from '../components/ImageLightbox';
@@ -563,6 +564,18 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     {selectedReq.desiredLeadTime || 'Không có ghi chú thêm.'}
                   </p>
                 </div>
+
+                {/* Ghi chú Sale nhập thêm — có thể chứa link ảnh/video, hiện clickable cho Order */}
+                {selectedReq.note && (
+                  <div className="bg-page border border-border rounded-[10px] p-[14px]">
+                    <span className="text-[11px] font-extrabold text-muted uppercase block mb-[4px]">
+                      GHI CHÚ
+                    </span>
+                    <p className="text-[12.5px] text-[#334155] m-0 leading-[1.5] whitespace-pre-wrap break-words">
+                      {renderTextWithLinks(selectedReq.note)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
