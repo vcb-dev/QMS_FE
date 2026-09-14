@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X } from 'lucide-react';
+import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X, MessageCircle } from 'lucide-react';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -35,6 +35,9 @@ type QuoteTableProps = Pick<
   selectedId: string | null;
   onSelect: (id: string) => void;
   onReturn?: (id: string) => void;
+  // Badge tin nhắn chưa đọc + mở chat ngay tại bảng — đơn nào không có key nghĩa là 0.
+  unreadCounts: Record<string, number>;
+  onOpenChat: (id: string) => void;
 };
 
 export const QuoteTable: React.FC<QuoteTableProps> = ({
@@ -51,6 +54,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onReturn,
   onResubmit,
   onMarkClosed,
+  unreadCounts,
+  onOpenChat,
 }) => {
   // Ảnh sản phẩm đang bấm xem zoom — null = không mở lightbox
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -532,6 +537,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const displayDeptName = r.requester?.department?.name || '---';
             const displayNote = r.desiredLeadTime || '---';
 
+            // Chat chỉ giữa 2 người liên quan tới đơn (giống DetailPage) và chỉ có ý nghĩa khi đã
+            // có người xử lý (assignee) — PENDING chưa ai nhận thì chưa có ai để nhắn.
+            const isChatParticipant =
+              (r.requester?.id ?? r.requesterId) === currentUser.id ||
+              (r.assignee?.id ?? r.assigneeId) === currentUser.id;
+            const canChat = isChatParticipant && !!(r.assignee?.id ?? r.assigneeId);
+            const unread = unreadCounts[r.id] || 0;
+
             return (
               <tr
                 key={r.id}
@@ -541,7 +554,26 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 )}
                 onClick={() => onSelect(r.id)}
               >
-                <td><strong className="font-mono text-[12px] text-[#1e293b]">{r.code || r.id}</strong></td>
+                <td>
+                  <span className="inline-flex items-center gap-[6px]">
+                    <strong className="font-mono text-[12px] text-[#1e293b]">{r.code || r.id}</strong>
+                    {canChat && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onOpenChat(r.id); }}
+                        title={unread > 0 ? `${unread} tin nhắn chưa đọc` : 'Trao đổi'}
+                        className="relative inline-flex items-center justify-center w-[20px] h-[20px] bg-transparent border-0 text-muted cursor-pointer p-0"
+                      >
+                        <MessageCircle size={14} />
+                        {unread > 0 && (
+                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[9px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
+                            {unread > 9 ? '9+' : unread}
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </span>
+                </td>
                 <td className="text-muted text-[11px]">
                   {r.createdAt
                     ? new Date(r.createdAt).toLocaleString('vi-VN', {
