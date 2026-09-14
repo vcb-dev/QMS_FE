@@ -1319,15 +1319,26 @@ const StoneGroupTable: React.FC<{
               </tr>
             )}
             {/* Dòng đệm rỗng — khoá chiều cao bảng cố định STONE_PAGE_SIZE dòng, trang cuối ít đá
-                hơn không bị co lại ngắn hơn các trang đầy. */}
+                hơn không bị co lại ngắn hơn các trang đầy. Lặp lại đúng cấu trúc 5 cột + icon
+                thao tác của dòng thật (chỉ ẩn bằng invisible) để chiều cao khớp chính xác — 1 ô
+                colSpan duy nhất có thể thấp hơn dòng thật (dòng thật có icon/chữ đậm cao hơn). */}
             {Array.from({
               length: Math.max(
                 0,
                 STONE_PAGE_SIZE - pageItems.length - (adding ? 1 : 0) - (items.length === 0 && !adding ? 1 : 0),
               ),
             }).map((_, i) => (
-              <tr key={`filler-${i}`} aria-hidden="true">
-                <td className={tdCls} colSpan={5}>&nbsp;</td>
+              <tr key={`filler-${i}`} aria-hidden="true" className="invisible">
+                <td className={clsx(tdCls, 'font-extrabold')}>&nbsp;</td>
+                <td className={tdCls}>&nbsp;</td>
+                <td className={tdCls}>&nbsp;</td>
+                <td className={tdCls}>&nbsp;</td>
+                <td className={tdCenterCls}>
+                  <div className="flex gap-[10px] justify-center">
+                    <EditIconButton onClick={() => {}} />
+                    <DeleteIconButton onClick={() => {}} />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
