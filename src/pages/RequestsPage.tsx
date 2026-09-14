@@ -99,7 +99,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           (r.assignee?.id ?? r.assigneeId) === currentUser.id;
         const hasAssignee = !!(r.assignee?.id ?? r.assigneeId);
         if (isParticipant && hasAssignee) {
-          socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: r.id });
+          // passive: true — chỉ đăng ký nhận badge, KHÔNG tính là "đang xem" (BE dựa vào cờ này để
+          // quyết định có bắc cầu Lark DM hay không, và để không bị coi là chiếm "phòng đang mở").
+          socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: r.id, passive: true });
         }
       }
     };
