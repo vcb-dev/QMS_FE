@@ -882,6 +882,16 @@ export async function fetchChatMessages(quoteRequestId: string): Promise<{ messa
   return apiCall(api.get(`/quote-chat/${quoteRequestId}/messages`), 'Không thể tải lịch sử trò chuyện');
 }
 
+// Số tin chưa đọc cho NHIỀU đơn cùng lúc — badge nhỏ ở bảng Danh Sách. Đơn nào không có tin
+// chưa đọc thì BE không trả key đó (payload gọn), FE đọc qua `counts[id] ?? 0`.
+export async function fetchChatUnreadCounts(quoteRequestIds: string[]): Promise<Record<string, number>> {
+  if (quoteRequestIds.length === 0) return {};
+  return apiCall(
+    api.get('/quote-chat/unread-counts', { params: { ids: quoteRequestIds.join(',') } }),
+    'Không thể tải số tin nhắn chưa đọc',
+  );
+}
+
 export async function uploadChatImage(quoteRequestId: string, file: File): Promise<{ imageUrl: string }> {
   const formData = new FormData();
   formData.append('file', file);
