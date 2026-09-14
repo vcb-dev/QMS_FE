@@ -792,6 +792,26 @@ export async function importStonesExcel(file: File) {
   }
 }
 
+// Import bảng giá đá theo lưới shape/size (VD kim cương) — file không có cột Loại/Tên riêng
+// từng dòng, stoneType chốt theo nút bấm (đá chủ/đá tấm) truyền qua query, không đọc từ file.
+export async function importStonesPriceGridExcel(file: File, stoneType: 'MAIN' | 'SIDE') {
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await api.post(`/stones/import-price-grid?stoneType=${stoneType}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      ...NO_TIMEOUT,
+    });
+    return res.data;
+  } catch (err: any) {
+    const data = err.response?.data;
+    if (data?.errors && Array.isArray(data.errors)) {
+      throw new Error(`${data.message}\n${data.errors.join('\n')}`);
+    }
+    throw new Error(data?.message || 'Không thể import bảng giá đá');
+  }
+}
+
 export async function fetchSilverMultipliers(): Promise<number[]> {
   try {
     const res = await dedupedGet('/quote-options/silver-multipliers');

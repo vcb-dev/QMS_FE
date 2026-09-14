@@ -8,6 +8,7 @@ import {
   updateStonePrices,
   deleteStonesMany,
   importStonesExcel,
+  importStonesPriceGridExcel,
   fetchMasterData,
   invalidateMasterData,
   updateProductCategoriesBulk,
@@ -251,6 +252,8 @@ export const PricingConfigPage: React.FC = () => {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Import bảng giá lưới shape/size (VD kim cương) — riêng đá chủ/đá tấm, stoneType chốt theo nút bấm.
+  const [importingPriceGrid, setImportingPriceGrid] = useState<{ MAIN: boolean; SIDE: boolean }>({ MAIN: false, SIDE: false });
 
   const loadAll = () => {
     Promise.all([fetchStones(), fetchMasterData(), fetchBaseMetals(), fetchPricingFormulas()])
@@ -651,6 +654,30 @@ export const PricingConfigPage: React.FC = () => {
     }
   };
 
+  // Import bảng giá lưới shape/size (file không có cột Loại/Tên riêng dòng, tên đá lấy từ dòng
+  // đầu file, stoneType chốt theo nút bấm) — trùng shape/size với đá đã có thì BE đè giá mới.
+  const handleImportPriceGridFile = async (file: File, stoneType: 'MAIN' | 'SIDE') => {
+    setImportResult(null);
+    setStoneError(null);
+    setImportingPriceGrid((s) => ({ ...s, [stoneType]: true }));
+    try {
+      const result = await importStonesPriceGridExcel(file, stoneType);
+      setImportResult(
+        result.updated > 0
+          ? `Đã import ${result.imported} đá mới, cập nhật giá ${result.updated} đá`
+          : `Đã import ${result.imported} đá`,
+      );
+      const rowsFresh = await fetchStones();
+      const freshList = Array.isArray(rowsFresh) ? rowsFresh : [];
+      setStones(freshList);
+      setInitialStones(freshList);
+    } catch (err: any) {
+      setStoneError(err.message || 'Import thất bại');
+    } finally {
+      setImportingPriceGrid((s) => ({ ...s, [stoneType]: false }));
+    }
+  };
+
   const mainStones = stones.filter((s) => s.stoneType === 'MAIN');
   const sideStones = stones.filter((s) => s.stoneType === 'SIDE');
 
@@ -877,6 +904,8 @@ export const PricingConfigPage: React.FC = () => {
                   newStone={newStone}
                   setNewStone={setNewStone}
                   onConfirmAdd={handleAddStone}
+                  onImportPriceGrid={(f) => handleImportPriceGridFile(f, 'MAIN')}
+                  importingPriceGrid={importingPriceGrid.MAIN}
                 />
 
                 <div className="h-[22px]" />
@@ -900,6 +929,8 @@ export const PricingConfigPage: React.FC = () => {
                   newStone={newStone}
                   setNewStone={setNewStone}
                   onConfirmAdd={handleAddStone}
+                  onImportPriceGrid={(f) => handleImportPriceGridFile(f, 'SIDE')}
+                  importingPriceGrid={importingPriceGrid.SIDE}
                 />
               </PanelSection>
             </>
@@ -1252,14 +1283,39 @@ const StoneGroupTable: React.FC<{
   newStone: { stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string };
   setNewStone: React.Dispatch<React.SetStateAction<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string }>>;
   onConfirmAdd: () => void;
-}> = ({ title, addLabel, items, initialStones, pendingDeleteIds, editingIds, page, setPage, onPriceChange, onToggleDelete, onToggleEdit, adding, onOpenAdd, onCloseAdd, newStone, setNewStone, onConfirmAdd }) => {
+  onImportPriceGrid: (file: File) => void;
+  importingPriceGrid: boolean;
+}> = ({ title, addLabel, items, initialStones, pendingDeleteIds, editingIds, page, setPage, onPriceChange, onToggleDelete, onToggleEdit, adding, onOpenAdd, onCloseAdd, newStone, setNewStone, onConfirmAdd, onImportPriceGrid, importingPriceGrid }) => {
   const totalPages = Math.max(1, Math.ceil(items.length / STONE_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageItems = items.slice((safePage - 1) * STONE_PAGE_SIZE, safePage * STONE_PAGE_SIZE);
+  const gridFileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div>
-      <h4 className="text-[12px] font-extrabold text-[#334155] m-0 mb-[8px]">{title}</h4>
+      <div className="flex items-center justify-between mb-[8px]">
+        <h4 className="text-[12px] font-extrabold text-[#334155] m-0">{title}</h4>
+        <input
+          ref={gridFileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0] || null;
+            if (f) onImportPriceGrid(f);
+            e.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => gridFileInputRef.current?.click()}
+          disabled={importingPriceGrid}
+          className={clsx(btnGhostSmallCls, importingPriceGrid && 'opacity-60')}
+          title="Import bảng giá theo lưới shape/size (VD kim cương) — tên đá lấy từ dòng đầu file"
+        >
+          {importingPriceGrid ? <Loader2 size={12} className="animate-[spin_0.8s_linear_infinite]" /> : <Upload size={12} />} Nhập bảng giá
+        </button>
+      </div>
       <div className="overflow-x-auto border border-[#e5e7eb] rounded-[10px]">
         <table className="w-full table-fixed border-collapse text-[12.5px]">
           <thead>
