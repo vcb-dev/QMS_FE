@@ -4,6 +4,7 @@ import { clsx } from 'clsx';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { useModalA11y } from '../hooks/useModalA11y';
+import { materialGroupKey } from '../utils/quoteOption';
 import { X, Upload, PlusCircle } from 'lucide-react';
 import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
@@ -36,11 +37,6 @@ const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle
     )}
   </span>
 );
-
-// Khoá nhóm kim loại gốc của 1 chất liệu. Chất liệu phi kim loại (baseMetalId null) mỗi cái là
-// một nhóm riêng nên không ghép được với bất kỳ chất liệu nào khác.
-const materialGroupKey = (m: { id: string; baseMetalId?: string | null }) =>
-  m.baseMetalId ?? `__nonmetal__${m.id}`;
 
 export const CreateModal: React.FC<CreateModalProps> = ({
   isOpen,

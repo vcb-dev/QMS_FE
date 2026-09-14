@@ -1,20 +1,39 @@
 import { useState } from 'react';
 import type { MaterialRow, StoneRow, StoneCatalogItem } from '../types';
+import { materialGroupKey } from '../utils/quoteOption';
 
 const genRowId = () => `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+type StoneRowsMaterial = { id: string; name: string; baseMetalId?: string | null; baseMetal?: { id: string } | null };
 
 // Gom state + CRUD cho 2 mảng "chất liệu" và "đá" dùng chung giữa CalculatorPage (Sale tự tính giá)
 // và PricingModal (Order xử lý đơn).
 export function useMaterialStoneRows(
-  dbMaterials: { id: string; name: string }[],
+  dbMaterials: StoneRowsMaterial[],
   stoneCatalog: StoneCatalogItem[],
   initialMaterialRows: MaterialRow[] = [],
 ) {
   const [materialRows, setMaterialRows] = useState<MaterialRow[]>(initialMaterialRows);
   const [stoneRows, setStoneRows] = useState<StoneRow[]>([]);
 
+  // Từ 2 dòng chất liệu trở lên -> khoá chung 1 nhóm kim loại gốc (không trộn Vàng với Bạc/Bạch
+  // kim...), lấy nhóm theo dòng ĐẦU TIÊN khớp được 1 chất liệu thật trong dbMaterials. Chỉ 1 dòng
+  // thì chưa khoá gì — dòng đó tự do chọn, nhóm chỉ chốt khi thêm dòng thứ 2.
+  const anchorMaterial =
+    materialRows.length > 1
+      ? materialRows
+          .map((r) => dbMaterials.find((m) => m.id === r.materialId))
+          .find((m): m is StoneRowsMaterial => !!m)
+      : undefined;
+  const lockedMaterialGroupKey = anchorMaterial ? materialGroupKey(anchorMaterial) : null;
+
   const addMaterialRow = () => {
-    const first = dbMaterials[0];
+    // Dòng mới phải cùng nhóm với các dòng đã có (nếu đang bị khoá) — không mặc định dbMaterials[0]
+    // vô điều kiện như trước, tránh thêm ngay 1 dòng khác nhóm rồi phải sửa lại.
+    const candidates = lockedMaterialGroupKey
+      ? dbMaterials.filter((m) => materialGroupKey(m) === lockedMaterialGroupKey)
+      : dbMaterials;
+    const first = candidates[0] ?? dbMaterials[0];
     setMaterialRows((prev) => [
       ...prev,
       { id: genRowId(), materialId: first?.id || '', materialName: first?.name || '', weightChi: '1.0' },
@@ -72,6 +91,7 @@ export function useMaterialStoneRows(
     addMaterialRow,
     updateMaterialRow,
     removeMaterialRow,
+    lockedMaterialGroupKey,
     stoneRows,
     setStoneRows,
     addStoneRow,
