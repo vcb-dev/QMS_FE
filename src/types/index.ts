@@ -349,6 +349,10 @@ export interface DetailPageProps {
   currentRole: Role;
   currentUser: User;
   socket?: import('socket.io-client').Socket | null;
+  // Nút "Báo giá" (ORDER/ADMIN) — cùng hành vi với trang Danh Sách: PENDING -> tiếp nhận + mở
+  // modal nhập giá ngay; PROCESSING (đã tiếp nhận) -> mở thẳng modal nhập giá.
+  onQuoteNow: (id: string, version: number) => void;
+  onPricing: (id: string) => void;
 }
 
 

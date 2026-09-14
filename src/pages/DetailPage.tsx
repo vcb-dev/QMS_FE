@@ -69,6 +69,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   currentRole,
   currentUser,
   socket,
+  onQuoteNow,
+  onPricing,
 }) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -316,9 +318,32 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
         </div>
 
-        {/* Trang chi tiết chỉ để xem — mọi thao tác đổi trạng thái (tiếp nhận/báo giá/từ chối/
-            trả lại/sửa/xóa/đánh dấu chốt) đã chuyển hết ra bảng danh sách, không còn nút nào ở
-            đây gọi API thay đổi dữ liệu nữa. */}
+        {/* Trang chi tiết chủ yếu để xem — các thao tác đổi trạng thái khác (tiếp nhận/từ chối/
+            trả lại/sửa/xóa/đánh dấu chốt) vẫn ở bảng danh sách. Riêng "Báo giá" (ORDER/ADMIN) có
+            thêm ở đây để báo giá thẳng từ trang chi tiết, không phải quay lại danh sách. */}
+        {(currentRole === 'ORDER' || currentRole === 'ADMIN') &&
+          selectedReq.status === 'PENDING' && (
+            <button
+              type="button"
+              onClick={() => onQuoteNow(selectedReq.id, selectedReq.version)}
+              className="bg-[#0f172a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
+            >
+              Báo giá luôn
+            </button>
+          )}
+        {(currentRole === 'ADMIN' ||
+          (currentRole === 'ORDER' &&
+            (selectedReq.assignee?.id === currentUser.id ||
+              selectedReq.assignee?.email === currentUser.email))) &&
+          selectedReq.status === 'PROCESSING' && (
+            <button
+              type="button"
+              onClick={() => onPricing(selectedReq.id)}
+              className="bg-[#0f172a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
+            >
+              Báo giá
+            </button>
+          )}
       </div>
 
       {/* Main 2-Column Content Grid */}
