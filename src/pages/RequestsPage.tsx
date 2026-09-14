@@ -65,9 +65,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
     navigate('/requests');
   };
 
-  // Badge tin nhắn chưa đọc cho từng dòng — tải lại mỗi khi danh sách đổi (đổi trang/lọc/refresh
-  // nền do socket). KHÔNG tự cập nhật real-time trong lúc đứng yên trên trang — chấp nhận đơn giản,
-  // đủ để biết "có tin mới chưa đọc" mỗi lần danh sách tải lại.
+  // Badge tin nhắn chưa đọc cho từng dòng — snapshot ban đầu qua REST mỗi khi danh sách đổi (đổi
+  // trang/lọc/refresh nền), CỘNG real-time qua socket cho tin đến SAU đó trong lúc đang đứng nhìn
+  // trang này (2 effect join room + nghe newMessage bên dưới).
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   useEffect(() => {
     if (!socket || requests.length === 0) return;
@@ -85,6 +85,44 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
     setUnreadCounts((prev) => ({ ...prev, [id]: 0 }));
     socket?.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: id });
   };
+
+  // Join room CHO MỌI dòng đang hiển thị (không chỉ dòng bấm vào) — để nghe được newMessage real-
+  // time ngay cả khi chưa bấm mở chat đơn nào. Chỉ join đơn mình thực sự tham gia (requester/
+  // assignee) và đã có người xử lý — khớp đúng điều kiện hiện icon ở QuoteTable. Join lại mỗi khi
+  // socket reconnect vì server không nhớ room cũ qua lần kết nối mới.
+  useEffect(() => {
+    if (!socket) return;
+    const joinVisibleRooms = () => {
+      for (const r of requests) {
+        const isParticipant =
+          (r.requester?.id ?? r.requesterId) === currentUser.id ||
+          (r.assignee?.id ?? r.assigneeId) === currentUser.id;
+        const hasAssignee = !!(r.assignee?.id ?? r.assigneeId);
+        if (isParticipant && hasAssignee) {
+          socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: r.id });
+        }
+      }
+    };
+    if (socket.connected) joinVisibleRooms();
+    socket.on('connect', joinVisibleRooms);
+    return () => { socket.off('connect', joinVisibleRooms); };
+  }, [socket, requests, currentUser.id]);
+
+  // Tin nhắn mới tới cho 1 trong các room đã join ở trên -> cộng dồn badge ngay, không cần tải lại
+  // danh sách. Bỏ qua tin do chính mình gửi, và bỏ qua đơn đang mở popup (popup tự đánh dấu đã đọc).
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewMessage = (msg: { quoteRequestId: string; senderId: string }) => {
+      if (msg.senderId === currentUser.id) return;
+      if (msg.quoteRequestId === activeChatReqId) return;
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [msg.quoteRequestId]: (prev[msg.quoteRequestId] || 0) + 1,
+      }));
+    };
+    socket.on(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage);
+    return () => { socket.off(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage); };
+  }, [socket, activeChatReqId, currentUser.id]);
 
   return (
     <>
