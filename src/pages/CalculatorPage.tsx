@@ -69,7 +69,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   // Phương án so sánh loại vàng khác — người dùng TỰ thêm (không tự sinh từ BE). Mỗi dòng chọn
   // 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau). Tính
   // riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo).
-  const { compareRows, addCompareRow, updateCompareRow, removeCompareRow } = useCompareRows(dbMaterials);
+  const { compareRows, addCompareRow, updateCompareRow, removeCompareRow, autoGoldMode } = useCompareRows(dbMaterials, materialRows);
   // Chặn auto-calc chạy với material/hệ số mặc định (hardcode) trước khi DB trả dữ liệu thật về —
   // nếu không sẽ tính 2 lần: 1 lần với default lúc mount, 1 lần nữa khi master data/silver-multipliers tới
   const [initialDataReady, setInitialDataReady] = useState(false);
@@ -585,13 +585,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 <span className="text-[11px] font-extrabold text-[#64748b] uppercase">
                   Phương án so sánh loại vàng khác (tham khảo)
                 </span>
-                <button
-                  type="button"
-                  onClick={addCompareRow}
-                  className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[12px] font-extrabold py-[6px] px-[12px] cursor-pointer"
-                >
-                  <Plus size={14} color="#475569" /> Thêm phương án
-                </button>
+                {!autoGoldMode && (
+                  <button
+                    type="button"
+                    onClick={addCompareRow}
+                    className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[12px] font-extrabold py-[6px] px-[12px] cursor-pointer"
+                  >
+                    <Plus size={14} color="#475569" /> Thêm phương án
+                  </button>
+                )}
               </div>
 
               {compareRows.length === 0 ? (
@@ -603,16 +605,26 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   {compareRows.map((row) => {
                     const missingWeight = !((parseFloat(row.weightChi) || 0) > 0);
                     return (
-                      <div key={row.id} className="grid [grid-template-columns:1fr_140px_36px] gap-[12px] items-center">
-                        <select
-                          value={row.materialId || ''}
-                          onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
-                          className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface"
-                        >
-                          {dbMaterials.map((mat) => (
-                            <option key={mat.id} value={mat.id}>{mat.name}</option>
-                          ))}
-                        </select>
+                      <div
+                        key={row.id}
+                        className={clsx(
+                          'grid gap-[12px] items-center',
+                          autoGoldMode ? '[grid-template-columns:1fr_140px]' : '[grid-template-columns:1fr_140px_36px]',
+                        )}
+                      >
+                        {autoGoldMode ? (
+                          <span className="py-[9px] px-[12px] text-[13px] font-bold text-[#334155]">{row.materialName}</span>
+                        ) : (
+                          <select
+                            value={row.materialId || ''}
+                            onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
+                            className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface"
+                          >
+                            {dbMaterials.map((mat) => (
+                              <option key={mat.id} value={mat.id}>{mat.name}</option>
+                            ))}
+                          </select>
+                        )}
 
                         <div className="relative">
                           <input
@@ -626,21 +638,23 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               updateCompareRow(row.id, { weightChi: v });
                             }}
                             placeholder="Số chỉ"
-                            className={clsx('w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] text-[13px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]', missingWeight ? 'border border-[#f87171]' : 'border border-[#cbd5e1]')}
+                            className={clsx('w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] text-[13px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]', !autoGoldMode && missingWeight ? 'border border-[#f87171]' : 'border border-[#cbd5e1]')}
                           />
                           <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#64748b]">
                             chỉ
                           </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => removeCompareRow(row.id)}
-                          title="Xóa phương án so sánh này"
-                          className="h-[36px] w-[36px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {!autoGoldMode && (
+                          <button
+                            type="button"
+                            onClick={() => removeCompareRow(row.id)}
+                            title="Xóa phương án so sánh này"
+                            className="h-[36px] w-[36px] rounded-[8px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
