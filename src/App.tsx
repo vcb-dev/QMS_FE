@@ -208,7 +208,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
             <Route path="/requests" element={
               <RequestsPage
                 requests={requests} categories={categories} materials={materials}
-                currentRole={currentRole} currentUser={currentUser!} counts={counts}
+                currentRole={currentRole} currentUser={currentUser!} socket={globalSocket} counts={counts}
                 statusSubFilter={statusSubFilter} setStatusSubFilter={setStatusSubFilter}
                 searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                 categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
