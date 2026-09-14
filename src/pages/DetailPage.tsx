@@ -327,7 +327,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             <button
               type="button"
               onClick={() => onQuoteNow(selectedReq.id, selectedReq.version)}
-              className="bg-[#0f172a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
+              className="bg-[#16a34a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
             >
               Báo giá luôn
             </button>
@@ -340,7 +340,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             <button
               type="button"
               onClick={() => onPricing(selectedReq.id)}
-              className="bg-[#0f172a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
+              className="bg-[#16a34a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
             >
               Báo giá
             </button>
