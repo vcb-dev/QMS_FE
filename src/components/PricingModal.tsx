@@ -12,7 +12,7 @@ import type { CalculateBatchResultItem } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
-import { getPrimaryOption, batchResultToOption } from '../utils/quoteOption';
+import { getPrimaryOption, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
 import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
@@ -31,7 +31,7 @@ interface PricingModalProps {
   onOpenCalculator?: () => void;
   selectedReq?: QuoteRequest | null;
   currentRole: Role;
-  materials?: { id: string; name: string; baseMetal?: { name: string } | null }[];
+  materials?: { id: string; name: string; baseMetalId?: string | null; baseMetal?: { id: string; name: string } | null }[];
 }
 
 export const PricingModal: React.FC<PricingModalProps> = ({
@@ -46,7 +46,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const dialogRef = useModalA11y(onClose, isOpen);
 
   // Master data
-  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetal?: { name: string } | null }[]>(initialMaterialsList);
+  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetalId?: string | null; baseMetal?: { id: string; name: string } | null }[]>(initialMaterialsList);
   
   const isSilverMaterialId = (materialId?: string) =>
     !!materialId && dbMaterials.find((m) => m.id === materialId)?.baseMetal?.name === 'Bạc';
@@ -70,6 +70,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     addMaterialRow,
     updateMaterialRow,
     removeMaterialRow,
+    lockedMaterialGroupKey,
     stoneRows: calcStoneRows,
     setStoneRows: setCalcStoneRows,
     addStoneRow,
@@ -811,11 +812,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             selectedReq ? 'bg-[#f1f5f9] text-muted cursor-not-allowed' : 'bg-surface cursor-pointer'
                           )}
                         >
-                          {dbMaterials.map((mat) => (
-                            <option key={mat.id} value={mat.id}>
-                              {mat.name}
-                            </option>
-                          ))}
+                          {dbMaterials
+                            // Từ 2 dòng chất liệu trở lên -> chỉ cho chọn cùng nhóm kim loại gốc với
+                            // các dòng còn lại (không trộn Vàng với Bạc/Bạch kim...).
+                            .filter((mat) => !lockedMaterialGroupKey || materialGroupKey(mat) === lockedMaterialGroupKey)
+                            .map((mat) => (
+                              <option key={mat.id} value={mat.id}>
+                                {mat.name}
+                              </option>
+                            ))}
                         </select>
 
                         <div className="relative">

@@ -6,7 +6,7 @@ import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
-import { formatOptionCopyLine, cleanOptionLabel, batchResultToOption } from '../utils/quoteOption';
+import { formatOptionCopyLine, cleanOptionLabel, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
 import type { CalculatorPageProps, StoneRow, StoneCatalogItem, CalcResult, QuoteOption } from '../types';
 import { clsx } from 'clsx';
@@ -42,6 +42,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     addMaterialRow,
     updateMaterialRow,
     removeMaterialRow,
+    lockedMaterialGroupKey,
     stoneRows,
     addStoneRow,
     updateStoneRow,
@@ -526,11 +527,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
                       className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold outline-none bg-surface"
                     >
-                      {dbMaterials.map((mat) => (
-                        <option key={mat.id} value={mat.id}>
-                          {mat.name}
-                        </option>
-                      ))}
+                      {dbMaterials
+                        // Từ 2 dòng chất liệu trở lên -> chỉ cho chọn cùng nhóm kim loại gốc với
+                        // các dòng còn lại (không trộn Vàng với Bạc/Bạch kim...).
+                        .filter((mat) => !lockedMaterialGroupKey || materialGroupKey(mat) === lockedMaterialGroupKey)
+                        .map((mat) => (
+                          <option key={mat.id} value={mat.id}>
+                            {mat.name}
+                          </option>
+                        ))}
                     </select>
 
                     <div className="relative">
