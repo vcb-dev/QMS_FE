@@ -1318,6 +1318,18 @@ const StoneGroupTable: React.FC<{
                 </td>
               </tr>
             )}
+            {/* Dòng đệm rỗng — khoá chiều cao bảng cố định STONE_PAGE_SIZE dòng, trang cuối ít đá
+                hơn không bị co lại ngắn hơn các trang đầy. */}
+            {Array.from({
+              length: Math.max(
+                0,
+                STONE_PAGE_SIZE - pageItems.length - (adding ? 1 : 0) - (items.length === 0 && !adding ? 1 : 0),
+              ),
+            }).map((_, i) => (
+              <tr key={`filler-${i}`} aria-hidden="true">
+                <td className={tdCls} colSpan={5}>&nbsp;</td>
+              </tr>
+            ))}
           </tbody>
           {!adding && (
             <tfoot>
