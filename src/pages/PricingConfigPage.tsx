@@ -7,7 +7,6 @@ import {
   createStone,
   updateStonePrices,
   deleteStonesMany,
-  importStonesExcel,
   importStonesPriceGridExcel,
   fetchMasterData,
   invalidateMasterData,
@@ -249,9 +248,7 @@ export const PricingConfigPage: React.FC = () => {
   const [newStone, setNewStone] = useState<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string }>({
     stoneType: 'MAIN', name: '', cut: '', size: '', price: '',
   });
-  const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   // Import bảng giá lưới shape/size (VD kim cương) — riêng đá chủ/đá tấm, stoneType chốt theo nút bấm.
   const [importingPriceGrid, setImportingPriceGrid] = useState<{ MAIN: boolean; SIDE: boolean }>({ MAIN: false, SIDE: false });
 
@@ -631,29 +628,6 @@ export const PricingConfigPage: React.FC = () => {
     setPendingDeleteStoneIds((prev) => toggleInArray(prev, id));
   };
 
-  // Import file Excel (.xlsx/.xls) — BE verify toàn bộ file, chỉ 1 dòng lỗi cũng chặn cả file
-  const handleImportFile = async (file: File) => {
-    setImportResult(null);
-    setStoneError(null);
-    setImporting(true);
-    try {
-      const result = await importStonesExcel(file);
-      setImportResult(
-        result.skipped > 0
-          ? `Đã import ${result.imported} đá (bỏ qua ${result.skipped} đá trùng tên/cut/size)`
-          : `Đã import ${result.imported} đá`,
-      );
-      const rowsFresh = await fetchStones();
-      const freshList = Array.isArray(rowsFresh) ? rowsFresh : [];
-      setStones(freshList);
-      setInitialStones(freshList);
-    } catch (err: any) {
-      setStoneError(err.message || 'Import thất bại');
-    } finally {
-      setImporting(false);
-    }
-  };
-
   // Import bảng giá lưới shape/size (file không có cột Loại/Tên riêng dòng, tên đá lấy từ dòng
   // đầu file, stoneType chốt theo nút bấm) — trùng shape/size với đá đã có thì BE đè giá mới.
   const handleImportPriceGridFile = async (file: File, stoneType: 'MAIN' | 'SIDE') => {
@@ -855,30 +829,6 @@ export const PricingConfigPage: React.FC = () => {
               <PanelSection
                 title="Quản lý bảng giá đá"
                 icon={Gem}
-                action={
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] || null;
-                        if (f) {
-                          if (!/\.(xlsx|xls)$/i.test(f.name)) {
-                            setStoneError('Chỉ chấp nhận file Excel (.xlsx hoặc .xls)');
-                          } else {
-                            handleImportFile(f);
-                          }
-                        }
-                        e.target.value = '';
-                      }}
-                    />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importing} className={clsx(btnGhostSmallCls, importing && 'opacity-60')}>
-                      {importing ? <Loader2 size={12} className="animate-[spin_0.8s_linear_infinite]" /> : <Upload size={12} />} Nhập Excel
-                    </button>
-                  </>
-                }
               >
                 {stoneError && (
                   <ErrorBanner message={stoneError} className="mb-[12px] whitespace-pre-line max-h-[160px] overflow-y-auto" />

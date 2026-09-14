@@ -774,24 +774,6 @@ export async function deleteStonesMany(ids: string[]) {
   return apiCall(api.post('/stones/delete-many', { ids }), 'Không thể xóa đá');
 }
 
-export async function importStonesExcel(file: File) {
-  const formData = new FormData();
-  formData.append('file', file);
-  try {
-    const res = await api.post('/stones/import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      ...NO_TIMEOUT,
-    });
-    return res.data;
-  } catch (err: any) {
-    const data = err.response?.data;
-    if (data?.errors && Array.isArray(data.errors)) {
-      throw new Error(`${data.message}\n${data.errors.join('\n')}`);
-    }
-    throw new Error(data?.message || 'Không thể import bảng giá đá');
-  }
-}
-
 // Import bảng giá đá theo lưới shape/size (VD kim cương) — file không có cột Loại/Tên riêng
 // từng dòng, stoneType chốt theo nút bấm (đá chủ/đá tấm) truyền qua query, không đọc từ file.
 export async function importStonesPriceGridExcel(file: File, stoneType: 'MAIN' | 'SIDE') {
