@@ -800,7 +800,12 @@ export const NotificationConfigPage: React.FC = () => {
                   <div className="relative">
                     <input
                       className={clsx(formControlCls, 'font-mono pr-[36px]')}
-                      type={showSecret ? 'text' : 'password'}
+                      // KHÔNG dùng type="password" — Chrome thấy cặp "ô text + ô password" sát nhau
+                      // (Webhook URL + ô này) là tưởng form đăng nhập, tự điền email/mật khẩu đã lưu
+                      // vào ô Webhook URL (kể cả có autoComplete="off"). Che chữ bằng CSS thay vì
+                      // type thật để không còn password field nào trên trang, Chrome hết cớ tự điền.
+                      type="text"
+                      style={showSecret ? undefined : { WebkitTextSecurity: 'disc' } as React.CSSProperties}
                       value={form.secret}
                       onChange={(e) => {
                         setForm((f) => ({ ...f, secret: e.target.value }));
