@@ -1308,7 +1308,7 @@ const StoneGroupTable: React.FC<{
               <th className={clsx(thCls, 'w-[26%]')}>Tên đá</th>
               <th className={clsx(thCls, 'w-[18%]')}>Giác cắt</th>
               <th className={clsx(thCls, 'w-[15%]')}>Size (mm)</th>
-              <th className={clsx(thCls, 'w-[26%]')}>Giá (VNĐ)</th>
+              <th className={clsx(thCls, 'w-[31%]')}>Giá (VNĐ)</th>
               <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
             </tr>
           </thead>
