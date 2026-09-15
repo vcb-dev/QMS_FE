@@ -575,7 +575,7 @@ export interface UserStatsResponse {
 
 export interface StaffPerformanceResponse {
   saleStats: { id: string; name: string; total: number; closed: number; closeRate: number }[];
-  pricerStats: { id: string; name: string; totalHandled: number; avgQuoteMs: number | null; avgProcessMs: number | null }[];
+  pricerStats: { id: string; name: string; totalHandled: number; medianQuoteMs: number | null; medianProcessMs: number | null }[];
 }
 
 export interface CreateModalProps {
