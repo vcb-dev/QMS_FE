@@ -91,7 +91,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
           <button
             type="button"
             onClick={() => setIsNewCustomerMode(false)}
-            className="py-[4px] px-[10px] text-[15px] font-bold rounded-[6px] border border-[#cbd5e1] bg-surface text-muted cursor-pointer flex items-center gap-[4px]"
+            className="py-[4px] px-[10px] text-[14px] font-bold rounded-[6px] border border-[#cbd5e1] bg-surface text-muted cursor-pointer flex items-center gap-[4px]"
           >
             <Users size={12} /> ← Chọn khách hàng có sẵn
           </button>
@@ -104,7 +104,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             <Search size={14} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
             <input
               type="text"
-              className={clsx(formControlCls, '!pl-[30px] !text-[16px]')}
+              className={clsx(formControlCls, '!pl-[30px] !text-[15px]')}
               placeholder="Gõ tìm tên hoặc SĐT khách hàng..."
               value={customerSearch}
               onChange={(e) => {
@@ -121,10 +121,10 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                 className="absolute top-[calc(100%+4px)] left-0 right-0 bg-surface border border-border rounded-[10px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12),0_8px_10px_-6px_rgba(0,0,0,0.05)] max-h-[220px] overflow-y-auto z-50 p-[4px]"
               >
                 {customerSearchLoading && (
-                  <div className="p-[10px] text-[16px] text-faint">Đang tìm...</div>
+                  <div className="p-[10px] text-[15px] text-faint">Đang tìm...</div>
                 )}
                 {!customerSearchLoading && customerList.length === 0 && (
-                  <div className="py-[6px] px-[10px] text-[16px] text-faint">Không tìm thấy khách hàng nào</div>
+                  <div className="py-[6px] px-[10px] text-[15px] text-faint">Không tìm thấy khách hàng nào</div>
                 )}
                 {!customerSearchLoading && customerList.map((cust) => {
                   const fullAddr = [cust.address, cust.ward?.name, cust.province?.name].filter(Boolean).join(', ');
@@ -138,7 +138,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                         setIsDropdownOpen(false);
                       }}
                       className={clsx(
-                        'w-full flex items-center justify-between gap-[8px] py-[8px] px-[10px] rounded-[8px] border-0 text-[#0f172a] text-[16px] cursor-pointer text-left',
+                        'w-full flex items-center justify-between gap-[8px] py-[8px] px-[10px] rounded-[8px] border-0 text-[#0f172a] text-[15px] cursor-pointer text-left',
                         isSelected ? 'bg-[#eff6ff]' : clsx('bg-transparent', dropdownItemHoverCls),
                       )}
                     >
@@ -160,7 +160,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
                         handleStartNewCustomerFromSearch();
                         setIsDropdownOpen(false);
                       }}
-                      className="w-full flex items-center justify-center gap-[6px] py-[8px] px-[10px] rounded-[8px] border-[1.5px] border-dashed border-[#10b981] bg-[#f0fdf4] text-[#15803d] text-[16px] font-bold cursor-pointer"
+                      className="w-full flex items-center justify-center gap-[6px] py-[8px] px-[10px] rounded-[8px] border-[1.5px] border-dashed border-[#10b981] bg-[#f0fdf4] text-[#15803d] text-[15px] font-bold cursor-pointer"
                     >
                       <UserPlus size={13} />
                       {customerSearch.trim()
@@ -174,7 +174,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
           </div>
 
           {selectedCustomer && !isDropdownOpen && (
-            <div className="flex items-center gap-[6px] py-[6px] px-[10px] bg-[#eff6ff] rounded-[8px] text-[15.5px] text-[#1e40af] font-semibold">
+            <div className="flex items-center gap-[6px] py-[6px] px-[10px] bg-[#eff6ff] rounded-[8px] text-[14.5px] text-[#1e40af] font-semibold">
               <Check size={13} /> Đã chọn: {selectedCustomer.name}{selectedCustomer.phone ? ` (${selectedCustomer.phone})` : ''}
             </div>
           )}
@@ -183,7 +183,7 @@ export const CustomerSelectorSection: React.FC<CustomerSelectorSectionProps> = (
             <button
               type="button"
               onClick={handleStartNewCustomerFromSearch}
-              className="flex items-center justify-center gap-[6px] py-[8px] px-[10px] rounded-[8px] border-[1.5px] border-dashed border-[#10b981] bg-[#f0fdf4] text-[#15803d] text-[16px] font-bold cursor-pointer"
+              className="flex items-center justify-center gap-[6px] py-[8px] px-[10px] rounded-[8px] border-[1.5px] border-dashed border-[#10b981] bg-[#f0fdf4] text-[#15803d] text-[15px] font-bold cursor-pointer"
             >
               <UserPlus size={13} />
               {customerSearch.trim()

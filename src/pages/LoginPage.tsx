@@ -228,23 +228,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
               alt="Viễn Chí Bảo"
               className="h-[52px] object-contain block mt-0 mx-auto mb-[14px]"
             />
-            <h1 className="text-[23px] font-extrabold text-[#1f2937] m-0">
+            <h1 className="text-[22px] font-extrabold text-[#1f2937] m-0">
               {modeCopy[mode].title}
             </h1>
-            <p className="text-[16px] text-[#9ca3af] mt-[4px] mr-0 mb-0 ml-0 tracking-[0.3px]">
+            <p className="text-[15px] text-[#9ca3af] mt-[4px] mr-0 mb-0 ml-0 tracking-[0.3px]">
               {modeCopy[mode].subtitle}
             </p>
           </div>
 
           {/* Feedback Alerts */}
           {errorMsg && (
-            <div className="bg-[#fef2f2] border border-[#fca5a5] text-[#b91c1c] py-[10px] px-[14px] rounded-[10px] text-[16.5px] mb-[16px] text-center">
+            <div className="bg-[#fef2f2] border border-[#fca5a5] text-[#b91c1c] py-[10px] px-[14px] rounded-[10px] text-[15.5px] mb-[16px] text-center">
               {errorMsg}
             </div>
           )}
 
           {successMsg && (
-            <div className="bg-[#f0fdf4] border border-[#86efac] text-[#15803d] py-[10px] px-[14px] rounded-[10px] text-[16.5px] mb-[16px] flex items-center justify-center gap-[8px]">
+            <div className="bg-[#f0fdf4] border border-[#86efac] text-[#15803d] py-[10px] px-[14px] rounded-[10px] text-[15.5px] mb-[16px] flex items-center justify-center gap-[8px]">
               <CheckCircle2 size={16} />
               {successMsg}
             </div>
@@ -269,7 +269,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                     <button
                       type="button"
                       onClick={() => goToMode('forgot')}
-                      className="bg-transparent border-0 text-[#b45309] text-[16px] cursor-pointer p-0 font-semibold"
+                      className="bg-transparent border-0 text-[#b45309] text-[15px] cursor-pointer p-0 font-semibold"
                     >
                       Quên mật khẩu?
                     </button>
@@ -294,7 +294,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                   </div>
                 </div>
 
-                <label className="flex items-center gap-[8px] text-[16.5px] text-[#4b5563] font-semibold cursor-pointer">
+                <label className="flex items-center gap-[8px] text-[15.5px] text-[#4b5563] font-semibold cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rememberMe}
@@ -314,7 +314,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
               <div className="mt-[20px] flex flex-col gap-[16px]">
                 <div className="flex items-center gap-[10px]">
                   <div className="flex-1 h-[1px] bg-[#e5e7eb]"></div>
-                  <span className="text-[16px] text-[#9ca3af] font-semibold">HOẶC</span>
+                  <span className="text-[15px] text-[#9ca3af] font-semibold">HOẶC</span>
                   <div className="flex-1 h-[1px] bg-[#e5e7eb]"></div>
                 </div>
 
@@ -327,7 +327,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                     redirectToLarkLogin();
                   }}
                   className={clsx(
-                    'grid grid-cols-[1fr_auto_1fr] items-center w-full py-[6px] px-0 bg-surface border border-[#d1d5db] rounded-[12px] text-[18.5px] font-semibold text-[#374151] shadow-[0_2px_4px_rgba(0,0,0,0.02)] transition-all duration-200',
+                    'grid grid-cols-[1fr_auto_1fr] items-center w-full py-[6px] px-0 bg-surface border border-[#d1d5db] rounded-[12px] text-[17.5px] font-semibold text-[#374151] shadow-[0_2px_4px_rgba(0,0,0,0.02)] transition-all duration-200',
                     larkLoading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[#f9fafb] hover:border-[#9ca3af]'
                   )}
                 >
@@ -343,12 +343,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                 </button>
               </div>
 
-              <p className="text-center text-[16.5px] text-[#9ca3af] mt-[24px]">
+              <p className="text-center text-[15.5px] text-[#9ca3af] mt-[24px]">
                 Chưa có tài khoản?{' '}
                 <button
                   type="button"
                   onClick={() => goToMode('register')}
-                  className="bg-transparent border-0 text-[#b45309] font-bold text-[16.5px] cursor-pointer p-0"
+                  className="bg-transparent border-0 text-[#b45309] font-bold text-[15.5px] cursor-pointer p-0"
                 >
                   Yêu cầu quyền truy cập
                 </button>
@@ -397,7 +397,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 3. FORGOT PASSWORD FORM */}
           {mode === 'forgot' && (
             <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-[16px]">
-              <p className="text-[17px] text-[#6b7280] leading-[1.5] m-0 text-center">
+              <p className="text-[16px] text-[#6b7280] leading-[1.5] m-0 text-center">
                 Nhập email tài khoản của bạn. Hệ thống sẽ cấp mã xác thực OTP (6 chữ số) để đặt lại mật khẩu mới.
               </p>
 
@@ -417,7 +417,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 4. RESET PASSWORD FORM */}
           {mode === 'reset' && (
             <form onSubmit={handleResetPasswordSubmit} className="flex flex-col gap-[14px]">
-              <p className="text-[17px] text-[#6b7280] leading-[1.5] m-0 text-center">
+              <p className="text-[16px] text-[#6b7280] leading-[1.5] m-0 text-center">
                 Nhập mã OTP 6 chữ số vừa nhận được và thiết lập mật khẩu mới của bạn.
               </p>
 
@@ -444,7 +444,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[linear-gradient(135deg,#16a34a_0%,#15803d_100%)] text-surface border-0 rounded-[10px] p-[13px] text-[18.5px] font-bold cursor-pointer flex items-center justify-center gap-[8px] shadow-[0_6px_16px_rgba(22,163,74,0.35)]"
+                className="w-full bg-[linear-gradient(135deg,#16a34a_0%,#15803d_100%)] text-surface border-0 rounded-[10px] p-[13px] text-[17.5px] font-bold cursor-pointer flex items-center justify-center gap-[8px] shadow-[0_6px_16px_rgba(22,163,74,0.35)]"
               >
                 <CheckCircle2 size={18} />
                 {loading ? 'Đang cập nhật mật khẩu...' : 'Xác Nhận Đặt Lại Mật Khẩu'}

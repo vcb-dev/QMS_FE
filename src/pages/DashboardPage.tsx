@@ -288,14 +288,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     if (change === null) return null;
     if (change === 'NEW') {
       return (
-        <span className={clsx('text-[15px] font-extrabold', dark ? 'text-[#4ade80]' : 'text-[#16a34a]')}>
+        <span className={clsx('text-[14px] font-extrabold', dark ? 'text-[#4ade80]' : 'text-[#16a34a]')}>
           Mới so với kỳ trước
         </span>
       );
     }
     const isUp = change >= 0;
     return (
-      <span className={clsx('text-[15px] font-extrabold', isUp ? (dark ? 'text-[#4ade80]' : 'text-[#16a34a]') : (dark ? 'text-[#f87171]' : 'text-[#dc2626]'))}>
+      <span className={clsx('text-[14px] font-extrabold', isUp ? (dark ? 'text-[#4ade80]' : 'text-[#16a34a]') : (dark ? 'text-[#f87171]' : 'text-[#dc2626]'))}>
         {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(1)}% so với kỳ trước
       </span>
     );
@@ -305,10 +305,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const renderPointChangeBadge = (curr: number, prev: number | undefined) => {
     if (prev === undefined) return null;
     const diff = curr - prev;
-    if (Math.abs(diff) < 0.05) return <span className="text-[15px] font-extrabold text-[#64748b]">Không đổi so với kỳ trước</span>;
+    if (Math.abs(diff) < 0.05) return <span className="text-[14px] font-extrabold text-[#64748b]">Không đổi so với kỳ trước</span>;
     const isUp = diff > 0;
     return (
-      <span className={clsx('text-[15px] font-extrabold', isUp ? 'text-[#16a34a]' : 'text-[#dc2626]')}>
+      <span className={clsx('text-[14px] font-extrabold', isUp ? 'text-[#16a34a]' : 'text-[#dc2626]')}>
         {isUp ? '▲' : '▼'} {Math.abs(diff).toFixed(1)} điểm % so với kỳ trước
       </span>
     );
@@ -347,10 +347,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 1. View Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[28px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
+          <h1 className="text-[27px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
             <LayoutDashboard size={22} /> Tổng quan
           </h1>
-          <p className="text-[17px] text-muted mt-[4px] mr-0 mb-0 ml-0">
+          <p className="text-[16px] text-muted mt-[4px] mr-0 mb-0 ml-0">
             {timeRange === 'THIS_MONTH' && 'Hoạt động trong tháng này'}
             {timeRange === 'TODAY' && 'Hoạt động trong hôm nay'}
             {timeRange === 'THIS_WEEK' && 'Hoạt động trong tuần này'}
@@ -364,7 +364,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           {/* "Chỉ mình tôi" — SALE & ORDER lọc theo yêu cầu của bản thân. Admin xem toàn công ty
               nên không có khái niệm này. */}
           {(currentRole === 'SALE' || currentRole === 'ORDER') && (
-            <label className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[16.5px] font-bold text-[#334155] cursor-pointer select-none">
+            <label className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[15.5px] font-bold text-[#334155] cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={isMineOnly}
@@ -381,7 +381,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <select
                 value={timeRange}
                 onChange={(e) => handleTimeRangeChange(e.target.value)}
-                className="bg-surface border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[14px] pb-[8px] pl-[32px] text-[16.5px] font-bold text-[#334155] cursor-pointer outline-none [appearance:auto] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+                className="bg-surface border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[14px] pb-[8px] pl-[32px] text-[15.5px] font-bold text-[#334155] cursor-pointer outline-none [appearance:auto] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
               >
                 <option value="THIS_MONTH">Tháng này</option>
                 <option value="TODAY">Hôm nay</option>
@@ -399,10 +399,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {currentRole === 'ADMIN' && (
         <div className="grid grid-cols-4 gap-[16px]">
           <div className={cardCls}>
-            <div className="text-[15px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
+            <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
               Tổng số yêu cầu
             </div>
-            <div className="text-[30px] font-black text-[#0f172a] mt-[6px]">
+            <div className="text-[29px] font-black text-[#0f172a] mt-[6px]">
               {kpiStats.total}
             </div>
             <div className="mt-[6px]">
@@ -410,10 +410,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
           </div>
           <div className={cardCls}>
-            <div className="text-[15px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
+            <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
               Tỷ lệ chốt trung bình
             </div>
-            <div className="text-[30px] font-black text-[#0f172a] mt-[6px]">
+            <div className="text-[29px] font-black text-[#0f172a] mt-[6px]">
               {kpiStats.closeRate.toFixed(1)}%
             </div>
             <div className="mt-[6px]">
@@ -421,10 +421,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
           </div>
           <div className={cardCls}>
-            <div className="text-[15px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
+            <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
               Doanh thu đã chốt
             </div>
-            <div className="text-[30px] font-black text-[#0f172a] mt-[6px]">
+            <div className="text-[29px] font-black text-[#0f172a] mt-[6px]">
               {formatCurrency(revenueStats.closedRevenue)}
             </div>
             <div className="mt-[6px]">
@@ -432,10 +432,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
           </div>
           <div className={cardCls}>
-            <div className="text-[15px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
+            <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
               Giá trị đơn đã báo giá (chưa chốt)
             </div>
-            <div className="text-[30px] font-black text-[#0f172a] mt-[6px]">
+            <div className="text-[29px] font-black text-[#0f172a] mt-[6px]">
               {formatCurrency(revenueStats.quotedRevenue)}
             </div>
             <div className="mt-[6px]">
@@ -508,13 +508,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           if (chartStatusFilter === 'ALL') {
             return (
               <ChartTooltip padding="10px 14px" minWidth="150px">
-                <div className="text-[16px] text-[#64748b] border-b border-[#334155] pb-[4px] mb-[6px]">
+                <div className="text-[15px] text-[#64748b] border-b border-[#334155] pb-[4px] mb-[6px]">
                   {label}
                 </div>
                 <div className="font-black mb-[6px] text-[#38bdf8]">
                   Tổng số: {dataItem.total} yêu cầu
                 </div>
-                <div className="flex flex-col gap-[3px] text-[15.5px]">
+                <div className="flex flex-col gap-[3px] text-[14.5px]">
                   <div className="text-[#60a5fa]">● Mới tạo: {dataItem.pending}</div>
                   <div className="text-[#fbbf24]">● Đang xử lý: {dataItem.processing}</div>
                   <div className="text-[#fb923c]">● Cần bổ sung: {dataItem.needMoreInfo}</div>
@@ -545,7 +545,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
             {/* Donut Chart */}
             <div className={cardCls}>
-              <h2 className="text-[18px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[16px] ml-0">
+              <h2 className="text-[17px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[16px] ml-0">
                 Phân bố trạng thái yêu cầu
               </h2>
               <div className="flex items-center gap-[20px]">
@@ -585,9 +585,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           // động — giữ inline
                           style={{ background: d.fill }}
                         />
-                        <span className="text-[16px] text-[#475569] font-semibold">{d.name}</span>
+                        <span className="text-[15px] text-[#475569] font-semibold">{d.name}</span>
                       </div>
-                      <span className="text-[17px] font-black text-[#0f172a]">{d.value}</span>
+                      <span className="text-[16px] font-black text-[#0f172a]">{d.value}</span>
                     </div>
                   ))}
                 </div>
@@ -598,10 +598,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <div className={cardCls}>
               <div className="flex items-center justify-between mb-[12px]">
                 <div>
-                  <h2 className="text-[18px] font-extrabold text-[#0f172a] m-0">
+                  <h2 className="text-[17px] font-extrabold text-[#0f172a] m-0">
                     {timeRange === 'THIS_YEAR' || timeRange === 'ALL' ? 'So sánh số lượng hàng tháng' : 'So sánh số lượng hàng ngày'}
                   </h2>
-                  <span className="text-[15px] text-[#334155]">
+                  <span className="text-[14px] text-[#334155]">
                     {timeRange === 'TODAY' && 'Theo khung giờ trong ngày'}
                     {timeRange === 'THIS_WEEK' && 'Theo các ngày trong tuần'}
                     {timeRange === 'THIS_MONTH' && 'Theo ngày trong tháng này'}
@@ -615,7 +615,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <select
                   value={chartStatusFilter}
                   onChange={(e) => setChartStatusFilter(e.target.value)}
-                  className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[6px] py-[5px] px-[10px] text-[15.5px] font-bold text-[#334155] cursor-pointer outline-none shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                  className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[6px] py-[5px] px-[10px] text-[14.5px] font-bold text-[#334155] cursor-pointer outline-none shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
                 >
                   <option value="ALL">Tất cả trạng thái</option>
                   <option value="PENDING">Mới tạo</option>
@@ -671,10 +671,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 1.1 Biểu đồ theo Sale — chỉ Admin xem, số yêu cầu tạo & đã chốt của từng Sale */}
       {currentRole === 'ADMIN' && (charts?.saleStats || []).length > 0 && (
         <div className={cardCls}>
-          <h2 className="text-[18px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[4px] ml-0">
+          <h2 className="text-[17px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[4px] ml-0">
             Hiệu suất theo Sale
           </h2>
-          <span className="text-[15px] text-[#334155]">Số yêu cầu đã tạo và đã chốt của từng Sale (top 8)</span>
+          <span className="text-[14px] text-[#334155]">Số yêu cầu đã tạo và đã chốt của từng Sale (top 8)</span>
 
           <ResponsiveContainer width="100%" height={Math.max(180, (charts?.saleStats || []).length * 42)}>
             <BarChart
@@ -725,10 +725,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           {/* Phân bố theo khoảng giá */}
           <div className={cardCls}>
-            <h2 className="text-[18px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[4px] ml-0">
+            <h2 className="text-[17px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[4px] ml-0">
               Phân bố theo khoảng giá
             </h2>
-            <span className="text-[15px] text-[#334155]">Số đơn đã báo giá theo từng khoảng</span>
+            <span className="text-[14px] text-[#334155]">Số đơn đã báo giá theo từng khoảng</span>
 
             <ResponsiveContainer width="100%" height={190}>
               <BarChart data={charts?.priceRangeDistribution || []} margin={{ top: 18, right: 10, left: -20, bottom: 4 }} barCategoryGap="30%">
@@ -763,26 +763,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* Left 2/3: Yêu cầu gần đây */}
         <div className={clsx(cardCls, 'h-full flex flex-col')}>
           <div className="flex items-center justify-between mb-[16px]">
-            <h2 className="text-[20px] font-extrabold text-[#0f172a] m-0">
+            <h2 className="text-[19px] font-extrabold text-[#0f172a] m-0">
               Yêu cầu gần đây
             </h2>
             <button
               type="button"
               onClick={onViewAll}
-              className="bg-transparent border-0 text-[#334155] text-[16.5px] font-bold cursor-pointer flex items-center gap-[4px]"
+              className="bg-transparent border-0 text-[#334155] text-[15.5px] font-bold cursor-pointer flex items-center gap-[4px]"
             >
               Xem tất cả <ArrowRight size={13} />
             </button>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[16.5px]">
+            <table className="w-full border-collapse text-[15.5px]">
               <thead>
                 <tr className="border-b border-[#f1f5f9] text-left">
-                  <th className="py-[8px] px-[10px] text-[14.5px] font-extrabold text-[#64748b] uppercase">MÃ YC / KHÁCH HÀNG</th>
-                  <th className="py-[8px] px-[10px] text-[14.5px] font-extrabold text-[#64748b] uppercase">SẢN PHẨM</th>
-                  <th className="py-[8px] px-[10px] text-[14.5px] font-extrabold text-[#64748b] uppercase">NGÀY TẠO</th>
-                  <th className="py-[8px] px-[10px] text-[14.5px] font-extrabold text-[#64748b] uppercase text-right">TRẠNG THÁI</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase">MÃ YC / KHÁCH HÀNG</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase">SẢN PHẨM</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase">NGÀY TẠO</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase text-right">TRẠNG THÁI</th>
                 </tr>
               </thead>
               <tbody>
@@ -798,10 +798,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                         className="table-row-hover border-b border-[#f8fafc] cursor-pointer"
                       >
                         <td className="py-[12px] px-[10px]">
-                          <div className="font-extrabold text-[#0f172a] text-[17px]">
+                          <div className="font-extrabold text-[#0f172a] text-[16px]">
                             {r.code || `#${r.id}`}
                           </div>
-                          <div className="text-[15px] text-[#334155]">
+                          <div className="text-[14px] text-[#334155]">
                             {r.customerName || r.requester?.name || 'Khách hàng'}
                           </div>
                         </td>
@@ -821,7 +821,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             </span>
                           </div>
                         </td>
-                        <td className="py-[12px] px-[10px] text-[#334155] text-[16px]">
+                        <td className="py-[12px] px-[10px] text-[#334155] text-[15px]">
                           {formatDateLabel(r.createdAt)}
                         </td>
                         <td className="py-[12px] px-[10px] text-right">
@@ -845,13 +845,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* Right 1/3: Sản phẩm nổi bật */}
         <div className={clsx(cardCls, 'h-full flex flex-col')}>
           <div className="flex items-center justify-between mb-[16px]">
-            <h2 className="text-[20px] font-extrabold text-[#0f172a] m-0">
+            <h2 className="text-[19px] font-extrabold text-[#0f172a] m-0">
               Sản phẩm nổi bật
             </h2>
             <button
               type="button"
               onClick={onOpenLibrary}
-              className="bg-transparent border-0 text-[#334155] text-[16px] font-bold cursor-pointer flex items-center gap-[4px]"
+              className="bg-transparent border-0 text-[#334155] text-[15px] font-bold cursor-pointer flex items-center gap-[4px]"
             >
               Thư viện <ArrowRight size={13} />
             </button>
@@ -882,10 +882,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       />
                     </div>
                     <div className="py-[8px] px-[10px]">
-                      <div className="text-[16px] font-extrabold text-[#0f172a] overflow-hidden text-ellipsis whitespace-nowrap">
+                      <div className="text-[15px] font-extrabold text-[#0f172a] overflow-hidden text-ellipsis whitespace-nowrap">
                         {item.productName}
                       </div>
-                      <div className="text-[15px] font-black text-primary mt-[2px]">
+                      <div className="text-[14px] font-black text-primary mt-[2px]">
                         {formattedPrice}
                       </div>
                       {item.materialPrice != null && renderPriceBreakdownLines({ material: item.materialPrice, stone: item.stonePrice ?? 0 })}
@@ -894,7 +894,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 );
               })
             ) : (
-              <div className="[grid-column:1/-1] text-[#64748b] text-[16.5px] text-center py-[24px] px-0">
+              <div className="[grid-column:1/-1] text-[#64748b] text-[15.5px] text-center py-[24px] px-0">
                 Chưa có sản phẩm nổi bật
               </div>
             )}

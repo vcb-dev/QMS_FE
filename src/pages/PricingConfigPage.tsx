@@ -45,7 +45,7 @@ const SectionHeader: React.FC<{ title: string; action?: React.ReactNode; icon?: 
   <div className="flex items-center justify-between flex-wrap gap-[10px] mb-[14px]">
     <div className="flex items-center gap-[8px] min-w-0">
       {Icon ? <Icon size={15} className="text-[#0f172a] shrink-0" /> : <span className="w-[8px] h-[8px] rounded-full bg-[#0f172a] shrink-0" />}
-      <h3 className="text-[17.5px] font-extrabold text-[#0f172a] m-0 [word-break:keep-all]">{title}</h3>
+      <h3 className="text-[16.5px] font-extrabold text-[#0f172a] m-0 [word-break:keep-all]">{title}</h3>
     </div>
     {action}
   </div>
@@ -62,7 +62,7 @@ const PanelSection: React.FC<{ title: string; action?: React.ReactNode; children
 const RuleCard: React.FC<{ title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode; icon?: LucideIcon }> = ({ title, subtitle, action, children, icon }) => (
   <div className="border border-[#e5e7eb] rounded-[12px] p-[18px]">
     <SectionHeader title={title} action={action} icon={icon} />
-    {subtitle && <p className="text-[15.5px] text-[#64748b] -mt-[6px] mr-0 mb-[12px] ml-0">{subtitle}</p>}
+    {subtitle && <p className="text-[14.5px] text-[#64748b] -mt-[6px] mr-0 mb-[12px] ml-0">{subtitle}</p>}
     {children}
   </div>
 );
@@ -81,7 +81,7 @@ const DeleteIconButton: React.FC<{ onClick: () => void; marked?: boolean; title?
 
 // Banner lỗi màu đỏ dùng chung cho các chỗ báo lỗi trong trang.
 const ErrorBanner: React.FC<{ message: string; className?: string }> = ({ message, className }) => (
-  <div className={clsx('flex items-start gap-[6px] text-[#b91c1c] text-[15.5px] bg-[#fef2f2] border border-[#fca5a5] py-[8px] px-[10px] rounded-[8px]', className)}>
+  <div className={clsx('flex items-start gap-[6px] text-[#b91c1c] text-[14.5px] bg-[#fef2f2] border border-[#fca5a5] py-[8px] px-[10px] rounded-[8px]', className)}>
     <AlertTriangle size={14} className="shrink-0 mt-[1px]" />
     <span>{message}</span>
   </div>
@@ -101,8 +101,8 @@ const ConfirmCancelButtons: React.FC<{ onConfirm: () => void; onCancel: () => vo
 
 const ValueDisplay: React.FC<{ value: number; unit?: string; dirty?: boolean }> = ({ value, unit, dirty }) => (
   <div className={clsx(valueBoxCls, 'flex items-baseline gap-[6px]')}>
-    <span className={clsx('font-extrabold text-[16.5px]', dirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{formatNumberVN(value)}</span>
-    {unit && <span className="text-[15px] font-bold text-[#64748b]">{unit}</span>}
+    <span className={clsx('font-extrabold text-[15.5px]', dirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{formatNumberVN(value)}</span>
+    {unit && <span className="text-[14px] font-bold text-[#64748b]">{unit}</span>}
   </div>
 );
 
@@ -662,8 +662,8 @@ export const PricingConfigPage: React.FC = () => {
       {/* Panel duy nhất — header + tabs + nội dung + footer sticky, giống mockup */}
       <div className="bg-surface border border-[#e5e7eb] rounded-[16px]">
         <div className="pt-[22px] px-[22px] pb-0">
-          <h1 className="text-[28px] font-black text-[#0f172a] m-0 mb-[4px] tracking-[-0.3px] flex items-center gap-[10px]"><Settings size={22} /> Cấu hình giá</h1>
-          <p className="text-[17px] text-muted m-0">Quản lý nguồn giá gốc và quy tắc tính giá bán cho hệ thống kho.</p>
+          <h1 className="text-[27px] font-black text-[#0f172a] m-0 mb-[4px] tracking-[-0.3px] flex items-center gap-[10px]"><Settings size={22} /> Cấu hình giá</h1>
+          <p className="text-[16px] text-muted m-0">Quản lý nguồn giá gốc và quy tắc tính giá bán cho hệ thống kho.</p>
 
           <div className="flex gap-[22px] mt-[18px] border-b border-[#e5e7eb]">
             <button type="button" className={clsx(pcpTabCls, activeTab === 'SOURCE' && pcpTabActiveCls)} onClick={() => setActiveTab('SOURCE')}>
@@ -729,7 +729,7 @@ export const PricingConfigPage: React.FC = () => {
               >
                 {materialError && <ErrorBanner message={materialError} className="mb-[12px]" />}
                 <div className="overflow-x-auto">
-                  <table className="w-full table-fixed border-collapse text-[16.5px]">
+                  <table className="w-full table-fixed border-collapse text-[15.5px]">
                     <thead>
                       <tr className={tableHeadRowCls}>
                         <th className={clsx(thCls, 'w-[24%]')}>Tên chất liệu</th>
@@ -833,7 +833,7 @@ export const PricingConfigPage: React.FC = () => {
                 {stoneError && (
                   <ErrorBanner message={stoneError} className="mb-[12px] whitespace-pre-line max-h-[160px] overflow-y-auto" />
                 )}
-                {importResult && <div className="mb-[12px] text-[#16a34a] text-[16px] font-bold">{importResult}</div>}
+                {importResult && <div className="mb-[12px] text-[#16a34a] text-[15px] font-bold">{importResult}</div>}
 
                 <StoneGroupTable
                   title="Đá Chủ"
@@ -922,7 +922,7 @@ export const PricingConfigPage: React.FC = () => {
                   >
                     {f.formulaType === 'MULTIPLIER' ? (
                       <div className="overflow-x-auto">
-                        <table className="w-full table-fixed border-collapse text-[16.5px]">
+                        <table className="w-full table-fixed border-collapse text-[15.5px]">
                           <thead>
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[60px]')}>STT</th>
@@ -963,7 +963,7 @@ export const PricingConfigPage: React.FC = () => {
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="w-full table-fixed border-collapse text-[16.5px]">
+                        <table className="w-full table-fixed border-collapse text-[15.5px]">
                           <thead>
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[42%]')}>Chi phí tối đa (VNĐ)</th>
@@ -981,14 +981,14 @@ export const PricingConfigPage: React.FC = () => {
                                   <td className={tdCls}>
                                     {isEditing ? (
                                       <div className="flex items-center gap-[8px]">
-                                        <label className="flex items-center gap-[4px] text-[14px] text-[#6b7280] font-bold cursor-pointer shrink-0 whitespace-nowrap">
+                                        <label className="flex items-center gap-[4px] text-[13px] text-[#6b7280] font-bold cursor-pointer shrink-0 whitespace-nowrap">
                                           <input type="checkbox" checked={isUnlimited} onChange={(e) => updateTier(f.id, idx, { maxCost: e.target.checked ? UNLIMITED_MAX_COST : 0 })} />
                                           Không giới hạn
                                         </label>
                                         {!isUnlimited && <MoneyField value={tier.maxCost} onChange={(v) => updateTier(f.id, idx, { maxCost: v })} />}
                                       </div>
                                     ) : (
-                                      isUnlimited ? <span className={clsx(valueBoxCls, 'font-extrabold text-[#0f172a] text-[18px]')}>Không giới hạn</span> : <ValueDisplay value={tier.maxCost} unit="VNĐ" />
+                                      isUnlimited ? <span className={clsx(valueBoxCls, 'font-extrabold text-[#0f172a] text-[17px]')}>Không giới hạn</span> : <ValueDisplay value={tier.maxCost} unit="VNĐ" />
                                     )}
                                   </td>
                                   <td className={tdCls}>
@@ -1044,8 +1044,8 @@ export const PricingConfigPage: React.FC = () => {
                 <div className="flex items-center gap-[8px]">
                   <Wrench size={15} className="text-[#334155] shrink-0" />
                   <div>
-                    <h3 className="text-[17.5px] font-extrabold text-[#0f172a] m-0">Tiền công / VAT</h3>
-                    <p className="text-[15px] text-[#64748b] m-0 mt-[2px]">Theo danh mục sản phẩm</p>
+                    <h3 className="text-[16.5px] font-extrabold text-[#0f172a] m-0">Tiền công / VAT</h3>
+                    <p className="text-[14px] text-[#64748b] m-0 mt-[2px]">Theo danh mục sản phẩm</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => setAddingCategory(true)} className={clsx(pcpIconBtnCls, pcpIconBtnEditCls)} title="Thêm danh mục">
@@ -1074,12 +1074,12 @@ export const PricingConfigPage: React.FC = () => {
                       onConfirmAdd={handleAddCategory}
                     />
                     {categories.length === 0 && !addingCategory && (
-                      <div className="py-[10px] px-0 text-center text-[#64748b] text-[16px]">Chưa có danh mục sản phẩm nào</div>
+                      <div className="py-[10px] px-0 text-center text-[#64748b] text-[15px]">Chưa có danh mục sản phẩm nào</div>
                     )}
                     {totalPages > 1 && (
                       <div className="flex items-center justify-end gap-[8px] mt-[12px]">
                         <button type="button" onClick={() => setCategoryPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={pageBtnCls(safePage <= 1)}>‹</button>
-                        <span className="text-[15px] font-bold text-[#334155]">{safePage}/{totalPages}</span>
+                        <span className="text-[14px] font-bold text-[#334155]">{safePage}/{totalPages}</span>
                         <button type="button" onClick={() => setCategoryPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className={pageBtnCls(safePage >= totalPages)}>›</button>
                       </div>
                     )}
@@ -1123,7 +1123,7 @@ export const PricingConfigPage: React.FC = () => {
       {toast && (
         <div
           className={clsx(
-            'fixed bottom-[20px] right-[20px] z-50 flex items-center gap-[8px] py-[12px] px-[16px] rounded-[10px] shadow-[0_10px_25px_rgba(0,0,0,0.18)] text-surface text-[16.5px] font-bold max-w-[360px]',
+            'fixed bottom-[20px] right-[20px] z-50 flex items-center gap-[8px] py-[12px] px-[16px] rounded-[10px] shadow-[0_10px_25px_rgba(0,0,0,0.18)] text-surface text-[15.5px] font-bold max-w-[360px]',
             toast.type === 'success' ? 'bg-[#16a34a]' : 'bg-[#dc2626]',
           )}
         >
@@ -1166,7 +1166,7 @@ const CategoryTable: React.FC<{
         return (
           <div key={c.id} className={clsx('flex flex-col gap-[6px] py-[9px] px-0 border-b border-[#f1f5f9]', markedDelete ? 'bg-[#fef2f2]' : isDirty ? 'bg-[#fffbeb]' : '')}>
             <div className="flex items-center justify-between gap-[8px]">
-              <span className={clsx('text-[16.5px] font-bold', markedDelete ? 'text-[#64748b] line-through' : 'text-[#334155]')}>{c.name}</span>
+              <span className={clsx('text-[15.5px] font-bold', markedDelete ? 'text-[#64748b] line-through' : 'text-[#334155]')}>{c.name}</span>
               <div className="flex items-center gap-[6px] shrink-0">
                 <EditIconButton onClick={() => onToggleEdit(c.id)} active={isEditing} title={markedDelete ? undefined : (isEditing ? 'Đóng sửa' : 'Sửa')} />
                 <DeleteIconButton onClick={() => onToggleDelete(c.id)} marked={markedDelete} />
@@ -1174,19 +1174,19 @@ const CategoryTable: React.FC<{
             </div>
             <div className="flex items-center gap-[8px]">
               <div className="flex-1">
-                <label className="text-[13.5px] text-[#64748b] font-bold block mb-[2px]">Tiền công</label>
+                <label className="text-[12.5px] text-[#64748b] font-bold block mb-[2px]">Tiền công</label>
                 {isEditing && !markedDelete ? (
                   <MoneyField value={c.laborCost || 0} onChange={(v) => onLaborCostChange(c.id, v)} width="100%" />
                 ) : (
-                  <span className={clsx(valueBoxCls, 'block w-full box-border text-[16.5px] font-extrabold', isDirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{formatNumberVN(c.laborCost || 0)}</span>
+                  <span className={clsx(valueBoxCls, 'block w-full box-border text-[15.5px] font-extrabold', isDirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{formatNumberVN(c.laborCost || 0)}</span>
                 )}
               </div>
               <div className="w-[70px] shrink-0">
-                <label className="text-[13.5px] text-[#64748b] font-bold block mb-[2px]">VAT</label>
+                <label className="text-[12.5px] text-[#64748b] font-bold block mb-[2px]">VAT</label>
                 {isEditing && !markedDelete ? (
                   <PercentField value={c.vatRate || 0} onChange={(v) => onVatRateChange(c.id, v)} width="100%" />
                 ) : (
-                  <span className={clsx(valueBoxCls, 'text-[16.5px] font-extrabold', isDirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{c.vatRate || 0}%</span>
+                  <span className={clsx(valueBoxCls, 'text-[15.5px] font-extrabold', isDirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{c.vatRate || 0}%</span>
                 )}
               </div>
             </div>
@@ -1194,7 +1194,7 @@ const CategoryTable: React.FC<{
         );
       })}
       {items.length === 0 && !adding && (
-        <div className="py-[10px] px-0 text-center text-[#cbd5e1] text-[16px]">—</div>
+        <div className="py-[10px] px-0 text-center text-[#cbd5e1] text-[15px]">—</div>
       )}
       {adding && (
         <div className={clsx(pcpAddRowCls, 'flex flex-col gap-[8px] p-[10px] rounded-[8px] mt-[8px]')}>
@@ -1244,7 +1244,7 @@ const StoneGroupTable: React.FC<{
   return (
     <div>
       <div className="flex items-center justify-between mb-[8px]">
-        <h4 className="text-[16px] font-extrabold text-[#334155] m-0">{title}</h4>
+        <h4 className="text-[15px] font-extrabold text-[#334155] m-0">{title}</h4>
         <input
           ref={gridFileInputRef}
           type="file"
@@ -1267,7 +1267,7 @@ const StoneGroupTable: React.FC<{
         </button>
       </div>
       <div className="overflow-x-auto border border-[#e5e7eb] rounded-[10px]">
-        <table className="w-full table-fixed border-collapse text-[16.5px]">
+        <table className="w-full table-fixed border-collapse text-[15.5px]">
           <thead>
             <tr className={tableHeadRowCls}>
               <th className={clsx(thCls, 'w-[26%]')}>Tên đá</th>
@@ -1346,7 +1346,7 @@ const StoneGroupTable: React.FC<{
             <tfoot>
               <tr className={pcpAddRowCls}>
                 <td colSpan={5} className="p-[8px]">
-                  <button type="button" onClick={onOpenAdd} className="text-[#334155] hover:text-primary flex items-center justify-center gap-[6px] w-full bg-transparent border-0 cursor-pointer text-[16px] font-bold p-[4px]">
+                  <button type="button" onClick={onOpenAdd} className="text-[#334155] hover:text-primary flex items-center justify-center gap-[6px] w-full bg-transparent border-0 cursor-pointer text-[15px] font-bold p-[4px]">
                     <Plus size={13} /> {addLabel}
                   </button>
                 </td>
@@ -1359,7 +1359,7 @@ const StoneGroupTable: React.FC<{
       {items.length > STONE_PAGE_SIZE && (
         <div className="flex items-center justify-end gap-[8px] mt-[10px]">
           <button type="button" onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={pageBtnCls(safePage <= 1)}>‹</button>
-          <span className="text-[15.5px] font-bold text-[#334155]">Trang {safePage}/{totalPages}</span>
+          <span className="text-[14.5px] font-bold text-[#334155]">Trang {safePage}/{totalPages}</span>
           <button type="button" onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className={pageBtnCls(safePage >= totalPages)}>›</button>
         </div>
       )}
