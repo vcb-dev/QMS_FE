@@ -9,7 +9,7 @@ import {
 } from '../styles/classNames';
 import { useSearchParams } from 'react-router-dom';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard, StaffUser } from '../types';
-import { Search, SlidersHorizontal, RotateCcw, ChevronDown, LayoutGrid, Circle, Link2, CircleDot, Sparkles, Home, Tag, type LucideIcon } from 'lucide-react';
+import { Search, SlidersHorizontal, RotateCcw, ChevronDown, LayoutGrid, Circle, Link2, CircleDot, Droplet, Home, Gem, type LucideIcon } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { ProductSpecModal } from '../components/ProductSpecModal';
@@ -17,15 +17,18 @@ import { displayPrice, formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProducts, getAllUsersApi } from '../services/api';
 
 // Icon cho pill danh mục — đoán theo từ khóa trong tên (danh mục là dữ liệu admin tự đặt, không
-// có field icon riêng), danh mục lạ rơi về Tag chứ không vỡ giao diện.
+// có field icon riêng), chọn hình khớp nghĩa thật của từng loại trang sức thay vì icon ngẫu nhiên:
+// vòng/lắc = vòng tròn trơn, nhẫn = vòng tròn có hạt đá giữa, dây chuyền = mắt xích, bông tai =
+// hình giọt nước (dáng bông tai treo phổ biến nhất). Danh mục lạ rơi về Gem (đá quý — trung tính,
+// hợp app trang sức hơn icon thẻ giá) chứ không vỡ giao diện.
 function getCategoryIcon(name: string): LucideIcon {
   const n = name.toLowerCase();
-  if (n.includes('lắc') || n.includes('vòng')) return Circle;
+  if (n.includes('lắc') || n.includes('vòng tay') || n.includes('vòng cổ')) return Circle;
   if (n.includes('dây chuyền')) return Link2;
   if (n.includes('nhẫn')) return CircleDot;
-  if (n.includes('bông tai') || n.includes('khuyên')) return Sparkles;
+  if (n.includes('bông tai') || n.includes('khuyên tai')) return Droplet;
   if (n.includes('trang trí')) return Home;
-  return Tag;
+  return Gem;
 }
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
@@ -206,7 +209,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             </button>
 
             {panelOpen && (
-              <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[360px] bg-surface border border-[#e2e8f0] rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
+              <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[600px] bg-surface border border-[#e2e8f0] rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
                 {/* Category — pill, không phải select, để thấy hết lựa chọn cùng lúc */}
                 <div>
                   <label className={popoverLabelCls}>Danh mục</label>
@@ -245,53 +248,56 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                   </div>
                 </div>
 
-                {/* Material */}
-                <div>
-                  <label className={popoverLabelCls}>Chất liệu</label>
-                  <div className="relative">
-                    <select value={selectedMat} onChange={(e) => setSelectedMat(e.target.value)} className={popoverSelectCls}>
-                      <option value="ALL">Tất cả chất liệu</option>
-                      {materials.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className={selectArrowCls} />
+                {/* Chất liệu / Sale / Order — 3 cột ngang, tận dụng panel rộng thay vì xếp chồng dọc */}
+                <div className="grid grid-cols-3 gap-[12px]">
+                  <div>
+                    <label className={popoverLabelCls}>Chất liệu</label>
+                    <div className="relative">
+                      <select value={selectedMat} onChange={(e) => setSelectedMat(e.target.value)} className={popoverSelectCls}>
+                        <option value="ALL">Tất cả chất liệu</option>
+                        {materials.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} className={selectArrowCls} />
+                    </div>
                   </div>
+
+                  {/* Sale — lọc theo người tạo yêu cầu (role SALE) */}
+                  {saleStaff.length > 0 && (
+                    <div>
+                      <label className={popoverLabelCls}>Sale</label>
+                      <div className="relative">
+                        <select value={selectedSale} onChange={(e) => setSelectedSale(e.target.value)} className={popoverSelectCls}>
+                          <option value="ALL">Tất cả Sale</option>
+                          {saleStaff.map((u) => (
+                            <option key={u.id} value={u.id}>{u.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className={selectArrowCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order — lọc theo người xử lý/báo giá (role ORDER) */}
+                  {orderStaff.length > 0 && (
+                    <div>
+                      <label className={popoverLabelCls}>Order</label>
+                      <div className="relative">
+                        <select value={selectedOrder} onChange={(e) => setSelectedOrder(e.target.value)} className={popoverSelectCls}>
+                          <option value="ALL">Tất cả Order</option>
+                          {orderStaff.map((u) => (
+                            <option key={u.id} value={u.id}>{u.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className={selectArrowCls} />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Sale — lọc theo người tạo yêu cầu (role SALE) */}
-                {saleStaff.length > 0 && (
-                  <div>
-                    <label className={popoverLabelCls}>Sale</label>
-                    <div className="relative">
-                      <select value={selectedSale} onChange={(e) => setSelectedSale(e.target.value)} className={popoverSelectCls}>
-                        <option value="ALL">Tất cả Sale</option>
-                        {saleStaff.map((u) => (
-                          <option key={u.id} value={u.id}>{u.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className={selectArrowCls} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Order — lọc theo người xử lý/báo giá (role ORDER) */}
-                {orderStaff.length > 0 && (
-                  <div>
-                    <label className={popoverLabelCls}>Order</label>
-                    <div className="relative">
-                      <select value={selectedOrder} onChange={(e) => setSelectedOrder(e.target.value)} className={popoverSelectCls}>
-                        <option value="ALL">Tất cả Order</option>
-                        {orderStaff.map((u) => (
-                          <option key={u.id} value={u.id}>{u.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className={selectArrowCls} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Time Range */}
+                {/* Lọc nhanh theo thời gian / Khoảng ngày tùy chọn — 2 cột ngang */}
+                <div className="grid grid-cols-2 gap-[12px]">
                 <div>
                   <label className={popoverLabelCls}>Lọc nhanh theo thời gian</label>
                   <div className="relative">
@@ -324,6 +330,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       className={dateInputCls}
                     />
                   </div>
+                </div>
                 </div>
               </div>
             )}
