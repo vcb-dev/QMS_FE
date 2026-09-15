@@ -767,7 +767,7 @@ export const PricingConfigPage: React.FC = () => {
                         <th className={clsx(thCls, 'w-[18%]')}>Kim loại gốc</th>
                         <th className={clsx(thCls, 'w-[16%]')}>% tính giá</th>
                         <th className={clsx(thCls, 'w-[32%]')}>Công thức tính lãi</th>
-                        <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
+                        <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -962,7 +962,7 @@ export const PricingConfigPage: React.FC = () => {
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[60px]')}>STT</th>
                               <th className={thCls}>Hệ số nhân</th>
-                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
+                              <th className={clsx(thCls, 'w-[90px] !text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1003,7 +1003,7 @@ export const PricingConfigPage: React.FC = () => {
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[42%]')}>Chi phí tối đa (VNĐ)</th>
                               <th className={clsx(thCls, 'w-[38%]')}>Biên độ lợi nhuận (%)</th>
-                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
+                              <th className={clsx(thCls, 'w-[90px] !text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1309,7 +1309,7 @@ const StoneGroupTable: React.FC<{
               <th className={clsx(thCls, 'w-[18%]')}>Giác cắt</th>
               <th className={clsx(thCls, 'w-[15%]')}>Size (mm)</th>
               <th className={clsx(thCls, 'w-[26%]')}>Giá (VNĐ)</th>
-              <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
+              <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
