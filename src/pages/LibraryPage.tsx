@@ -9,12 +9,24 @@ import {
 } from '../styles/classNames';
 import { useSearchParams } from 'react-router-dom';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard, StaffUser } from '../types';
-import { Search, SlidersHorizontal, RotateCcw, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, RotateCcw, ChevronDown, LayoutGrid, Circle, Link2, CircleDot, Sparkles, Home, Tag, type LucideIcon } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { ProductSpecModal } from '../components/ProductSpecModal';
 import { displayPrice, formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProducts, getAllUsersApi } from '../services/api';
+
+// Icon cho pill danh mục — đoán theo từ khóa trong tên (danh mục là dữ liệu admin tự đặt, không
+// có field icon riêng), danh mục lạ rơi về Tag chứ không vỡ giao diện.
+function getCategoryIcon(name: string): LucideIcon {
+  const n = name.toLowerCase();
+  if (n.includes('lắc') || n.includes('vòng')) return Circle;
+  if (n.includes('dây chuyền')) return Link2;
+  if (n.includes('nhẫn')) return CircleDot;
+  if (n.includes('bông tai') || n.includes('khuyên')) return Sparkles;
+  if (n.includes('trang trí')) return Home;
+  return Tag;
+}
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   categories,
@@ -194,18 +206,42 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             </button>
 
             {panelOpen && (
-              <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[300px] bg-surface border border-[#e2e8f0] rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
-                {/* Category */}
+              <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[360px] bg-surface border border-[#e2e8f0] rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
+                {/* Category — pill, không phải select, để thấy hết lựa chọn cùng lúc */}
                 <div>
                   <label className={popoverLabelCls}>Danh mục</label>
-                  <div className="relative">
-                    <select value={selectedCat} onChange={(e) => setSelectedCat(e.target.value)} className={popoverSelectCls}>
-                      <option value="ALL">Tất cả danh mục</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className={selectArrowCls} />
+                  <div className="flex flex-wrap gap-[6px]">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCat('ALL')}
+                      className={clsx(
+                        'inline-flex items-center gap-[6px] py-[6px] px-[12px] rounded-full border text-[14.5px] font-bold cursor-pointer',
+                        selectedCat === 'ALL'
+                          ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+                          : 'bg-surface text-muted border-border hover:bg-[#f8fafc]',
+                      )}
+                    >
+                      <LayoutGrid size={13} /> Tất cả danh mục
+                    </button>
+                    {categories.map((c) => {
+                      const Icon = getCategoryIcon(c.name);
+                      const isActive = selectedCat === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setSelectedCat(c.id)}
+                          className={clsx(
+                            'inline-flex items-center gap-[6px] py-[6px] px-[12px] rounded-full border text-[14.5px] font-bold cursor-pointer',
+                            isActive
+                              ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+                              : 'bg-surface text-muted border-border hover:bg-[#f8fafc]',
+                          )}
+                        >
+                          <Icon size={13} /> {c.name}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
