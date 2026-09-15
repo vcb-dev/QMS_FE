@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Pagination } from '../components/Pagination';
 import {
@@ -270,6 +270,18 @@ export const NotificationConfigPage: React.FC = () => {
     setFormOpen(true);
   };
   const closeForm = () => setFormOpen(false);
+  // Chặn "vuốt ra ngoài" đóng nhầm popup: bôi đen/kéo chọn text bên trong form rồi thả chuột ra
+  // ngoài backdrop cũng fire click trên backdrop y hệt bấm thật. Chỉ đóng khi CẢ mousedown lẫn
+  // click đều rơi thẳng trên backdrop (không phải target con nào đó kéo ra) — bấm thật vẫn đóng.
+  const backdropMouseDownOnSelfRef = useRef(false);
+  const handleBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    backdropMouseDownOnSelfRef.current = e.target === e.currentTarget;
+  };
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (backdropMouseDownOnSelfRef.current && e.target === e.currentTarget) {
+      closeForm();
+    }
+  };
 
   const toggleAction = (a: string) =>
     setForm((f) => ({
@@ -694,10 +706,9 @@ export const NotificationConfigPage: React.FC = () => {
       {/* ---- add / edit modal ---- */}
       {formOpen &&
         createPortal(
-          <div className={modalBackdropCls} onClick={closeForm}>
+          <div className={modalBackdropCls} onMouseDown={handleBackdropMouseDown} onClick={handleBackdropClick}>
             <div
               className={clsx(modalCardCls, '!max-w-[560px] w-[560px] h-[min(680px,92vh)] flex flex-col')}
-              onClick={(e) => e.stopPropagation()}
             >
               <div className={clsx(modalHeaderCls, 'shrink-0')}>
                 <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
@@ -789,7 +800,12 @@ export const NotificationConfigPage: React.FC = () => {
                   <div className="relative">
                     <input
                       className={clsx(formControlCls, 'font-mono pr-[36px]')}
-                      type={showSecret ? 'text' : 'password'}
+                      // KHÔNG dùng type="password" — Chrome thấy cặp "ô text + ô password" sát nhau
+                      // (Webhook URL + ô này) là tưởng form đăng nhập, tự điền email/mật khẩu đã lưu
+                      // vào ô Webhook URL (kể cả có autoComplete="off"). Che chữ bằng CSS thay vì
+                      // type thật để không còn password field nào trên trang, Chrome hết cớ tự điền.
+                      type="text"
+                      style={showSecret ? undefined : { WebkitTextSecurity: 'disc' } as React.CSSProperties}
                       value={form.secret}
                       onChange={(e) => {
                         setForm((f) => ({ ...f, secret: e.target.value }));
