@@ -50,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="h-[24px] object-contain"
           />
         </div>
-        <span className="text-[19px] font-extrabold text-[#0f172a] tracking-[-0.2px] opacity-0 whitespace-nowrap transition-opacity duration-150 group-hover/sidebar:opacity-100">
+        <span className="text-[18px] font-extrabold text-[#0f172a] tracking-[-0.2px] opacity-0 whitespace-nowrap transition-opacity duration-150 group-hover/sidebar:opacity-100">
           Viễn Chí Bảo 
         </span>
       </button>

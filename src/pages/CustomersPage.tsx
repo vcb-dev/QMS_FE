@@ -164,10 +164,10 @@ export const CustomersPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-[22px]">
       <div>
-        <h1 className="text-[28px] font-black text-[#0f172a] m-0 tracking-[-0.3px]">
+        <h1 className="text-[27px] font-black text-[#0f172a] m-0 tracking-[-0.3px]">
           Quản Lý Khách Hàng
         </h1>
-        <p className="text-[17px] text-[#334155] mt-[4px] mr-0 mb-0 ml-0">
+        <p className="text-[16px] text-[#334155] mt-[4px] mr-0 mb-0 ml-0">
           Danh sách khách hàng và lịch sử đơn báo giá
         </p>
       </div>
@@ -198,7 +198,7 @@ export const CustomersPage: React.FC = () => {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Tìm theo tên hoặc SĐT..."
-                className="w-full pt-[9px] pr-[12px] pb-[9px] pl-[34px] rounded-[8px] border border-[#cbd5e1] text-[16.5px] outline-none box-border"
+                className="w-full pt-[9px] pr-[12px] pb-[9px] pl-[34px] rounded-[8px] border border-[#cbd5e1] text-[15.5px] outline-none box-border"
               />
             </div>
 
@@ -207,12 +207,12 @@ export const CustomersPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setPanelOpen((v) => !v)}
-                className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[16.5px]')}
+                className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[15.5px]')}
               >
                 <SlidersHorizontal size={14} />
                 Bộ lọc
                 {panelFilterCount > 0 && (
-                  <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[14.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
+                  <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[13.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
                     {panelFilterCount}
                   </span>
                 )}
@@ -260,7 +260,7 @@ export const CustomersPage: React.FC = () => {
                           type="button"
                           onClick={() => { setTimeRangeFilter(opt.value); setStartDateFilter(''); setEndDateFilter(''); }}
                           className={clsx(
-                            'py-[6px] px-[12px] rounded-[6px] text-[15.5px] font-bold cursor-pointer',
+                            'py-[6px] px-[12px] rounded-[6px] text-[14.5px] font-bold cursor-pointer',
                             timeRangeFilter === opt.value && !startDateFilter && !endDateFilter
                               ? 'bg-surface text-[#0f172a] border border-[#0f172a]'
                               : 'bg-[#f1f5f9] text-[#334155] border border-transparent',
@@ -307,7 +307,7 @@ export const CustomersPage: React.FC = () => {
               onClick={handleResetExtraFilters}
               disabled={!isExtraFiltered}
               title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-              className={clsx(fbBtnCls, 'flex items-center gap-[4px] py-[8px] px-[14px] text-[16px] shrink-0')}
+              className={clsx(fbBtnCls, 'flex items-center gap-[4px] py-[8px] px-[14px] text-[15px] shrink-0')}
             >
               <RotateCcw size={13} /> Xóa bộ lọc
             </button>
@@ -324,7 +324,7 @@ export const CustomersPage: React.FC = () => {
                 type="button"
                 onClick={() => setSortMode(opt.key)}
                 className={clsx(
-                  'py-[7px] px-[12px] rounded-[8px] text-[15.5px] font-bold cursor-pointer',
+                  'py-[7px] px-[12px] rounded-[8px] text-[14.5px] font-bold cursor-pointer',
                   sortMode === opt.key
                     ? 'bg-surface text-[#0f172a] border border-[#0f172a]'
                     : 'bg-[#f1f5f9] text-[#475569] border border-transparent',
@@ -337,7 +337,7 @@ export const CustomersPage: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="text-center text-faint text-[16.5px] py-[30px]">Đang tải...</div>
+          <div className="text-center text-faint text-[15.5px] py-[30px]">Đang tải...</div>
         ) : rows.length > 0 ? (
           <div className="flex flex-col gap-[8px]">
             {rows.map((s) => {
@@ -354,26 +354,26 @@ export const CustomersPage: React.FC = () => {
                     )}
                   >
                     <div>
-                      <div className="font-extrabold text-[#0f172a] text-[17px]">{s.customer.name}</div>
-                      <div className="flex items-center gap-[10px] mt-[2px] text-[15px] text-muted">
+                      <div className="font-extrabold text-[#0f172a] text-[16px]">{s.customer.name}</div>
+                      <div className="flex items-center gap-[10px] mt-[2px] text-[14px] text-muted">
                         {s.customer.phone && <span className="flex items-center gap-[3px]"><Phone size={11} /> {s.customer.phone}</span>}
                         {s.customer.province && <span className="flex items-center gap-[3px]"><MapPin size={11} /> {s.customer.province.name}</span>}
                       </div>
                     </div>
-                    <div className="text-[16.5px] text-[#334155]">
-                      <div className="text-[14px] text-faint font-bold uppercase">Tổng đơn</div>
+                    <div className="text-[15.5px] text-[#334155]">
+                      <div className="text-[13px] text-faint font-bold uppercase">Tổng đơn</div>
                       {s.totalOrders}
                     </div>
-                    <div className="text-[16.5px] text-[#334155]">
-                      <div className="text-[14px] text-faint font-bold uppercase">Đã chốt</div>
+                    <div className="text-[15.5px] text-[#334155]">
+                      <div className="text-[13px] text-faint font-bold uppercase">Đã chốt</div>
                       {s.totalClosed}
                     </div>
-                    <div className="text-[16.5px] text-muted">
-                      <div className="text-[14px] text-faint font-bold uppercase">Đơn gần nhất</div>
+                    <div className="text-[15.5px] text-muted">
+                      <div className="text-[13px] text-faint font-bold uppercase">Đơn gần nhất</div>
                       {s.lastOrder ? new Date(s.lastOrder).toLocaleDateString('vi-VN') : '---'}
                     </div>
-                    <div className="text-[17px] font-black text-tone-green-text">
-                      <div className="text-[14px] text-faint font-bold uppercase">Giá trị đã chốt</div>
+                    <div className="text-[16px] font-black text-tone-green-text">
+                      <div className="text-[13px] text-faint font-bold uppercase">Giá trị đã chốt</div>
                       {formatCurrency(s.closedValue)}
                     </div>
                     <div className="text-faint">
@@ -384,11 +384,11 @@ export const CustomersPage: React.FC = () => {
                   {isExpanded && (
                     <div className="border-t border-[#f1f5f9] py-[12px] px-[14px] bg-[#fbfcfe]">
                       {orderState?.loading ? (
-                        <div className="text-center text-faint text-[16px] py-[10px]">
+                        <div className="text-center text-faint text-[15px] py-[10px]">
                           Đang tải danh sách đơn...
                         </div>
                       ) : orderState?.error ? (
-                        <div className="text-center text-[#dc2626] text-[16px] py-[10px]">
+                        <div className="text-center text-[#dc2626] text-[15px] py-[10px]">
                           {orderState.error}
                         </div>
                       ) : orderState?.data && orderState.data.length > 0 ? (
@@ -398,13 +398,13 @@ export const CustomersPage: React.FC = () => {
                             .map((o) => {
                               const meta = STATUS_META[o.status] || { label: o.status, color: '#475569', bg: '#f1f5f9' };
                               return (
-                                <div key={o.id} className="grid grid-cols-[110px_1.6fr_1fr_0.9fr_1fr_1fr] gap-[10px] items-center text-[16px] py-[6px] border-b border-[#f1f5f9]">
+                                <div key={o.id} className="grid grid-cols-[110px_1.6fr_1fr_0.9fr_1fr_1fr] gap-[10px] items-center text-[15px] py-[6px] border-b border-[#f1f5f9]">
                                   <span className="font-mono text-muted">{o.code || o.id}</span>
                                   <span className="text-[#334155] font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{o.productName}</span>
                                   <span className="text-muted overflow-hidden text-ellipsis whitespace-nowrap" title={o.requester?.name || undefined}>{o.requester?.name || 'Chưa gán'}</span>
                                   <span className="text-muted">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '---'}</span>
                                   <span
-                                    className="inline-flex items-center justify-center py-[2px] px-[8px] rounded-[20px] text-[14.5px] font-bold w-fit"
+                                    className="inline-flex items-center justify-center py-[2px] px-[8px] rounded-[20px] text-[13.5px] font-bold w-fit"
                                     // động — giữ inline
                                     style={{ color: meta.color, background: meta.bg }}
                                   >
@@ -418,7 +418,7 @@ export const CustomersPage: React.FC = () => {
                             })}
                         </div>
                       ) : (
-                        <div className="text-center text-faint text-[16px] py-[10px]">
+                        <div className="text-center text-faint text-[15px] py-[10px]">
                           Khách hàng chưa có đơn nào
                         </div>
                       )}
@@ -429,7 +429,7 @@ export const CustomersPage: React.FC = () => {
             })}
           </div>
         ) : (
-          <div className="text-center text-faint text-[16.5px] py-[30px]">Không tìm thấy khách hàng nào</div>
+          <div className="text-center text-faint text-[15.5px] py-[30px]">Không tìm thấy khách hàng nào</div>
         )}
 
         {rows.length > 0 && (

@@ -111,10 +111,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           onClick={() => onStatusSubFilterChange('ALL')}
           className={clsx(fbSquareBaseCls, statusSubFilter === 'ALL' && fbSquareActiveCls)}
         >
-          <div className="text-[14.5px] font-bold text-muted uppercase tracking-[0.3px] mb-[2px]">
+          <div className="text-[13.5px] font-bold text-muted uppercase tracking-[0.3px] mb-[2px]">
             Tất cả
           </div>
-          <div className="text-[19px] font-black text-[#0f172a]">
+          <div className="text-[18px] font-black text-[#0f172a]">
             {counts.total}
           </div>
         </button>
@@ -128,10 +128,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onStatusSubFilterChange(s.value)}
               className={clsx(fbSquareBaseCls, isActive && fbSquareActiveCls)}
             >
-              <div className="text-[14.5px] font-bold text-muted uppercase tracking-[0.3px] mb-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
+              <div className="text-[13.5px] font-bold text-muted uppercase tracking-[0.3px] mb-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
                 {s.label}
               </div>
-              <div className="text-[19px] font-black text-[#0f172a]">
+              <div className="text-[18px] font-black text-[#0f172a]">
                 {counts[s.countKey]}
               </div>
             </button>
@@ -150,7 +150,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Tìm kiếm mã, tên khách, sản phẩm..."
-              className="w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[12px] pb-[8px] pl-[34px] text-[16.5px] text-[#0f172a] outline-none box-border"
+              className="w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[12px] pb-[8px] pl-[34px] text-[15.5px] text-[#0f172a] outline-none box-border"
             />
           </div>
 
@@ -159,12 +159,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <button
               type="button"
               onClick={() => setPanelOpen((v) => !v)}
-              className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] !py-[8px] !px-[14px] !text-[16.5px]')}
+              className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] !py-[8px] !px-[14px] !text-[15.5px]')}
             >
               <SlidersHorizontal size={14} />
               Bộ lọc
               {panelFilterCount > 0 && (
-                <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[14.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
+                <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[13.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
                   {panelFilterCount}
                 </span>
               )}
@@ -197,7 +197,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         checked={includeLocked}
                         onChange={(e) => onIncludeLockedChange(e.target.checked)}
                       />
-                      <span className="text-[16.5px] font-semibold text-[#334155]">
+                      <span className="text-[15.5px] font-semibold text-[#334155]">
                         Hiện yêu cầu bị khóa
                       </span>
                       <span
@@ -261,7 +261,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         type="button"
                         onClick={() => onTimeRangeFilterChange?.(opt.value)}
                         className={clsx(
-                          'py-[6px] px-[12px] rounded-[6px] text-[15.5px] font-bold cursor-pointer border',
+                          'py-[6px] px-[12px] rounded-[6px] text-[14.5px] font-bold cursor-pointer border',
                           timeRangeFilter === opt.value ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-muted border-transparent',
                         )}
                       >
@@ -307,7 +307,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="button"
             onClick={onResetFilters}
             disabled={!isFiltered}
-            className={clsx(fbBtnCls, '!py-[8px] !px-[14px] !text-[16px] flex items-center gap-[4px] shrink-0')}
+            className={clsx(fbBtnCls, '!py-[8px] !px-[14px] !text-[15px] flex items-center gap-[4px] shrink-0')}
             title={isFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
           >
             <RotateCcw size={13} /> Xóa bộ lọc

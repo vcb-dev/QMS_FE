@@ -64,7 +64,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-[24px] font-extrabold text-[#0f172a] mt-[2px] flex items-center gap-[10px]">
+        <h1 className="text-[23px] font-extrabold text-[#0f172a] mt-[2px] flex items-center gap-[10px]">
           <FileText size={20} /> Danh Sách Yêu Cầu Báo Giá
         </h1>
       </div>
@@ -104,7 +104,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           <>
             {(currentRole === 'SALE' || currentRole === 'ADMIN') && (
               <button
-                className="bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1] py-[8px] px-[18px] rounded-[10px] font-extrabold text-[17px] cursor-pointer inline-flex items-center gap-[6px] transition-[background_0.15s,border-color_0.15s] hover:bg-[#e2e8f0] hover:border-[#94a3b8]"
+                className="bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1] py-[8px] px-[18px] rounded-[10px] font-extrabold text-[16px] cursor-pointer inline-flex items-center gap-[6px] transition-[background_0.15s,border-color_0.15s] hover:bg-[#e2e8f0] hover:border-[#94a3b8]"
                 // Gọi trực tiếp onClick={onOpenCreate} sẽ vô tình truyền thẳng SyntheticEvent của
                 // click vào làm calcData (object luôn truthy) — khiến CreateModal tưởng đang tạo đơn
                 // từ máy tính giá, khóa nhầm phần chọn đá dù đây là luồng tạo đơn thường.
@@ -117,7 +117,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
               <button
                 type="button"
                 onClick={onOpenExport}
-                className="inline-flex items-center gap-[6px] bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] rounded-[8px] py-[8px] px-[14px] text-[17px] font-bold cursor-pointer"
+                className="inline-flex items-center gap-[6px] bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] rounded-[8px] py-[8px] px-[14px] text-[16px] font-bold cursor-pointer"
                 title="Xuất danh sách đang lọc ra Excel"
               >
                 <Download size={13} /> Xuất Excel

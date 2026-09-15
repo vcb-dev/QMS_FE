@@ -45,7 +45,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
 
         {/* 404 Badge with Icon */}
         <div className="relative mb-[20px] inline-flex items-center justify-center">
-          <div className="text-[76px] font-black tracking-[-3px] leading-none bg-[linear-gradient(135deg,#cbd5e1_0%,#94a3b8_100%)] bg-clip-text text-transparent select-none">
+          <div className="text-[75px] font-black tracking-[-3px] leading-none bg-[linear-gradient(135deg,#cbd5e1_0%,#94a3b8_100%)] bg-clip-text text-transparent select-none">
             404
           </div>
           <div className="absolute -bottom-[4px] -right-[8px] w-[36px] h-[36px] rounded-[12px] bg-[#eff6ff] border-2 border-surface flex items-center justify-center text-primary shadow-[0_4px_10px_rgba(37,99,235,0.15)]">
@@ -54,10 +54,10 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
         </div>
 
         {/* Text Details */}
-        <h2 className="text-[22px] font-extrabold text-text mt-0 mx-0 mb-[10px] tracking-[-0.2px]">
+        <h2 className="text-[21px] font-extrabold text-text mt-0 mx-0 mb-[10px] tracking-[-0.2px]">
           {title}
         </h2>
-        <p className="text-[17.5px] text-muted mt-0 mx-0 mb-[28px] leading-[1.5] max-w-[380px]">
+        <p className="text-[16.5px] text-muted mt-0 mx-0 mb-[28px] leading-[1.5] max-w-[380px]">
           {description}
         </p>
 
@@ -66,7 +66,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
           <button
             type="button"
             onClick={handleBack}
-            className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-[8px] bg-text text-surface border-0 rounded-[12px] py-[12px] px-[18px] text-[17.5px] font-bold cursor-pointer shadow-[0_4px_12px_rgba(15,23,42,0.2)] transition-all duration-150 ease-out"
+            className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-[8px] bg-text text-surface border-0 rounded-[12px] py-[12px] px-[18px] text-[16.5px] font-bold cursor-pointer shadow-[0_4px_12px_rgba(15,23,42,0.2)] transition-all duration-150 ease-out"
           >
             <ArrowLeft size={16} /> {backLabel}
           </button>
@@ -75,7 +75,7 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-[8px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[12px] py-[12px] px-[18px] text-[17.5px] font-bold cursor-pointer transition-all duration-150 ease-out"
+              className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-[8px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[12px] py-[12px] px-[18px] text-[16.5px] font-bold cursor-pointer transition-all duration-150 ease-out"
             >
               <Home size={16} /> Về trang chủ
             </button>
