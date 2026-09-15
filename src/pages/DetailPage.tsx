@@ -298,19 +298,19 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           <button
             type="button"
             onClick={onBack}
-            className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[8px] px-[16px] text-[13px] font-bold text-[#334155] cursor-pointer flex items-center gap-[6px] shadow-sm transition-[all_0.15s_ease]"
+            className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[8px] px-[16px] text-[14px] font-bold text-[#334155] cursor-pointer flex items-center gap-[6px] shadow-sm transition-[all_0.15s_ease]"
           >
             <ArrowLeft size={16} /> 
           </button>
 
           <div>
             <div className="flex items-center gap-[10px]">
-              <h1 className="text-[22px] font-black text-text m-0">
+              <h1 className="text-[23px] font-black text-text m-0">
                 {selectedReq.code || `#RQ-${selectedReq.id}`}
               </h1>
               {getStatusBadge(selectedReq.status)}
             </div>
-            <p className="text-[13px] text-muted mt-[4px] mr-0 mb-0 ml-0">
+            <p className="text-[14px] text-muted mt-[4px] mr-0 mb-0 ml-0">
               Tạo lúc {selectedReq.createdAt ? new Date(selectedReq.createdAt).toLocaleString('vi-VN') : '---'}
             </p>
           </div>
@@ -328,10 +328,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           {/* Reject or Return Reasons Warning Alert */}
           {(selectedReq.status === 'REJECTED' ) && selectedReq.rejectReason && (
             <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-[12px] py-[16px] px-[20px]">
-              <div className="text-[13px] font-extrabold text-[#be123c] flex items-center gap-[8px]">
+              <div className="text-[14px] font-extrabold text-[#be123c] flex items-center gap-[8px]">
                 <XCircle size={18} /> LÝ DO TỪ CHỐI HẲN
               </div>
-              <p className="text-[13px] text-[#9f1239] mt-[6px] mr-0 mb-0 ml-0 leading-[1.5]">
+              <p className="text-[14px] text-[#9f1239] mt-[6px] mr-0 mb-0 ml-0 leading-[1.5]">
                 {selectedReq.rejectReason}
               </p>
             </div>
@@ -339,10 +339,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
           {selectedReq.status === 'NEED_MORE_INFO' && selectedReq.returnReason && (
             <div className="bg-[#fff7ed] border border-[#ffedd5] rounded-[12px] py-[16px] px-[20px]">
-              <div className="text-[13px] font-extrabold text-[#c2410c] flex items-center gap-[8px]">
+              <div className="text-[14px] font-extrabold text-[#c2410c] flex items-center gap-[8px]">
                 <RotateCcw size={18} /> YÊU CẦU BỔ SUNG THÔNG TIN
               </div>
-              <p className="text-[13px] text-[#9a3412] mt-[6px] mr-0 mb-0 ml-0 leading-[1.5]">
+              <p className="text-[14px] text-[#9a3412] mt-[6px] mr-0 mb-0 ml-0 leading-[1.5]">
                 {selectedReq.returnReason}
               </p>
             </div>
@@ -353,10 +353,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             <div className="bg-[#fff7ed] border-[1.5px] border-[#fed7aa] rounded-[12px] py-[16px] px-[20px] flex items-center gap-[14px] shadow-[0_2px_6px_rgba(234,88,12,0.08)]">
               <AlertTriangle size={24} color="#ea580c" className="shrink-0" />
               <div>
-                <div className="text-[13.5px] font-extrabold text-[#c2410c]">
+                <div className="text-[14.5px] font-extrabold text-[#c2410c]">
                   GIÁ CHƯA ĐƯỢC XÁC NHẬN BỞI ADMIN / ORDER
                 </div>
-                <p className="text-[12.5px] text-[#9a3412] mt-[4px] mr-0 mb-0 ml-0 leading-[1.5] font-semibold">
+                <p className="text-[13.5px] text-[#9a3412] mt-[4px] mr-0 mb-0 ml-0 leading-[1.5] font-semibold">
                   <strong>Lưu ý:</strong> Mức giá bên dưới chỉ là giá tạm tính / ước tính. Giá <strong>chưa được xác nhận, tuyệt đối không được báo cho khách</strong> cho đến khi đơn chuyển sang trạng thái &quot;ĐÃ BÁO GIÁ&quot;.
                 </p>
               </div>
@@ -366,7 +366,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
           {/* Product Overview Card & Gallery */}
           <div className={cardCls}>
-            <h2 className="text-[18px] font-black text-text mb-[16px]">
+            <h2 className="text-[19px] font-black text-text mb-[16px]">
               {selectedReq.productName || 'Sản phẩm mẫu'}
             </h2>
 
@@ -404,7 +404,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   {mediaList.length > 1 && (
                     <>
                       <span
-                        className="absolute bottom-[10px] right-[10px] bg-[rgba(15,23,42,0.85)] backdrop-blur-[4px] text-surface text-[12.5px] font-extrabold py-[5px] px-[12px] rounded-[20px] border border-[rgba(255,255,255,0.25)] shadow-[0_2px_6px_rgba(0,0,0,0.25)] flex items-center gap-[5px] pointer-events-none"
+                        className="absolute bottom-[10px] right-[10px] bg-[rgba(15,23,42,0.85)] backdrop-blur-[4px] text-surface text-[13.5px] font-extrabold py-[5px] px-[12px] rounded-[20px] border border-[rgba(255,255,255,0.25)] shadow-[0_2px_6px_rgba(0,0,0,0.25)] flex items-center gap-[5px] pointer-events-none"
                       >
                         {currentMedia?.type === 'video' ? <Play size={13} /> : <ImageIcon size={13} />}{' '}
                         {currentMediaIdx + 1} / {mediaList.length}
@@ -531,10 +531,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
                 {/* Additional Description / Customer Notes */}
                 <div className="bg-page border border-border rounded-[10px] p-[14px]">
-                  <span className="text-[11px] font-extrabold text-muted uppercase block mb-[4px]">
+                  <span className="text-[12px] font-extrabold text-muted uppercase block mb-[4px]">
                     GHI CHÚ / MÔ TẢ YÊU CẦU CỦA KHÁCH HÀNG
                   </span>
-                  <p className="text-[12.5px] text-[#334155] m-0 leading-[1.5]">
+                  <p className="text-[13.5px] text-[#334155] m-0 leading-[1.5]">
                     {selectedReq.desiredLeadTime || 'Không có ghi chú thêm.'}
                   </p>
                 </div>
@@ -548,7 +548,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           {selectedReq.status !== 'CLOSED' && selectedReq.status !== 'PENDING' && pricedOptions.length > 0 && (
             <div className={cardCls}>
               <div className="flex items-center justify-between mb-[16px]">
-                <h3 className="text-[16px] font-extrabold text-text m-0 flex items-center gap-[8px]">
+                <h3 className="text-[17px] font-extrabold text-text m-0 flex items-center gap-[8px]">
                   <Layers size={18} color="#d97706" /> Các Phương Án Báo Giá ({pricedOptions.length})
                 </h3>
                 {pricedOptions.length > 1 && (
@@ -556,7 +556,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     type="button"
                     onClick={() => handleCopyAllOptions(pricedOptions)}
                     className={clsx(
-                      'flex items-center gap-[6px] py-[6px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[12px] font-bold cursor-pointer',
+                      'flex items-center gap-[6px] py-[6px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold cursor-pointer',
                       copiedAllOpt ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-surface text-[#334155]',
                     )}
                   >
@@ -589,25 +589,25 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             className="bg-[#F3F4F6] text-[#111827] border border-[#e5e7eb] rounded-[16px] p-[24px] shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex flex-col gap-[16px]"
           >
             <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-[12px]">
-              <span className="text-[14px] font-extrabold text-[#111827] flex items-center gap-[6px]">
+              <span className="text-[15px] font-extrabold text-[#111827] flex items-center gap-[6px]">
                 <BarChart3 size={16} color="#4b5563" /> Bảng Kê Giá & VAT
               </span>
-              <span className="text-[11px] font-mono text-[#4b5563] bg-surface py-[2px] px-[8px] rounded-[6px] border border-[#e5e7eb]">
+              <span className="text-[12px] font-mono text-[#4b5563] bg-surface py-[2px] px-[8px] rounded-[6px] border border-[#e5e7eb]">
                 {selectedReq.code || `#${selectedReq.id}`}
               </span>
             </div>
 
             <div className="bg-surface rounded-[12px] p-[16px] border border-[#e5e7eb] mt-[4px]">
-              <span className="text-[10.5px] font-extrabold text-[#6b7280] tracking-[0.5px] uppercase block">
+              <span className="text-[11.5px] font-extrabold text-[#6b7280] tracking-[0.5px] uppercase block">
                 TỔNG BÁO GIÁ CHỐT
               </span>
               <div
                 className={clsx(
-                  'text-[26px] font-black mt-[4px]',
+                  'text-[27px] font-black mt-[4px]',
                   priceVal > 0
                     ? (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'
                         ? 'text-[#16a34a] not-italic opacity-100'
-                        : 'text-[#94a3b8] italic opacity-75')
+                        : 'text-[#64748b] italic opacity-75')
                     : 'text-[#d97706] not-italic opacity-100',
                 )}
               >
@@ -619,7 +619,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               
               {/* Sale chỉ cần biết có VAT hay không, không cần xem % chi tiết (ORDER/ADMIN mới xem chi tiết bên dưới) */}
               {priceVal > 0 && currentRole === 'SALE' && finalOption && finalOption.vat != null && (
-                <div className={clsx('mt-[8px] text-[11.5px] font-bold', finalOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#94a3b8]')}>
+                <div className={clsx('mt-[8px] text-[12.5px] font-bold', finalOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#64748b]')}>
                   {finalOption.vat > 0 ? 'Có VAT' : 'Không VAT'}
                 </div>
               )}
@@ -628,7 +628,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   Chưa có giá chốt thì chưa có gì đáng tin để hiện — ẩn hết, chỉ để lại "Chưa có giá chốt". */}
               {priceVal > 0 && (currentRole === 'ORDER' || currentRole === 'ADMIN') && finalOption &&
                (finalOption.weightChi != null || finalOption.totalMetalCost != null || finalOption.laborCost != null || finalOption.stonePrice != null || finalOption.stoneCost != null || finalOption.vat != null) && (
-                <div className="flex flex-col gap-[5px] mt-[10px] pt-[10px] border-t border-dashed border-border text-[11.5px] text-[#475569]">
+                <div className="flex flex-col gap-[5px] mt-[10px] pt-[10px] border-t border-dashed border-border text-[12.5px] text-[#475569]">
                   {finalOption.materials && finalOption.materials.length > 1 ? (
                     <div className="bg-page py-[6px] px-[8px] rounded-[6px] mb-[4px] border border-border">
                       <div className="font-extrabold text-[#475569] mb-[3px]">Chi tiết từng kim loại:</div>
@@ -703,7 +703,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     <SpecRow label="VAT" value={`${finalOption.vat}%`} />
                   )}
                   {finalOption.totalMetalCost != null && finalOption.metalRawCost == null && (finalOption.laborCost != null || finalOption.vat != null) && (
-                    <div className="text-[10.5px] text-[#94a3b8] italic mt-[2px]">
+                    <div className="text-[11.5px] text-[#64748b] italic mt-[2px]">
                       {finalOption.laborCost != null && `Trong đó tiền công vốn: ${formatCurrency(Number(finalOption.laborCost))}`}
                       {finalOption.laborCost != null && finalOption.vat != null && ' · '}
                       {finalOption.vat != null && `VAT ${finalOption.vat}%`}
@@ -717,28 +717,28 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
           {/* Customer & Request Meta Card */}
           <div className={cardCls}>
-            <h3 className="text-[15px] font-extrabold text-[#0f172a] mb-[14px] border-b border-[#f1f5f9] pb-[10px]">
+            <h3 className="text-[16px] font-extrabold text-[#0f172a] mb-[14px] border-b border-[#f1f5f9] pb-[10px]">
               Thông Tin Đơn Yêu Cầu
             </h3>
 
-            <div className="flex flex-col gap-[12px] text-[13px]">
+            <div className="flex flex-col gap-[12px] text-[14px]">
               <div>
-                <span className="text-[11px] text-[#64748b] font-bold uppercase">THÔNG TIN KHÁCH HÀNG</span>
-                <div className="font-extrabold text-[#0f172a] text-[14px] mt-[2px] flex items-center gap-[6px]">
+                <span className="text-[12px] text-[#334155] font-bold uppercase">THÔNG TIN KHÁCH HÀNG</span>
+                <div className="font-extrabold text-[#0f172a] text-[15px] mt-[2px] flex items-center gap-[6px]">
                   <UserIcon size={15} color="#2563eb" /> {selectedReq.customerName || selectedReq.customer?.name || 'Khách hàng lẻ'}
                 </div>
                 {selectedReq.customer?.phone && (
-                  <div className="text-[12px] text-[#475569] mt-[4px] flex items-center gap-[6px]">
+                  <div className="text-[13px] text-[#475569] mt-[4px] flex items-center gap-[6px]">
                     <Phone size={13} color="#64748b" /> SĐT: {selectedReq.customer.phone}
                   </div>
                 )}
                 {selectedReq.customer?.province && (
-                  <div className="text-[12px] text-[#475569] font-bold mt-[4px] flex items-center gap-[6px]">
+                  <div className="text-[13px] text-[#475569] font-bold mt-[4px] flex items-center gap-[6px]">
                     <Building2 size={13} color="#1d4ed8" /> Tỉnh/TP: {selectedReq.customer.province.name}
                   </div>
                 )}
                 {(selectedReq.customer?.address || selectedReq.customer?.ward) && (
-                  <div className="text-[12px] text-[#475569] mt-[4px] flex items-center gap-[6px]">
+                  <div className="text-[13px] text-[#475569] mt-[4px] flex items-center gap-[6px]">
                     <MapPin size={13} color="#ea580c" /> Địa chỉ: {[selectedReq.customer?.address, selectedReq.customer?.ward?.name].filter(Boolean).join(', ')}
                   </div>
                 )}
@@ -750,7 +750,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   nội bộ — nhóm chung với thông tin khách hàng ở trên thay vì kẹp giữa các mốc thời
                   gian nội bộ bên dưới. */}
               <div>
-                <span className="text-[11px] text-[#64748b] font-bold uppercase">NGÀY MONG MUỐN NHẬN HÀNG</span>
+                <span className="text-[12px] text-[#334155] font-bold uppercase">NGÀY MONG MUỐN NHẬN HÀNG</span>
                 <div className="font-extrabold text-[#e11d48] mt-[2px] flex items-center gap-[6px]">
                   <Calendar size={15} /> {selectedReq.desiredDate || selectedReq.desiredLeadTime || 'Gấp trong 3 ngày'}
                 </div>
@@ -759,17 +759,17 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               {/* Ranh giới rõ ràng hơn giữa mối quan tâm của khách hàng (trên) và dữ liệu xử lý nội
                   bộ (dưới) — nhãn nhóm riêng thay vì chỉ 1 divider mảnh như giữa các field cùng nhóm. */}
               <div className="mt-[4px] pt-[14px] border-t border-border">
-                <span className="text-[10px] font-extrabold text-[#94a3b8] uppercase tracking-[0.6px]">
+                <span className="text-[11px] font-extrabold text-[#64748b] uppercase tracking-[0.6px]">
                   Xử Lý Nội Bộ
                 </span>
               </div>
 
               <div>
-                <span className="text-[11px] text-[#64748b] font-bold uppercase">NGƯỜI TẠO YÊU CẦU</span>
+                <span className="text-[12px] text-[#334155] font-bold uppercase">NGƯỜI TẠO YÊU CẦU</span>
                 <div className="font-extrabold text-[#334155] mt-[2px]">
                   {selectedReq.requester?.name || selectedReq.createdBy?.name || 'Kinh Doanh'}
                 </div>
-                <div className="text-[11.5px] text-[#64748b] mt-[2px] flex items-center gap-[6px]">
+                <div className="text-[12.5px] text-[#334155] mt-[2px] flex items-center gap-[6px]">
                   <Building2 size={13} color="#64748b" /> {selectedReq.requester?.department?.name || 'Store VCB'}
                 </div>
               </div>
@@ -777,7 +777,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               <div className="h-[1px] bg-[#f1f5f9]" />
 
               <div>
-                <span className="text-[11px] text-[#64748b] font-bold uppercase">CHUYÊN VIÊN BÁO GIÁ</span>
+                <span className="text-[12px] text-[#334155] font-bold uppercase">CHUYÊN VIÊN BÁO GIÁ</span>
                 <div className="font-extrabold text-[#2563eb] mt-[2px]">
                   {selectedReq.assignee?.name || 'Chưa phân công'}
                 </div>
@@ -787,7 +787,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 <>
                   <div className="h-[1px] bg-[#f1f5f9]" />
                   <div>
-                    <span className="text-[11px] text-[#64748b] font-bold uppercase inline-flex items-center gap-[4px]">
+                    <span className="text-[12px] text-[#334155] font-bold uppercase inline-flex items-center gap-[4px]">
                       THỜI GIAN XỬ LÝ
                       <span
                         title={
@@ -796,7 +796,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                           'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.\n' +
                           'Từ chối sau: từ lúc tiếp nhận đến lúc từ chối.'
                         }
-                        className="inline-flex cursor-help text-[#94a3b8]"
+                        className="inline-flex cursor-help text-[#64748b]"
                       >
                         <HelpCircle size={12} />
                       </span>

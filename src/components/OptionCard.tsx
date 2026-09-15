@@ -24,11 +24,11 @@ export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus,
   return (
     <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] rounded-[10px] bg-white border border-[#e2e8f0]">
       <div className="flex flex-col gap-[3px]">
-        <span className="text-[13.5px] font-bold text-[#0f172a]">
+        <span className="text-[14.5px] font-bold text-[#0f172a]">
           {label}
         </span>
         {summary && (
-          <span className="text-[11.5px] text-[#64748b] font-semibold">
+          <span className="text-[12.5px] text-[#334155] font-semibold">
             {summary}
           </span>
         )}
@@ -38,8 +38,8 @@ export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus,
         <span className="flex flex-col items-end">
           <strong
             className={clsx(
-              "text-[15px] font-black",
-              isFinalStatus ? "text-[#16a34a] not-italic opacity-100" : "text-[#94a3b8] italic opacity-80"
+              "text-[16px] font-black",
+              isFinalStatus ? "text-[#16a34a] not-italic opacity-100" : "text-[#64748b] italic opacity-80"
             )}
           >
             {price}
@@ -47,7 +47,7 @@ export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus,
           {renderPriceBreakdownLines(getPriceBreakdown(opt))}
         </span>
         {!isFinalStatus && (
-          <span className="text-[10px] text-[#ea580c] bg-[#fff7ed] border border-[#ffedd5] py-[1px] px-[5px] rounded-[4px] font-extrabold">
+          <span className="text-[11px] text-[#ea580c] bg-[#fff7ed] border border-[#ffedd5] py-[1px] px-[5px] rounded-[4px] font-extrabold">
             Chưa duyệt
           </span>
         )}
