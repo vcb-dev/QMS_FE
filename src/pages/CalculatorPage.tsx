@@ -452,10 +452,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   return (
     <div className="flex flex-col gap-[18px] pb-[30px]">
       <div>
-        <h1 className="text-[25px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
+        <h1 className="text-[26px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
           <Calculator size={22} /> Máy Tính Giá
         </h1>
-        <p className="text-[14px] text-muted mt-[4px] mr-0 mb-0 ml-0">
+        <p className="text-[15px] text-muted mt-[4px] mr-0 mb-0 ml-0">
           Tính giá kim hoàn theo thông số sản phẩm, kim loại và đá
         </p>
       </div>
@@ -471,11 +471,11 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           {/* Section 1: Thông số Sản phẩm & Kim loại */}
           <div className={cardCls}>
             <div className="flex items-center justify-between mb-[16px] flex-wrap gap-[10px]">
-              <h3 className="text-[16px] font-extrabold text-[#0f172a] m-0">Thông số Sản phẩm & Kim loại</h3>
+              <h3 className="text-[17px] font-extrabold text-[#0f172a] m-0">Thông số Sản phẩm & Kim loại</h3>
               <button
                 type="button"
                 onClick={addMaterialRow}
-                className="flex items-center gap-[6px] bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[13px] font-extrabold py-[7px] px-[14px] cursor-pointer transition-[all_0.15s_ease]"
+                className="flex items-center gap-[6px] bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[14px] font-extrabold py-[7px] px-[14px] cursor-pointer transition-[all_0.15s_ease]"
               >
                 <Plus size={14} color="#475569" /> Thêm chất liệu
               </button>
@@ -483,13 +483,13 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
             {/* Danh mục sản phẩm */}
             <div className={clsx(formGroupCls, 'mb-[16px]')}>
-              <label className={clsx(formLabelCls, 'text-[12px] font-extrabold text-[#334155] uppercase block mb-[6px]')}>
+              <label className={clsx(formLabelCls, 'text-[13px] font-extrabold text-[#334155] uppercase block mb-[6px]')}>
                 DANH MỤC SẢN PHẨM
               </label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none bg-surface"
+                className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none bg-surface"
               >
                 <option value="">-- Chọn danh mục sản phẩm --</option>
                 {dbCategories.map((cat) => (
@@ -506,10 +506,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               <div
                 className="grid [grid-template-columns:1fr_140px_36px] gap-[12px] mb-[8px] py-0 px-[2px]"
               >
-                <span className="text-[12px] font-extrabold text-[#334155] uppercase">
+                <span className="text-[13px] font-extrabold text-[#334155] uppercase">
                   LOẠI VÀNG / CHẤT LIỆU
                 </span>
-                <span className="text-[12px] font-extrabold text-[#334155] uppercase">
+                <span className="text-[13px] font-extrabold text-[#334155] uppercase">
                   TRỌNG LƯỢNG (CHỈ)
                 </span>
                 <span />
@@ -525,7 +525,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     <select
                       value={row.materialId || ''}
                       onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
-                      className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none bg-surface"
+                      className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none bg-surface"
                     >
                       {dbMaterials
                         // Từ 2 dòng chất liệu trở lên -> chỉ cho chọn cùng nhóm kim loại gốc với
@@ -549,9 +549,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           if (v !== '' && parseFloat(v) < 0) return;
                           updateMaterialRow(row.id, { weightChi: v });
                         }}
-                        className="w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]"
+                        className="w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]"
                       />
-                      <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] font-bold text-[#334155]">
+                      <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[14px] font-bold text-[#334155]">
                         chỉ
                       </span>
                     </div>
@@ -574,9 +574,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
               {/* Tổng khối lượng khi có từ 2 chất liệu trở lên */}
               {materialRows.length > 1 && (
-                <div className="flex justify-between items-baseline pt-[10px] mt-[10px] border-t border-dashed border-[#cbd5e1] text-[13px] text-[#475569]">
+                <div className="flex justify-between items-baseline pt-[10px] mt-[10px] border-t border-dashed border-[#cbd5e1] text-[14px] text-[#475569]">
                   <span className="font-bold">Tổng khối lượng:</span>
-                  <strong className="text-[14px] text-[#0f172a] [font-variant-numeric:tabular-nums]">
+                  <strong className="text-[15px] text-[#0f172a] [font-variant-numeric:tabular-nums]">
                     {materialRows.reduce((sum, r) => sum + (parseFloat(r.weightChi) || 0), 0).toFixed(2)} chỉ
                   </strong>
                 </div>
@@ -587,14 +587,14 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 PHẢI nhập khối lượng riêng; kết quả là phương án "chỉ tham khảo". */}
             <div className="border border-[#e2e8f0] rounded-[12px] p-[14px] bg-[#f8fafc] mt-[14px]">
               <div className="flex items-center justify-between mb-[10px]">
-                <span className="text-[12px] font-extrabold text-[#334155] uppercase">
+                <span className="text-[13px] font-extrabold text-[#334155] uppercase">
                   Phương án so sánh loại vàng khác (tham khảo)
                 </span>
                 {!autoGoldMode && (
                   <button
                     type="button"
                     onClick={addCompareRow}
-                    className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[13px] font-extrabold py-[6px] px-[12px] cursor-pointer"
+                    className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[14px] font-extrabold py-[6px] px-[12px] cursor-pointer"
                   >
                     <Plus size={14} color="#475569" /> Thêm phương án
                   </button>
@@ -602,7 +602,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               </div>
 
               {compareRows.length === 0 ? (
-                <p className="text-[12.5px] text-[#64748b] m-0">
+                <p className="text-[13.5px] text-[#64748b] m-0">
                   Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
                 </p>
               ) : (
@@ -618,12 +618,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                         )}
                       >
                         {autoGoldMode ? (
-                          <span className="py-[9px] px-[12px] text-[14px] font-bold text-[#334155]">{row.materialName}</span>
+                          <span className="py-[9px] px-[12px] text-[15px] font-bold text-[#334155]">{row.materialName}</span>
                         ) : (
                           <select
                             value={row.materialId || ''}
                             onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
-                            className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none bg-surface"
+                            className="w-full py-[9px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none bg-surface"
                           >
                             {dbMaterials.map((mat) => (
                               <option key={mat.id} value={mat.id}>{mat.name}</option>
@@ -643,9 +643,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               updateCompareRow(row.id, { weightChi: v });
                             }}
                             placeholder="Số chỉ"
-                            className={clsx('w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] text-[14px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]', !autoGoldMode && missingWeight ? 'border border-[#f87171]' : 'border border-[#cbd5e1]')}
+                            className={clsx('w-full pt-[9px] pr-[42px] pb-[9px] pl-[12px] rounded-[8px] text-[15px] font-bold outline-none bg-surface [font-variant-numeric:tabular-nums]', !autoGoldMode && missingWeight ? 'border border-[#f87171]' : 'border border-[#cbd5e1]')}
                           />
-                          <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] font-bold text-[#334155]">
+                          <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[14px] font-bold text-[#334155]">
                             chỉ
                           </span>
                         </div>
@@ -663,7 +663,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       </div>
                     );
                   })}
-                  <span className="text-[12px] text-[#64748b]">
+                  <span className="text-[13px] text-[#64748b]">
                     Dòng chưa nhập khối lượng sẽ bị bỏ qua khi tính.
                   </span>
                 </div>
@@ -679,18 +679,18 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   onChange={(e) => setIncludeVat(e.target.checked)}
                   className="w-[16px] h-[16px] cursor-pointer"
                 />
-                <span className="text-[14px] font-bold text-[#374151]">Cộng VAT vào báo giá</span>
+                <span className="text-[15px] font-bold text-[#374151]">Cộng VAT vào báo giá</span>
               </label>
             )}
 
             {/* Hệ số nhân Bạc — chỉ ORDER/ADMIN được chọn, Sale luôn dùng mặc định (server ép, FE ẩn cho khỏi rối) */}
             {isSilverMaterial && !isSale && (
               <div className="mt-[14px] pt-[14px] border-t border-dashed border-[#e2e8f0] flex items-center gap-[10px]">
-                <label className="text-[12px] font-extrabold text-[#334155] uppercase">Hệ số nhân Bạc</label>
+                <label className="text-[13px] font-extrabold text-[#334155] uppercase">Hệ số nhân Bạc</label>
                 <select
                   value={selectedSilverMultiplier}
                   onChange={(e) => setSelectedSilverMultiplier(parseFloat(e.target.value) || 0)}
-                  className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none bg-surface"
+                  className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none bg-surface"
                 >
                   {silverMultipliers.map((m) => (
                     <option key={m} value={m}>× {m}</option>
@@ -708,11 +708,11 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <React.Fragment key={m.id}>
                     {idx > 0 && <div className="w-[1px] h-[24px] bg-[#e2e8f0]" />}
                     <div className="flex items-baseline gap-[10px] flex-wrap">
-                      <span className="text-[15px] font-extrabold text-[#475569] uppercase tracking-[0.3px]">
+                      <span className="text-[16px] font-extrabold text-[#475569] uppercase tracking-[0.3px]">
                         GIÁ {m.name.toUpperCase()}
                       </span>
-                      <strong className="text-[20px] font-black text-[#334155] tracking-[0.3px] [font-variant-numeric:tabular-nums]">
-                        {formatNumberVN(m.priceVnd)} <span className="text-[15px] font-bold">đ/chỉ</span>
+                      <strong className="text-[21px] font-black text-[#334155] tracking-[0.3px] [font-variant-numeric:tabular-nums]">
+                        {formatNumberVN(m.priceVnd)} <span className="text-[16px] font-bold">đ/chỉ</span>
                       </strong>
                     </div>
                   </React.Fragment>
@@ -727,12 +727,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               {/* Section 2: Thông số Đá quý — 2 phương thức nhập theo mục 3.1: nhập tổng trực tiếp, hoặc bảng tính từng viên */}
               <div className={cardCls}>
                 <div className="flex items-center justify-between mb-[14px]">
-                  <h3 className="text-[16px] font-extrabold text-[#0f172a] m-0">Thông số Đá quý</h3>
+                  <h3 className="text-[17px] font-extrabold text-[#0f172a] m-0">Thông số Đá quý</h3>
                   {stoneInputMode === 'table' && (
                     <button
                       type="button"
                       onClick={addStoneRow}
-                      className="bg-[#f3f3f3] border border-[#a3a3a3] text-[#000000] text-[13px] font-extrabold rounded-[6px] py-[6px] px-[14px] cursor-pointer"
+                      className="bg-[#f3f3f3] border border-[#a3a3a3] text-[#000000] text-[14px] font-extrabold rounded-[6px] py-[6px] px-[14px] cursor-pointer"
                     >
                       + THÊM ĐÁ
                     </button>
@@ -744,14 +744,14 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <button
                     type="button"
                     onClick={() => setStoneInputMode('table')}
-                    className={clsx('flex-1 py-[8px] px-[10px] rounded-[8px] text-[13px] font-extrabold cursor-pointer', stoneInputMode === 'table' ? 'border-[1.5px] border-[#0f172a] bg-[#fff7ed] text-[#c2410c]' : 'border border-[#cbd5e1] bg-surface text-muted')}
+                    className={clsx('flex-1 py-[8px] px-[10px] rounded-[8px] text-[14px] font-extrabold cursor-pointer', stoneInputMode === 'table' ? 'border-[1.5px] border-[#0f172a] bg-[#fff7ed] text-[#c2410c]' : 'border border-[#cbd5e1] bg-surface text-muted')}
                   >
                     Tính từ bảng đá
                   </button>
                   <button
                     type="button"
                     onClick={() => setStoneInputMode('total')}
-                    className={clsx('flex-1 py-[8px] px-[10px] rounded-[8px] text-[13px] font-extrabold cursor-pointer', stoneInputMode === 'total' ? 'border-[1.5px] border-[#0f172a] bg-[#fff7ed] text-[#c2410c]' : 'border border-[#cbd5e1] bg-surface text-muted')}
+                    className={clsx('flex-1 py-[8px] px-[10px] rounded-[8px] text-[14px] font-extrabold cursor-pointer', stoneInputMode === 'total' ? 'border-[1.5px] border-[#0f172a] bg-[#fff7ed] text-[#c2410c]' : 'border border-[#cbd5e1] bg-surface text-muted')}
                   >
                     Nhập tổng tiền đá
                   </button>
@@ -760,7 +760,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 {stoneInputMode === 'total' ? (
                   /* Nhập tổng tiền đá trực tiếp — đã biết giá, khỏi khai từng viên */
                   <div className={formGroupCls}>
-                    <label className={clsx(formLabelCls, 'text-[12px] font-extrabold text-[#334155] uppercase')}>
+                    <label className={clsx(formLabelCls, 'text-[13px] font-extrabold text-[#334155] uppercase')}>
                       TỔNG TIỀN ĐÁ (VNĐ)
                     </label>
                     <input
@@ -768,7 +768,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       inputMode="numeric"
                       value={formatNumberVN(manualStoneTotal)}
                       onChange={(e) => setManualStoneTotal(parseFloat(e.target.value.replace(/\D/g, '')) || 0)}
-                      className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none [font-variant-numeric:tabular-nums]"
+                      className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none [font-variant-numeric:tabular-nums]"
                     />
                   </div>
                 ) : stoneRows.length > 0 ? (
@@ -782,7 +782,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           <button
                             type="button"
                             onClick={() => removeStoneRow(row.id)}
-                            className="bg-transparent border-0 text-[#ef4444] cursor-pointer text-[17px] font-extrabold"
+                            className="bg-transparent border-0 text-[#ef4444] cursor-pointer text-[18px] font-extrabold"
                           >
                             ✕
                           </button>
@@ -791,13 +791,13 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                         <div className="flex flex-col gap-[12px]">
                           <div className="grid grid-cols-2 gap-[10px]">
                             <div>
-                              <label className="text-[11.5px] text-[#334155] font-bold block mb-[4px]">
+                              <label className="text-[12.5px] text-[#334155] font-bold block mb-[4px]">
                                 Loại đá
                               </label>
                               <select
                                 value={row.stoneType}
                                 onChange={(e) => updateStoneRow(row.id, { stoneType: e.target.value as StoneRow['stoneType'], stoneId: '' })}
-                                className="w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[13.5px] font-semibold bg-surface"
+                                className="w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] font-semibold bg-surface"
                               >
                                 <option value="">-- Chọn loại --</option>
                                 <option value="MAIN">Đá chủ</option>
@@ -805,14 +805,14 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               </select>
                             </div>
                             <div>
-                              <label className="text-[11.5px] text-[#334155] font-bold block mb-[4px]">
+                              <label className="text-[12.5px] text-[#334155] font-bold block mb-[4px]">
                                 Sản phẩm đá
                               </label>
                               <select
                                 value={row.stoneId}
                                 disabled={!row.stoneType}
                                 onChange={(e) => updateStoneRow(row.id, { stoneId: e.target.value })}
-                                className={clsx('w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[13.5px] font-semibold', row.stoneType ? 'bg-surface' : 'bg-[#f1f5f9]')}
+                                className={clsx('w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] font-semibold', row.stoneType ? 'bg-surface' : 'bg-[#f1f5f9]')}
                               >
                                 <option value="">-- Chọn sản phẩm --</option>
                                 {stoneCatalog.filter((s) => s.stoneType === row.stoneType).map((s) => (
@@ -823,7 +823,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           </div>
 
                           <div>
-                            <label className="text-[11.5px] text-[#334155] font-bold block mb-[4px]">
+                            <label className="text-[12.5px] text-[#334155] font-bold block mb-[4px]">
                               SL viên
                             </label>
                             <input
@@ -831,7 +831,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               min={1}
                               value={row.qty}
                               onChange={(e) => updateStoneRow(row.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                              className="w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[13.5px] font-bold bg-surface text-right"
+                              className="w-full py-[8px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] font-bold bg-surface text-right"
                             />
                           </div>
 
@@ -842,14 +842,14 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 
                     {/* Tổng cộng tất cả các loại đá = Tổng tiền đá (mục 3.2) */}
                     <div className="flex justify-between items-baseline pt-[10px] pr-[4px] pb-0 pl-[4px]">
-                      <span className="text-[13px] font-extrabold text-[#374151]">Tổng tiền đá</span>
-                      <strong className="text-[16px] text-[#c2410c] [font-variant-numeric:tabular-nums]">
+                      <span className="text-[14px] font-extrabold text-[#374151]">Tổng tiền đá</span>
+                      <strong className="text-[17px] text-[#c2410c] [font-variant-numeric:tabular-nums]">
                         {calcResult?.stoneCost != null ? formatCurrency(calcResult.stoneCost) : '—'}
                       </strong>
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full p-[24px] rounded-[12px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] text-center text-[#334155] text-[14px]">
+                  <div className="w-full p-[24px] rounded-[12px] border border-dashed border-[#cbd5e1] bg-[#f8fafc] text-center text-[#334155] text-[15px]">
                     Bấm <strong>"THÊM ĐÁ"</strong> ở trên để nhập danh sách đá quý
                   </div>
                 )}
@@ -859,23 +859,23 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   không ghi đè cấu hình chuẩn (Material.laborCost/PricingConfig.defaultVatRate) */}
               {!isSale && (
                 <div className={cardCls}>
-                  <h3 className="text-[16px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[16px] ml-0">Chế tác & Phí dịch vụ</h3>
+                  <h3 className="text-[17px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[16px] ml-0">Chế tác & Phí dịch vụ</h3>
 
                   <div className="flex flex-col gap-[16px]">
                     <div className={formGroupCls}>
-                      <label className={clsx(formLabelCls, 'text-[12px] font-extrabold text-[#334155] uppercase')}>
+                      <label className={clsx(formLabelCls, 'text-[13px] font-extrabold text-[#334155] uppercase')}>
                         TIỀN CÔNG CHẾ TÁC (VNĐ)
                       </label>
                       <input
                         type="text"
                         value={formatNumberVN(laborCost)}
                         onChange={(e) => setLaborCost(Math.max(0, parseFloat(e.target.value.replace(/\D/g, '')) || 0))}
-                        className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none [font-variant-numeric:tabular-nums]"
+                        className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none [font-variant-numeric:tabular-nums]"
                       />
                     </div>
 
                     <div className={formGroupCls}>
-                      <label className={clsx(formLabelCls, 'text-[12px] font-extrabold text-[#334155] uppercase')}>
+                      <label className={clsx(formLabelCls, 'text-[13px] font-extrabold text-[#334155] uppercase')}>
                         THUẾ VAT (%)
                       </label>
                       <input
@@ -888,7 +888,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           if (v !== '' && parseFloat(v) < 0) return;
                           setVatPct(Math.max(0, Math.min(100, parseFloat(v) || 0)));
                         }}
-                        className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold outline-none [font-variant-numeric:tabular-nums]"
+                        className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold outline-none [font-variant-numeric:tabular-nums]"
                       />
                     </div>
 
@@ -902,11 +902,11 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           {priceOptions.length > 0 && (
             <div className={cardCls}>
               <div className="flex items-center justify-between mb-[16px]">
-                <h3 className="text-[16px] font-extrabold text-[#0f172a] m-0">Các Phương Án Giá</h3>
+                <h3 className="text-[17px] font-extrabold text-[#0f172a] m-0">Các Phương Án Giá</h3>
                 <button
                   type="button"
                   onClick={handleCopyAllPrices}
-                  className={clsx('flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[13px] font-bold cursor-pointer', copiedAll ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-surface text-[#475569]')}
+                  className={clsx('flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[14px] font-bold cursor-pointer', copiedAll ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-surface text-[#475569]')}
                 >
                   {copiedAll ? <Check size={13} /> : <Copy size={13} />}
                   {copiedAll ? 'Đã copy hết!' : 'Copy hết'}
@@ -919,11 +919,11 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                     className={clsx('rounded-[12px] p-[14px] flex items-center justify-between gap-[10px]', opt.isSelected ? 'bg-[#f1f5f9] border-[1.5px] border-[#0f172a]' : 'bg-[#f8fafc] border border-[#e2e8f0]')}
                   >
                     <div className="min-w-0">
-                      <div className="text-[12.5px] font-bold text-[#334155] overflow-hidden text-ellipsis whitespace-nowrap">
+                      <div className="text-[13.5px] font-bold text-[#334155] overflow-hidden text-ellipsis whitespace-nowrap">
                         {cleanOptionLabel(opt)}
                       </div>
                       <div className="flex flex-col">
-                        <div className="text-[17px] font-black text-[#0f172a] mt-[2px] [font-variant-numeric:tabular-nums]">
+                        <div className="text-[18px] font-black text-[#0f172a] mt-[2px] [font-variant-numeric:tabular-nums]">
                           {formatCurrency(opt.quotedPrice)}
                         </div>
                         {renderPriceBreakdownLines(getPriceBreakdown(opt))}
@@ -958,10 +958,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <Calculator size={20} color="#475569" />
                 </div>
                 <div>
-                  <h2 className="text-[17px] font-black text-[#111827] m-0">
+                  <h2 className="text-[18px] font-black text-[#111827] m-0">
                     Sẵn sàng tính giá
                   </h2>
-                  <p className="text-[12.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
+                  <p className="text-[13.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
                     Nhập trọng lượng — giá tự động cập nhật, hoặc bấm tính ngay
                   </p>
                 </div>
@@ -971,7 +971,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 type="button"
                 onClick={handleCalculate}
                 disabled={isCalculating}
-                className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[16px] font-extrabold shadow-none transition-[all_0.2s_ease]', isCalculating ? 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
+                className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[17px] font-extrabold shadow-none transition-[all_0.2s_ease]', isCalculating ? 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
               >
                 {isCalculating ? 'Đang tính giá...' : 'Tính giá ngay'}
               </button>
@@ -986,10 +986,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <CheckCircle2 size={20} color="#475569" />
                 </div>
                 <div>
-                  <h2 className="text-[17px] font-black text-[#111827] m-0">
+                  <h2 className="text-[18px] font-black text-[#111827] m-0">
                     Tổng báo giá đề xuất
                   </h2>
-                  <p className="text-[12.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
+                  <p className="text-[13.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
                     Đã tính theo thông số hiện tại
                   </p>
                 </div>
@@ -1000,7 +1000,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 {calcResult && (currentRole === 'ORDER' || currentRole === 'ADMIN') && (
                   <>
                     {calcResult.breakdown && calcResult.breakdown.length > 1 ? (
-                      <div className="bg-[#f8fafc] py-[8px] px-[10px] rounded-[8px] mb-[4px] text-[12.5px] border border-[#e2e8f0]">
+                      <div className="bg-[#f8fafc] py-[8px] px-[10px] rounded-[8px] mb-[4px] text-[13.5px] border border-[#e2e8f0]">
                         <div className="font-extrabold text-[#475569] mb-[4px]">Chi tiết từng kim loại:</div>
                         {calcResult.breakdown.map((b, i) => (
                           <div key={i} className="flex justify-between text-[#334155] mt-[2px]">
@@ -1030,9 +1030,9 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   </>
                 )}
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[13.5px] font-extrabold text-[#374151]">Tổng báo giá</span>
+                  <span className="text-[14.5px] font-extrabold text-[#374151]">Tổng báo giá</span>
                   <div className="flex flex-col items-end">
-                    <span className="text-[25px] font-black text-[#0f172a] [font-variant-numeric:tabular-nums]">
+                    <span className="text-[26px] font-black text-[#0f172a] [font-variant-numeric:tabular-nums]">
                       {formatCurrency(quotedPrice)}
                     </span>
                     {quotedPrice != null && calcResult && renderPriceBreakdownLines(
@@ -1075,7 +1075,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                         options: priceOptions,
                       });
                     }}
-                    className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[16px] font-extrabold shadow-none transition-[all_0.2s_ease]', (isCalculating || quotedPrice === null) ? 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
+                    className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[17px] font-extrabold shadow-none transition-[all_0.2s_ease]', (isCalculating || quotedPrice === null) ? 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
                   >
                     {isCalculating ? 'Đang tính toán...' : 'Tạo Đơn Với Giá Này →'}
                   </button>
@@ -1085,7 +1085,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   type="button"
                   onClick={handleCalculate}
                   disabled={isCalculating}
-                  className={clsx('w-full bg-surface text-[#4b5563] border border-[#e5e7eb] rounded-[12px] p-[12px] text-[14px] font-bold flex items-center justify-center gap-[6px] transition-[all_0.2s_ease]', isCalculating ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
+                  className={clsx('w-full bg-surface text-[#4b5563] border border-[#e5e7eb] rounded-[12px] p-[12px] text-[15px] font-bold flex items-center justify-center gap-[6px] transition-[all_0.2s_ease]', isCalculating ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
                 >
                   <RotateCcw size={14} />
                   {isCalculating ? 'Đang tính lại...' : 'Tính lại giá'}
@@ -1095,7 +1095,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           )}
 
           {errorMessage && (
-            <div className="text-[#b91c1c] text-[13px] bg-[#fef2f2] border border-[#fca5a5] p-[10px] rounded-[8px] w-full">
+            <div className="text-[#b91c1c] text-[14px] bg-[#fef2f2] border border-[#fca5a5] p-[10px] rounded-[8px] w-full">
                {errorMessage}
             </div>
           )}
@@ -1108,14 +1108,14 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 const BreakdownRow: React.FC<{ label: string; value: number; accent?: string }> = ({ label, value, accent }) => (
   <div className="flex items-baseline justify-between">
     <span
-      className={clsx('text-[13px]', accent ? 'font-bold' : 'font-normal text-[#6b7280]')}
+      className={clsx('text-[14px]', accent ? 'font-bold' : 'font-normal text-[#6b7280]')}
       // động — giữ inline
       style={accent ? { color: accent } : undefined}
     >
       {label}
     </span>
     <span
-      className={clsx('text-[14px] font-bold [font-variant-numeric:tabular-nums]', !accent && 'text-[#374151]')}
+      className={clsx('text-[15px] font-bold [font-variant-numeric:tabular-nums]', !accent && 'text-[#374151]')}
       // động — giữ inline
       style={accent ? { color: accent } : undefined}
     >

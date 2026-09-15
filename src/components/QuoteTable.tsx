@@ -105,7 +105,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
   const renderProcessingTimeCell = (r: QuoteRequest) => {
     if (!r.acceptedAt) {
-      return <span className="text-faint text-[12px]">Chưa tiếp nhận</span>;
+      return <span className="text-faint text-[13px]">Chưa tiếp nhận</span>;
     }
 
     const acceptedTime = new Date(r.acceptedAt).getTime();
@@ -125,7 +125,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     }
 
     return (
-      <div className="text-[12px] leading-[1.35]">
+      <div className="text-[13px] leading-[1.35]">
         <div className="text-[#475569]">{toAccept ? `Nhận xử lý sau ${toAccept}` : '—'}</div>
         {secondLine}
       </div>
@@ -194,7 +194,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             if (!open) updateMenuPosition();
             setOpen(!open);
           }}
-          className="inline-flex items-center justify-center gap-[4px] min-w-[118px] py-[4px] px-[10px] rounded-[20px] text-[12.5px] font-bold cursor-pointer whitespace-nowrap shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[all_0.12s]"
+          className="inline-flex items-center justify-center gap-[4px] min-w-[118px] py-[4px] px-[10px] rounded-[20px] text-[13.5px] font-bold cursor-pointer whitespace-nowrap shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[all_0.12s]"
           // động — giữ inline
           style={{
             border: `1px solid ${meta.border}`,
@@ -233,7 +233,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 type="button"
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 className={clsx(
-                  'flex items-center gap-[8px] w-full py-[7px] px-[10px] border-0 rounded-[7px] text-[13.5px] cursor-pointer text-left',
+                  'flex items-center gap-[8px] w-full py-[7px] px-[10px] border-0 rounded-[7px] text-[14.5px] cursor-pointer text-left',
                   opt.value === current ? 'font-bold' : 'font-medium',
                 )}
                 // động — giữ inline
@@ -279,7 +279,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           title="Bấm để xem tất cả chất liệu"
         >
           <span className={quoteChipCls}>{materials[0]}</span>
-          <span className="text-faint font-extrabold text-[14px]">...</span>
+          <span className="text-faint font-extrabold text-[15px]">...</span>
         </button>
       );
     }
@@ -474,7 +474,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
 
   return (
     <div className="w-full overflow-x-auto border border-border rounded-[10px]">
-      <table className="w-full min-w-[1500px] border-collapse text-[13.5px] [&_th]:text-left [&_th]:py-[6px] [&_th]:px-[10px] [&_th]:text-[12px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:py-[6px] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]">
+      <table className="w-full min-w-[1500px] border-collapse text-[14.5px] [&_th]:text-left [&_th]:py-[6px] [&_th]:px-[10px] [&_th]:text-[13px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:py-[6px] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]">
         <thead>
           <tr>
             <th>Mã Hỏi Giá</th>
@@ -556,7 +556,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               >
                 <td>
                   <span className="inline-flex items-center gap-[6px]">
-                    <strong className="font-mono text-[13px] text-[#1e293b]">{r.code || r.id}</strong>
+                    <strong className="font-mono text-[14px] text-[#1e293b]">{r.code || r.id}</strong>
                     {canChat && (
                       <button
                         type="button"
@@ -566,7 +566,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       >
                         <MessageCircle size={14} />
                         {unread > 0 && (
-                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[10px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
+                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[11px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
                             {unread > 9 ? '9+' : unread}
                           </span>
                         )}
@@ -574,7 +574,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     )}
                   </span>
                 </td>
-                <td className="text-muted text-[12px]">
+                <td className="text-muted text-[13px]">
                   {r.createdAt
                     ? new Date(r.createdAt).toLocaleString('vi-VN', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
@@ -589,7 +589,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </td>
                 )}
                 <td>
-                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[12px] font-semibold">
+                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[13px] font-semibold">
                     {r.category?.name || '---'}
                   </span>
                 </td>
@@ -606,7 +606,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       }}
                     />
                     {r.images && r.images.length > 1 && (
-                      <span className="absolute bottom-[-2px] right-[-2px] bg-[#0f172a] text-surface text-[10.5px] font-extrabold py-[1px] px-[4px] rounded-[4px] border border-surface pointer-events-none">
+                      <span className="absolute bottom-[-2px] right-[-2px] bg-[#0f172a] text-surface text-[11.5px] font-extrabold py-[1px] px-[4px] rounded-[4px] border border-surface pointer-events-none">
                         +{r.images.length - 1}
                       </span>
                     )}
@@ -633,7 +633,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     <div className="inline-flex items-center gap-[5px]">
                       <span>Bị từ chối</span>
                       {r.rejectReason && (
-                        <span className="text-[11px] bg-[#ffe4e6] text-[#9f1239] border border-[#fecdd3] py-[1px] px-[5px] rounded-[4px] cursor-help">
+                        <span className="text-[12px] bg-[#ffe4e6] text-[#9f1239] border border-[#fecdd3] py-[1px] px-[5px] rounded-[4px] cursor-help">
                           ⓘ Lý do
                         </span>
                       )}
@@ -641,7 +641,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </td>
                 ) : priceVal > 0 ? (
                   (r.status === 'QUOTED' || r.status === 'CLOSED') ? (
-                    <td className="text-[#0f766e] rounded-[6px] py-[6px] px-[8px] font-extrabold text-[14px]">
+                    <td className="text-[#0f766e] rounded-[6px] py-[6px] px-[8px] font-extrabold text-[15px]">
                       <div className="flex flex-col">
                         {formattedPrice}
                         {renderPriceBreakdownLines(priceBd)}
@@ -653,11 +653,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       className="rounded-[6px] py-[6px] px-[8px]"
                     >
                       <div className="inline-flex flex-col items-start">
-                        <span className="text-faint italic font-bold text-[13.5px] opacity-75">
+                        <span className="text-faint italic font-bold text-[14.5px] opacity-75">
                           {formattedPrice}
                         </span>
                         {renderPriceBreakdownLines(priceBd)}
-                        <span className="text-[10.5px] text-[#ea580c] bg-[#fff7ed] border border-[#ffedd5] py-0 px-[4px] rounded-[3px] font-extrabold mt-[2px] leading-[14px]">
+                        <span className="text-[11.5px] text-[#ea580c] bg-[#fff7ed] border border-[#ffedd5] py-0 px-[4px] rounded-[3px] font-extrabold mt-[2px] leading-[14px]">
                           Chưa duyệt
                         </span>
                       </div>
@@ -666,14 +666,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 ) : (
                   <td className="text-faint text-center">---</td>
                 )}
-                <td className="text-[13px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
+                <td className="text-[14px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
                 {!isCompactView && (
-                  <td className="text-[12px] text-[#475569] font-semibold">
+                  <td className="text-[13px] text-[#475569] font-semibold">
                     {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}
                   </td>
                 )}
                 {!isCompactView && (
-                  <td className="text-[12px] text-[#d97706] max-w-[160px] overflow-hidden text-ellipsis font-semibold">
+                  <td className="text-[13px] text-[#d97706] max-w-[160px] overflow-hidden text-ellipsis font-semibold">
                     {displayNote}
                   </td>
                 )}
@@ -682,7 +682,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 )}
                 {!isCompactView && <td>{renderProcessingTimeCell(r)}</td>}
                 <td>
-                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[12px] font-semibold">
+                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[13px] font-semibold">
                     {displayDeptName}
                   </span>
                 </td>
@@ -718,7 +718,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           >
             <X size={20} />
           </button>
-          <span className="fixed bottom-[20px] left-1/2 -translate-x-1/2 text-[rgba(255,255,255,0.7)] text-[13px] font-semibold">
+          <span className="fixed bottom-[20px] left-1/2 -translate-x-1/2 text-[rgba(255,255,255,0.7)] text-[14px] font-semibold">
             Lăn chuột để phóng to / thu nhỏ · Kéo ảnh để xem chỗ khác · {Math.round(zoomScale * 100)}%
           </span>
           <img

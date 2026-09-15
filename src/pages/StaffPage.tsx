@@ -181,10 +181,10 @@ export const StaffPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-[22px]">
       <div>
-        <h1 className="text-[25px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
+        <h1 className="text-[26px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
           <Users size={22} /> Quản Lý Nhân Viên
         </h1>
-        <p className="text-[14px] text-muted m-0 mt-[4px]">
+        <p className="text-[15px] text-muted m-0 mt-[4px]">
           Thống kê người dùng và hiệu suất người báo giá
         </p>
       </div>
@@ -192,7 +192,7 @@ export const StaffPage: React.FC = () => {
       {/* Bộ lọc thời gian — áp cho toàn trang. BE lọc theo user.createdAt / quoteRequest.createdAt /
           auditLog.createdAt và tính hết số liệu; FE chỉ hiển thị kết quả. */}
       <div className="bg-surface border border-border rounded-[12px] py-[10px] px-[14px] flex items-center gap-[12px] flex-wrap">
-        <span className="text-[12px] font-extrabold text-muted uppercase tracking-[0.4px] inline-flex items-center gap-[6px]">
+        <span className="text-[13px] font-extrabold text-muted uppercase tracking-[0.4px] inline-flex items-center gap-[6px]">
           <Calendar size={13} /> Khoảng thời gian
         </span>
 
@@ -205,7 +205,7 @@ export const StaffPage: React.FC = () => {
                 type="button"
                 onClick={() => applyPreset(p.value)}
                 className={clsx(
-                  'py-[6px] px-[12px] rounded-[6px] text-[12.5px] font-bold cursor-pointer border',
+                  'py-[6px] px-[12px] rounded-[6px] text-[13.5px] font-bold cursor-pointer border',
                   active ? 'bg-[#0f172a] text-surface border-[#0f172a]' : 'bg-[#f1f5f9] text-muted border-transparent',
                 )}
               >
@@ -223,7 +223,7 @@ export const StaffPage: React.FC = () => {
             onChange={(e) => { setStartDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
             className={dateInputPy6Cls}
           />
-          <span className="text-faint text-[13px]">—</span>
+          <span className="text-faint text-[14px]">—</span>
           <input
             type="date"
             value={endDate}
@@ -237,21 +237,21 @@ export const StaffPage: React.FC = () => {
           <button
             type="button"
             onClick={resetTimeFilter}
-            className="inline-flex items-center gap-[4px] py-[6px] px-[12px] rounded-[6px] bg-surface border border-border text-[#475569] text-[12.5px] font-bold cursor-pointer"
+            className="inline-flex items-center gap-[4px] py-[6px] px-[12px] rounded-[6px] bg-surface border border-border text-[#475569] text-[13.5px] font-bold cursor-pointer"
           >
             <RotateCcw size={12} /> Xóa lọc
           </button>
         )}
 
-        {loading && <span className="text-[12.5px] text-faint font-semibold">Đang tải…</span>}
+        {loading && <span className="text-[13.5px] text-faint font-semibold">Đang tải…</span>}
       </div>
 
       {/* 2.1 Thống kê người dùng */}
       <div className="grid grid-cols-4 gap-[16px]">
         <StatCard icon={<Users size={14} />} label="Tổng người dùng" value={totalUsers} />
         <div className="bg-surface border border-border rounded-[14px] py-[18px] px-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-          <div className="text-[12px] font-extrabold text-muted uppercase">Sale / Order</div>
-          <div className="text-[19px] font-black text-[#0f172a] mt-[8px]">
+          <div className="text-[13px] font-extrabold text-muted uppercase">Sale / Order</div>
+          <div className="text-[20px] font-black text-[#0f172a] mt-[8px]">
             {byRole.SALE} <span className="text-[#cbd5e1] font-bold">/</span> {byRole.ORDER}
           </div>
         </div>
@@ -269,14 +269,14 @@ export const StaffPage: React.FC = () => {
         <h2 className={cardHeadingCls}>
           <ShieldCheck size={16} color="#2563eb" /> Quản lý tài khoản
         </h2>
-        <span className="text-[12px] text-muted">Duyệt tài khoản mới hoặc khóa/mở khóa tài khoản đang hoạt động</span>
+        <span className="text-[13px] text-muted">Duyệt tài khoản mới hoặc khóa/mở khóa tài khoản đang hoạt động</span>
 
         <div className="flex gap-[8px] mt-[14px] border-b border-[#f1f5f9] pb-[12px]">
           <button
             type="button"
             onClick={() => setAccountTab('PENDING')}
             className={clsx(
-              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[13.5px] font-bold cursor-pointer border',
+              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[14.5px] font-bold cursor-pointer border',
               accountTab === 'PENDING' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
             )}
           >
@@ -286,7 +286,7 @@ export const StaffPage: React.FC = () => {
             type="button"
             onClick={() => setAccountTab('ACTIVE')}
             className={clsx(
-              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[13.5px] font-bold cursor-pointer border',
+              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[14.5px] font-bold cursor-pointer border',
               accountTab === 'ACTIVE' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
             )}
           >
@@ -296,7 +296,7 @@ export const StaffPage: React.FC = () => {
 
         {accountTab === 'PENDING' && (pendingUsers.length > 0 ? (
           <div className="overflow-x-auto mt-[14px]">
-            <table className="w-full border-collapse text-[13.5px]">
+            <table className="w-full border-collapse text-[14.5px]">
               <thead>
                 <tr className="border-b border-[#f1f5f9] text-left">
                   <th className={staffThCls}>Tên</th>
@@ -320,7 +320,7 @@ export const StaffPage: React.FC = () => {
                         value={approveRole[u.id] || u.role}
                         disabled={actionLoadingId === u.id}
                         onChange={(e) => setApproveRole((prev) => ({ ...prev, [u.id]: e.target.value as Role }))}
-                        className="py-[5px] px-[8px] rounded-[6px] border border-border bg-surface text-[#334155] text-[12.5px] font-semibold cursor-pointer"
+                        className="py-[5px] px-[8px] rounded-[6px] border border-border bg-surface text-[#334155] text-[13.5px] font-semibold cursor-pointer"
                       >
                         {(['SALE', 'ORDER'] as Role[]).map((r) => (
                           <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
@@ -334,7 +334,7 @@ export const StaffPage: React.FC = () => {
                           disabled={actionLoadingId === u.id}
                           onClick={() => handleApprove(u.id)}
                           className={clsx(
-                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border-0 bg-[#16a34a] text-surface text-[12.5px] font-bold',
+                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border-0 bg-[#16a34a] text-surface text-[13.5px] font-bold',
                             actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
                           )}
                         >
@@ -345,7 +345,7 @@ export const StaffPage: React.FC = () => {
                           disabled={actionLoadingId === u.id}
                           onClick={() => handleReject(u.id)}
                           className={clsx(
-                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border border-[#fecdd3] bg-[#fff1f2] text-[#be123c] text-[12.5px] font-bold',
+                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border border-[#fecdd3] bg-[#fff1f2] text-[#be123c] text-[13.5px] font-bold',
                             actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
                           )}
                         >
@@ -364,7 +364,7 @@ export const StaffPage: React.FC = () => {
 
         {accountTab === 'ACTIVE' && (activeListUsers.length > 0 ? (
           <div className="overflow-x-auto mt-[14px]">
-            <table className="w-full border-collapse text-[13.5px]">
+            <table className="w-full border-collapse text-[14.5px]">
               <thead>
                 <tr className="border-b border-[#f1f5f9] text-left">
                   <th className={staffThCls}>Tên</th>
@@ -387,7 +387,7 @@ export const StaffPage: React.FC = () => {
                     <td className="p-[10px] text-[#334155]">{ROLE_LABEL[u.role] || u.role}</td>
                     <td className="p-[10px]">
                       <span className={clsx(
-                        'inline-flex items-center gap-[4px] py-[3px] px-[8px] rounded-[20px] text-[12px] font-bold border',
+                        'inline-flex items-center gap-[4px] py-[3px] px-[8px] rounded-[20px] text-[13px] font-bold border',
                         u.isActive ? 'bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]' : 'bg-[#fff1f2] text-[#be123c] border-[#fecdd3]',
                       )}>
                         {u.isActive ? 'Đang hoạt động' : 'Đã khóa'}
@@ -399,7 +399,7 @@ export const StaffPage: React.FC = () => {
                         disabled={actionLoadingId === u.id}
                         onClick={() => handleToggleActive(u.id, u.isActive)}
                         className={clsx(
-                          'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] text-surface text-[12.5px] font-bold',
+                          'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] text-surface text-[13.5px] font-bold',
                           u.isActive ? 'border border-[#fecdd3] bg-[#fff1f2] text-[#be123c]' : 'border-0 bg-[#16a34a] text-surface',
                           actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
                         )}
@@ -413,7 +413,7 @@ export const StaffPage: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="text-center text-faint text-[13.5px] py-[20px] px-0">Chưa có tài khoản nào được duyệt</div>
+          <div className="text-center text-faint text-[14.5px] py-[20px] px-0">Chưa có tài khoản nào được duyệt</div>
         ))}
 
         {currentAccountList.length > 0 && (
@@ -432,12 +432,12 @@ export const StaffPage: React.FC = () => {
 
       {/* Phân bố theo bộ phận */}
       <div className={cardContainerCls}>
-        <h2 className="text-[15px] font-extrabold text-[#0f172a] m-0 mb-[14px]">Phân bố theo bộ phận</h2>
+        <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0 mb-[14px]">Phân bố theo bộ phận</h2>
         {deptStats.length > 0 ? (
           <div className="flex flex-col gap-[10px]">
             {deptStats.map(([name, count]) => (
               <div key={name} className="flex items-center gap-[12px]">
-                <span className="text-[13.5px] text-[#334155] font-semibold w-[160px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{name}</span>
+                <span className="text-[14.5px] text-[#334155] font-semibold w-[160px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{name}</span>
                 <div className="flex-1 bg-[#f1f5f9] rounded-[6px] h-[10px] overflow-hidden">
                   <div
                     className="bg-primary h-full rounded-[6px]"
@@ -445,12 +445,12 @@ export const StaffPage: React.FC = () => {
                     style={{ width: `${(count / (totalUsers || 1)) * 100}%` }}
                   />
                 </div>
-                <span className="text-[13.5px] font-black text-[#0f172a] w-[24px] text-right shrink-0">{count}</span>
+                <span className="text-[14.5px] font-black text-[#0f172a] w-[24px] text-right shrink-0">{count}</span>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center text-faint text-[13.5px] py-[20px] px-0">Chưa có dữ liệu</div>
+          <div className="text-center text-faint text-[14.5px] py-[20px] px-0">Chưa có dữ liệu</div>
         )}
       </div>
 
@@ -460,11 +460,11 @@ export const StaffPage: React.FC = () => {
           <h2 className={cardHeadingCls}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất Sale
           </h2>
-          <span className="text-[12px] text-muted">Số yêu cầu đã tạo & đã chốt của từng Sale</span>
+          <span className="text-[13px] text-muted">Số yêu cầu đã tạo & đã chốt của từng Sale</span>
 
           {saleStats.length > 0 ? (
             <div className="overflow-x-auto mt-[14px]">
-              <table className="w-full border-collapse text-[13.5px]">
+              <table className="w-full border-collapse text-[14.5px]">
                 <thead>
                   <tr className="border-b border-[#f1f5f9] text-left">
                     <th className={staffThCls}>Sale</th>
@@ -494,11 +494,11 @@ export const StaffPage: React.FC = () => {
           <h2 className={cardHeadingCls}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
           </h2>
-          <span className="text-[12px] text-muted">Thời gian trung vị báo giá & xử lý của từng Order</span>
+          <span className="text-[13px] text-muted">Thời gian trung vị báo giá & xử lý của từng Order</span>
 
           {pricerStats.length > 0 ? (
             <div className="overflow-x-auto mt-[14px]">
-              <table className="w-full border-collapse text-[13.5px]">
+              <table className="w-full border-collapse text-[14.5px]">
                 <thead>
                   <tr className="border-b border-[#f1f5f9] text-left">
                     <th className={staffThCls}>Order</th>
@@ -549,7 +549,7 @@ export const StaffPage: React.FC = () => {
               const maxCount = actions[0]?.count || 1;
               return (
                 <div key={role}>
-                  <div className="text-[12px] font-extrabold text-muted uppercase mb-[10px]">
+                  <div className="text-[13px] font-extrabold text-muted uppercase mb-[10px]">
                     {ROLE_LABEL[role] || role}
                   </div>
                   <div className="flex flex-col gap-[8px]">
@@ -560,7 +560,7 @@ export const StaffPage: React.FC = () => {
                         <div key={a.action}>
                           <div
                             onClick={() => setExpandedAction(isOpen ? null : key)}
-                            className="flex justify-between text-[12.5px] text-[#334155] mb-[3px] cursor-pointer"
+                            className="flex justify-between text-[13.5px] text-[#334155] mb-[3px] cursor-pointer"
                           >
                             <span className="font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{ACTION_LABEL[a.action] || a.action}</span>
                             <span className="font-black text-[#0f172a] shrink-0 ml-[8px]">{a.count}</span>
@@ -578,7 +578,7 @@ export const StaffPage: React.FC = () => {
                           {isOpen && (
                             <div className="mt-[6px] py-[8px] px-[10px] bg-[#f8fafc] border border-[#f1f5f9] rounded-[8px] flex flex-col gap-[4px]">
                               {a.byActor.filter((actor) => !actor.actorId || !lockedUserIds.has(actor.actorId)).map((actor) => (
-                                <div key={actor.actorId || actor.actorName} className="flex justify-between text-[12px]">
+                                <div key={actor.actorId || actor.actorName} className="flex justify-between text-[13px]">
                                   <span className="text-[#334155] font-semibold">{actor.actorName}</span>
                                   <span className="text-muted font-bold">{actor.count} lần</span>
                                 </div>

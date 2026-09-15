@@ -11,7 +11,7 @@ interface ToastProps {
 export const Toast: React.FC<ToastProps> = ({ message, onClose }) => (
   <div
     role="status"
-    className="fixed bottom-[24px] right-[24px] z-[4000] flex items-center gap-[10px] max-w-[340px] bg-white border border-[#cbd5e1] rounded-[10px] py-[12px] px-[14px] shadow-[0_4px_16px_rgba(0,0,0,0.1)] text-[14px] font-semibold text-[#0f172a]"
+    className="fixed bottom-[24px] right-[24px] z-[4000] flex items-center gap-[10px] max-w-[340px] bg-white border border-[#cbd5e1] rounded-[10px] py-[12px] px-[14px] shadow-[0_4px_16px_rgba(0,0,0,0.1)] text-[15px] font-semibold text-[#0f172a]"
   >
     <Check size={16} color="#475569" className="shrink-0" />
     <span className="flex-1">{message}</span>

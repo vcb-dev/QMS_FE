@@ -110,7 +110,7 @@ const isHttps = (s: string) => {
 const Badge: React.FC<{ on: boolean }> = ({ on }) => (
   <span
     className={clsx(
-      'inline-flex items-center gap-[6px] text-[12.5px] font-bold py-[3px] px-[9px] rounded-full',
+      'inline-flex items-center gap-[6px] text-[13.5px] font-bold py-[3px] px-[9px] rounded-full',
       on
         ? 'bg-[#ecfdf5] text-[#15803d] border border-[#bbf7d0]'
         : 'bg-[#f8fafc] text-[#64748b] border border-[#e5e7eb]',
@@ -392,10 +392,10 @@ export const NotificationConfigPage: React.FC = () => {
         <div className="pt-[22px] px-[22px] pb-0">
           <div className="flex items-start justify-between gap-[16px] flex-wrap">
             <div>
-              <h1 className="text-[25px] font-black text-[#0f172a] mb-[4px] tracking-[-0.3px] flex items-center gap-[10px]">
+              <h1 className="text-[26px] font-black text-[#0f172a] mb-[4px] tracking-[-0.3px] flex items-center gap-[10px]">
                 <Bell size={22} /> Cấu hình thông báo Lark
               </h1>
-              <p className="m-0 text-[13.5px] text-[#334155] max-w-[620px] leading-[1.5]">
+              <p className="m-0 text-[14.5px] text-[#334155] max-w-[620px] leading-[1.5]">
                 Mỗi dòng là một nhóm Lark. Khi thêm hoặc sửa, chọn luôn nhóm đó
                 nhận thông báo cho những hành động nào.
               </p>
@@ -408,7 +408,7 @@ export const NotificationConfigPage: React.FC = () => {
 
         <div className="pt-[18px] px-[22px] pb-[22px] flex flex-col gap-[16px]">
           {error && (
-            <div className="flex gap-[6px] items-start text-[#b91c1c] text-[13px] bg-[#fef2f2] border border-[#fca5a5] py-[9px] px-[11px] rounded-[8px]">
+            <div className="flex gap-[6px] items-start text-[#b91c1c] text-[14px] bg-[#fef2f2] border border-[#fca5a5] py-[9px] px-[11px] rounded-[8px]">
               <AlertTriangle
                 size={14}
                 className="shrink-0 mt-[1px]"
@@ -424,10 +424,10 @@ export const NotificationConfigPage: React.FC = () => {
                 key={i}
                 className="border border-[#e5e7eb] rounded-[10px] py-[12px] px-[14px]"
               >
-                <div className="text-[19px] font-extrabold text-[#0f172a] tabular-nums">
+                <div className="text-[20px] font-extrabold text-[#0f172a] tabular-nums">
                   {c.num}
                 </div>
-                <div className="text-[12.5px] text-[#334155] mt-[2px]">
+                <div className="text-[13.5px] text-[#334155] mt-[2px]">
                   {c.label}
                 </div>
               </div>
@@ -436,7 +436,7 @@ export const NotificationConfigPage: React.FC = () => {
 
           {/* list */}
           <div>
-            <h3 className="text-[14.5px] font-extrabold text-[#0f172a] mb-[10px]">
+            <h3 className="text-[15.5px] font-extrabold text-[#0f172a] mb-[10px]">
               Danh sách webhook
             </h3>
 
@@ -538,7 +538,7 @@ export const NotificationConfigPage: React.FC = () => {
                       <tr>
                         <td
                           colSpan={6}
-                          className="p-[38px] text-center text-[#334155] text-[14px]"
+                          className="p-[38px] text-center text-[#334155] text-[15px]"
                         >
                           <Loader2
                             size={16}
@@ -557,13 +557,13 @@ export const NotificationConfigPage: React.FC = () => {
                             size={30}
                             className="text-[#64748b] mb-[8px]"
                           />
-                          <div className="text-[#0f172a] font-bold text-[14.5px]">
+                          <div className="text-[#0f172a] font-bold text-[15.5px]">
                             {stats.total === 0
                               ? 'Chưa có webhook nào'
                               : 'Không tìm thấy webhook phù hợp'}
                           </div>
                           {stats.total === 0 && (
-                            <div className="text-[13.5px] mt-[2px]">
+                            <div className="text-[14.5px] mt-[2px]">
                               Thêm webhook đầu tiên để bắt đầu nhận thông báo
                               trên Lark.
                             </div>
@@ -577,10 +577,10 @@ export const NotificationConfigPage: React.FC = () => {
                           className={clsx(ncpRowHoverCls, 'border-b border-[#f1f5f9]')}
                         >
                           <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
-                            <div className="font-bold text-[#0f172a] text-[14px]">
+                            <div className="font-bold text-[#0f172a] text-[15px]">
                               {w.chatName || '(chưa đặt tên)'}
                             </div>
-                            <div className="text-[12px] text-[#64748b] mt-[1px]">
+                            <div className="text-[13px] text-[#64748b] mt-[1px]">
                               {w.botName
                                 ? `Bot: ${w.botName}`
                                 : 'Chưa đặt tên bot'}
@@ -590,7 +590,7 @@ export const NotificationConfigPage: React.FC = () => {
                             <div className="flex items-center gap-[6px]">
                               <code
                                 title={w.webhookUrl}
-                                className="text-[12.5px] text-[#334155] bg-[#f1f5f9] py-[3px] px-[7px] rounded-[6px] font-mono"
+                                className="text-[13.5px] text-[#334155] bg-[#f1f5f9] py-[3px] px-[7px] rounded-[6px] font-mono"
                               >
                                 {maskUrl(w.webhookUrl)}
                               </code>
@@ -603,7 +603,7 @@ export const NotificationConfigPage: React.FC = () => {
                                 <Copy size={13} />
                               </button>
                             </div>
-                            <div className="text-[12px] text-[#64748b] mt-[4px]">
+                            <div className="text-[13px] text-[#64748b] mt-[4px]">
                               {w.hasSecret
                                 ? 'Có signing secret'
                                 : 'Không đặt secret'}
@@ -611,7 +611,7 @@ export const NotificationConfigPage: React.FC = () => {
                           </td>
                           <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
                             {w.actions.length === 0 ? (
-                              <span className="text-[13px] text-[#64748b] italic">
+                              <span className="text-[14px] text-[#64748b] italic">
                                 Chưa chọn hành động nào
                               </span>
                             ) : (
@@ -619,7 +619,7 @@ export const NotificationConfigPage: React.FC = () => {
                                 {w.actions.map((a) => (
                                   <span
                                     key={a}
-                                    className="text-[12px] font-semibold text-[#475569] bg-[#f1f5f9] border border-[#e5e7eb] rounded-full py-[2px] px-[8px] inline-flex items-center"
+                                    className="text-[13px] font-semibold text-[#475569] bg-[#f1f5f9] border border-[#e5e7eb] rounded-full py-[2px] px-[8px] inline-flex items-center"
                                   >
                                     {labelOf(a)}
                                   </span>
@@ -645,7 +645,7 @@ export const NotificationConfigPage: React.FC = () => {
                               <Badge on={w.isEnabled} />
                             </button>
                           </td>
-                          <td className={clsx(tdCls, 'py-[12px] px-[16px] text-[13px] text-[#334155] align-top')}>
+                          <td className={clsx(tdCls, 'py-[12px] px-[16px] text-[14px] text-[#334155] align-top')}>
                             <div className="text-[#0f172a] font-medium">
                               {w.updatedByName || '—'}
                             </div>
@@ -711,7 +711,7 @@ export const NotificationConfigPage: React.FC = () => {
               className={clsx(modalCardCls, '!max-w-[560px] w-[560px] h-[min(680px,92vh)] flex flex-col')}
             >
               <div className={clsx(modalHeaderCls, 'shrink-0')}>
-                <h2 className="text-[17px] font-extrabold text-[#0f172a] m-0">
+                <h2 className="text-[18px] font-extrabold text-[#0f172a] m-0">
                   {editing ? 'Chỉnh sửa webhook' : 'Thêm webhook'}
                 </h2>
                 <button
@@ -737,7 +737,7 @@ export const NotificationConfigPage: React.FC = () => {
                       placeholder="Nhóm Báo Giá VCB"
                     />
                     {formErr.chatName && (
-                      <span className="text-[12.5px] text-[#ef4444]">
+                      <span className="text-[13.5px] text-[#ef4444]">
                         {formErr.chatName}
                       </span>
                     )}
@@ -766,7 +766,7 @@ export const NotificationConfigPage: React.FC = () => {
                   <label className={clsx(formLabelCls, 'flex items-baseline gap-[8px]')}>
                     Webhook URL
                     {urlWarn && !formErr.url && (
-                      <span className="font-normal text-[12px] text-[#64748b]">
+                      <span className="font-normal text-[13px] text-[#64748b]">
                         không giống link webhook Lark
                       </span>
                     )}
@@ -774,7 +774,7 @@ export const NotificationConfigPage: React.FC = () => {
                   <input
                     className={clsx(
                       formControlCls,
-                      'font-mono text-[13px]',
+                      'font-mono text-[14px]',
                       formErr.url && '!border-[#ef4444]',
                       !formErr.url && urlWarn && '!border-[#f59e0b]',
                     )}
@@ -787,7 +787,7 @@ export const NotificationConfigPage: React.FC = () => {
                     autoComplete="off"
                   />
                   {formErr.url && (
-                    <span className="text-[12.5px] text-[#ef4444]">
+                    <span className="text-[13.5px] text-[#ef4444]">
                       {formErr.url}
                     </span>
                   )}
@@ -795,7 +795,7 @@ export const NotificationConfigPage: React.FC = () => {
 
                 <div className={formGroupCls}>
                   <label className={formLabelCls}>Signing secret</label>
-                  <span className="text-[12.5px] text-[#334155] leading-[1.45] block mb-[4px]">
+                  <span className="text-[13.5px] text-[#334155] leading-[1.45] block mb-[4px]">
                   </span>
                   <div className="relative">
                     <input
@@ -829,7 +829,7 @@ export const NotificationConfigPage: React.FC = () => {
                   {editing?.hasSecret &&
                     secretTouched &&
                     form.secret === '' && (
-                      <span className="text-[12.5px] text-[#b45309]">
+                      <span className="text-[13.5px] text-[#b45309]">
                         Để trống sẽ xóa secret đang lưu.
                       </span>
                     )}
@@ -849,7 +849,7 @@ export const NotificationConfigPage: React.FC = () => {
                       {form.actions.map((a) => (
                         <span
                           key={a}
-                          className="inline-flex items-center gap-[5px] text-[12px] font-medium text-[#0f172a] bg-[#f1f5f9] border border-[#e5e7eb] rounded-full pt-[2px] pr-[4px] pb-[2px] pl-[9px]"
+                          className="inline-flex items-center gap-[5px] text-[13px] font-medium text-[#0f172a] bg-[#f1f5f9] border border-[#e5e7eb] rounded-full pt-[2px] pr-[4px] pb-[2px] pl-[9px]"
                         >
                           {labelOf(a)}
                           <button
@@ -886,7 +886,7 @@ export const NotificationConfigPage: React.FC = () => {
                     return (
                       <div className="border border-[#e5e7eb] rounded-[10px] mt-[4px] max-h-[166px] overflow-y-auto">
                           {hits.length === 0 ? (
-                            <div className="p-[12px] text-[13px] text-[#64748b]">
+                            <div className="p-[12px] text-[14px] text-[#64748b]">
                               Không có hành động khớp
                               {actionQuery ? ` "${actionQuery}"` : ''}.
                             </div>
@@ -909,7 +909,7 @@ export const NotificationConfigPage: React.FC = () => {
                                   >
                                     {on && <Check size={11} color="#fff" />}
                                   </span>
-                                  <span className="text-[13.5px] font-medium text-[#0f172a]">
+                                  <span className="text-[14.5px] font-medium text-[#0f172a]">
                                     {c.label}
                                   </span>
                                 </button>
@@ -961,7 +961,7 @@ export const NotificationConfigPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className={modalHeaderCls}>
-                <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
+                <h2 className="text-[17px] font-extrabold text-[#0f172a] m-0">
                   Xóa webhook này?
                 </h2>
                 <button
@@ -973,7 +973,7 @@ export const NotificationConfigPage: React.FC = () => {
                 </button>
               </div>
               <div className={modalBodyCls}>
-                <p className="m-0 text-[13.5px] text-[#334155] leading-[1.55]">
+                <p className="m-0 text-[14.5px] text-[#334155] leading-[1.55]">
                   Webhook của "{deleteTarget.chatName}" và mọi đăng ký hành động
                   của nhóm này sẽ bị xóa. Hành động này không thể hoàn tác.
                 </p>
@@ -1010,7 +1010,7 @@ export const NotificationConfigPage: React.FC = () => {
         createPortal(
           <div
             className={clsx(
-              'fixed bottom-[24px] left-1/2 -translate-x-1/2 text-surface py-[11px] px-[18px] rounded-[10px] text-[13.5px] font-semibold flex items-center gap-[9px] shadow-[0_10px_30px_rgba(0,0,0,0.25)] z-[1100] max-w-[90vw]',
+              'fixed bottom-[24px] left-1/2 -translate-x-1/2 text-surface py-[11px] px-[18px] rounded-[10px] text-[14.5px] font-semibold flex items-center gap-[9px] shadow-[0_10px_30px_rgba(0,0,0,0.25)] z-[1100] max-w-[90vw]',
               toast.err ? 'bg-[#dc2626]' : 'bg-[#0f172a]',
             )}
           >
