@@ -669,6 +669,10 @@ export async function updateMaterial(id: string, patch: { name?: string; priceRa
   return apiCall(api.patch(`/materials/${id}`, patch), 'Không thể cập nhật chất liệu');
 }
 
+export async function deleteMaterial(id: string) {
+  return apiCall(api.delete(`/materials/${id}`), 'Không thể xóa chất liệu');
+}
+
 // Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu dùng chung 1 công thức.
 export async function fetchPricingFormulas() {
   return apiCall(dedupedGet('/pricing-formulas'), 'Không thể tải công thức tính lãi');
@@ -682,6 +686,10 @@ export async function createPricingFormula(payload: { name: string; formulaType:
 
 export async function updatePricingFormula(id: string, patch: { name?: string; config?: PricingFormulaConfig; isDefault?: boolean }) {
   return apiCall(api.patch(`/pricing-formulas/${id}`, patch), 'Không thể cập nhật công thức tính lãi');
+}
+
+export async function deletePricingFormula(id: string) {
+  return apiCall(api.delete(`/pricing-formulas/${id}`), 'Không thể xóa công thức tính lãi');
 }
 
 export interface CalculateBatchResultItem {
