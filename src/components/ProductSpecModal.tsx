@@ -157,7 +157,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
       >
         <div className={clsx(modalHeaderCls, 'shrink-0')}>
           <div className="min-w-0">
-            <h2 className="text-[17px] overflow-hidden text-ellipsis whitespace-nowrap">{item.productName}</h2>
+            <h2 className="text-[19px] overflow-hidden text-ellipsis whitespace-nowrap">{item.productName}</h2>
           </div>
           <button onClick={onClose} aria-label="Đóng" className={modalCloseIconBtnCls}>
             <X size={18} />
@@ -201,7 +201,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
             </div>
 
             {/* Thông số gộp của nhóm sản phẩm — lấp khoảng trống dưới ảnh, cân với cột phải */}
-            <dl className="w-full mt-[18px] flex flex-col [&>div]:flex [&>div]:justify-between [&>div]:gap-[12px] [&>div]:py-[8px] [&>div]:border-t [&>div]:border-border [&>div:last-child]:border-b [&>div:last-child]:border-border [&_dt]:shrink-0 [&_dt]:pt-[1px] [&_dt]:text-[12px] [&_dt]:font-bold [&_dt]:tracking-[0.5px] [&_dt]:uppercase [&_dt]:text-faint [&_dd]:min-w-0 [&_dd]:text-[13.5px] [&_dd]:font-bold [&_dd]:text-[#0f172a] [&_dd]:text-right">
+            <dl className="w-full mt-[18px] flex flex-col [&>div]:flex [&>div]:justify-between [&>div]:gap-[12px] [&>div]:py-[8px] [&>div]:border-t [&>div]:border-border [&>div:last-child]:border-b [&>div:last-child]:border-border [&_dt]:shrink-0 [&_dt]:pt-[1px] [&_dt]:text-[14px] [&_dt]:font-bold [&_dt]:tracking-[0.5px] [&_dt]:uppercase [&_dt]:text-faint [&_dd]:min-w-0 [&_dd]:text-[15.5px] [&_dd]:font-bold [&_dd]:text-[#0f172a] [&_dd]:text-right">
               <div><dt>Chất liệu</dt><dd>{item.matStr || '—'}</dd></div>
               <div><dt>Khối lượng</dt><dd>{item.weightDisplay || '—'}</dd></div>
               <div><dt>Đá</dt><dd>{item.stoneDisplay || 'Không đính đá'}</dd></div>
@@ -228,8 +228,8 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                     onClick={() => setSelIdx(idx)}
                   >
                     <div className="flex items-baseline justify-between gap-[8px] mb-[1px]">
-                      <span className="text-[12.5px] font-bold text-muted [font-variant-numeric:tabular-nums] tracking-[0.2px]">{h.code}</span>
-                      <span className="shrink-0 text-[14px] font-extrabold text-[#0f172a] [font-variant-numeric:tabular-nums] text-right">
+                      <span className="text-[14.5px] font-bold text-muted [font-variant-numeric:tabular-nums] tracking-[0.2px]">{h.code}</span>
+                      <span className="shrink-0 text-[16px] font-extrabold text-[#0f172a] [font-variant-numeric:tabular-nums] text-right">
                         {fmtDate(h.quotedDate ?? h.quotedAt)}
                         {h.weightDisplay ? ` · ${h.weightDisplay}` : ''}
                       </span>
@@ -239,7 +239,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                     <div className={specHistCardLineCls} title={item.stoneDisplay || 'Không đính đá'}>
                       Đá <strong>{item.stoneDisplay || 'Không đính đá'}</strong>
                     </div>
-                    <div className="mt-[5px] pt-[6px] border-t border-dashed border-border text-[13.5px] text-muted [&_strong]:text-[#0f172a] [&_strong]:font-extrabold">
+                    <div className="mt-[5px] pt-[6px] border-t border-dashed border-border text-[15.5px] text-muted [&_strong]:text-[#0f172a] [&_strong]:font-extrabold">
                       Đã báo <strong>{formatPriceRange(h.priceMin, h.priceMax, h.options[0]?.price ?? 0)}</strong>
                     </div>
                   </button>
@@ -247,7 +247,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                 {histPage < histTotalPages && (
                   <div
                     ref={histSentinelRef}
-                    className="flex items-center justify-center min-h-[34px] mt-[2px] text-[12.5px] font-bold tracking-[0.5px] uppercase text-faint"
+                    className="flex items-center justify-center min-h-[34px] mt-[2px] text-[14.5px] font-bold tracking-[0.5px] uppercase text-faint"
                   >
                     {histLoading ? 'Đang tải thêm…' : ''}
                   </div>
@@ -263,7 +263,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
               {selected && selected.options.length > 1 && (
                 <button
                   type="button"
-                  className="flex items-center gap-[5px] shrink-0 py-[4px] px-[9px] text-[12px] font-bold tracking-[0.3px] text-muted bg-white border border-border rounded-[7px] cursor-pointer data-[copied]:text-[#15803d] data-[copied]:bg-[#dcfce7] data-[copied]:border-[#bbf7d0]"
+                  className="flex items-center gap-[5px] shrink-0 py-[4px] px-[9px] text-[14px] font-bold tracking-[0.3px] text-muted bg-white border border-border rounded-[7px] cursor-pointer data-[copied]:text-[#15803d] data-[copied]:bg-[#dcfce7] data-[copied]:border-[#bbf7d0]"
                   data-copied={copiedAll || undefined}
                   onClick={() => handleCopyAll(selected.options)}
                   title="Copy giá hôm nay của tất cả phương án"
@@ -275,7 +275,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
             {selected && selected.options.length > 0 ? (
               <div className="flex flex-col">
                 {quotedWhen && (
-                  <div className="text-[12px] font-extrabold uppercase tracking-[0.4px] text-faint mb-[10px]">
+                  <div className="text-[14px] font-extrabold uppercase tracking-[0.4px] text-faint mb-[10px]">
                     Báo giá ngày {quotedWhen}
                   </div>
                 )}
@@ -288,7 +288,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                   const bdL = getLivePriceBreakdown(o);
                   const money = (v: number | null | undefined) => (v == null ? '—' : formatCurrency(v));
                   // Nhãn cột trái của bảng giá (Tổng / Kim loại / Đá)
-                  const rowLabelCls = 'text-left text-[11.5px] font-bold uppercase tracking-[0.3px]';
+                  const rowLabelCls = 'text-left text-[13.5px] font-bold uppercase tracking-[0.3px]';
                   const numCls = 'text-right pl-[10px] whitespace-nowrap';
                   return (
                     <div
@@ -296,11 +296,11 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                       className="flex flex-col gap-[6px] py-[14px] first:pt-[2px] [&:not(:first-child)]:border-t [&:not(:first-child)]:border-border"
                     >
                       <div className="flex items-center gap-[6px]">
-                        <span className="flex-1 min-w-0 text-[14px] text-muted truncate">{o.optionName}</span>
+                        <span className="flex-1 min-w-0 text-[16px] text-muted truncate">{o.optionName}</span>
                         {oTag && (
                           <span
                             className={clsx(
-                              'shrink-0 py-[2px] px-[7px] text-[11.5px] font-extrabold tracking-[0.3px] rounded-full',
+                              'shrink-0 py-[2px] px-[7px] text-[13.5px] font-extrabold tracking-[0.3px] rounded-full',
                               oTag.className,
                             )}
                           >
@@ -317,9 +317,9 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                           {copiedIdx === idx ? <Check size={11} /> : <Copy size={11} />}
                         </button>
                       </div>
-                      <table className="w-full text-[13.5px] [font-variant-numeric:tabular-nums] border-collapse [&_td]:py-[2px] [&_th]:py-[2px]">
+                      <table className="w-full text-[15.5px] [font-variant-numeric:tabular-nums] border-collapse [&_td]:py-[2px] [&_th]:py-[2px]">
                         <thead>
-                          <tr className="text-[11px] font-extrabold uppercase tracking-[0.4px] text-faint">
+                          <tr className="text-[13px] font-extrabold uppercase tracking-[0.4px] text-faint">
                             <th className="font-[inherit]" />
                             <th className={clsx(numCls, 'font-[inherit]')}>Lúc báo giá</th>
                             {hasLive && <th className={clsx(numCls, 'font-[inherit]')}>Hôm nay</th>}
@@ -346,7 +346,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                       {hasLive && dp !== 0 && (
                         <div
                           className={clsx(
-                            'flex items-center justify-end gap-[3px] text-[12.5px] font-bold [&_svg]:shrink-0',
+                            'flex items-center justify-end gap-[3px] text-[14.5px] font-bold [&_svg]:shrink-0',
                             deltaCls,
                           )}
                         >
