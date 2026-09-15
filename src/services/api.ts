@@ -288,11 +288,12 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
   return data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
 }
 
-export async function fetchDashboardCharts(filter?: { timeRange?: string; startDate?: string; endDate?: string }): Promise<DashboardChartsResponse> {
+export async function fetchDashboardCharts(filter?: { timeRange?: string; startDate?: string; endDate?: string; ownerId?: string }): Promise<DashboardChartsResponse> {
   const params: Record<string, any> = {};
   if (filter?.timeRange) params.timeRange = filter.timeRange;
   if (filter?.startDate) params.startDate = filter.startDate;
   if (filter?.endDate) params.endDate = filter.endDate;
+  if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
   return apiCall(dedupedGet('/quote-requests/dashboard-charts', params), 'Không thể lấy dữ liệu biểu đồ Dashboard');
 }
 

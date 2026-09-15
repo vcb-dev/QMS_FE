@@ -25,10 +25,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   requests: initialRequests,
   counts: initialCounts,
   currentRole,
+  currentUser,
+  ownerFilter,
+  setOwnerFilter,
   onSelectReq,
   onOpenCreateModal: _onOpenCreateModal,
   onFilterStatus,
 }) => {
+  // "Chỉ mình tôi" — chỉ SALE/ORDER dùng (Admin xem toàn công ty, không có khái niệm "của tôi").
+  const isMineOnly = (currentRole === 'SALE' || currentRole === 'ORDER') && ownerFilter === 'MY_REQ';
+  const ownerIdParam = isMineOnly ? currentUser.id : undefined;
   const navigate = useNavigate();
   const onViewAll = () => navigate('/requests');
   const onOpenLibrary = () => navigate('/library');
@@ -128,11 +134,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       const [res, chartsRes] = await Promise.all([
         fetchQuoteRequests({
           timeRange: newRange,
+          ownerId: ownerIdParam,
           includeCounts: true,
           limit: 20,
           lite: true,
         }),
-        fetchDashboardCharts({ timeRange: newRange }),
+        fetchDashboardCharts({ timeRange: newRange, ownerId: ownerIdParam }),
       ]);
       if (myRequestId !== timeRangeRequestIdRef.current) return;
       if (res.meta?.counts) {
@@ -161,8 +168,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ORDER bật/tắt "Chỉ mình tôi" -> tải lại đúng mốc thời gian đang chọn (không reset về
+  // THIS_MONTH như effect mount ở trên). Bỏ qua lần chạy đầu vì effect mount đã tự fetch rồi.
+  const skipFirstOwnerEffectRef = React.useRef(true);
+  React.useEffect(() => {
+    if (currentRole !== 'ORDER') return;
+    if (skipFirstOwnerEffectRef.current) {
+      skipFirstOwnerEffectRef.current = false;
+      return;
+    }
+    handleTimeRangeChange(timeRange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownerFilter]);
+
   // SALE không tự fetch — App.tsx load requests/counts bất đồng bộ nên phải đồng bộ lại
-  // mỗi khi props initialRequests/initialCounts đổi (login xong mới có data thật)
+  // mỗi khi props initialRequests/initialCounts đổi (login xong mới có data thật, hoặc đổi
+  // "Chỉ mình tôi" — hook chung ở App.tsx đã tự fetch lại theo ownerFilter mới).
   React.useEffect(() => {
     if (currentRole !== 'SALE') return;
     setApiRequests(initialRequests);
@@ -171,13 +192,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // SALE bỏ qua handleTimeRangeChange ở effect trên (không có dropdown thời gian) nên charts
   // (Sản phẩm nổi bật, phân bố danh mục/chất liệu...) không bao giờ được fetch nếu thiếu đoạn
-  // này — tự fetch riêng 1 lần lúc mount với kỳ mặc định THIS_MONTH.
+  // này — tự fetch riêng với kỳ mặc định THIS_MONTH, và lại mỗi khi đổi "Chỉ mình tôi".
   React.useEffect(() => {
     if (currentRole !== 'SALE') return;
-    fetchDashboardCharts({ timeRange: 'THIS_MONTH' })
+    fetchDashboardCharts({ timeRange: 'THIS_MONTH', ownerId: ownerIdParam })
       .then(setCharts)
       .catch((err) => console.error('Error fetching dashboard charts for SALE:', err));
-  }, [currentRole]);
+  }, [currentRole, ownerIdParam]);
 
   const getStatusColor = (status: string) =>
     STATUS_CHART_META.find((s) => s.value === status)?.color || '#2563eb';
@@ -339,26 +360,39 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </p>
         </div>
 
-        {currentRole !== 'SALE' && (
         <div className="flex items-center gap-[10px]">
-          {/* Time Range Filter Select Dropdown */}
-          <div className="relative flex items-center">
-            <Calendar size={14} className="absolute left-[12px] text-[#64748b] pointer-events-none" />
-            <select
-              value={timeRange}
-              onChange={(e) => handleTimeRangeChange(e.target.value)}
-              className="bg-surface border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[14px] pb-[8px] pl-[32px] text-[12.5px] font-bold text-[#334155] cursor-pointer outline-none [appearance:auto] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
-            >
-              <option value="THIS_MONTH">Tháng này</option>
-              <option value="TODAY">Hôm nay</option>
-              <option value="THIS_WEEK">Tuần này</option>
-              <option value="LAST_MONTH">Tháng trước</option>
-              <option value="THIS_YEAR">Năm nay</option>
-              <option value="ALL">Tất cả thời gian</option>
-            </select>
-          </div>
+          {/* "Chỉ mình tôi" — SALE & ORDER lọc theo yêu cầu của bản thân. Admin xem toàn công ty
+              nên không có khái niệm này. */}
+          {(currentRole === 'SALE' || currentRole === 'ORDER') && (
+            <label className="flex items-center gap-[6px] bg-surface border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[12.5px] font-bold text-[#334155] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isMineOnly}
+                onChange={(e) => setOwnerFilter(e.target.checked ? 'MY_REQ' : 'ALL')}
+              />
+              Chỉ mình tôi
+            </label>
+          )}
+
+          {/* Time Range Filter Select Dropdown — SALE không có, dùng SaleStatusStatsGrid riêng */}
+          {currentRole !== 'SALE' && (
+            <div className="relative flex items-center">
+              <Calendar size={14} className="absolute left-[12px] text-[#64748b] pointer-events-none" />
+              <select
+                value={timeRange}
+                onChange={(e) => handleTimeRangeChange(e.target.value)}
+                className="bg-surface border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[14px] pb-[8px] pl-[32px] text-[12.5px] font-bold text-[#334155] cursor-pointer outline-none [appearance:auto] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+              >
+                <option value="THIS_MONTH">Tháng này</option>
+                <option value="TODAY">Hôm nay</option>
+                <option value="THIS_WEEK">Tuần này</option>
+                <option value="LAST_MONTH">Tháng trước</option>
+                <option value="THIS_YEAR">Năm nay</option>
+                <option value="ALL">Tất cả thời gian</option>
+              </select>
+            </div>
+          )}
         </div>
-        )}
       </div>
 
       {/* 2. KPI tổng hợp + Doanh thu — chỉ Admin xem */}
@@ -413,7 +447,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 3. Charts Row — SALE thấy ô số liệu theo trạng thái, không thấy biểu đồ */}
       {currentRole === 'SALE' ? (
-        <SaleStatusStatsGrid onSelectStatus={onFilterStatus} />
+        <SaleStatusStatsGrid onSelectStatus={onFilterStatus} ownerId={ownerIdParam} />
       ) : (() => {
         const chartData = [
           { name: 'Mới tạo',     value: counts.pending,        fill: '#3b82f6' },

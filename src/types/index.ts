@@ -323,6 +323,10 @@ export interface DashboardPageProps {
   requests: QuoteRequest[];
   counts: StatusCounts;
   currentRole: Role;
+  currentUser: User;
+  // Phạm vi "Chỉ mình tôi" — dùng chung state với trang Danh Sách (SALE/ORDER), Admin không đọc.
+  ownerFilter: string;
+  setOwnerFilter: (v: string) => void;
   onSelectReq: (id: string) => void;
   onOpenCreateModal?: () => void;
   // Bấm vào 1 ô trạng thái trong "Số lượng yêu cầu theo trạng thái" (SALE) — điều hướng sang

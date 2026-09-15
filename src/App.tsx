@@ -201,6 +201,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
           <Routes>
             <Route path="/" element={
               <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
+                currentUser={currentUser} ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
                 onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate}
                 onFilterStatus={(status) => { setStatusSubFilter(status); setCurrentPage(1); navigate('/requests'); }} />
             } />
