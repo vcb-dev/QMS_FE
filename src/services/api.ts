@@ -773,11 +773,13 @@ export async function deleteStonesMany(ids: string[]) {
   return apiCall(api.post('/stones/delete-many', { ids }), 'Không thể xóa đá');
 }
 
-export async function importStonesExcel(file: File) {
+// Import bảng giá đá theo lưới shape/size (VD kim cương) — file không có cột Loại/Tên riêng
+// từng dòng, stoneType chốt theo nút bấm (đá chủ/đá tấm) truyền qua query, không đọc từ file.
+export async function importStonesPriceGridExcel(file: File, stoneType: 'MAIN' | 'SIDE') {
   const formData = new FormData();
   formData.append('file', file);
   try {
-    const res = await api.post('/stones/import', formData, {
+    const res = await api.post(`/stones/import-price-grid?stoneType=${stoneType}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       ...NO_TIMEOUT,
     });
