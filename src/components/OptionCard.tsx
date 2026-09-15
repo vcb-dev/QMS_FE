@@ -39,7 +39,7 @@ export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus,
           <strong
             className={clsx(
               "text-[18px] font-black",
-              isFinalStatus ? "text-[#16a34a] not-italic opacity-100" : "text-[#64748b] italic opacity-80"
+              isFinalStatus ? "text-[#16a34a] not-italic opacity-100" : "text-[#334155] italic opacity-80"
             )}
           >
             {price}

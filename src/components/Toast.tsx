@@ -19,7 +19,7 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose }) => (
       type="button"
       onClick={onClose}
       title="Đóng"
-      className="bg-transparent border-none cursor-pointer text-[#64748b] flex p-0"
+      className="bg-transparent border-none cursor-pointer text-[#334155] flex p-0"
     >
       <X size={14} />
     </button>

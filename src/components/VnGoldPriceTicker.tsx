@@ -51,13 +51,13 @@ export const VnGoldPriceTicker: React.FC = () => {
             <span className="w-[6px] h-[6px] rounded-full bg-[#16a34a] animate-[livePulse_1.4s_ease-in-out_infinite]" />
             TRỰC TIẾP
           </span>
-          <span className="text-[13.5px] text-[#64748b]">
+          <span className="text-[13.5px] text-[#334155]">
             (chỉ tham khảo, không dùng để tính giá)
           </span>
         </div>
         <div className="flex items-center gap-[10px]">
           {updatedAt && (
-            <span className="text-[13.5px] text-[#64748b]">
+            <span className="text-[13.5px] text-[#334155]">
               {new Date(updatedAt).toLocaleTimeString('vi-VN')}
             </span>
           )}
@@ -78,7 +78,7 @@ export const VnGoldPriceTicker: React.FC = () => {
 
       {error && <div className="text-[14.5px] text-[#dc2626]"> {error}</div>}
       {!error && items.length === 0 && (
-        <div className="text-[14.5px] text-[#64748b]">Đang tải giá vàng thị trường...</div>
+        <div className="text-[14.5px] text-[#334155]">Đang tải giá vàng thị trường...</div>
       )}
 
       {items.length > 0 && (
@@ -105,7 +105,7 @@ export const VnGoldPriceTicker: React.FC = () => {
                 <div
                   className={clsx(
                     'flex items-center gap-[4px] mt-[4px] text-[14.5px] font-extrabold',
-                    isUp ? 'text-[#16a34a]' : isDown ? 'text-[#dc2626]' : 'text-[#64748b]',
+                    isUp ? 'text-[#16a34a]' : isDown ? 'text-[#dc2626]' : 'text-[#334155]',
                   )}
                 >
                   <Icon size={12} />

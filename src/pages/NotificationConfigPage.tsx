@@ -113,7 +113,7 @@ const Badge: React.FC<{ on: boolean }> = ({ on }) => (
       'inline-flex items-center gap-[6px] text-[14.5px] font-bold py-[3px] px-[9px] rounded-full',
       on
         ? 'bg-[#ecfdf5] text-[#15803d] border border-[#bbf7d0]'
-        : 'bg-[#f8fafc] text-[#64748b] border border-[#e5e7eb]',
+        : 'bg-[#f8fafc] text-[#334155] border border-[#e5e7eb]',
     )}
   >
     <span
@@ -444,7 +444,7 @@ export const NotificationConfigPage: React.FC = () => {
               <div className="relative w-[220px] max-w-full">
                 <Search
                   size={14}
-                  className="absolute left-[10px] top-1/2 -translate-y-1/2 text-[#64748b]"
+                  className="absolute left-[10px] top-1/2 -translate-y-1/2 text-[#334155]"
                 />
                 <input
                   value={search}
@@ -555,7 +555,7 @@ export const NotificationConfigPage: React.FC = () => {
                         >
                           <Bell
                             size={30}
-                            className="text-[#64748b] mb-[8px]"
+                            className="text-[#334155] mb-[8px]"
                           />
                           <div className="text-[#0f172a] font-bold text-[16.5px]">
                             {stats.total === 0
@@ -580,7 +580,7 @@ export const NotificationConfigPage: React.FC = () => {
                             <div className="font-bold text-[#0f172a] text-[16px]">
                               {w.chatName || '(chưa đặt tên)'}
                             </div>
-                            <div className="text-[14px] text-[#64748b] mt-[1px]">
+                            <div className="text-[14px] text-[#334155] mt-[1px]">
                               {w.botName
                                 ? `Bot: ${w.botName}`
                                 : 'Chưa đặt tên bot'}
@@ -603,7 +603,7 @@ export const NotificationConfigPage: React.FC = () => {
                                 <Copy size={13} />
                               </button>
                             </div>
-                            <div className="text-[14px] text-[#64748b] mt-[4px]">
+                            <div className="text-[14px] text-[#334155] mt-[4px]">
                               {w.hasSecret
                                 ? 'Có signing secret'
                                 : 'Không đặt secret'}
@@ -611,7 +611,7 @@ export const NotificationConfigPage: React.FC = () => {
                           </td>
                           <td className={clsx(tdCls, 'py-[12px] px-[16px] align-top')}>
                             {w.actions.length === 0 ? (
-                              <span className="text-[15px] text-[#64748b] italic">
+                              <span className="text-[15px] text-[#334155] italic">
                                 Chưa chọn hành động nào
                               </span>
                             ) : (
@@ -746,7 +746,7 @@ export const NotificationConfigPage: React.FC = () => {
                   <div className={formGroupCls}>
                     <label className={formLabelCls}>
                       Tên bot{' '}
-                      <span className="font-normal text-[#64748b]">
+                      <span className="font-normal text-[#334155]">
                         (tùy chọn)
                       </span>
                     </label>
@@ -766,7 +766,7 @@ export const NotificationConfigPage: React.FC = () => {
                   <label className={clsx(formLabelCls, 'flex items-baseline gap-[8px]')}>
                     Webhook URL
                     {urlWarn && !formErr.url && (
-                      <span className="font-normal text-[14px] text-[#64748b]">
+                      <span className="font-normal text-[14px] text-[#334155]">
                         không giống link webhook Lark
                       </span>
                     )}
@@ -821,7 +821,7 @@ export const NotificationConfigPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowSecret((v) => !v)}
-                      className={clsx(iconBtnCls, 'absolute right-[6px] top-1/2 -translate-y-1/2 text-[#64748b]')}
+                      className={clsx(iconBtnCls, 'absolute right-[6px] top-1/2 -translate-y-1/2 text-[#334155]')}
                     >
                       {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
@@ -839,7 +839,7 @@ export const NotificationConfigPage: React.FC = () => {
                 <div className={formGroupCls}>
                   <label className={clsx(formLabelCls, 'm-0')}>
                     Nhận thông báo cho hành động
-                    <span className="font-normal text-[#64748b] ml-[6px]">
+                    <span className="font-normal text-[#334155] ml-[6px]">
                       đã chọn {form.actions.length}/{catalog.length}
                     </span>
                   </label>
@@ -868,7 +868,7 @@ export const NotificationConfigPage: React.FC = () => {
                   <div className="relative mt-[2px]">
                     <Search
                       size={14}
-                      className="absolute left-[11px] top-1/2 -translate-y-1/2 text-[#64748b]"
+                      className="absolute left-[11px] top-1/2 -translate-y-1/2 text-[#334155]"
                     />
                     <input
                       className={clsx(formControlCls, 'pl-[32px]')}
@@ -886,7 +886,7 @@ export const NotificationConfigPage: React.FC = () => {
                     return (
                       <div className="border border-[#e5e7eb] rounded-[10px] mt-[4px] max-h-[166px] overflow-y-auto">
                           {hits.length === 0 ? (
-                            <div className="p-[12px] text-[15px] text-[#64748b]">
+                            <div className="p-[12px] text-[15px] text-[#334155]">
                               Không có hành động khớp
                               {actionQuery ? ` "${actionQuery}"` : ''}.
                             </div>

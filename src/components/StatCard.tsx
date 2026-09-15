@@ -34,7 +34,7 @@ interface StatCardProps {
 export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, tone = 'default', deltaPct, deltaLabel = 'so với tháng trước' }) => {
   const t = TONE_CLASSES[tone];
   const hasDelta = deltaPct !== undefined;
-  const deltaCls = deltaPct == null ? 'text-[#64748b]' : deltaPct > 0 ? 'text-[#15803d]' : deltaPct < 0 ? 'text-[#dc2626]' : 'text-[#334155]';
+  const deltaCls = deltaPct == null ? 'text-[#334155]' : deltaPct > 0 ? 'text-[#15803d]' : deltaPct < 0 ? 'text-[#dc2626]' : 'text-[#334155]';
   const deltaText = deltaPct == null ? 'Chưa có dữ liệu kỳ trước' : `${deltaPct > 0 ? '+' : ''}${deltaPct.toFixed(1)}% ${deltaLabel}`;
   return (
     <div className={clsx("border border-solid rounded-[14px] py-[18px] px-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]", t.card)}>
