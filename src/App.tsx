@@ -247,6 +247,8 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
               <DetailPage
                 selectedReq={selectedReq} currentRole={currentRole} currentUser={currentUser!}
                 socket={globalSocket}
+                onQuoteNow={handleQuoteNow}
+                onPricing={(id) => setPricingReqId(id)}
               />
             } />
 
