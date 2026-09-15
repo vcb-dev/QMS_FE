@@ -9,27 +9,12 @@ import {
 } from '../styles/classNames';
 import { useSearchParams } from 'react-router-dom';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard, StaffUser } from '../types';
-import { Search, SlidersHorizontal, RotateCcw, ChevronDown, LayoutGrid, Circle, Link2, CircleDot, Droplet, Home, Gem, type LucideIcon } from 'lucide-react';
+import { Search, SlidersHorizontal, RotateCcw, ChevronDown } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { ProductSpecModal } from '../components/ProductSpecModal';
 import { displayPrice, formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProducts, getAllUsersApi } from '../services/api';
-
-// Icon cho pill danh mục — đoán theo từ khóa trong tên (danh mục là dữ liệu admin tự đặt, không
-// có field icon riêng), chọn hình khớp nghĩa thật của từng loại trang sức thay vì icon ngẫu nhiên:
-// vòng/lắc = vòng tròn trơn, nhẫn = vòng tròn có hạt đá giữa, dây chuyền = mắt xích, bông tai =
-// hình giọt nước (dáng bông tai treo phổ biến nhất). Danh mục lạ rơi về Gem (đá quý — trung tính,
-// hợp app trang sức hơn icon thẻ giá) chứ không vỡ giao diện.
-function getCategoryIcon(name: string): LucideIcon {
-  const n = name.toLowerCase();
-  if (n.includes('lắc') || n.includes('vòng tay') || n.includes('vòng cổ')) return Circle;
-  if (n.includes('dây chuyền')) return Link2;
-  if (n.includes('nhẫn')) return CircleDot;
-  if (n.includes('bông tai') || n.includes('khuyên tai')) return Droplet;
-  if (n.includes('trang trí')) return Home;
-  return Gem;
-}
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   categories,
@@ -224,10 +209,9 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                           : 'bg-surface text-muted border-border hover:bg-[#f8fafc]',
                       )}
                     >
-                      <LayoutGrid size={13} /> Tất cả danh mục
+                      Tất cả danh mục
                     </button>
                     {categories.map((c) => {
-                      const Icon = getCategoryIcon(c.name);
                       const isActive = selectedCat === c.id;
                       return (
                         <button
@@ -241,7 +225,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                               : 'bg-surface text-muted border-border hover:bg-[#f8fafc]',
                           )}
                         >
-                          <Icon size={13} /> {c.name}
+                          {c.name}
                         </button>
                       );
                     })}
