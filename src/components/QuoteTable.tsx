@@ -66,9 +66,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     { value: 'tall', label: 'Cao' },
   ];
   const ROW_HEIGHT_CLS: Record<RowHeight, string> = {
-    compact: '[&_td]:py-[2px] [&_th]:py-[4px]',
-    normal: '[&_td]:py-[6px] [&_th]:py-[6px]',
-    tall: '[&_td]:py-[16px] [&_th]:py-[8px]',
+    compact: '[&_td]:py-[4px] [&_th]:py-[4px]',
+    normal: '[&_td]:py-[10px] [&_th]:py-[8px]',
+    tall: '[&_td]:py-[18px] [&_th]:py-[10px]',
   };
   const [rowHeight, setRowHeight] = useState<RowHeight>(() => {
     try {
@@ -655,7 +655,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </div>
                 </td>
                 <td>
-                  <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words">
+                  <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
                     {r.productName}
                   </div>
                 </td>
@@ -717,13 +717,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </td>
                 )}
                 {!isCompactView && (
-                  <td className="text-[14px] text-[#d97706] max-w-[200px] whitespace-normal font-semibold">
+                  <td className="text-[14px] text-[#d97706] max-w-[200px] whitespace-normal font-semibold leading-[1.5]">
                     {displayNote}
                   </td>
                 )}
                 {!isCompactView && (
                   <td>
-                    <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a]">{displayCustomerName}</div>
+                    <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
                   </td>
                 )}
                 <td>
