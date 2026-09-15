@@ -113,9 +113,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     };
   }, [isDragging]);
 
-  // Chỉ Order cần cột thiết yếu (mã, tên, ảnh, chất liệu, loại sản phẩm, thời gian,
-  // trạng thái, số đo, bộ phận, giá, VAT). Sale và Admin xem đủ mọi cột.
-  const isCompactView = currentRole === 'ORDER';
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -535,26 +532,24 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th className="text-[#0f766e]">Báo Giá Khách (Có VAT)</th>
             <th>Số Đo Kích Thước</th>
             <th>Người Báo Giá</th>
-            {!isCompactView && (
-              <th>
-                <span className="inline-flex items-center gap-[4px]">
-                  Mốc Xử Lý
-                  <span
-                    title={
-                      'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc ORDER tiếp nhận.\n' +
-                      'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
-                      'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.'
-                    }
-                    className="inline-flex cursor-help text-faint"
-                  >
-                    <HelpCircle size={13} />
-                  </span>
+            <th>
+              <span className="inline-flex items-center gap-[4px]">
+                Mốc Xử Lý
+                <span
+                  title={
+                    'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc ORDER tiếp nhận.\n' +
+                    'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
+                    'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.'
+                  }
+                  className="inline-flex cursor-help text-faint"
+                >
+                  <HelpCircle size={13} />
                 </span>
-              </th>
-            )}
-            {!isCompactView && <th>Tỷ Lệ Chốt</th>}
-            {!isCompactView && <th>Yêu Cầu / Muốn Nhận</th>}
-            {!isCompactView && <th>Khách Hàng / Hỏi Giá</th>}
+              </span>
+            </th>
+            <th>Tỷ Lệ Chốt</th>
+            <th>Yêu Cầu / Muốn Nhận</th>
+            <th>Khách Hàng / Hỏi Giá</th>
             <th>Bộ Phận</th>
           </tr>
         </thead>
@@ -710,22 +705,16 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 )}
                 <td className="text-[12px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
                 <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
-                {!isCompactView && <td>{renderProcessingTimeCell(r)}</td>}
-                {!isCompactView && (
-                  <td className="text-[11px] text-[#475569] font-semibold">
-                    {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}
-                  </td>
-                )}
-                {!isCompactView && (
-                  <td className="text-[11px] text-[#d97706] max-w-[200px] whitespace-normal font-semibold leading-[1.5]">
-                    {displayNote}
-                  </td>
-                )}
-                {!isCompactView && (
-                  <td>
-                    <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
-                  </td>
-                )}
+                <td>{renderProcessingTimeCell(r)}</td>
+                <td className="text-[11px] text-[#475569] font-semibold">
+                  {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}
+                </td>
+                <td className="text-[11px] text-[#d97706] max-w-[200px] whitespace-normal font-semibold leading-[1.5]">
+                  {displayNote}
+                </td>
+                <td>
+                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
+                </td>
                 <td>
                   <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[11px] font-semibold">
                     {displayDeptName}
