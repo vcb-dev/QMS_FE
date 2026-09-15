@@ -3,6 +3,17 @@ import type { CalculateBatchResultItem } from '../services/api';
 import { formatCurrency } from './currency';
 import { getPriceBreakdown } from './priceBreakdown';
 
+// Khoá nhóm kim loại gốc của 1 chất liệu — trong CÙNG 1 sản phẩm/phương án chỉ được kết hợp các
+// chất liệu chung 1 kim loại gốc (VD nhiều tuổi vàng với nhau), không trộn Vàng với Bạc/Bạch kim.
+// Phi kim loại (không có base metal, VD đá/phụ kiện) mỗi cái 1 nhóm riêng, không ghép được với
+// bất kỳ chất liệu nào khác. Dùng chung CreateModal (chọn nhiều chất liệu lúc tạo yêu cầu) và
+// useMaterialStoneRows (thêm dòng chất liệu ở Máy Tính Giá/PricingModal).
+export const materialGroupKey = (m: {
+  id: string;
+  baseMetalId?: string | null;
+  baseMetal?: { id: string } | null;
+}): string => (m.baseMetalId ?? m.baseMetal?.id) || `__nonmetal__${m.id}`;
+
 // Nhãn bỏ phần "(Áp dụng X%)" cho gọn — số % vẫn dùng để tính giá, chỉ ẩn khỏi UI/copy
 export const stripAppliedPct = (s: string) => (s || '').replace(/\s*\(Áp dụng[^)]*\)/gi, '').trim();
 
