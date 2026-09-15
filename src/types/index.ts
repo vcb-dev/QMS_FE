@@ -506,6 +506,8 @@ export interface RequestsPageProps {
   materials: Material[];
   currentRole: Role;
   currentUser: User;
+  // Badge tin nhắn chưa đọc + mở chat ngay tại bảng — không truyền thì không hiện badge/chat.
+  socket?: import('socket.io-client').Socket | null;
   counts: StatusCounts;
   statusSubFilter: string;
   setStatusSubFilter: (v: string) => void;
@@ -605,6 +607,8 @@ export interface ChatPopupProps {
   socket: import('socket.io-client').Socket;
   unreadCount: number;
   onOpenChange: (isOpen: boolean) => void;
+  // Mở sẵn lúc mount — dùng khi bấm icon tin nhắn ở bảng Danh Sách, khỏi phải bấm lại nút nổi.
+  initialOpen?: boolean;
 }
 
 // ── Cấu hình thông báo Lark (trang admin) ─────────────────────────────
