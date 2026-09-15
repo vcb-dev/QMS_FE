@@ -82,6 +82,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [stoneOptionsAll, setStoneOptionsAll] = useState<{ id: string; name: string; stoneType: 'MAIN' | 'SIDE' }[]>([]);
   const [selectedStoneIds, setSelectedStoneIds] = useState<string[]>([]);
   const [customerMeasurements, setCustomerMeasurements] = useState('');
+  // Ghi chú thêm — Sale gõ tự do, có thể dán link ảnh/video để Order bấm xem ở trang chi tiết.
+  const [note, setNote] = useState('');
   const [leadTime, setLeadTime] = useState('7-15 NGÀY (Tiêu chuẩn)');
   const [closeRateValue, setCloseRateValue] = useState<string>(CLOSE_RATE_OPTIONS[0].value);
   // Ảnh cũ đã có sẵn (lúc sửa yêu cầu) — URL Cloudinary thật, gửi lại nguyên văn (BE pass-through,
@@ -263,6 +265,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
       setSelectedMaterialIds(matIds);
       setCustomerMeasurements(editingReq.customerMeasurements || '');
+      setNote(editingReq.note || '');
       setExistingImageUrls(editingReq.images ? editingReq.images.map((img) => img.imageUrl) : []);
       setNewImageFiles([]);
       setExistingVideoUrl(editingReq.videoUrl || null);
@@ -352,6 +355,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       }
 
       setCustomerMeasurements(calculatorData?.note || '');
+      setNote('');
       setExistingImageUrls([]);
       setNewImageFiles([]);
       setExistingVideoUrl(null);
@@ -530,6 +534,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         materialIds: selectedMaterialIds,
         stoneIds: selectedStoneIds.length > 0 ? selectedStoneIds : undefined,
         customerMeasurements,
+        note: note.trim(),
         desiredLeadTime: leadTime,
         ...(closeRatePct != null ? { closeRatePct } : {}),
         imageUrls: existingImageUrls.length > 0 ? existingImageUrls : undefined,
@@ -925,6 +930,19 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Ghi chú thêm — dán được link ảnh/video, Order xem ở trang chi tiết sẽ bấm được luôn */}
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Ghi chú</label>
+                <textarea
+                  className={formControlCls}
+                  placeholder="Ghi chú thêm cho Order — có thể dán link ảnh/video tham khảo..."
+                  value={note}
+                  maxLength={2000}
+                  rows={3}
+                  onChange={(e) => setNote(e.target.value)}
+                />
               </div>
 
               {/* Multiple Images Upload Zone */}

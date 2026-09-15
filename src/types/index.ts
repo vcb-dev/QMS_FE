@@ -223,6 +223,9 @@ export interface QuoteRequest {
   desiredLeadTime?: string;
   desiredDate?: string;
   customerMeasurements?: string;
+  // Ghi chú thêm Sale nhập lúc tạo/sửa yêu cầu — có thể chứa link ảnh/video, hiển thị dạng
+  // clickable link ở trang chi tiết cho Order xem.
+  note?: string;
   closeRatePct?: number;
   vat?: number;
   quotedPrice?: number;
