@@ -153,7 +153,7 @@ export const ncpRowHoverCls = 'hover:bg-[#fafafa]';
 // ---- PricingConfigPage (.pcp-*) ----
 export const pcpIconBtnCls = clsx(
   iconBtnCls,
-  'text-[#64748b] transition-colors duration-150 hover:text-[#dc2626]',
+  'text-[#334155] transition-colors duration-150 hover:text-[#dc2626]',
 );
 export const pcpIconBtnEditCls = 'hover:!text-primary';
 export const pcpIconBtnUndoCls = 'hover:!text-[#334155]';
