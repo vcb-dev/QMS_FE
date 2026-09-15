@@ -4,13 +4,13 @@ export const cardCls = 'bg-surface border border-border rounded-[16px] p-[22px] 
 export const cardTitleCls = 'text-[18px] font-extrabold text-[#0f172a] mb-[16px]';
 export const fieldLabelCls = 'text-[15.5px] font-bold text-[#374151]';
 export const fieldInputCls = 'w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-[10px] pt-[11px] pr-[14px] pb-[11px] pl-[40px] text-[#111827] text-[16.5px] outline-none';
-export const fieldIconCls = 'absolute left-[13px] text-[#9ca3af]';
+export const fieldIconCls = 'absolute left-[13px] text-[#64748b]';
 export const goldButtonCls = 'w-full bg-[linear-gradient(135deg,#f0b429_0%,#d97706_100%)] text-surface border-0 rounded-[10px] p-[13px] text-[17.5px] font-bold cursor-pointer flex items-center justify-center gap-[8px] shadow-[0_6px_16px_rgba(217,119,6,0.35)]';
-export const backLinkCls = 'bg-none border-0 text-[#9ca3af] text-[16px] cursor-pointer flex items-center justify-center gap-[6px] font-semibold mt-[4px]';
-export const labelCls = 'text-[13.5px] font-bold text-[#6b7280] uppercase tracking-[0.04em] block mb-[6px]';
+export const backLinkCls = 'bg-none border-0 text-[#64748b] text-[16px] cursor-pointer flex items-center justify-center gap-[6px] font-semibold mt-[4px]';
+export const labelCls = 'text-[13.5px] font-bold text-[#334155] uppercase tracking-[0.04em] block mb-[6px]';
 export const inputCls = 'w-full py-[8px] px-[10px] rounded-[8px] border border-[#cbd5e1] text-[15.5px] font-extrabold text-[#0f172a] outline-none';
 export const valueBoxCls = 'inline-block py-[8px] px-[10px] border border-transparent rounded-[8px] box-border';
-export const suffixCls = 'absolute right-[10px] top-1/2 -translate-y-1/2 text-[14px] font-bold text-[#64748b] pointer-events-none';
+export const suffixCls = 'absolute right-[10px] top-1/2 -translate-y-1/2 text-[14px] font-bold text-[#334155] pointer-events-none';
 export const fieldErrorCls = 'text-[13.5px] text-[#dc2626] font-bold';
 export const btnPrimaryCls = 'flex items-center justify-center gap-[6px] bg-[#f1f5f9] border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[15.5px] font-extrabold py-[9px] px-[18px] cursor-pointer';
 export const btnSecondaryCls = 'flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[8px] py-[8px] px-[16px] text-[15.5px] font-bold text-[#334155] cursor-pointer';
@@ -20,7 +20,7 @@ export const pageBtnCls = (disabled: boolean) => clsx('py-[4px] px-[10px] rounde
 export const thCls = 'py-[8px] px-[6px] text-left';
 export const tdCls = 'py-[10px] px-[6px] min-h-[38px] align-middle';
 export const tdCenterCls = 'py-[10px] px-[6px] text-center min-h-[38px] align-middle';
-export const tableHeadRowCls = 'text-[#64748b] text-[13.5px] uppercase tracking-[0.04em] border-b border-[#e5e7eb]';
+export const tableHeadRowCls = 'text-[#334155] text-[13.5px] uppercase tracking-[0.04em] border-b border-[#e5e7eb]';
 export const modalCloseIconBtnCls = 'bg-transparent border-0 text-[#334155] cursor-pointer';
 
 // ---- Modal shell (.modal-*) ----
@@ -144,7 +144,7 @@ export const navLabelCls =
 // ---- NotificationConfigPage (.ncp-*) ----
 export const ncpIconBtnCls = clsx(
   iconBtnCls,
-  'text-[#64748b] rounded-[6px] transition-colors duration-150 hover:text-[#0f172a] hover:bg-[#f1f5f9]',
+  'text-[#334155] rounded-[6px] transition-colors duration-150 hover:text-[#0f172a] hover:bg-[#f1f5f9]',
 );
 export const ncpIconBtnDangerCls = 'hover:!text-[#dc2626] hover:!bg-[#fef2f2]';
 // .ncp-row:hover / .ncp-sub:hover — cùng một hiệu ứng nền
@@ -153,7 +153,7 @@ export const ncpRowHoverCls = 'hover:bg-[#fafafa]';
 // ---- PricingConfigPage (.pcp-*) ----
 export const pcpIconBtnCls = clsx(
   iconBtnCls,
-  'text-[#9ca3af] transition-colors duration-150 hover:text-[#dc2626]',
+  'text-[#64748b] transition-colors duration-150 hover:text-[#dc2626]',
 );
 export const pcpIconBtnEditCls = 'hover:!text-primary';
 export const pcpIconBtnUndoCls = 'hover:!text-[#334155]';
@@ -161,7 +161,7 @@ export const pcpIconBtnUndoCls = 'hover:!text-[#334155]';
 export const numInputCls =
   '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:m-0';
 export const pcpTabCls =
-  'py-[10px] px-[4px] border-0 border-b-2 border-b-transparent text-[16px] font-bold cursor-pointer text-[#64748b] bg-transparent hover:text-[#475569]';
+  'py-[10px] px-[4px] border-0 border-b-2 border-b-transparent text-[16px] font-bold cursor-pointer text-[#334155] bg-transparent hover:text-[#475569]';
 export const pcpTabActiveCls = '!text-[#0f172a] !border-b-[#0f172a]';
 export const pcpAddRowCls = 'bg-[#f8fafc] border-t border-dashed border-t-[#cbd5e1]';
 
@@ -171,5 +171,5 @@ export const cardContainerCls =
 export const cardHeadingCls =
   'text-[17px] font-extrabold text-[#0f172a] m-0 mb-[4px] flex items-center gap-[8px]';
 export const staffThCls =
-  'py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase';
+  'py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#334155] uppercase';
 export const emptyTextCls = 'text-center text-faint text-[15.5px] py-[24px] px-0';

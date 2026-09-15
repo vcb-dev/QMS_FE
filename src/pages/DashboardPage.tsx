@@ -284,7 +284,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const renderPointChangeBadge = (curr: number, prev: number | undefined) => {
     if (prev === undefined) return null;
     const diff = curr - prev;
-    if (Math.abs(diff) < 0.05) return <span className="text-[14px] font-extrabold text-[#64748b]">Không đổi so với kỳ trước</span>;
+    if (Math.abs(diff) < 0.05) return <span className="text-[14px] font-extrabold text-[#334155]">Không đổi so với kỳ trước</span>;
     const isUp = diff > 0;
     return (
       <span className={clsx('text-[14px] font-extrabold', isUp ? 'text-[#16a34a]' : 'text-[#dc2626]')}>
@@ -462,7 +462,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               >
                 ● {d.name}
               </div>
-              <div>{d.value} yêu cầu <span className="text-[#64748b]">({pct}%)</span></div>
+              <div>{d.value} yêu cầu <span className="text-[#334155]">({pct}%)</span></div>
             </ChartTooltip>
           );
         };
@@ -474,7 +474,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           if (chartStatusFilter === 'ALL') {
             return (
               <ChartTooltip padding="10px 14px" minWidth="150px">
-                <div className="text-[15px] text-[#64748b] border-b border-[#334155] pb-[4px] mb-[6px]">
+                <div className="text-[15px] text-[#334155] border-b border-[#334155] pb-[4px] mb-[6px]">
                   {label}
                 </div>
                 <div className="font-black mb-[6px] text-[#38bdf8]">
@@ -495,7 +495,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           const selectedVal = dataItem.value;
           return (
             <ChartTooltip>
-              <div className="text-[#64748b] mb-[2px]">{label}</div>
+              <div className="text-[#334155] mb-[2px]">{label}</div>
               <div
                 // động — giữ inline
                 style={{ color: getStatusColor(chartStatusFilter) }}
@@ -666,10 +666,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   const closeRate = d.total > 0 ? ((d.closed / d.total) * 100).toFixed(1) : '0';
                   return (
                     <ChartTooltip>
-                      <div className="text-[#64748b] mb-[2px]">{label}</div>
+                      <div className="text-[#334155] mb-[2px]">{label}</div>
                       <div className="text-[#38bdf8]">● Đã tạo: {d.total}</div>
                       <div className="text-[#22c55e]">● Đã chốt: {d.closed}</div>
-                      <div className="text-[#64748b] mt-[2px]">Tỷ lệ chốt: {closeRate}%</div>
+                      <div className="text-[#334155] mt-[2px]">Tỷ lệ chốt: {closeRate}%</div>
                     </ChartTooltip>
                   );
                 }}
@@ -706,7 +706,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     if (!active || !payload?.length) return null;
                     return (
                       <ChartTooltip>
-                        <div className="text-[#64748b]">{label}</div>
+                        <div className="text-[#334155]">{label}</div>
                         <div className="text-[#2563eb]">● {payload[0].value} đơn</div>
                       </ChartTooltip>
                     );
@@ -745,10 +745,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <table className="w-full border-collapse text-[15.5px]">
               <thead>
                 <tr className="border-b border-[#f1f5f9] text-left">
-                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase">MÃ YC / KHÁCH HÀNG</th>
-                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase">SẢN PHẨM</th>
-                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase">NGÀY TẠO</th>
-                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#64748b] uppercase text-right">TRẠNG THÁI</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#334155] uppercase">MÃ YC / KHÁCH HÀNG</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#334155] uppercase">SẢN PHẨM</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#334155] uppercase">NGÀY TẠO</th>
+                  <th className="py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#334155] uppercase text-right">TRẠNG THÁI</th>
                 </tr>
               </thead>
               <tbody>
@@ -798,7 +798,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="text-center text-[#64748b] p-[24px]">
+                    <td colSpan={4} className="text-center text-[#334155] p-[24px]">
                       Chưa có yêu cầu nào gần đây
                     </td>
                   </tr>
@@ -860,7 +860,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 );
               })
             ) : (
-              <div className="[grid-column:1/-1] text-[#64748b] text-[15.5px] text-center py-[24px] px-0">
+              <div className="[grid-column:1/-1] text-[#334155] text-[15.5px] text-center py-[24px] px-0">
                 Chưa có sản phẩm nổi bật
               </div>
             )}

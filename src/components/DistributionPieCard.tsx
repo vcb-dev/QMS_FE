@@ -62,7 +62,7 @@ export const DistributionPieCard: React.FC<DistributionPieCardProps> = ({ title,
         </div>
       </div>
     ) : (
-      <div className="text-center text-[#64748b] text-[15.5px] py-[24px]">Chưa có dữ liệu</div>
+      <div className="text-center text-[#334155] text-[15.5px] py-[24px]">Chưa có dữ liệu</div>
     )}
   </div>
 );

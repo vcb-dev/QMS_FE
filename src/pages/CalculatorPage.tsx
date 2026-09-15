@@ -595,7 +595,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
               </div>
 
               {compareRows.length === 0 ? (
-                <p className="text-[14.5px] text-[#64748b] m-0">
+                <p className="text-[14.5px] text-[#334155] m-0">
                   Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
                 </p>
               ) : (
@@ -644,7 +644,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                       </div>
                     );
                   })}
-                  <span className="text-[14px] text-[#64748b]">
+                  <span className="text-[14px] text-[#334155]">
                     Dòng chưa nhập khối lượng sẽ bị bỏ qua khi tính.
                   </span>
                 </div>
@@ -942,7 +942,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <h2 className="text-[19px] font-black text-[#111827] m-0">
                     Sẵn sàng tính giá
                   </h2>
-                  <p className="text-[14.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
+                  <p className="text-[14.5px] text-[#334155] mt-[2px] mr-0 mb-0 ml-0">
                     Nhập trọng lượng — giá tự động cập nhật, hoặc bấm tính ngay
                   </p>
                 </div>
@@ -952,7 +952,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                 type="button"
                 onClick={handleCalculate}
                 disabled={isCalculating}
-                className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[18px] font-extrabold shadow-none transition-[all_0.2s_ease]', isCalculating ? 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
+                className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[18px] font-extrabold shadow-none transition-[all_0.2s_ease]', isCalculating ? 'bg-[#e2e8f0] text-[#334155] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
               >
                 {isCalculating ? 'Đang tính giá...' : 'Tính giá ngay'}
               </button>
@@ -970,7 +970,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   <h2 className="text-[19px] font-black text-[#111827] m-0">
                     Tổng báo giá đề xuất
                   </h2>
-                  <p className="text-[14.5px] text-[#6b7280] mt-[2px] mr-0 mb-0 ml-0">
+                  <p className="text-[14.5px] text-[#334155] mt-[2px] mr-0 mb-0 ml-0">
                     Đã tính theo thông số hiện tại
                   </p>
                 </div>
@@ -1056,7 +1056,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                         options: priceOptions,
                       });
                     }}
-                    className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[18px] font-extrabold shadow-none transition-[all_0.2s_ease]', (isCalculating || quotedPrice === null) ? 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
+                    className={clsx('w-full border border-[#cbd5e1] rounded-[12px] p-[16px] text-[18px] font-extrabold shadow-none transition-[all_0.2s_ease]', (isCalculating || quotedPrice === null) ? 'bg-[#e2e8f0] text-[#334155] cursor-not-allowed opacity-70' : 'bg-[#f1f5f9] text-[#334155] cursor-pointer opacity-100')}
                   >
                     {isCalculating ? 'Đang tính toán...' : 'Tạo Đơn Với Giá Này →'}
                   </button>
@@ -1089,7 +1089,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
 const BreakdownRow: React.FC<{ label: string; value: number; accent?: string }> = ({ label, value, accent }) => (
   <div className="flex items-baseline justify-between">
     <span
-      className={clsx('text-[15px]', accent ? 'font-bold' : 'font-normal text-[#6b7280]')}
+      className={clsx('text-[15px]', accent ? 'font-bold' : 'font-normal text-[#334155]')}
       // động — giữ inline
       style={accent ? { color: accent } : undefined}
     >

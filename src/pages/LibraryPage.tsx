@@ -167,7 +167,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         <div className="flex items-center gap-[10px] flex-wrap">
           {/* Search Input */}
           <div className="relative w-[260px]">
-            <Search size={15} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#64748b]" />
+            <Search size={15} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#334155]" />
             <input
               type="text"
               placeholder="Tìm kiếm sản phẩm ..."
@@ -323,7 +323,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       {/* Product Cards Grid: 5 Columns */}
       <div className="grid grid-cols-5 gap-[16px]">
         {loading ? (
-          <div className="col-span-full text-center text-[#64748b] p-[40px]">
+          <div className="col-span-full text-center text-[#334155] p-[40px]">
             Đang tải dữ liệu sản phẩm...
           </div>
         ) : products.length > 0 ? (
@@ -395,12 +395,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       </div>
                     )}
                     {/* {item.livePriceMaterialMin != null && (
-                      <div className="text-[14px] font-semibold text-[#64748b]">
+                      <div className="text-[14px] font-semibold text-[#334155]">
                         Giá chất liệu: {formatPriceRange(item.livePriceMaterialMin, item.livePriceMaterialMax, item.livePriceMaterialMin)}
                       </div>
                     )}
                     {item.livePriceStoneMin != null && item.livePriceStoneMax != null && item.livePriceStoneMax > 0 && (
-                      <div className="text-[14px] font-semibold text-[#64748b]">
+                      <div className="text-[14px] font-semibold text-[#334155]">
                         Giá đá: {formatPriceRange(item.livePriceStoneMin, item.livePriceStoneMax, item.livePriceStoneMin)}
                       </div>
                     )} */}
@@ -416,7 +416,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       </div>
                     )}
                     <div>
-                      <strong className="text-[#334155]">Đá quý:</strong> <span className={item.stoneDisplay === 'Không đính đá' ? 'text-[#64748b] font-medium' : 'text-text font-bold'}>{item.stoneDisplay}</span>
+                      <strong className="text-[#334155]">Đá quý:</strong> <span className={item.stoneDisplay === 'Không đính đá' ? 'text-[#334155] font-medium' : 'text-text font-bold'}>{item.stoneDisplay}</span>
                     </div>
                   </div>
                 </div>
@@ -424,7 +424,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             );
           })
         ) : (
-          <div className="col-span-full text-center text-[#64748b] p-[40px]">
+          <div className="col-span-full text-center text-[#334155] p-[40px]">
             Chưa có sản phẩm nào trong thư viện
           </div>
         )}

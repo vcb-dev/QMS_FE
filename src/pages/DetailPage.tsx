@@ -598,7 +598,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             </div>
 
             <div className="bg-surface rounded-[12px] p-[16px] border border-[#e5e7eb] mt-[4px]">
-              <span className="text-[13.5px] font-extrabold text-[#6b7280] tracking-[0.5px] uppercase block">
+              <span className="text-[13.5px] font-extrabold text-[#334155] tracking-[0.5px] uppercase block">
                 TỔNG BÁO GIÁ CHỐT
               </span>
               <div
@@ -607,7 +607,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   priceVal > 0
                     ? (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'
                         ? 'text-[#16a34a] not-italic opacity-100'
-                        : 'text-[#64748b] italic opacity-75')
+                        : 'text-[#334155] italic opacity-75')
                     : 'text-[#d97706] not-italic opacity-100',
                 )}
               >
@@ -619,7 +619,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               
               {/* Sale chỉ cần biết có VAT hay không, không cần xem % chi tiết (ORDER/ADMIN mới xem chi tiết bên dưới) */}
               {priceVal > 0 && currentRole === 'SALE' && finalOption && finalOption.vat != null && (
-                <div className={clsx('mt-[8px] text-[14.5px] font-bold', finalOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#64748b]')}>
+                <div className={clsx('mt-[8px] text-[14.5px] font-bold', finalOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#334155]')}>
                   {finalOption.vat > 0 ? 'Có VAT' : 'Không VAT'}
                 </div>
               )}
@@ -703,7 +703,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     <SpecRow label="VAT" value={`${finalOption.vat}%`} />
                   )}
                   {finalOption.totalMetalCost != null && finalOption.metalRawCost == null && (finalOption.laborCost != null || finalOption.vat != null) && (
-                    <div className="text-[13.5px] text-[#64748b] italic mt-[2px]">
+                    <div className="text-[13.5px] text-[#334155] italic mt-[2px]">
                       {finalOption.laborCost != null && `Trong đó tiền công vốn: ${formatCurrency(Number(finalOption.laborCost))}`}
                       {finalOption.laborCost != null && finalOption.vat != null && ' · '}
                       {finalOption.vat != null && `VAT ${finalOption.vat}%`}
@@ -759,7 +759,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               {/* Ranh giới rõ ràng hơn giữa mối quan tâm của khách hàng (trên) và dữ liệu xử lý nội
                   bộ (dưới) — nhãn nhóm riêng thay vì chỉ 1 divider mảnh như giữa các field cùng nhóm. */}
               <div className="mt-[4px] pt-[14px] border-t border-border">
-                <span className="text-[13px] font-extrabold text-[#64748b] uppercase tracking-[0.6px]">
+                <span className="text-[13px] font-extrabold text-[#334155] uppercase tracking-[0.6px]">
                   Xử Lý Nội Bộ
                 </span>
               </div>
@@ -796,7 +796,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                           'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.\n' +
                           'Từ chối sau: từ lúc tiếp nhận đến lúc từ chối.'
                         }
-                        className="inline-flex cursor-help text-[#64748b]"
+                        className="inline-flex cursor-help text-[#334155]"
                       >
                         <HelpCircle size={12} />
                       </span>

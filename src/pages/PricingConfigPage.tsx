@@ -62,7 +62,7 @@ const PanelSection: React.FC<{ title: string; action?: React.ReactNode; children
 const RuleCard: React.FC<{ title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode; icon?: LucideIcon }> = ({ title, subtitle, action, children, icon }) => (
   <div className="border border-[#e5e7eb] rounded-[12px] p-[18px]">
     <SectionHeader title={title} action={action} icon={icon} />
-    {subtitle && <p className="text-[14.5px] text-[#64748b] -mt-[6px] mr-0 mb-[12px] ml-0">{subtitle}</p>}
+    {subtitle && <p className="text-[14.5px] text-[#334155] -mt-[6px] mr-0 mb-[12px] ml-0">{subtitle}</p>}
     {children}
   </div>
 );
@@ -102,7 +102,7 @@ const ConfirmCancelButtons: React.FC<{ onConfirm: () => void; onCancel: () => vo
 const ValueDisplay: React.FC<{ value: number; unit?: string; dirty?: boolean }> = ({ value, unit, dirty }) => (
   <div className={clsx(valueBoxCls, 'flex items-baseline gap-[6px]')}>
     <span className={clsx('font-extrabold text-[15.5px]', dirty ? 'text-[#b45309]' : 'text-[#0f172a]')}>{formatNumberVN(value)}</span>
-    {unit && <span className="text-[14px] font-bold text-[#64748b]">{unit}</span>}
+    {unit && <span className="text-[14px] font-bold text-[#334155]">{unit}</span>}
   </div>
 );
 
@@ -792,7 +792,7 @@ export const PricingConfigPage: React.FC = () => {
                         );
                       })}
                       {materials.length === 0 && (
-                        <tr><td colSpan={5} className="p-[14px] text-center text-[#64748b]">Chưa có chất liệu nào</td></tr>
+                        <tr><td colSpan={5} className="p-[14px] text-center text-[#334155]">Chưa có chất liệu nào</td></tr>
                       )}
                       {addingMaterial && (
                         <tr className={pcpAddRowCls}>
@@ -954,7 +954,7 @@ export const PricingConfigPage: React.FC = () => {
                               const multError = mult < 0 ? 'Không được âm' : null;
                               return (
                                 <tr key={idx} className="border-b border-[#f1f5f9]">
-                                  <td className={clsx(tdCls, 'text-[#64748b] font-bold')}>{idx + 1}</td>
+                                  <td className={clsx(tdCls, 'text-[#334155] font-bold')}>{idx + 1}</td>
                                   <td className={tdCls}>
                                     {isEditing ? (
                                       <div className="flex flex-col gap-[2px]">
@@ -975,7 +975,7 @@ export const PricingConfigPage: React.FC = () => {
                               );
                             })}
                             {(f.config.multipliers || []).length === 0 && (
-                              <tr><td colSpan={3} className="p-[14px] text-center text-[#64748b]">Chưa có hệ số nào</td></tr>
+                              <tr><td colSpan={3} className="p-[14px] text-center text-[#334155]">Chưa có hệ số nào</td></tr>
                             )}
                           </tbody>
                         </table>
@@ -1000,7 +1000,7 @@ export const PricingConfigPage: React.FC = () => {
                                   <td className={tdCls}>
                                     {isEditing ? (
                                       <div className="flex items-center gap-[8px]">
-                                        <label className="flex items-center gap-[4px] text-[13px] text-[#6b7280] font-bold cursor-pointer shrink-0 whitespace-nowrap">
+                                        <label className="flex items-center gap-[4px] text-[13px] text-[#334155] font-bold cursor-pointer shrink-0 whitespace-nowrap">
                                           <input type="checkbox" checked={isUnlimited} onChange={(e) => updateTier(f.id, idx, { maxCost: e.target.checked ? UNLIMITED_MAX_COST : 0 })} />
                                           Không giới hạn
                                         </label>
@@ -1027,7 +1027,7 @@ export const PricingConfigPage: React.FC = () => {
                               );
                             })}
                             {(f.config.tiers || []).length === 0 && (
-                              <tr><td colSpan={3} className="p-[14px] text-center text-[#64748b]">Chưa có bậc lợi nhuận nào</td></tr>
+                              <tr><td colSpan={3} className="p-[14px] text-center text-[#334155]">Chưa có bậc lợi nhuận nào</td></tr>
                             )}
                           </tbody>
                         </table>
@@ -1064,7 +1064,7 @@ export const PricingConfigPage: React.FC = () => {
                   <Wrench size={15} className="text-[#334155] shrink-0" />
                   <div>
                     <h3 className="text-[16.5px] font-extrabold text-[#0f172a] m-0">Tiền công / VAT</h3>
-                    <p className="text-[14px] text-[#64748b] m-0 mt-[2px]">Theo danh mục sản phẩm</p>
+                    <p className="text-[14px] text-[#334155] m-0 mt-[2px]">Theo danh mục sản phẩm</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => setAddingCategory(true)} className={clsx(pcpIconBtnCls, pcpIconBtnEditCls)} title="Thêm danh mục">
@@ -1093,7 +1093,7 @@ export const PricingConfigPage: React.FC = () => {
                       onConfirmAdd={handleAddCategory}
                     />
                     {categories.length === 0 && !addingCategory && (
-                      <div className="py-[10px] px-0 text-center text-[#64748b] text-[15px]">Chưa có danh mục sản phẩm nào</div>
+                      <div className="py-[10px] px-0 text-center text-[#334155] text-[15px]">Chưa có danh mục sản phẩm nào</div>
                     )}
                     {totalPages > 1 && (
                       <div className="flex items-center justify-end gap-[8px] mt-[12px]">
@@ -1185,7 +1185,7 @@ const CategoryTable: React.FC<{
         return (
           <div key={c.id} className={clsx('flex flex-col gap-[6px] py-[9px] px-0 border-b border-[#f1f5f9]', markedDelete ? 'bg-[#fef2f2]' : isDirty ? 'bg-[#fffbeb]' : '')}>
             <div className="flex items-center justify-between gap-[8px]">
-              <span className={clsx('text-[15.5px] font-bold', markedDelete ? 'text-[#64748b] line-through' : 'text-[#334155]')}>{c.name}</span>
+              <span className={clsx('text-[15.5px] font-bold', markedDelete ? 'text-[#334155] line-through' : 'text-[#334155]')}>{c.name}</span>
               <div className="flex items-center gap-[6px] shrink-0">
                 <EditIconButton onClick={() => onToggleEdit(c.id)} active={isEditing} title={markedDelete ? undefined : (isEditing ? 'Đóng sửa' : 'Sửa')} />
                 <DeleteIconButton onClick={() => onToggleDelete(c.id)} marked={markedDelete} />
@@ -1193,7 +1193,7 @@ const CategoryTable: React.FC<{
             </div>
             <div className="flex items-center gap-[8px]">
               <div className="flex-1">
-                <label className="text-[12.5px] text-[#64748b] font-bold block mb-[2px]">Tiền công</label>
+                <label className="text-[12.5px] text-[#334155] font-bold block mb-[2px]">Tiền công</label>
                 {isEditing && !markedDelete ? (
                   <MoneyField value={c.laborCost || 0} onChange={(v) => onLaborCostChange(c.id, v)} width="100%" />
                 ) : (
@@ -1201,7 +1201,7 @@ const CategoryTable: React.FC<{
                 )}
               </div>
               <div className="w-[70px] shrink-0">
-                <label className="text-[12.5px] text-[#64748b] font-bold block mb-[2px]">VAT</label>
+                <label className="text-[12.5px] text-[#334155] font-bold block mb-[2px]">VAT</label>
                 {isEditing && !markedDelete ? (
                   <PercentField value={c.vatRate || 0} onChange={(v) => onVatRateChange(c.id, v)} width="100%" />
                 ) : (
@@ -1279,9 +1279,9 @@ const StoneGroupTable: React.FC<{
               const isEditing = editingIds.includes(s.id);
               return (
                 <tr key={s.id} className={clsx('border-b border-[#f1f5f9]', markedDelete ? 'bg-[#fef2f2]' : isDirty ? 'bg-[#fffbeb]' : '')}>
-                  <td className={clsx(tdCls, 'font-extrabold', markedDelete ? 'line-through text-[#64748b]' : 'text-[#0f172a]')}>{s.name}</td>
-                  <td className={clsx(tdCls, markedDelete && 'text-[#64748b]')}>{s.cut || '—'}</td>
-                  <td className={clsx(tdCls, markedDelete && 'text-[#64748b]')}>{s.size || '—'}</td>
+                  <td className={clsx(tdCls, 'font-extrabold', markedDelete ? 'line-through text-[#334155]' : 'text-[#0f172a]')}>{s.name}</td>
+                  <td className={clsx(tdCls, markedDelete && 'text-[#334155]')}>{s.cut || '—'}</td>
+                  <td className={clsx(tdCls, markedDelete && 'text-[#334155]')}>{s.size || '—'}</td>
                   <td className={tdCls}>
                     {isEditing && !markedDelete ? (
                       <MoneyField value={s.price} onChange={(v) => onPriceChange(s.id, v)} width="160px" />
@@ -1299,7 +1299,7 @@ const StoneGroupTable: React.FC<{
               );
             })}
             {items.length === 0 && !adding && (
-              <tr><td colSpan={5} className="p-[14px] text-center text-[#64748b]">Chưa có đá nào</td></tr>
+              <tr><td colSpan={5} className="p-[14px] text-center text-[#334155]">Chưa có đá nào</td></tr>
             )}
             {adding && (
               <tr className={pcpAddRowCls}>

@@ -231,7 +231,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
             <h1 className="text-[22px] font-extrabold text-[#1f2937] m-0">
               {modeCopy[mode].title}
             </h1>
-            <p className="text-[15px] text-[#9ca3af] mt-[4px] mr-0 mb-0 ml-0 tracking-[0.3px]">
+            <p className="text-[15px] text-[#64748b] mt-[4px] mr-0 mb-0 ml-0 tracking-[0.3px]">
               {modeCopy[mode].subtitle}
             </p>
           </div>
@@ -287,7 +287,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
                       title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                      className="absolute right-[12px] bg-transparent border-0 text-[#9ca3af] cursor-pointer flex"
+                      className="absolute right-[12px] bg-transparent border-0 text-[#64748b] cursor-pointer flex"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -314,7 +314,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
               <div className="mt-[20px] flex flex-col gap-[16px]">
                 <div className="flex items-center gap-[10px]">
                   <div className="flex-1 h-[1px] bg-[#e5e7eb]"></div>
-                  <span className="text-[15px] text-[#9ca3af] font-semibold">HOẶC</span>
+                  <span className="text-[15px] text-[#64748b] font-semibold">HOẶC</span>
                   <div className="flex-1 h-[1px] bg-[#e5e7eb]"></div>
                 </div>
 
@@ -343,7 +343,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                 </button>
               </div>
 
-              <p className="text-center text-[15.5px] text-[#9ca3af] mt-[24px]">
+              <p className="text-center text-[15.5px] text-[#64748b] mt-[24px]">
                 Chưa có tài khoản?{' '}
                 <button
                   type="button"
@@ -397,7 +397,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 3. FORGOT PASSWORD FORM */}
           {mode === 'forgot' && (
             <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-[16px]">
-              <p className="text-[16px] text-[#6b7280] leading-[1.5] m-0 text-center">
+              <p className="text-[16px] text-[#334155] leading-[1.5] m-0 text-center">
                 Nhập email tài khoản của bạn. Hệ thống sẽ cấp mã xác thực OTP (6 chữ số) để đặt lại mật khẩu mới.
               </p>
 
@@ -417,7 +417,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
           {/* 4. RESET PASSWORD FORM */}
           {mode === 'reset' && (
             <form onSubmit={handleResetPasswordSubmit} className="flex flex-col gap-[14px]">
-              <p className="text-[16px] text-[#6b7280] leading-[1.5] m-0 text-center">
+              <p className="text-[16px] text-[#334155] leading-[1.5] m-0 text-center">
                 Nhập mã OTP 6 chữ số vừa nhận được và thiết lập mật khẩu mới của bạn.
               </p>
 

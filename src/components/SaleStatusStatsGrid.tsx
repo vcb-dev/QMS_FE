@@ -46,7 +46,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
 
   const renderChange = (currVal: number, prevVal: number) => {
     if (prevVal === 0) {
-      if (currVal === 0) return <span className="text-[14px] font-bold text-[#64748b]">0%</span>;
+      if (currVal === 0) return <span className="text-[14px] font-bold text-[#334155]">0%</span>;
       return (
         <span className="inline-flex items-center gap-[3px] text-[14px] font-extrabold text-[#2563eb]">
           <Sparkles size={11} /> Mới
@@ -60,7 +60,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
       <span
         className={clsx(
           "inline-flex items-center gap-[3px] text-[14px] font-extrabold",
-          isFlat ? "text-[#64748b]" : isUp ? "text-[#16a34a]" : "text-[#dc2626]"
+          isFlat ? "text-[#334155]" : isUp ? "text-[#16a34a]" : "text-[#dc2626]"
         )}
       >
         {!isFlat && (isUp ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
@@ -124,7 +124,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
             </div>
             <div className="flex items-center gap-[5px]">
               {renderChange(current[item.key] ?? 0, previous[item.key] ?? 0)}
-              <span className="text-[13.5px] text-[#64748b]">so với {periodLabel}</span>
+              <span className="text-[13.5px] text-[#334155]">so với {periodLabel}</span>
             </div>
           </div>
         ))}
