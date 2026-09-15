@@ -153,10 +153,10 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       {/* Header Title */}
       <div className="flex justify-between items-start gap-[12px]">
         <div>
-          <h1 className="text-[24px] font-black text-[#0f172a] m-0 tracking-[-0.3px]">
+          <h1 className="text-[25px] font-black text-[#0f172a] m-0 tracking-[-0.3px]">
             {currentRole === 'SALE' ? 'Thư Viện Sản Phẩm' : 'Quản Lý Sản Phẩm'}
           </h1>
-          <p className="text-[13px] text-[#64748b] mt-[4px] mb-0 mx-0">
+          <p className="text-[14px] text-[#334155] mt-[4px] mb-0 mx-0">
             Xếp hạng sản phẩm đã báo giá cho khách theo giá, mốc thời gian và phân loại
           </p>
         </div>
@@ -167,13 +167,13 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         <div className="flex items-center gap-[10px] flex-wrap">
           {/* Search Input */}
           <div className="relative w-[260px]">
-            <Search size={15} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#94a3b8]" />
+            <Search size={15} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#64748b]" />
             <input
               type="text"
               placeholder="Tìm kiếm sản phẩm ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-surface border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[12px] pb-[7px] pl-[36px] text-[12.5px] text-[#0f172a] outline-none box-border"
+              className="w-full bg-surface border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[12px] pb-[7px] pl-[36px] text-[13.5px] text-[#0f172a] outline-none box-border"
             />
           </div>
 
@@ -182,12 +182,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             <button
               type="button"
               onClick={() => setPanelOpen((v) => !v)}
-              className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[12.5px]')}
+              className={clsx(fbBtnCls, 'inline-flex items-center gap-[6px] py-[8px] px-[14px] text-[13.5px]')}
             >
               <SlidersHorizontal size={14} />
               Bộ lọc
               {panelFilterCount > 0 && (
-                <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[10.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
+                <span className="bg-[#cbd5e1] text-[#0f172a] rounded-full text-[11.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
                   {panelFilterCount}
                 </span>
               )}
@@ -299,7 +299,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             onClick={handleResetExtraFilters}
             disabled={!isExtraFiltered}
             title={isExtraFiltered ? 'Xóa tất cả bộ lọc' : 'Chưa có bộ lọc nào đang áp dụng'}
-            className={clsx(fbBtnCls, 'flex items-center gap-[4px] py-[8px] px-[14px] text-[12px] shrink-0')}
+            className={clsx(fbBtnCls, 'flex items-center gap-[4px] py-[8px] px-[14px] text-[13px] shrink-0')}
           >
             <RotateCcw size={13} /> Xóa bộ lọc
           </button>
@@ -309,7 +309,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         <select
           value={sortMode}
           onChange={(e) => setSortMode(e.target.value as SortModeLibrary)}
-          className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[12.5px] font-bold text-[#0f172a] outline-none cursor-pointer min-w-[150px]"
+          className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[13.5px] font-bold text-[#0f172a] outline-none cursor-pointer min-w-[150px]"
         >
           <option value="PRICE_DESC">Giá cao nhất</option>
           <option value="PRICE_ASC">Giá thấp nhất</option>
@@ -318,12 +318,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         </select>
       </div>
 
-      {error && <div className="text-[#dc2626] text-[13px] text-center">{error}</div>}
+      {error && <div className="text-[#dc2626] text-[14px] text-center">{error}</div>}
 
       {/* Product Cards Grid: 5 Columns */}
       <div className="grid grid-cols-5 gap-[16px]">
         {loading ? (
-          <div className="col-span-full text-center text-[#94a3b8] p-[40px]">
+          <div className="col-span-full text-center text-[#64748b] p-[40px]">
             Đang tải dữ liệu sản phẩm...
           </div>
         ) : products.length > 0 ? (
@@ -350,11 +350,11 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                   {(sortMode === 'PRICE_DESC' || sortMode === 'MOST_QUOTED') && (
-                    <span className="absolute top-[8px] left-[8px] bg-text text-surface text-[10px] font-extrabold py-[2px] px-[8px] rounded-[10px]">
+                    <span className="absolute top-[8px] left-[8px] bg-text text-surface text-[11px] font-extrabold py-[2px] px-[8px] rounded-[10px]">
                       #{(currentPage - 1) * pageSize + idx + 1}
                     </span>
                   )}
-                  <span className="absolute top-[8px] right-[8px] bg-[rgba(15,23,42,0.75)] backdrop-blur-[4px] text-surface text-[10px] font-bold py-[2px] px-[6px] rounded-[6px] tabular-nums">
+                  <span className="absolute top-[8px] right-[8px] bg-[rgba(15,23,42,0.75)] backdrop-blur-[4px] text-surface text-[11px] font-bold py-[2px] px-[6px] rounded-[6px] tabular-nums">
                     {item.code}
                   </span>
                 </div>
@@ -362,13 +362,13 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                 {/* Body Details */}
                 <div className="p-[14px] flex flex-col gap-[5px] flex-1">
                   <div className="flex items-center gap-[6px]">
-                    <h3 className="text-[13.5px] font-extrabold text-text m-0 truncate flex-1" title={item.productName}>
+                    <h3 className="text-[14.5px] font-extrabold text-text m-0 truncate flex-1" title={item.productName}>
                       {item.productName}
                     </h3>
                     {item.duplicateCount && item.duplicateCount > 1 && (
                       <span
                         title={`Đã báo giá ${item.duplicateCount} lần cho mẫu này`}
-                        className="shrink-0 text-[10px] font-extrabold text-[#0369a1] bg-[#e0f2fe] py-[2px] px-[6px] rounded-[8px]"
+                        className="shrink-0 text-[11px] font-extrabold text-[#0369a1] bg-[#e0f2fe] py-[2px] px-[6px] rounded-[8px]"
                       >
                         ×{item.duplicateCount}
                       </span>
@@ -376,47 +376,47 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                   </div>
 
                   <div className="mt-[1px]">
-                    <div className="text-[15px] font-black text-text">
+                    <div className="text-[16px] font-black text-text">
                       {formatPriceRange(item.priceMin, item.priceMax, displayPrice(item.option))}
                     </div>
                     {/* {item.priceMaterialMin != null && (
-                      <div className="text-[11px] font-semibold text-[#64748b]">
+                      <div className="text-[12px] font-semibold text-[#334155]">
                         Giá chất liệu: {formatPriceRange(item.priceMaterialMin, item.priceMaterialMax, item.priceMaterialMin)}
                       </div>
                     )}
                     {item.priceStoneMin != null && item.priceStoneMax != null && item.priceStoneMax > 0 && (
-                      <div className="text-[11px] font-semibold text-[#64748b]">
+                      <div className="text-[12px] font-semibold text-[#334155]">
                         Giá đá: {formatPriceRange(item.priceStoneMin, item.priceStoneMax, item.priceStoneMin)}
                       </div>
                     )} */}
                     {item.livePriceMin != null && item.livePriceMax != null && (
-                      <div className="text-[11.5px] font-bold text-[#0369a1] mt-[1px]">
+                      <div className="text-[12.5px] font-bold text-[#0369a1] mt-[1px]">
                         Hôm nay ~ {formatPriceRange(item.livePriceMin, item.livePriceMax, item.livePriceMax)}
                       </div>
                     )}
                     {/* {item.livePriceMaterialMin != null && (
-                      <div className="text-[11px] font-semibold text-[#94a3b8]">
+                      <div className="text-[12px] font-semibold text-[#64748b]">
                         Giá chất liệu: {formatPriceRange(item.livePriceMaterialMin, item.livePriceMaterialMax, item.livePriceMaterialMin)}
                       </div>
                     )}
                     {item.livePriceStoneMin != null && item.livePriceStoneMax != null && item.livePriceStoneMax > 0 && (
-                      <div className="text-[11px] font-semibold text-[#94a3b8]">
+                      <div className="text-[12px] font-semibold text-[#64748b]">
                         Giá đá: {formatPriceRange(item.livePriceStoneMin, item.livePriceStoneMax, item.livePriceStoneMin)}
                       </div>
                     )} */}
                   </div>
 
-                  <div className="text-[11.5px] text-[#475569] mt-[4px] flex flex-col gap-[3px] leading-[1.4]">
+                  <div className="text-[12.5px] text-[#475569] mt-[4px] flex flex-col gap-[3px] leading-[1.4]">
                     <div>
-                      <strong className="text-[#64748b]">Chất liệu:</strong> {item.matStr}
+                      <strong className="text-[#334155]">Chất liệu:</strong> {item.matStr}
                     </div>
                     {item.weightDisplay && (
                       <div>
-                        <strong className="text-[#64748b]">Khối lượng:</strong> <span className="font-bold text-text">{item.weightDisplay}</span>
+                        <strong className="text-[#334155]">Khối lượng:</strong> <span className="font-bold text-text">{item.weightDisplay}</span>
                       </div>
                     )}
                     <div>
-                      <strong className="text-[#64748b]">Đá quý:</strong> <span className={item.stoneDisplay === 'Không đính đá' ? 'text-[#94a3b8] font-medium' : 'text-text font-bold'}>{item.stoneDisplay}</span>
+                      <strong className="text-[#334155]">Đá quý:</strong> <span className={item.stoneDisplay === 'Không đính đá' ? 'text-[#64748b] font-medium' : 'text-text font-bold'}>{item.stoneDisplay}</span>
                     </div>
                   </div>
                 </div>
@@ -424,7 +424,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             );
           })
         ) : (
-          <div className="col-span-full text-center text-[#94a3b8] p-[40px]">
+          <div className="col-span-full text-center text-[#64748b] p-[40px]">
             Chưa có sản phẩm nào trong thư viện
           </div>
         )}

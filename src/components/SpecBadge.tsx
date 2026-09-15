@@ -16,11 +16,11 @@ export const SpecBadge: React.FC<SpecBadgeProps> = ({ icon, label, value, fullWi
   <div
     className={clsx("bg-[#f8fafc] border border-[#e2e8f0] rounded-[10px] p-[12px]", fullWidth && "col-span-full")}
   >
-    <span className="text-[10.5px] font-extrabold text-[#64748b] uppercase flex items-center gap-[5px]">
+    <span className="text-[11.5px] font-extrabold text-[#334155] uppercase flex items-center gap-[5px]">
       {icon} {label}
     </span>
     {/* động — giữ inline */}
-    <strong className="text-[13px] text-[#0f172a] mt-[4px] block" style={valueStyle} title={title}>
+    <strong className="text-[14px] text-[#0f172a] mt-[4px] block" style={valueStyle} title={title}>
       {value}
     </strong>
   </div>

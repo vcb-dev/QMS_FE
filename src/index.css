@@ -5,8 +5,8 @@
   --color-page: #f8fafc;
   --color-border: #e2e8f0;
   --color-text: #0f172a;
-  --color-muted: #64748b;
-  --color-faint: #94a3b8;
+  --color-muted: #334155;
+  --color-faint: #64748b;
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
   --color-accent-gold: #d97706;
@@ -42,8 +42,8 @@
   --bg-surface: #ffffff;
   --border-color: #e2e8f0;
   --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-light: #94a3b8;
+  --text-muted: #334155;
+  --text-light: #64748b;
 
   --tone-blue-bg: #eff6ff;
   --tone-blue-text: #1d4ed8;

@@ -23,7 +23,7 @@ export function renderPriceBreakdownLines(
   opts?: { live?: boolean },
 ): React.ReactNode {
   if (!bd) return null;
-  const lineCls = `text-[11px] font-semibold leading-[15px] ${opts?.live ? 'text-[#94a3b8]' : 'text-[#64748b]'}`;
+  const lineCls = `text-[12px] font-semibold leading-[15px] ${opts?.live ? 'text-[#64748b]' : 'text-[#334155]'}`;
   return (
     <span className="flex flex-col">
       <span className={lineCls}>Giá chất liệu: {formatCurrency(bd.material)}</span>
