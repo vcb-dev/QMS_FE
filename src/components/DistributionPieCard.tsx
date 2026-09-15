@@ -19,8 +19,8 @@ interface DistributionPieCardProps {
 // "Phân bố theo danh mục" và "Phân bố theo chất liệu", chỉ khác tiêu đề/nguồn data.
 export const DistributionPieCard: React.FC<DistributionPieCardProps> = ({ title, subtitle, data }) => (
   <div className={cardCls}>
-    <h2 className="text-[15px] font-extrabold text-[#0f172a] m-0 mb-[4px]">{title}</h2>
-    <span className="text-[12px] text-[#334155]">{subtitle}</span>
+    <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0 mb-[4px]">{title}</h2>
+    <span className="text-[13px] text-[#334155]">{subtitle}</span>
 
     {data.length > 0 ? (
       <div className="flex flex-col items-center gap-[12px] mt-[8px]">
@@ -54,15 +54,15 @@ export const DistributionPieCard: React.FC<DistributionPieCardProps> = ({ title,
               <div className="flex items-center gap-[6px] min-w-0">
                 {/* động — giữ inline */}
                 <div className="w-[8px] h-[8px] rounded-[3px] shrink-0" style={{ background: d.fill }} />
-                <span className="text-[12px] text-[#475569] font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{d.name}</span>
+                <span className="text-[13px] text-[#475569] font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{d.name}</span>
               </div>
-              <span className="text-[13px] font-black text-[#0f172a] shrink-0">{d.value}</span>
+              <span className="text-[14px] font-black text-[#0f172a] shrink-0">{d.value}</span>
             </div>
           ))}
         </div>
       </div>
     ) : (
-      <div className="text-center text-[#64748b] text-[13.5px] py-[24px]">Chưa có dữ liệu</div>
+      <div className="text-center text-[#64748b] text-[14.5px] py-[24px]">Chưa có dữ liệu</div>
     )}
   </div>
 );

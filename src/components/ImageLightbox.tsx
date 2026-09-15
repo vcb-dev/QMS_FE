@@ -103,7 +103,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
 
       {/* Thông tin số thứ tự ảnh & Hướng dẫn */}
       <span
-        className="fixed top-[24px] left-1/2 -translate-x-1/2 text-[rgba(255,255,255,0.9)] text-[14px] font-bold bg-[rgba(0,0,0,0.5)] backdrop-blur-[4px] py-[6px] px-[16px] rounded-[20px] z-10 tracking-[0.3px]"
+        className="fixed top-[24px] left-1/2 -translate-x-1/2 text-[rgba(255,255,255,0.9)] text-[15px] font-bold bg-[rgba(0,0,0,0.5)] backdrop-blur-[4px] py-[6px] px-[16px] rounded-[20px] z-10 tracking-[0.3px]"
       >
         {images.length > 1 ? `Ảnh ${currentIdx + 1}/${images.length} · ` : ''}
         Lăn chuột để zoom ({Math.round(zoomScale * 100)}%){zoomScale > 1 ? ' · Kéo để xem các góc ảnh' : ''}

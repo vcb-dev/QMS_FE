@@ -46,9 +46,9 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
 
   const renderChange = (currVal: number, prevVal: number) => {
     if (prevVal === 0) {
-      if (currVal === 0) return <span className="text-[12px] font-bold text-[#64748b]">0%</span>;
+      if (currVal === 0) return <span className="text-[13px] font-bold text-[#64748b]">0%</span>;
       return (
-        <span className="inline-flex items-center gap-[3px] text-[12px] font-extrabold text-[#2563eb]">
+        <span className="inline-flex items-center gap-[3px] text-[13px] font-extrabold text-[#2563eb]">
           <Sparkles size={11} /> Mới
         </span>
       );
@@ -59,7 +59,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
     return (
       <span
         className={clsx(
-          "inline-flex items-center gap-[3px] text-[12px] font-extrabold",
+          "inline-flex items-center gap-[3px] text-[13px] font-extrabold",
           isFlat ? "text-[#64748b]" : isUp ? "text-[#16a34a]" : "text-[#dc2626]"
         )}
       >
@@ -79,7 +79,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
       )}
     >
       <div className="flex items-center justify-between mb-[16px]">
-        <h2 className="text-[15px] font-extrabold text-[#0f172a] m-0">
+        <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0">
           Số lượng yêu cầu theo trạng thái
         </h2>
         <div className="flex border border-[#cbd5e1] rounded-[8px] overflow-hidden">
@@ -87,7 +87,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
             type="button"
             onClick={() => setPeriod('WEEK')}
             className={clsx(
-              "px-[14px] py-[6px] text-[13px] font-bold border-none cursor-pointer",
+              "px-[14px] py-[6px] text-[14px] font-bold border-none cursor-pointer",
               period === 'WEEK' ? "bg-[#e2e8f0] text-[#0f172a]" : "bg-white text-[#334155]"
             )}
           >
@@ -97,7 +97,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
             type="button"
             onClick={() => setPeriod('MONTH')}
             className={clsx(
-              "px-[14px] py-[6px] text-[13px] font-bold border-none cursor-pointer",
+              "px-[14px] py-[6px] text-[14px] font-bold border-none cursor-pointer",
               period === 'MONTH' ? "bg-[#e2e8f0] text-[#0f172a]" : "bg-white text-[#334155]"
             )}
           >
@@ -116,15 +116,15 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
               onSelectStatus ? "cursor-pointer" : "cursor-default"
             )}
           >
-            <div className="text-[12px] font-bold text-[#334155] uppercase tracking-[0.3px] mb-[6px]">
+            <div className="text-[13px] font-bold text-[#334155] uppercase tracking-[0.3px] mb-[6px]">
               {item.label}
             </div>
-            <div className="text-[25px] font-black text-[#0f172a] mb-[4px]">
+            <div className="text-[26px] font-black text-[#0f172a] mb-[4px]">
               {current[item.key]}
             </div>
             <div className="flex items-center gap-[5px]">
               {renderChange(current[item.key] ?? 0, previous[item.key] ?? 0)}
-              <span className="text-[11.5px] text-[#64748b]">so với {periodLabel}</span>
+              <span className="text-[12.5px] text-[#64748b]">so với {periodLabel}</span>
             </div>
           </div>
         ))}

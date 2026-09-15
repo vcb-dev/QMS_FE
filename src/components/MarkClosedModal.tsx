@@ -67,7 +67,7 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
         </div>
 
         <div className={modalBodyCls}>
-          <p className="text-[13.5px] text-[#334155] m-0 mb-[12px]">
+          <p className="text-[14.5px] text-[#334155] m-0 mb-[12px]">
             Yêu cầu này có {options.length} phương án đã báo giá — chọn đúng phương án khách đồng ý mua trước khi đánh dấu Đã Chốt.
           </p>
           <div className="flex flex-col gap-[8px]">
@@ -87,16 +87,16 @@ export const MarkClosedModal: React.FC<MarkClosedModalProps> = ({ isOpen, reqCod
                   )}
                 >
                   <span className="flex flex-col gap-[3px]">
-                    <span className="text-[14.5px] font-bold text-[#0f172a]">{label}</span>
+                    <span className="text-[15.5px] font-bold text-[#0f172a]">{label}</span>
                     {summary && (
-                      <span className="text-[12.5px] text-[#334155] font-semibold">
+                      <span className="text-[13.5px] text-[#334155] font-semibold">
                         {summary}
                       </span>
                     )}
                   </span>
                   <span className="flex items-center gap-[8px] shrink-0">
                     <div className="flex flex-col items-end">
-                      <strong className="text-[15px] font-black text-[#16a34a]">
+                      <strong className="text-[16px] font-black text-[#16a34a]">
                         {formatCurrency(Number(opt.quotedPrice))}
                       </strong>
                       {renderPriceBreakdownLines(getPriceBreakdown(opt))}
