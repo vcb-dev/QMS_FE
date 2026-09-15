@@ -606,10 +606,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       >
         <div className={clsx(modalHeaderCls, '!py-[16px] !px-[20px]')}>
           <div>
-            <h2 className="m-0 text-[19px] font-extrabold text-[#0f172a]">
+            <h2 className="m-0 text-[21px] font-extrabold text-[#0f172a]">
               Báo Giá Yêu Cầu {selectedReq?.code || ''}
             </h2>
-            <span className="text-[14px] text-muted">
+            <span className="text-[16px] text-muted">
               Khách: <strong>{selectedReq?.customer?.name || 'Khách vãng lai'}</strong> — Danh mục: <strong>{selectedReq?.category?.name || '---'}</strong>
             </span>
           </div>
@@ -628,17 +628,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             <div className="flex items-center justify-between mb-[12px]">
               <div className="flex items-center gap-[8px]">
                 <Layers size={18} color="#d97706" />
-                <h3 className="text-[17px] font-extrabold text-[#0f172a] m-0">
+                <h3 className="text-[19px] font-extrabold text-[#0f172a] m-0">
                   Các Phương Án Báo Giá ({primaryEntries.length})
                 </h3>
               </div>
-              <span className="text-[13.5px] text-muted">
+              <span className="text-[15.5px] text-muted">
                 Chọn 1 phương án làm giá chính để chốt
               </span>
             </div>
 
             {primaryEntries.length === 0 ? (
-              <div className="bg-[#f8fafc] p-[16px] rounded-[10px] text-center text-muted text-[15px]">
+              <div className="bg-[#f8fafc] p-[16px] rounded-[10px] text-center text-muted text-[17px]">
                 Chưa có phương án nào. Hãy dùng bảng máy tính bên dưới và bấm <strong>"Tính Giá Ngay"</strong> — phương án sẽ tự hiện lên đây.
               </div>
             ) : (
@@ -666,15 +666,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             className="w-[16px] h-[16px] accent-[#16a34a] cursor-pointer"
                           />
                           <div className="min-w-0">
-                            <div className="text-[15.5px] font-extrabold text-[#0f172a]">
+                            <div className="text-[17.5px] font-extrabold text-[#0f172a]">
                               {opt.optionName || `Phương án ${idx + 1}`}
                               {opt.isSelected && (
-                                <span className="ml-[8px] bg-[#16a34a] text-surface text-[12px] font-extrabold py-[2px] px-[8px] rounded-[20px]">
+                                <span className="ml-[8px] bg-[#16a34a] text-surface text-[14px] font-extrabold py-[2px] px-[8px] rounded-[20px]">
                                   ĐÃ CHỌN LÀM GIÁ CHÍNH
                                 </span>
                               )}
                             </div>
-                            <div className="text-[14px] text-muted mt-[2px]">
+                            <div className="text-[16px] text-muted mt-[2px]">
                               {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
                               {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
                               {opt.vat != null ? ` · VAT ${opt.vat}%` : ''}
@@ -684,7 +684,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                         <div className="flex items-center gap-[12px] shrink-0">
                         <div className="flex flex-col items-end">
-                          <strong className="text-[18px] font-black text-[#16a34a] tabular-nums">
+                          <strong className="text-[20px] font-black text-[#16a34a] tabular-nums">
                             {formatCurrency(opt.quotedPrice)}
                           </strong>
                           {renderPriceBreakdownLines(getPriceBreakdown(opt))}
@@ -707,7 +707,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           của phương án chính cùng cụm, chỉ để tham khảo, không có radio chọn. */}
                       {children.length > 0 && (
                         <div className="pt-0 pr-[14px] pb-[12px] pl-[40px] flex flex-col gap-[6px]">
-                          <span className="text-[12.5px] font-extrabold text-faint uppercase">
+                          <span className="text-[14.5px] font-extrabold text-faint uppercase">
                             Phương án đính kèm — chỉ tham khảo
                           </span>
                           {children.map(({ opt: childOpt, idx: childIdx }) => (
@@ -715,12 +715,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                               key={childIdx}
                               className="flex items-center justify-between gap-[8px] py-[6px] px-[10px] bg-surface border border-dashed border-[#cbd5e1] rounded-[8px]"
                             >
-                              <span className="text-[14px] font-bold text-muted min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                              <span className="text-[16px] font-bold text-muted min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                                 {childOpt.optionName || childOpt.materialName}
                               </span>
                               <div className="flex items-center gap-[8px] shrink-0">
                                 <div className="flex flex-col items-end">
-                                  <strong className="text-[15px] font-extrabold text-[#16a34a] tabular-nums">
+                                  <strong className="text-[17px] font-extrabold text-[#16a34a] tabular-nums">
                                     {formatCurrency(childOpt.quotedPrice)}
                                   </strong>
                                   {renderPriceBreakdownLines(getPriceBreakdown(childOpt))}
@@ -756,7 +756,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             >
               <div className="flex items-center gap-[8px]">
                 <Calculator size={18} color="#2563eb" />
-                <h3 className="text-[17px] font-extrabold text-[#0f172a] m-0">
+                <h3 className="text-[19px] font-extrabold text-[#0f172a] m-0">
                   Máy Tính Báo Giá / Tạo Phương Án Mới
                 </h3>
               </div>
@@ -782,7 +782,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       <button
                         type="button"
                         onClick={addMaterialRow}
-                        className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[13.5px] font-extrabold text-[#0f172a] cursor-pointer"
+                        className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[15.5px] font-extrabold text-[#0f172a] cursor-pointer"
                       >
                         <Plus size={13} /> Thêm chất liệu
                       </button>
@@ -808,7 +808,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
                           title={selectedReq ? 'Không thể đổi chất liệu Sale đã yêu cầu' : undefined}
                           className={clsx(
-                            'py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold',
+                            'py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[17px] font-bold',
                             selectedReq ? 'bg-[#f1f5f9] text-muted cursor-not-allowed' : 'bg-surface cursor-pointer'
                           )}
                         >
@@ -835,9 +835,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                               updateMaterialRow(row.id, { weightChi: v });
                             }}
                             placeholder="Số chỉ"
-                            className="w-full pt-[8px] pr-[38px] pb-[8px] pl-[10px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold bg-surface tabular-nums"
+                            className="w-full pt-[8px] pr-[38px] pb-[8px] pl-[10px] rounded-[8px] border border-[#cbd5e1] text-[17px] font-bold bg-surface tabular-nums"
                           />
-                          <span className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[13px] text-muted font-bold">
+                          <span className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[15px] text-muted font-bold">
                             chỉ
                           </span>
                         </div>
@@ -868,7 +868,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       <button
                         type="button"
                         onClick={addCompareRow}
-                        className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[13.5px] font-extrabold text-[#0f172a] cursor-pointer"
+                        className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[15.5px] font-extrabold text-[#0f172a] cursor-pointer"
                       >
                         <Plus size={13} /> Thêm phương án
                       </button>
@@ -876,7 +876,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </div>
 
                   {compareRows.length === 0 ? (
-                    <p className="text-[13.5px] text-faint m-0">
+                    <p className="text-[15.5px] text-faint m-0">
                       Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
                     </p>
                   ) : (
@@ -890,13 +890,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           )}
                         >
                           {autoGoldMode ? (
-                            <span className="py-[8px] px-[12px] text-[15px] font-bold text-[#0f172a]">{row.materialName}</span>
+                            <span className="py-[8px] px-[12px] text-[17px] font-bold text-[#0f172a]">{row.materialName}</span>
                           ) : (
                             <select
                               key={dbMaterials.length}
                               value={row.materialId}
                               onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
-                              className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold bg-surface cursor-pointer"
+                              className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[17px] font-bold bg-surface cursor-pointer"
                             >
                               {dbMaterials.map((mat) => (
                                 <option key={mat.id} value={mat.id}>
@@ -918,9 +918,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                                 updateCompareRow(row.id, { weightChi: v });
                               }}
                               placeholder="Số chỉ"
-                              className="w-full pt-[8px] pr-[38px] pb-[8px] pl-[10px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold bg-surface tabular-nums"
+                              className="w-full pt-[8px] pr-[38px] pb-[8px] pl-[10px] rounded-[8px] border border-[#cbd5e1] text-[17px] font-bold bg-surface tabular-nums"
                             />
-                            <span className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[13px] text-muted font-bold">
+                            <span className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[15px] text-muted font-bold">
                               chỉ
                             </span>
                           </div>
@@ -952,7 +952,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       value={formatNumberVN(calcLaborCost)}
                       onChange={(e) => setCalcLaborCost(e.target.value.replace(/\D/g, ''))}
                       placeholder="0"
-                      className="w-full py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold bg-surface"
+                      className="w-full py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[17px] font-bold bg-surface"
                     />
                   </div>
 
@@ -971,9 +971,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           if (v !== '' && parseFloat(v) < 0) return;
                           setCalcVat(v);
                         }}
-                        className="w-[65px] py-[8px] px-[10px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold bg-surface"
+                        className="w-[65px] py-[8px] px-[10px] rounded-[8px] border border-[#cbd5e1] text-[17px] font-bold bg-surface"
                       />
-                      <label className="text-[14px] text-[#334155] font-bold flex items-center gap-[4px] cursor-pointer">
+                      <label className="text-[16px] text-[#334155] font-bold flex items-center gap-[4px] cursor-pointer">
                         <input
                           type="checkbox"
                           checked={calcIncludeVat}
@@ -993,7 +993,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                     <select
                       value={calcSilverMultiplier}
                       onChange={(e) => setCalcSilverMultiplier(parseFloat(e.target.value) || 3)}
-                      className="py-[4px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] font-bold"
+                      className="py-[4px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[16.5px] font-bold"
                     >
                       {silverMultipliers.map((m) => (
                         <option key={m} value={m}>× {m}</option>
@@ -1014,7 +1014,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         type="button"
                         onClick={() => setCalcStoneMode('catalog')}
                         className={clsx(
-                          'py-[3px] px-[8px] rounded-[5px] text-[13px] font-bold cursor-pointer',
+                          'py-[3px] px-[8px] rounded-[5px] text-[15px] font-bold cursor-pointer',
                           calcStoneMode === 'catalog'
                             ? 'border border-[#0f172a] bg-[#0f172a] text-surface'
                             : 'border border-[#cbd5e1] bg-surface text-[#334155]'
@@ -1026,7 +1026,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         type="button"
                         onClick={() => setCalcStoneMode('manual')}
                         className={clsx(
-                          'py-[3px] px-[8px] rounded-[5px] text-[13px] font-bold cursor-pointer',
+                          'py-[3px] px-[8px] rounded-[5px] text-[15px] font-bold cursor-pointer',
                           calcStoneMode === 'manual'
                             ? 'border border-[#0f172a] bg-[#0f172a] text-surface'
                             : 'border border-[#cbd5e1] bg-surface text-[#334155]'
@@ -1045,7 +1045,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         onChange={(e) => setCalcManualStoneName(e.target.value)}
                         maxLength={200}
                         placeholder="Mô tả đá (VD: Kim cương 4.5 ly)"
-                        className="py-[7px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[14.5px]"
+                        className="py-[7px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[16.5px]"
                       />
                       <input
                         type="text"
@@ -1053,7 +1053,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         value={formatNumberVN(calcManualStonePrice)}
                         onChange={(e) => setCalcManualStonePrice(e.target.value.replace(/\D/g, ''))}
                         placeholder="Giá đá (₫)"
-                        className="py-[7px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] font-bold"
+                        className="py-[7px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[16.5px] font-bold"
                       />
                     </div>
                   ) : (
@@ -1063,7 +1063,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           <select
                             value={sRow.stoneType}
                             onChange={(e) => updateStoneRow(sRow.id, { stoneType: e.target.value as StoneRow['stoneType'], stoneId: '' })}
-                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14px]"
+                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[16px]"
                           >
                             <option value="">Loại đá</option>
                             <option value="MAIN">Đá chủ</option>
@@ -1074,7 +1074,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             disabled={!sRow.stoneType}
                             onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
                             className={clsx(
-                              'py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14px]',
+                              'py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[16px]',
                               sRow.stoneType ? 'bg-surface' : 'bg-[#f1f5f9]'
                             )}
                           >
@@ -1089,7 +1089,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             value={sRow.qty}
                             onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
                             placeholder="SL"
-                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14px] text-right font-bold"
+                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[16px] text-right font-bold"
                           />
                           <button
                             type="button"
@@ -1103,7 +1103,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       <button
                         type="button"
                         onClick={addStoneRow}
-                        className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[13.5px] font-bold text-primary cursor-pointer"
+                        className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[15.5px] font-bold text-primary cursor-pointer"
                       >
                         + Thêm loại đá
                       </button>
@@ -1114,7 +1114,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 {/* 4. Nút Tính Giá */}
                 <div className="flex justify-between items-center">
                   {calcError ? (
-                    <span className="text-[#dc2626] text-[14px] font-bold">{calcError}</span>
+                    <span className="text-[#dc2626] text-[16px] font-bold">{calcError}</span>
                   ) : <span />}
 
                   <button
@@ -1122,7 +1122,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                     onClick={handleRunCalculate}
                     disabled={calcLoading}
                     className={clsx(
-                      'bg-[linear-gradient(135deg,#fbbf24,#f59e0b)] text-[#78350f] border-0 rounded-[8px] py-[10px] px-[20px] text-[15px] font-extrabold cursor-pointer shadow-[0_2px_6px_rgba(245,158,11,0.3)]',
+                      'bg-[linear-gradient(135deg,#fbbf24,#f59e0b)] text-[#78350f] border-0 rounded-[8px] py-[10px] px-[20px] text-[17px] font-extrabold cursor-pointer shadow-[0_2px_6px_rgba(245,158,11,0.3)]',
                       calcLoading ? 'opacity-70' : 'opacity-100'
                     )}
                   >
@@ -1139,7 +1139,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="bg-surface border border-[#cbd5e1] rounded-[8px] py-[10px] px-[18px] text-[15px] font-bold text-[#475569] cursor-pointer"
+              className="bg-surface border border-[#cbd5e1] rounded-[8px] py-[10px] px-[18px] text-[17px] font-bold text-[#475569] cursor-pointer"
             >
               Đóng
             </button>
@@ -1152,7 +1152,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   : 'Xác nhận và gửi báo giá này'
               }
               className={clsx(
-                'text-surface border-0 rounded-[8px] py-[10px] px-[24px] text-[15.5px] font-extrabold transition-[all_0.2s_ease]',
+                'text-surface border-0 rounded-[8px] py-[10px] px-[24px] text-[17.5px] font-extrabold transition-[all_0.2s_ease]',
                 !hasValidPrice
                   ? 'bg-[#94a3b8] cursor-not-allowed shadow-none'
                   : 'bg-[#0f172a] cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.25)]',

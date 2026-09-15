@@ -23,13 +23,13 @@ import {
 // Chip "✓ tên" cho chất liệu/đá đã chọn — dùng cho cả material và stone, khác nhau ở điều
 // kiện ẩn nút xóa (material dựa vào calculatorData.materials/materialType, stone dựa cả object).
 const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle?: string }> = ({ label, onRemove, removeTitle }) => (
-  <span className="bg-[#f1f5f9] border border-[#cbd5e1] text-[#334155] py-[4px] px-[10px] rounded-[16px] text-[13.5px] font-bold inline-flex items-center gap-[6px]">
+  <span className="bg-[#f1f5f9] border border-[#cbd5e1] text-[#334155] py-[4px] px-[10px] rounded-[16px] text-[15.5px] font-bold inline-flex items-center gap-[6px]">
     ✓ {label}
     {onRemove && (
       <button
         type="button"
         onClick={onRemove}
-        className="bg-transparent border-0 text-[#334155] cursor-pointer p-0 text-[14px] leading-[1] font-extrabold"
+        className="bg-transparent border-0 text-[#334155] cursor-pointer p-0 text-[16px] leading-[1] font-extrabold"
         title={removeTitle}
       >
         ✕
@@ -568,10 +568,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               className="h-[32px] object-contain"
             />
             <div>
-              <h2 id="modalCreateTitle" className="text-[20px] font-extrabold m-0 text-[#0f172a]">
+              <h2 id="modalCreateTitle" className="text-[22px] font-extrabold m-0 text-[#0f172a]">
                 Tạo Yêu Cầu Báo Giá Chế Tác Mới
               </h2>
-              <p className="text-[14px] text-muted mt-[2px] mr-0 mb-0 ml-0">
+              <p className="text-[16px] text-muted mt-[2px] mr-0 mb-0 ml-0">
                 Điền đầy đủ các trường thông tin chuẩn nghiệp vụ VCB để chuyển bộ phận Định Giá
               </p>
             </div>
@@ -590,7 +590,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             
             {/* Left Card: THÔNG TIN ĐƠN HÀNG */}
             <div className="bg-surface border border-border rounded-[16px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col gap-[16px]">
-              <h3 className="text-[15px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
+              <h3 className="text-[17px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
                 THÔNG TIN ĐƠN HÀNG
               </h3>
 
@@ -686,7 +686,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       className="absolute top-[calc(100%+4px)] left-0 right-0 z-20 bg-surface border border-[#cbd5e1] rounded-[8px] shadow-[0_8px_20px_rgba(0,0,0,0.12)] max-h-[220px] overflow-y-auto p-[6px]"
                     >
                       {materials.length === 0 && (
-                        <div className="p-[8px] text-[14px] text-faint">Chưa có chất liệu nào</div>
+                        <div className="p-[8px] text-[16px] text-faint">Chưa có chất liệu nào</div>
                       )}
                       {materials.map((m) => {
                         const blocked =
@@ -698,7 +698,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             key={m.id}
                             title={blocked ? 'Phải cùng kim loại gốc với chất liệu đã chọn' : undefined}
                             className={clsx(
-                              'flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[15px] font-semibold text-[#334155]',
+                              'flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[17px] font-semibold text-[#334155]',
                               blocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
                             )}
                           >
@@ -790,14 +790,14 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                               type="button"
                               onClick={() => toggleStoneType(t)}
                               className={clsx(
-                                'flex-1 flex items-center justify-center gap-[6px] py-[7px] px-[10px] rounded-[7px] text-[15px] font-bold cursor-pointer transition-[background_0.12s,color_0.12s]',
+                                'flex-1 flex items-center justify-center gap-[6px] py-[7px] px-[10px] rounded-[7px] text-[17px] font-bold cursor-pointer transition-[background_0.12s,color_0.12s]',
                                 active ? 'border border-[#0f172a] bg-[#e2e8f0] text-[#0f172a]' : 'border border-border bg-surface text-[#475569]'
                               )}
                             >
                               {t === 'MAIN' ? 'Đá chủ' : 'Đá tấm'}
                               <span
                                 className={clsx(
-                                  'text-[13px] font-bold py-[1px] px-[6px] rounded-full',
+                                  'text-[15px] font-bold py-[1px] px-[6px] rounded-full',
                                   active ? 'bg-[#cbd5e1] text-[#0f172a]' : 'bg-[#e2e8f0] text-muted'
                                 )}
                               >
@@ -815,7 +815,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             value={stoneSearchQuery}
                             onChange={(e) => setStoneSearchQuery(e.target.value)}
                             placeholder="Tìm tên đá..."
-                            className="w-full py-[7px] px-[10px] text-[15px] border border-[#cbd5e1] rounded-[6px] outline-none"
+                            className="w-full py-[7px] px-[10px] text-[17px] border border-[#cbd5e1] rounded-[6px] outline-none"
                           />
                         </div>
                       )}
@@ -834,7 +834,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         )}
                         {visibleStoneOptions.length > 0 && (
                           <label
-                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[14px] font-bold text-[#334155] cursor-pointer"
+                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[16px] font-bold text-[#334155] cursor-pointer"
                           >
                             <input
                               type="checkbox"
@@ -848,7 +848,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         {visibleStoneOptions.map((s) => (
                           <label
                             key={s.id}
-                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[15px] font-semibold text-[#334155] cursor-pointer"
+                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[17px] font-semibold text-[#334155] cursor-pointer"
                             onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                           >
@@ -889,7 +889,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
             {/* Right Card: THÔNG SỐ & TÀI LIỆU BÁO GIÁ */}
             <div className="bg-surface border border-border rounded-[16px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col gap-[16px]">
-              <h3 className="text-[15px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
+              <h3 className="text-[17px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
                 THÔNG SỐ BÁO GIÁ & TÀI LIỆU
               </h3>
 
@@ -972,14 +972,14 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   <div className="mb-[6px]">
                     <Upload size={30} color="#64748b" />
                   </div>
-                  <div className="font-bold text-[15px] text-[#0f172a] mb-[2px]">
+                  <div className="font-bold text-[17px] text-[#0f172a] mb-[2px]">
                     {totalImageCount >= MAX_IMAGES
                       ? `✓ Đã đạt tối đa ${MAX_IMAGES} ảnh mẫu`
                       : totalImageCount > 0
                       ? `✓ Đã chọn ${totalImageCount}/${MAX_IMAGES} ảnh (Bấm để chọn thêm)`
                       : 'Kéo thả hoặc bấm để chọn 1 hoặc nhiều ảnh'}
                   </div>
-                  <span className="text-[13px] text-muted">
+                  <span className="text-[15px] text-muted">
                     (Giới hạn tối đa {MAX_IMAGES} ảnh mẫu/yêu cầu | Hỗ trợ PNG, JPG, WEBP)
                   </span>
                 </div>
@@ -1002,7 +1002,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             e.stopPropagation();
                             removeExistingImage(idx);
                           }}
-                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[13px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[15px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
                           title="Xóa ảnh này"
                         >
                           ✕
@@ -1023,7 +1023,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             e.stopPropagation();
                             removeNewImage(idx);
                           }}
-                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[13px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[15px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
                           title="Xóa ảnh này"
                         >
                           ✕
@@ -1035,7 +1035,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     {totalImageCount < MAX_IMAGES && (
                       <div
                         onClick={triggerFileInput}
-                        className="w-[76px] h-[76px] rounded-[10px] border-2 border-dashed border-[#cbd5e1] bg-[#f8fafc] flex flex-col items-center justify-center cursor-pointer text-[#475569] text-[13px] font-extrabold gap-[2px]"
+                        className="w-[76px] h-[76px] rounded-[10px] border-2 border-dashed border-[#cbd5e1] bg-[#f8fafc] flex flex-col items-center justify-center cursor-pointer text-[#475569] text-[15px] font-extrabold gap-[2px]"
                         title="Bấm để chọn thêm ảnh"
                       >
                         <Upload size={18} color="#64748b" />
@@ -1067,7 +1067,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     <button
                       type="button"
                       onClick={removeVideo}
-                      className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[22px] h-[22px] text-[14px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                      className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[22px] h-[22px] text-[16px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
                       title="Xóa video này"
                     >
                       ✕
@@ -1079,10 +1079,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     onClick={triggerVideoInput}
                   >
                     <Upload size={24} color="#64748b" />
-                    <div className="font-bold text-[15px] text-[#0f172a] mt-[4px]">
+                    <div className="font-bold text-[17px] text-[#0f172a] mt-[4px]">
                       Bấm để chọn 1 video
                     </div>
-                    <span className="text-[13px] text-muted">
+                    <span className="text-[15px] text-muted">
                       (Tối đa {MAX_VIDEO_SIZE_MB}MB | MP4, MOV, WEBM)
                     </span>
                   </div>
@@ -1090,12 +1090,12 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {/* Operational Notice Banner */}
-              <div className="bg-[#f8fafc] border border-border rounded-[10px] p-[14px] text-[14.5px] text-[#475569] leading-[1.5]">
+              <div className="bg-[#f8fafc] border border-border rounded-[10px] p-[14px] text-[16.5px] text-[#475569] leading-[1.5]">
                 <strong>Lưu ý nghiệp vụ:</strong> Yêu cầu BÁO GIÁ phải có đầy đủ mô tả, ảnh mẫu và chất liệu. Thời gian xử lý từ 1-4 giờ.
               </div>
 
               {/* Process Confirmation Checkbox */}
-              <label className="font-bold cursor-pointer flex items-center gap-[8px] text-[15px] text-[#334155]">
+              <label className="font-bold cursor-pointer flex items-center gap-[8px] text-[17px] text-[#334155]">
                 <input
                   type="checkbox"
                   checked={understandProcess}
@@ -1115,7 +1115,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="bg-[#f1f5f9] border border-[#cbd5e1] rounded-[10px] py-[11px] px-[22px] text-[15.5px] font-bold text-[#475569] cursor-pointer"
+              className="bg-[#f1f5f9] border border-[#cbd5e1] rounded-[10px] py-[11px] px-[22px] text-[17.5px] font-bold text-[#475569] cursor-pointer"
             >
               Hủy bỏ
             </button>
@@ -1123,7 +1123,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               type="submit"
               disabled={submitting}
               className={clsx(
-                'bg-[#e2e8f0] text-[#0f172a] border border-[#94a3b8] rounded-[10px] py-[12px] px-[28px] text-[16px] font-extrabold cursor-pointer flex items-center justify-center gap-[8px] shadow-none',
+                'bg-[#e2e8f0] text-[#0f172a] border border-[#94a3b8] rounded-[10px] py-[12px] px-[28px] text-[18px] font-extrabold cursor-pointer flex items-center justify-center gap-[8px] shadow-none',
                 submitting ? 'opacity-70' : 'opacity-100'
               )}
             >

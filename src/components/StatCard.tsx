@@ -38,13 +38,13 @@ export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, tone = '
   const deltaText = deltaPct == null ? 'Chưa có dữ liệu kỳ trước' : `${deltaPct > 0 ? '+' : ''}${deltaPct.toFixed(1)}% ${deltaLabel}`;
   return (
     <div className={clsx("border border-solid rounded-[14px] py-[18px] px-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]", t.card)}>
-      <div className={clsx("flex items-center gap-[8px] text-[13px] font-extrabold uppercase", t.label)}>
+      <div className={clsx("flex items-center gap-[8px] text-[15px] font-extrabold uppercase", t.label)}>
         {icon}
         {label}
       </div>
-      <div className={clsx("text-[26px] font-black mt-[6px]", t.value)}>{value}</div>
+      <div className={clsx("text-[28px] font-black mt-[6px]", t.value)}>{value}</div>
       {hasDelta && (
-        <div className={clsx("text-[13px] font-bold mt-[6px]", deltaCls)}>{deltaText}</div>
+        <div className={clsx("text-[15px] font-bold mt-[6px]", deltaCls)}>{deltaText}</div>
       )}
     </div>
   );
