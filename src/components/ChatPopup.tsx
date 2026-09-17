@@ -220,7 +220,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
       >
         <MessageCircle size={24} className={connected ? 'opacity-100' : 'opacity-50'} />
         {!isOpen && connected && unreadCount > 0 && (
-          <span className="absolute top-[-2px] right-[-2px] bg-[#ef4444] text-white rounded-full text-[11px] font-extrabold min-w-[20px] h-[20px] flex items-center justify-center py-0 px-[4px]">
+          <span className="absolute top-[-2px] right-[-2px] bg-[#ef4444] text-white rounded-full text-[14px] font-extrabold min-w-[20px] h-[20px] flex items-center justify-center py-0 px-[4px]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -231,7 +231,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
         <div className="fixed bottom-[90px] right-[24px] z-[9990] w-[340px] h-[440px] bg-surface rounded-[14px] shadow-[0_12px_32px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
           <div className="bg-[#0f172a] text-white py-[12px] px-[16px] flex items-center justify-between">
             <div className="flex items-center gap-[8px]">
-              <span className="font-bold text-[13.5px]">Trao đổi</span>
+              <span className="font-bold text-[16.5px]">Trao đổi</span>
               <span className={clsx('w-[7px] h-[7px] rounded-full', connected ? 'bg-[#22c55e]' : 'bg-[#ef4444]')} />
             </div>
             <button onClick={toggleOpen} className="bg-transparent border-0 text-white cursor-pointer">
@@ -249,7 +249,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
                 <div key={m.id} className={clsx('flex flex-col', mine ? 'items-end' : 'items-start')}>
                   <div
                     className={clsx(
-                      'max-w-[80%] py-[8px] px-[12px] rounded-[12px] text-[13px] transition-opacity duration-200',
+                      'max-w-[80%] py-[8px] px-[12px] rounded-[12px] text-[16px] transition-opacity duration-200',
                       isSending ? 'opacity-75' : 'opacity-100',
                       isFailed
                         ? 'bg-[#fee2e2] text-[#991b1b] border border-[#f87171]'
@@ -272,7 +272,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
                     )}
                     {m.content}
                   </div>
-                  <span className="text-[10px] text-faint mt-[2px] flex items-center gap-[4px]">
+                  <span className="text-[13px] text-faint mt-[2px] flex items-center gap-[4px]">
                     {m.senderName} · {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                     {isSending && <span className="text-[#3b82f6] italic">· Đang gửi...</span>}
                     {isFailed && <span className="text-[#ef4444] font-semibold">· Gửi lỗi</span>}
@@ -283,7 +283,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
           </div>
 
           {!connected && (
-            <div className="py-[4px] px-[12px] text-[11px] text-[#ef4444] bg-[#fef2f2]">
+            <div className="py-[4px] px-[12px] text-[14px] text-[#ef4444] bg-[#fef2f2]">
               Mất kết nối... Đang tự động kết nối lại
             </div>
           )}
@@ -317,7 +317,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
               maxLength={2000}
               disabled={!connected}
               className={clsx(
-                'flex-1 border border-[#cbd5e1] rounded-[20px] py-[8px] px-[14px] text-[13px] outline-none',
+                'flex-1 border border-[#cbd5e1] rounded-[20px] py-[8px] px-[14px] text-[16px] outline-none',
                 connected ? 'opacity-100' : 'opacity-60',
               )}
             />

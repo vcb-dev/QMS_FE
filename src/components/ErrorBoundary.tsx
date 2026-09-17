@@ -78,30 +78,30 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
             <div className="w-[52px] h-[52px] rounded-[16px] bg-[#fef2f2] border border-[#fee2e2] flex items-center justify-center text-[#dc2626] mx-auto mb-[14px]">
               <ShieldAlert size={26} />
             </div>
-            <h2 className="text-[16px] font-extrabold text-[#0f172a] m-0 mb-[6px]">
+            <h2 className="text-[19px] font-extrabold text-[#0f172a] m-0 mb-[6px]">
               Trang này gặp lỗi hiển thị
             </h2>
-            <p className="text-[13px] text-muted m-0 mb-[16px] leading-[1.5]">
+            <p className="text-[16px] text-muted m-0 mb-[16px] leading-[1.5]">
               Các phần khác vẫn dùng được. Thử tải lại nội dung, hoặc chuyển sang mục khác ở thanh bên.
             </p>
             <div className="flex gap-[10px] justify-center flex-wrap">
               <button
                 type="button"
                 onClick={this.handleRetry}
-                className="inline-flex items-center gap-[7px] bg-[#0f172a] text-white border-0 rounded-[10px] py-[9px] px-[16px] text-[13px] font-bold cursor-pointer"
+                className="inline-flex items-center gap-[7px] bg-[#0f172a] text-white border-0 rounded-[10px] py-[9px] px-[16px] text-[16px] font-bold cursor-pointer"
               >
                 <RotateCcw size={15} /> Tải lại nội dung
               </button>
               <button
                 type="button"
                 onClick={this.handleGoHome}
-                className="inline-flex items-center gap-[7px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[10px] py-[9px] px-[16px] text-[13px] font-bold cursor-pointer"
+                className="inline-flex items-center gap-[7px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[10px] py-[9px] px-[16px] text-[16px] font-bold cursor-pointer"
               >
                 <Home size={15} /> Về trang chủ
               </button>
             </div>
             {error?.message && (
-              <p className="mt-[14px] mb-0 text-[11.5px] font-mono text-[#dc2626] [word-break:break-word]">
+              <p className="mt-[14px] mb-0 text-[14.5px] font-mono text-[#dc2626] [word-break:break-word]">
                 {error.name || 'Lỗi'}: {error.message}
               </p>
             )}
@@ -126,10 +126,10 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
                   <ShieldAlert size={32} />
                 </div>
 
-                <h1 className="text-[20px] font-extrabold text-[#0f172a] m-0 mb-[8px] tracking-[-0.3px]">
+                <h1 className="text-[23px] font-extrabold text-[#0f172a] m-0 mb-[8px] tracking-[-0.3px]">
                   Đã xảy ra sự cố không mong muốn
                 </h1>
-                <p className="text-[13.5px] text-muted m-0 leading-[1.5] max-w-[420px]">
+                <p className="text-[16.5px] text-muted m-0 leading-[1.5] max-w-[420px]">
                   Hệ thống gặp lỗi trong quá trình xử lý giao diện. Bạn có thể thử tải lại trang hoặc quay về trang chủ.
                 </p>
               </div>
@@ -139,7 +139,7 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
                 <button
                   type="button"
                   onClick={this.handleReload}
-                  className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-[8px] bg-[#0f172a] text-white border-0 rounded-[12px] py-[12px] px-[20px] text-[13.5px] font-bold cursor-pointer shadow-[0_4px_12px_rgba(15,23,42,0.25)] transition-[all_0.15s_ease]"
+                  className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-[8px] bg-[#0f172a] text-white border-0 rounded-[12px] py-[12px] px-[20px] text-[16.5px] font-bold cursor-pointer shadow-[0_4px_12px_rgba(15,23,42,0.25)] transition-[all_0.15s_ease]"
                 >
                   <RotateCcw size={16} /> Tải lại trang
                 </button>
@@ -147,7 +147,7 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
                 <button
                   type="button"
                   onClick={this.handleGoHome}
-                  className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-[8px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[12px] py-[12px] px-[20px] text-[13.5px] font-bold cursor-pointer transition-[all_0.15s_ease]"
+                  className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-[8px] bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[12px] py-[12px] px-[20px] text-[16.5px] font-bold cursor-pointer transition-[all_0.15s_ease]"
                 >
                   <Home size={16} /> Về trang chủ
                 </button>
@@ -158,7 +158,7 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
                 <button
                   type="button"
                   onClick={this.toggleDetails}
-                  className="w-full py-[12px] px-[16px] flex items-center justify-between bg-transparent border-0 cursor-pointer text-[#475569] text-[12.5px] font-bold"
+                  className="w-full py-[12px] px-[16px] flex items-center justify-between bg-transparent border-0 cursor-pointer text-[#475569] text-[15.5px] font-bold"
                 >
                   <span className="flex items-center gap-[8px]">
                     <Bug size={15} className="text-muted" /> Thông tin kỹ thuật (dành cho IT / Hỗ trợ)
@@ -169,14 +169,14 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
                 {showDetails && (
                   <div className="pt-0 px-[16px] pb-[16px] border-t border-border">
                     <div className="flex justify-between items-center my-[12px] mb-[8px] gap-[8px] flex-wrap">
-                      <span className="text-[11.5px] font-extrabold text-[#dc2626]">
+                      <span className="text-[14.5px] font-extrabold text-[#dc2626]">
                         {error?.name || 'Lỗi'}: {error?.message || 'Không xác định'}
                       </span>
                       <button
                         type="button"
                         onClick={this.handleCopyError}
                         className={clsx(
-                          'inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[11px] font-bold cursor-pointer',
+                          'inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-[6px] border border-[#cbd5e1] text-[14px] font-bold cursor-pointer',
                           copied ? 'bg-[#f0fdf4] text-[#16a34a]' : 'bg-surface text-[#334155]',
                         )}
                       >
@@ -185,7 +185,7 @@ Component Stack: ${this.state.errorInfo?.componentStack || 'No component stack'}
                       </button>
                     </div>
 
-                    <div className="bg-[#0f172a] text-[#f87171] rounded-[8px] p-[12px] text-[11px] font-mono max-h-[160px] overflow-y-auto whitespace-pre-wrap [word-break:break-all] leading-[1.5]">
+                    <div className="bg-[#0f172a] text-[#f87171] rounded-[8px] p-[12px] text-[14px] font-mono max-h-[160px] overflow-y-auto whitespace-pre-wrap [word-break:break-all] leading-[1.5]">
                       {error?.stack || errorInfo?.componentStack || error?.message || 'Không có chi tiết stack trace.'}
                     </div>
                   </div>

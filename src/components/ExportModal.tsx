@@ -189,7 +189,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                       className={clsx(formControlCls, '!pl-[32px]')}
                     />
                   </div>
-                  <span className="text-[11px] font-bold text-faint">đến</span>
+                  <span className="text-[14px] font-bold text-faint">đến</span>
                   <div className="relative flex-1 min-w-0">
                     <Calendar size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                     <input
@@ -208,13 +208,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div className={panelCls}>
               <div className="flex justify-between items-center">
                 <label className={formLabelCls}>Chọn cột export</label>
-                <button type="button" onClick={toggleAll} className="bg-transparent border-0 text-primary text-[11.5px] font-bold cursor-pointer">
+                <button type="button" onClick={toggleAll} className="bg-transparent border-0 text-primary text-[14.5px] font-bold cursor-pointer">
                   {allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-x-[12px] gap-y-[8px] max-h-[300px] overflow-y-auto p-[2px]">
                 {EXPORT_FIELDS.map((f) => (
-                  <label key={f.key} className="flex items-center gap-[6px] text-[12.5px] text-[#334155] cursor-pointer">
+                  <label key={f.key} className="flex items-center gap-[6px] text-[15.5px] text-[#334155] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedFields.has(f.key)}
