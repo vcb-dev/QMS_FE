@@ -12,7 +12,7 @@ import type { CalculateBatchResultItem } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
-import { getPrimaryOption, batchResultToOption } from '../utils/quoteOption';
+import { getPrimaryOption, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
 import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
@@ -31,7 +31,7 @@ interface PricingModalProps {
   onOpenCalculator?: () => void;
   selectedReq?: QuoteRequest | null;
   currentRole: Role;
-  materials?: { id: string; name: string; baseMetal?: { name: string } | null }[];
+  materials?: { id: string; name: string; baseMetalId?: string | null; baseMetal?: { id: string; name: string } | null }[];
 }
 
 export const PricingModal: React.FC<PricingModalProps> = ({
@@ -46,7 +46,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const dialogRef = useModalA11y(onClose, isOpen);
 
   // Master data
-  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetal?: { name: string } | null }[]>(initialMaterialsList);
+  const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetalId?: string | null; baseMetal?: { id: string; name: string } | null }[]>(initialMaterialsList);
   
   const isSilverMaterialId = (materialId?: string) =>
     !!materialId && dbMaterials.find((m) => m.id === materialId)?.baseMetal?.name === 'Bạc';
@@ -70,6 +70,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     addMaterialRow,
     updateMaterialRow,
     removeMaterialRow,
+    lockedMaterialGroupKey,
     stoneRows: calcStoneRows,
     setStoneRows: setCalcStoneRows,
     addStoneRow,
@@ -86,7 +87,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // chọn 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau).
   // Tính riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo, không chọn
   // làm giá chính) cùng groupId với phương án chính.
-  const { compareRows, setCompareRows, addCompareRow, updateCompareRow, removeCompareRow } = useCompareRows(dbMaterials);
+  const { compareRows, setCompareRows, addCompareRow, updateCompareRow, removeCompareRow, autoGoldMode } = useCompareRows(dbMaterials, calcMaterialRows);
 
   // Đá đính
   const [calcStoneMode, setCalcStoneMode] = useState<'catalog' | 'manual'>('catalog');
@@ -307,8 +308,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       return;
     }
 
-    // Dòng "loại vàng khác" đã chọn chất liệu nhưng CHƯA nhập khối lượng — bắt buộc nhập.
-    if (compareRows.some((r) => r.materialId && !((parseFloat(r.weightChi) || 0) > 0))) {
+    // Dòng "loại vàng khác" đã chọn chất liệu nhưng CHƯA nhập khối lượng — bắt buộc nhập. Không áp
+    // dụng ở chế độ tự liệt kê vàng (autoGoldMode): phần lớn dòng auto rỗng theo thiết kế — bỏ qua
+    // lúc tính chứ không phải lỗi nhập thiếu.
+    if (
+      !autoGoldMode &&
+      compareRows.some((r) => r.materialId && !((parseFloat(r.weightChi) || 0) > 0))
+    ) {
       setCalcError('Nhập khối lượng (chỉ) cho phương án loại vàng khác');
       return;
     }
@@ -806,11 +812,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             selectedReq ? 'bg-[#f1f5f9] text-muted cursor-not-allowed' : 'bg-surface cursor-pointer'
                           )}
                         >
-                          {dbMaterials.map((mat) => (
-                            <option key={mat.id} value={mat.id}>
-                              {mat.name}
-                            </option>
-                          ))}
+                          {dbMaterials
+                            // Từ 2 dòng chất liệu trở lên -> chỉ cho chọn cùng nhóm kim loại gốc với
+                            // các dòng còn lại (không trộn Vàng với Bạc/Bạch kim...).
+                            .filter((mat) => !lockedMaterialGroupKey || materialGroupKey(mat) === lockedMaterialGroupKey)
+                            .map((mat) => (
+                              <option key={mat.id} value={mat.id}>
+                                {mat.name}
+                              </option>
+                            ))}
                         </select>
 
                         <div className="relative">
@@ -854,13 +864,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                     <label className={labelUppercaseCls}>
                       Phương án loại vàng khác (tham khảo)
                     </label>
-                    <button
-                      type="button"
-                      onClick={addCompareRow}
-                      className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[14.5px] font-extrabold text-[#0f172a] cursor-pointer"
-                    >
-                      <Plus size={13} /> Thêm phương án
-                    </button>
+                    {!autoGoldMode && (
+                      <button
+                        type="button"
+                        onClick={addCompareRow}
+                        className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[14.5px] font-extrabold text-[#0f172a] cursor-pointer"
+                      >
+                        <Plus size={13} /> Thêm phương án
+                      </button>
+                    )}
                   </div>
 
                   {compareRows.length === 0 ? (
@@ -872,20 +884,27 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       {compareRows.map((row) => (
                         <div
                           key={row.id}
-                          className="grid grid-cols-[1fr_140px_32px] gap-[10px] items-center"
+                          className={clsx(
+                            'grid gap-[10px] items-center',
+                            autoGoldMode ? 'grid-cols-[1fr_140px]' : 'grid-cols-[1fr_140px_32px]',
+                          )}
                         >
-                          <select
-                            key={dbMaterials.length}
-                            value={row.materialId}
-                            onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
-                            className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface cursor-pointer"
-                          >
-                            {dbMaterials.map((mat) => (
-                              <option key={mat.id} value={mat.id}>
-                                {mat.name}
-                              </option>
-                            ))}
-                          </select>
+                          {autoGoldMode ? (
+                            <span className="py-[8px] px-[12px] text-[16px] font-bold text-[#0f172a]">{row.materialName}</span>
+                          ) : (
+                            <select
+                              key={dbMaterials.length}
+                              value={row.materialId}
+                              onChange={(e) => updateCompareRow(row.id, { materialId: e.target.value })}
+                              className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface cursor-pointer"
+                            >
+                              {dbMaterials.map((mat) => (
+                                <option key={mat.id} value={mat.id}>
+                                  {mat.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
 
                           <div className="relative">
                             <input
@@ -906,13 +925,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => removeCompareRow(row.id)}
-                            className="h-[32px] w-[32px] rounded-[6px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {!autoGoldMode && (
+                            <button
+                              type="button"
+                              onClick={() => removeCompareRow(row.id)}
+                              className="h-[32px] w-[32px] rounded-[6px] border border-[#fecaca] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>

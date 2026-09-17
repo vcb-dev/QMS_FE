@@ -7,7 +7,7 @@ import {
   createStone,
   updateStonePrices,
   deleteStonesMany,
-  importStonesExcel,
+  importStonesPriceGridExcel,
   fetchMasterData,
   invalidateMasterData,
   updateProductCategoriesBulk,
@@ -19,9 +19,11 @@ import {
   updateBaseMetalPrice,
   createMaterial,
   updateMaterial,
+  deleteMaterial,
   fetchPricingFormulas,
   createPricingFormula,
   updatePricingFormula,
+  deletePricingFormula,
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
 import type{BaseMetal, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
@@ -248,9 +250,9 @@ export const PricingConfigPage: React.FC = () => {
   const [newStone, setNewStone] = useState<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string }>({
     stoneType: 'MAIN', name: '', cut: '', size: '', price: '',
   });
-  const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Import bảng giá lưới shape/size (VD kim cương) — riêng đá chủ/đá tấm, stoneType chốt theo nút bấm.
+  const [importingPriceGrid, setImportingPriceGrid] = useState<{ MAIN: boolean; SIDE: boolean }>({ MAIN: false, SIDE: false });
 
   const loadAll = () => {
     Promise.all([fetchStones(), fetchMasterData(), fetchBaseMetals(), fetchPricingFormulas()])
@@ -493,6 +495,20 @@ export const PricingConfigPage: React.FC = () => {
     }
   };
 
+  // Xóa lưu ngay như thêm — BE tự chặn nếu đang là công thức mặc định hoặc còn chất liệu dùng,
+  // lỗi đó hiện thẳng qua formulaError.
+  const handleDeleteFormula = async (id: string, name: string) => {
+    if (!window.confirm(`Xóa công thức "${name}"?`)) return;
+    setFormulaError(null);
+    try {
+      await deletePricingFormula(id);
+      setFormulas((prev) => prev.filter((f) => f.id !== id));
+      setInitialFormulas((prev) => prev.filter((f) => f.id !== id));
+    } catch (err: any) {
+      setFormulaError(err.message || 'Không thể xóa công thức');
+    }
+  };
+
   // Chỉ cập nhật local state — lưu xuống BE khi bấm nút "Lưu cấu hình" ở dưới
   const handleCategoryLaborCostChange = (id: string, laborCost: number) => {
     setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, laborCost } : c)));
@@ -594,6 +610,21 @@ export const PricingConfigPage: React.FC = () => {
     }
   };
 
+  // Xóa lưu ngay như thêm/sửa (không staged) — confirm tay vì chất liệu không có staging/undo
+  // như đá (Lưu cấu hình mới xóa thật) nên xóa là mất luôn không hoàn tác được.
+  const handleDeleteMaterial = async (id: string, name: string) => {
+    if (!window.confirm(`Xóa chất liệu "${name}"?`)) return;
+    setMaterialError(null);
+    try {
+      await deleteMaterial(id);
+      setMaterials((prev) => prev.filter((m) => m.id !== id));
+      setInitialMaterials((prev) => prev.filter((m) => m.id !== id));
+      invalidateMasterData();
+    } catch (err: any) {
+      setMaterialError(err.message || 'Không thể xóa chất liệu');
+    }
+  };
+
   const handleAddStone = async () => {
     setStoneError(null);
     const price = parseFloat(newStone.price.replace(/\D/g, '')) || 0;
@@ -628,16 +659,17 @@ export const PricingConfigPage: React.FC = () => {
     setPendingDeleteStoneIds((prev) => toggleInArray(prev, id));
   };
 
-  // Import file Excel (.xlsx/.xls) — BE verify toàn bộ file, chỉ 1 dòng lỗi cũng chặn cả file
-  const handleImportFile = async (file: File) => {
+  // Import bảng giá lưới shape/size (file không có cột Loại/Tên riêng dòng, tên đá lấy từ dòng
+  // đầu file, stoneType chốt theo nút bấm) — trùng shape/size với đá đã có thì BE đè giá mới.
+  const handleImportPriceGridFile = async (file: File, stoneType: 'MAIN' | 'SIDE') => {
     setImportResult(null);
     setStoneError(null);
-    setImporting(true);
+    setImportingPriceGrid((s) => ({ ...s, [stoneType]: true }));
     try {
-      const result = await importStonesExcel(file);
+      const result = await importStonesPriceGridExcel(file, stoneType);
       setImportResult(
-        result.skipped > 0
-          ? `Đã import ${result.imported} đá (bỏ qua ${result.skipped} đá trùng tên/cut/size)`
+        result.updated > 0
+          ? `Đã import ${result.imported} đá mới, cập nhật giá ${result.updated} đá`
           : `Đã import ${result.imported} đá`,
       );
       const rowsFresh = await fetchStones();
@@ -647,7 +679,7 @@ export const PricingConfigPage: React.FC = () => {
     } catch (err: any) {
       setStoneError(err.message || 'Import thất bại');
     } finally {
-      setImporting(false);
+      setImportingPriceGrid((s) => ({ ...s, [stoneType]: false }));
     }
   };
 
@@ -735,7 +767,7 @@ export const PricingConfigPage: React.FC = () => {
                         <th className={clsx(thCls, 'w-[18%]')}>Kim loại gốc</th>
                         <th className={clsx(thCls, 'w-[16%]')}>% tính giá</th>
                         <th className={clsx(thCls, 'w-[32%]')}>Công thức tính lãi</th>
-                        <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
+                        <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -786,6 +818,7 @@ export const PricingConfigPage: React.FC = () => {
                             <td className={tdCenterCls}>
                               <div className="flex gap-[10px] justify-center">
                                 <EditIconButton onClick={() => setEditingMaterialIds((prev) => toggleInArray(prev, m.id))} active={isEditing} />
+                                <DeleteIconButton onClick={() => handleDeleteMaterial(m.id, m.name)} title="Xóa chất liệu" />
                               </div>
                             </td>
                           </tr>
@@ -828,30 +861,6 @@ export const PricingConfigPage: React.FC = () => {
               <PanelSection
                 title="Quản lý bảng giá đá"
                 icon={Gem}
-                action={
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] || null;
-                        if (f) {
-                          if (!/\.(xlsx|xls)$/i.test(f.name)) {
-                            setStoneError('Chỉ chấp nhận file Excel (.xlsx hoặc .xls)');
-                          } else {
-                            handleImportFile(f);
-                          }
-                        }
-                        e.target.value = '';
-                      }}
-                    />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importing} className={clsx(btnGhostSmallCls, importing && 'opacity-60')}>
-                      {importing ? <Loader2 size={12} className="animate-[spin_0.8s_linear_infinite]" /> : <Upload size={12} />} Nhập Excel
-                    </button>
-                  </>
-                }
               >
                 {stoneError && (
                   <ErrorBanner message={stoneError} className="mb-[12px] whitespace-pre-line max-h-[160px] overflow-y-auto" />
@@ -877,6 +886,8 @@ export const PricingConfigPage: React.FC = () => {
                   newStone={newStone}
                   setNewStone={setNewStone}
                   onConfirmAdd={handleAddStone}
+                  onImportPriceGrid={(f) => handleImportPriceGridFile(f, 'MAIN')}
+                  importingPriceGrid={importingPriceGrid.MAIN}
                 />
 
                 <div className="h-[22px]" />
@@ -900,6 +911,8 @@ export const PricingConfigPage: React.FC = () => {
                   newStone={newStone}
                   setNewStone={setNewStone}
                   onConfirmAdd={handleAddStone}
+                  onImportPriceGrid={(f) => handleImportPriceGridFile(f, 'SIDE')}
+                  importingPriceGrid={importingPriceGrid.SIDE}
                 />
               </PanelSection>
             </>
@@ -930,13 +943,16 @@ export const PricingConfigPage: React.FC = () => {
                       (f.isDefault ? ' • Mặc định tính lãi phần Đá.' : '')
                     }
                     action={
-                      <button
-                        type="button"
-                        onClick={() => (f.formulaType === 'MULTIPLIER' ? addMultiplier(f.id) : addTier(f.id))}
-                        className={btnGhostSmallCls}
-                      >
-                        <Plus size={12} /> {f.formulaType === 'MULTIPLIER' ? 'Thêm hệ số' : 'Thêm bậc'}
-                      </button>
+                      <div className="flex items-center gap-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => (f.formulaType === 'MULTIPLIER' ? addMultiplier(f.id) : addTier(f.id))}
+                          className={btnGhostSmallCls}
+                        >
+                          <Plus size={12} /> {f.formulaType === 'MULTIPLIER' ? 'Thêm hệ số' : 'Thêm bậc'}
+                        </button>
+                        <DeleteIconButton onClick={() => handleDeleteFormula(f.id, f.name)} title="Xóa công thức" />
+                      </div>
                     }
                   >
                     {f.formulaType === 'MULTIPLIER' ? (
@@ -946,7 +962,7 @@ export const PricingConfigPage: React.FC = () => {
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[60px]')}>STT</th>
                               <th className={thCls}>Hệ số nhân</th>
-                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
+                              <th className={clsx(thCls, 'w-[90px] !text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -987,7 +1003,7 @@ export const PricingConfigPage: React.FC = () => {
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[42%]')}>Chi phí tối đa (VNĐ)</th>
                               <th className={clsx(thCls, 'w-[38%]')}>Biên độ lợi nhuận (%)</th>
-                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
+                              <th className={clsx(thCls, 'w-[90px] !text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1252,14 +1268,39 @@ const StoneGroupTable: React.FC<{
   newStone: { stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string };
   setNewStone: React.Dispatch<React.SetStateAction<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string }>>;
   onConfirmAdd: () => void;
-}> = ({ title, addLabel, items, initialStones, pendingDeleteIds, editingIds, page, setPage, onPriceChange, onToggleDelete, onToggleEdit, adding, onOpenAdd, onCloseAdd, newStone, setNewStone, onConfirmAdd }) => {
+  onImportPriceGrid: (file: File) => void;
+  importingPriceGrid: boolean;
+}> = ({ title, addLabel, items, initialStones, pendingDeleteIds, editingIds, page, setPage, onPriceChange, onToggleDelete, onToggleEdit, adding, onOpenAdd, onCloseAdd, newStone, setNewStone, onConfirmAdd, onImportPriceGrid, importingPriceGrid }) => {
   const totalPages = Math.max(1, Math.ceil(items.length / STONE_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageItems = items.slice((safePage - 1) * STONE_PAGE_SIZE, safePage * STONE_PAGE_SIZE);
+  const gridFileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div>
-      <h4 className="text-[15px] font-extrabold text-[#334155] m-0 mb-[8px]">{title}</h4>
+      <div className="flex items-center justify-between mb-[8px]">
+        <h4 className="text-[15px] font-extrabold text-[#334155] m-0">{title}</h4>
+        <input
+          ref={gridFileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0] || null;
+            if (f) onImportPriceGrid(f);
+            e.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => gridFileInputRef.current?.click()}
+          disabled={importingPriceGrid}
+          className={clsx(btnGhostSmallCls, importingPriceGrid && 'opacity-60')}
+          title="Import bảng giá theo lưới shape/size (VD kim cương) — tên đá lấy từ dòng đầu file"
+        >
+          {importingPriceGrid ? <Loader2 size={12} className="animate-[spin_0.8s_linear_infinite]" /> : <Upload size={12} />} Nhập bảng giá
+        </button>
+      </div>
       <div className="overflow-x-auto border border-[#e5e7eb] rounded-[10px]">
         <table className="w-full table-fixed border-collapse text-[15.5px]">
           <thead>
@@ -1267,8 +1308,8 @@ const StoneGroupTable: React.FC<{
               <th className={clsx(thCls, 'w-[26%]')}>Tên đá</th>
               <th className={clsx(thCls, 'w-[18%]')}>Giác cắt</th>
               <th className={clsx(thCls, 'w-[15%]')}>Size (mm)</th>
-              <th className={clsx(thCls, 'w-[26%]')}>Giá (VNĐ)</th>
-              <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
+              <th className={clsx(thCls, 'w-[31%]')}>Giá (VNĐ)</th>
+              <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -1312,6 +1353,29 @@ const StoneGroupTable: React.FC<{
                 </td>
               </tr>
             )}
+            {/* Dòng đệm rỗng — khoá chiều cao bảng cố định STONE_PAGE_SIZE dòng, trang cuối ít đá
+                hơn không bị co lại ngắn hơn các trang đầy. Lặp lại đúng cấu trúc 5 cột + icon
+                thao tác của dòng thật (chỉ ẩn bằng invisible) để chiều cao khớp chính xác — 1 ô
+                colSpan duy nhất có thể thấp hơn dòng thật (dòng thật có icon/chữ đậm cao hơn). */}
+            {Array.from({
+              length: Math.max(
+                0,
+                STONE_PAGE_SIZE - pageItems.length - (adding ? 1 : 0) - (items.length === 0 && !adding ? 1 : 0),
+              ),
+            }).map((_, i) => (
+              <tr key={`filler-${i}`} aria-hidden="true" className="invisible">
+                <td className={clsx(tdCls, 'font-extrabold')}>&nbsp;</td>
+                <td className={tdCls}>&nbsp;</td>
+                <td className={tdCls}>&nbsp;</td>
+                <td className={tdCls}>&nbsp;</td>
+                <td className={tdCenterCls}>
+                  <div className="flex gap-[10px] justify-center">
+                    <EditIconButton onClick={() => {}} />
+                    <DeleteIconButton onClick={() => {}} />
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
           {!adding && (
             <tfoot>

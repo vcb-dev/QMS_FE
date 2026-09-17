@@ -31,6 +31,7 @@ import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { renderTextWithLinks } from '../utils/linkify';
 import { getPrimaryOption, formatOptionCopyLine } from '../utils/quoteOption';
 import { ChatPopup } from '../components/ChatPopup';
 import { ImageLightbox } from '../components/ImageLightbox';
@@ -69,6 +70,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   currentRole,
   currentUser,
   socket,
+  onQuoteNow,
+  onPricing,
 }) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -316,9 +319,32 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
         </div>
 
-        {/* Trang chi tiết chỉ để xem — mọi thao tác đổi trạng thái (tiếp nhận/báo giá/từ chối/
-            trả lại/sửa/xóa/đánh dấu chốt) đã chuyển hết ra bảng danh sách, không còn nút nào ở
-            đây gọi API thay đổi dữ liệu nữa. */}
+        {/* Trang chi tiết chủ yếu để xem — các thao tác đổi trạng thái khác (tiếp nhận/từ chối/
+            trả lại/sửa/xóa/đánh dấu chốt) vẫn ở bảng danh sách. Riêng "Báo giá" (ORDER/ADMIN) có
+            thêm ở đây để báo giá thẳng từ trang chi tiết, không phải quay lại danh sách. */}
+        {(currentRole === 'ORDER' || currentRole === 'ADMIN') &&
+          selectedReq.status === 'PENDING' && (
+            <button
+              type="button"
+              onClick={() => onQuoteNow(selectedReq.id, selectedReq.version)}
+              className="bg-[#16a34a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
+            >
+              Báo giá luôn
+            </button>
+          )}
+        {(currentRole === 'ADMIN' ||
+          (currentRole === 'ORDER' &&
+            (selectedReq.assignee?.id === currentUser.id ||
+              selectedReq.assignee?.email === currentUser.email))) &&
+          selectedReq.status === 'PROCESSING' && (
+            <button
+              type="button"
+              onClick={() => onPricing(selectedReq.id)}
+              className="bg-[#16a34a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
+            >
+              Báo giá
+            </button>
+          )}
       </div>
 
       {/* Main 2-Column Content Grid */}
@@ -538,6 +564,18 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     {selectedReq.desiredLeadTime || 'Không có ghi chú thêm.'}
                   </p>
                 </div>
+
+                {/* Ghi chú Sale nhập thêm — có thể chứa link ảnh/video, hiện clickable cho Order */}
+                {selectedReq.note && (
+                  <div className="bg-page border border-border rounded-[10px] p-[14px]">
+                    <span className="text-[11px] font-extrabold text-muted uppercase block mb-[4px]">
+                      GHI CHÚ
+                    </span>
+                    <p className="text-[12.5px] text-[#334155] m-0 leading-[1.5] whitespace-pre-wrap break-words">
+                      {renderTextWithLinks(selectedReq.note)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

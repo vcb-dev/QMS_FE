@@ -4,6 +4,7 @@ import { clsx } from 'clsx';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { useModalA11y } from '../hooks/useModalA11y';
+import { materialGroupKey } from '../utils/quoteOption';
 import { X, Upload, PlusCircle } from 'lucide-react';
 import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
@@ -36,11 +37,6 @@ const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle
     )}
   </span>
 );
-
-// Khoá nhóm kim loại gốc của 1 chất liệu. Chất liệu phi kim loại (baseMetalId null) mỗi cái là
-// một nhóm riêng nên không ghép được với bất kỳ chất liệu nào khác.
-const materialGroupKey = (m: { id: string; baseMetalId?: string | null }) =>
-  m.baseMetalId ?? `__nonmetal__${m.id}`;
 
 export const CreateModal: React.FC<CreateModalProps> = ({
   isOpen,
@@ -82,6 +78,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [stoneOptionsAll, setStoneOptionsAll] = useState<{ id: string; name: string; stoneType: 'MAIN' | 'SIDE' }[]>([]);
   const [selectedStoneIds, setSelectedStoneIds] = useState<string[]>([]);
   const [customerMeasurements, setCustomerMeasurements] = useState('');
+  // Ghi chú thêm — Sale gõ tự do, có thể dán link ảnh/video để Order bấm xem ở trang chi tiết.
+  const [note, setNote] = useState('');
   const [leadTime, setLeadTime] = useState('7-15 NGÀY (Tiêu chuẩn)');
   const [closeRateValue, setCloseRateValue] = useState<string>(CLOSE_RATE_OPTIONS[0].value);
   // Ảnh cũ đã có sẵn (lúc sửa yêu cầu) — URL Cloudinary thật, gửi lại nguyên văn (BE pass-through,
@@ -263,6 +261,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
       setSelectedMaterialIds(matIds);
       setCustomerMeasurements(editingReq.customerMeasurements || '');
+      setNote(editingReq.note || '');
       setExistingImageUrls(editingReq.images ? editingReq.images.map((img) => img.imageUrl) : []);
       setNewImageFiles([]);
       setExistingVideoUrl(editingReq.videoUrl || null);
@@ -352,6 +351,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       }
 
       setCustomerMeasurements(calculatorData?.note || '');
+      setNote('');
       setExistingImageUrls([]);
       setNewImageFiles([]);
       setExistingVideoUrl(null);
@@ -530,6 +530,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         materialIds: selectedMaterialIds,
         stoneIds: selectedStoneIds.length > 0 ? selectedStoneIds : undefined,
         customerMeasurements,
+        note: note.trim(),
         desiredLeadTime: leadTime,
         ...(closeRatePct != null ? { closeRatePct } : {}),
         imageUrls: existingImageUrls.length > 0 ? existingImageUrls : undefined,
@@ -925,6 +926,19 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Ghi chú thêm — dán được link ảnh/video, Order xem ở trang chi tiết sẽ bấm được luôn */}
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Ghi chú</label>
+                <textarea
+                  className={formControlCls}
+                  placeholder="Ghi chú thêm cho Order — có thể dán link ảnh/video tham khảo..."
+                  value={note}
+                  maxLength={2000}
+                  rows={3}
+                  onChange={(e) => setNote(e.target.value)}
+                />
               </div>
 
               {/* Multiple Images Upload Zone */}

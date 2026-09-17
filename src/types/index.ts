@@ -223,6 +223,9 @@ export interface QuoteRequest {
   desiredLeadTime?: string;
   desiredDate?: string;
   customerMeasurements?: string;
+  // Ghi chú thêm Sale nhập lúc tạo/sửa yêu cầu — có thể chứa link ảnh/video, hiển thị dạng
+  // clickable link ở trang chi tiết cho Order xem.
+  note?: string;
   closeRatePct?: number;
   vat?: number;
   quotedPrice?: number;
@@ -320,6 +323,10 @@ export interface DashboardPageProps {
   requests: QuoteRequest[];
   counts: StatusCounts;
   currentRole: Role;
+  currentUser: User;
+  // Phạm vi "Chỉ mình tôi" — dùng chung state với trang Danh Sách (SALE/ORDER), Admin không đọc.
+  ownerFilter: string;
+  setOwnerFilter: (v: string) => void;
   onSelectReq: (id: string) => void;
   onOpenCreateModal?: () => void;
   // Bấm vào 1 ô trạng thái trong "Số lượng yêu cầu theo trạng thái" (SALE) — điều hướng sang
@@ -349,6 +356,10 @@ export interface DetailPageProps {
   currentRole: Role;
   currentUser: User;
   socket?: import('socket.io-client').Socket | null;
+  // Nút "Báo giá" (ORDER/ADMIN) — cùng hành vi với trang Danh Sách: PENDING -> tiếp nhận + mở
+  // modal nhập giá ngay; PROCESSING (đã tiếp nhận) -> mở thẳng modal nhập giá.
+  onQuoteNow: (id: string, version: number) => void;
+  onPricing: (id: string) => void;
 }
 
 
@@ -503,6 +514,8 @@ export interface RequestsPageProps {
   materials: Material[];
   currentRole: Role;
   currentUser: User;
+  // Badge tin nhắn chưa đọc + mở chat ngay tại bảng — không truyền thì không hiện badge/chat.
+  socket?: import('socket.io-client').Socket | null;
   counts: StatusCounts;
   statusSubFilter: string;
   setStatusSubFilter: (v: string) => void;
@@ -570,7 +583,7 @@ export interface UserStatsResponse {
 
 export interface StaffPerformanceResponse {
   saleStats: { id: string; name: string; total: number; closed: number; closeRate: number }[];
-  pricerStats: { id: string; name: string; totalHandled: number; avgQuoteMs: number | null; avgProcessMs: number | null }[];
+  pricerStats: { id: string; name: string; totalHandled: number; medianQuoteMs: number | null; medianProcessMs: number | null }[];
 }
 
 export interface CreateModalProps {
@@ -602,6 +615,8 @@ export interface ChatPopupProps {
   socket: import('socket.io-client').Socket;
   unreadCount: number;
   onOpenChange: (isOpen: boolean) => void;
+  // Mở sẵn lúc mount — dùng khi bấm icon tin nhắn ở bảng Danh Sách, khỏi phải bấm lại nút nổi.
+  initialOpen?: boolean;
 }
 
 // ── Cấu hình thông báo Lark (trang admin) ─────────────────────────────

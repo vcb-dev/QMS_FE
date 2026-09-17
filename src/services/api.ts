@@ -288,11 +288,12 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
   return data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
 }
 
-export async function fetchDashboardCharts(filter?: { timeRange?: string; startDate?: string; endDate?: string }): Promise<DashboardChartsResponse> {
+export async function fetchDashboardCharts(filter?: { timeRange?: string; startDate?: string; endDate?: string; ownerId?: string }): Promise<DashboardChartsResponse> {
   const params: Record<string, any> = {};
   if (filter?.timeRange) params.timeRange = filter.timeRange;
   if (filter?.startDate) params.startDate = filter.startDate;
   if (filter?.endDate) params.endDate = filter.endDate;
+  if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
   return apiCall(dedupedGet('/quote-requests/dashboard-charts', params), 'Không thể lấy dữ liệu biểu đồ Dashboard');
 }
 
@@ -668,6 +669,10 @@ export async function updateMaterial(id: string, patch: { name?: string; priceRa
   return apiCall(api.patch(`/materials/${id}`, patch), 'Không thể cập nhật chất liệu');
 }
 
+export async function deleteMaterial(id: string) {
+  return apiCall(api.delete(`/materials/${id}`), 'Không thể xóa chất liệu');
+}
+
 // Công thức tính lãi — gắn theo NHÓM, nhiều chất liệu dùng chung 1 công thức.
 export async function fetchPricingFormulas() {
   return apiCall(dedupedGet('/pricing-formulas'), 'Không thể tải công thức tính lãi');
@@ -681,6 +686,10 @@ export async function createPricingFormula(payload: { name: string; formulaType:
 
 export async function updatePricingFormula(id: string, patch: { name?: string; config?: PricingFormulaConfig; isDefault?: boolean }) {
   return apiCall(api.patch(`/pricing-formulas/${id}`, patch), 'Không thể cập nhật công thức tính lãi');
+}
+
+export async function deletePricingFormula(id: string) {
+  return apiCall(api.delete(`/pricing-formulas/${id}`), 'Không thể xóa công thức tính lãi');
 }
 
 export interface CalculateBatchResultItem {
@@ -773,11 +782,13 @@ export async function deleteStonesMany(ids: string[]) {
   return apiCall(api.post('/stones/delete-many', { ids }), 'Không thể xóa đá');
 }
 
-export async function importStonesExcel(file: File) {
+// Import bảng giá đá theo lưới shape/size (VD kim cương) — file không có cột Loại/Tên riêng
+// từng dòng, stoneType chốt theo nút bấm (đá chủ/đá tấm) truyền qua query, không đọc từ file.
+export async function importStonesPriceGridExcel(file: File, stoneType: 'MAIN' | 'SIDE') {
   const formData = new FormData();
   formData.append('file', file);
   try {
-    const res = await api.post('/stones/import', formData, {
+    const res = await api.post(`/stones/import-price-grid?stoneType=${stoneType}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       ...NO_TIMEOUT,
     });
@@ -880,6 +891,16 @@ export async function deleteProductCategoriesMany(ids: string[]) {
 
 export async function fetchChatMessages(quoteRequestId: string): Promise<{ messages: ChatMessage[]; unreadCount: number }> {
   return apiCall(api.get(`/quote-chat/${quoteRequestId}/messages`), 'Không thể tải lịch sử trò chuyện');
+}
+
+// Số tin chưa đọc cho NHIỀU đơn cùng lúc — badge nhỏ ở bảng Danh Sách. Đơn nào không có tin
+// chưa đọc thì BE không trả key đó (payload gọn), FE đọc qua `counts[id] ?? 0`.
+export async function fetchChatUnreadCounts(quoteRequestIds: string[]): Promise<Record<string, number>> {
+  if (quoteRequestIds.length === 0) return {};
+  return apiCall(
+    api.get('/quote-chat/unread-counts', { params: { ids: quoteRequestIds.join(',') } }),
+    'Không thể tải số tin nhắn chưa đọc',
+  );
 }
 
 export async function uploadChatImage(quoteRequestId: string, file: File): Promise<{ imageUrl: string }> {

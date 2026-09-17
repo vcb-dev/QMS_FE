@@ -201,6 +201,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
           <Routes>
             <Route path="/" element={
               <DashboardPage requests={requests} counts={counts} currentRole={currentRole}
+                currentUser={currentUser} ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
                 onSelectReq={handleOpenDetail} onOpenCreateModal={handleOpenCreate}
                 onFilterStatus={(status) => { setStatusSubFilter(status); setCurrentPage(1); navigate('/requests'); }} />
             } />
@@ -208,7 +209,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
             <Route path="/requests" element={
               <RequestsPage
                 requests={requests} categories={categories} materials={materials}
-                currentRole={currentRole} currentUser={currentUser!} counts={counts}
+                currentRole={currentRole} currentUser={currentUser!} socket={globalSocket} counts={counts}
                 statusSubFilter={statusSubFilter} setStatusSubFilter={setStatusSubFilter}
                 searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                 categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
@@ -246,6 +247,8 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
               <DetailPage
                 selectedReq={selectedReq} currentRole={currentRole} currentUser={currentUser!}
                 socket={globalSocket}
+                onQuoteNow={handleQuoteNow}
+                onPricing={(id) => setPricingReqId(id)}
               />
             } />
 

@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { RequestsPageProps } from '../types';
 import { FilterBar } from '../components/FilterBar';
 import { QuoteTable } from '../components/QuoteTable';
+import { ChatPopup } from '../components/ChatPopup';
 import { Pagination } from '../components/Pagination';
 import { Download, PlusCircle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchChatUnreadCounts } from '../services/api';
+import { CHAT_EVENTS } from '../constants/chatEvents';
 
 export const RequestsPage: React.FC<RequestsPageProps> = ({
   requests,
@@ -12,6 +15,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   materials,
   currentRole,
   currentUser,
+  socket,
   counts,
   statusSubFilter,
   setStatusSubFilter,
@@ -60,6 +64,67 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
     setScopeFilter(sc);
     navigate('/requests');
   };
+
+  // Badge tin nhắn chưa đọc cho từng dòng — snapshot ban đầu qua REST mỗi khi danh sách đổi (đổi
+  // trang/lọc/refresh nền), CỘNG real-time qua socket cho tin đến SAU đó trong lúc đang đứng nhìn
+  // trang này (2 effect join room + nghe newMessage bên dưới).
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!socket || requests.length === 0) return;
+    let cancelled = false;
+    fetchChatUnreadCounts(requests.map((r) => r.id))
+      .then((counts) => { if (!cancelled) setUnreadCounts(counts); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [socket, requests]);
+
+  // Chat 1 đơn tại chỗ (không rời trang danh sách) — chỉ 1 popup tại 1 thời điểm, giống DetailPage.
+  const [activeChatReqId, setActiveChatReqId] = useState<string | null>(null);
+  const handleOpenChat = (id: string) => {
+    setActiveChatReqId(id);
+    setUnreadCounts((prev) => ({ ...prev, [id]: 0 }));
+    socket?.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: id });
+  };
+
+  // Join room CHO MỌI dòng đang hiển thị (không chỉ dòng bấm vào) — để nghe được newMessage real-
+  // time ngay cả khi chưa bấm mở chat đơn nào. Chỉ join đơn mình thực sự tham gia (requester/
+  // assignee) và đã có người xử lý — khớp đúng điều kiện hiện icon ở QuoteTable. Join lại mỗi khi
+  // socket reconnect vì server không nhớ room cũ qua lần kết nối mới.
+  useEffect(() => {
+    if (!socket) return;
+    const joinVisibleRooms = () => {
+      for (const r of requests) {
+        const isParticipant =
+          (r.requester?.id ?? r.requesterId) === currentUser.id ||
+          (r.assignee?.id ?? r.assigneeId) === currentUser.id;
+        const hasAssignee = !!(r.assignee?.id ?? r.assigneeId);
+        if (isParticipant && hasAssignee) {
+          // passive: true — chỉ đăng ký nhận badge, KHÔNG tính là "đang xem" (BE dựa vào cờ này để
+          // quyết định có bắc cầu Lark DM hay không, và để không bị coi là chiếm "phòng đang mở").
+          socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: r.id, passive: true });
+        }
+      }
+    };
+    if (socket.connected) joinVisibleRooms();
+    socket.on('connect', joinVisibleRooms);
+    return () => { socket.off('connect', joinVisibleRooms); };
+  }, [socket, requests, currentUser.id]);
+
+  // Tin nhắn mới tới cho 1 trong các room đã join ở trên -> cộng dồn badge ngay, không cần tải lại
+  // danh sách. Bỏ qua tin do chính mình gửi, và bỏ qua đơn đang mở popup (popup tự đánh dấu đã đọc).
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewMessage = (msg: { quoteRequestId: string; senderId: string }) => {
+      if (msg.senderId === currentUser.id) return;
+      if (msg.quoteRequestId === activeChatReqId) return;
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [msg.quoteRequestId]: (prev[msg.quoteRequestId] || 0) + 1,
+      }));
+    };
+    socket.on(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage);
+    return () => { socket.off(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage); };
+  }, [socket, activeChatReqId, currentUser.id]);
 
   return (
     <>
@@ -142,6 +207,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onReturn={onReturn}
           onResubmit={onResubmit}
           onMarkClosed={onMarkClosed}
+          unreadCounts={unreadCounts}
+          onOpenChat={handleOpenChat}
         />
         <Pagination
           currentPage={currentPage}
@@ -152,6 +219,19 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onPageSizeChange={(newSize) => { setPageSize(newSize); setCurrentPage(1); }}
         />
       </div>
+
+      {activeChatReqId && socket && (
+        <ChatPopup
+          key={activeChatReqId}
+          quoteRequestId={activeChatReqId}
+          currentUserId={currentUser.id}
+          currentUserName={currentUser.name}
+          socket={socket}
+          unreadCount={0}
+          initialOpen
+          onOpenChange={(open) => { if (!open) setActiveChatReqId(null); }}
+        />
+      )}
     </>
   );
 };

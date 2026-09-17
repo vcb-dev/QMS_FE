@@ -194,68 +194,94 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             </button>
 
             {panelOpen && (
-              <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[300px] bg-surface border border-[#e2e8f0] rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
-                {/* Category */}
+              <div className="absolute top-[calc(100%+8px)] left-0 z-20 w-[600px] bg-surface border border-[#e2e8f0] rounded-[12px] shadow-[0_12px_32px_rgba(15,23,42,0.16)] p-[16px] flex flex-col gap-[14px]">
+                {/* Category — pill, không phải select, để thấy hết lựa chọn cùng lúc */}
                 <div>
                   <label className={popoverLabelCls}>Danh mục</label>
-                  <div className="relative">
-                    <select value={selectedCat} onChange={(e) => setSelectedCat(e.target.value)} className={popoverSelectCls}>
-                      <option value="ALL">Tất cả danh mục</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className={selectArrowCls} />
+                  <div className="flex flex-wrap gap-[6px]">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCat('ALL')}
+                      className={clsx(
+                        'inline-flex items-center gap-[6px] py-[6px] px-[12px] rounded-full border text-[14.5px] font-bold cursor-pointer',
+                        selectedCat === 'ALL'
+                          ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+                          : 'bg-surface text-muted border-border hover:bg-[#f8fafc]',
+                      )}
+                    >
+                      Tất cả danh mục
+                    </button>
+                    {categories.map((c) => {
+                      const isActive = selectedCat === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setSelectedCat(c.id)}
+                          className={clsx(
+                            'inline-flex items-center gap-[6px] py-[6px] px-[12px] rounded-full border text-[14.5px] font-bold cursor-pointer',
+                            isActive
+                              ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+                              : 'bg-surface text-muted border-border hover:bg-[#f8fafc]',
+                          )}
+                        >
+                          {c.name}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Material */}
-                <div>
-                  <label className={popoverLabelCls}>Chất liệu</label>
-                  <div className="relative">
-                    <select value={selectedMat} onChange={(e) => setSelectedMat(e.target.value)} className={popoverSelectCls}>
-                      <option value="ALL">Tất cả chất liệu</option>
-                      {materials.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className={selectArrowCls} />
-                  </div>
-                </div>
-
-                {/* Sale — lọc theo người tạo yêu cầu (role SALE) */}
-                {saleStaff.length > 0 && (
+                {/* Chất liệu / Sale / Order — 3 cột ngang, tận dụng panel rộng thay vì xếp chồng dọc */}
+                <div className="grid grid-cols-3 gap-[12px]">
                   <div>
-                    <label className={popoverLabelCls}>Sale</label>
+                    <label className={popoverLabelCls}>Chất liệu</label>
                     <div className="relative">
-                      <select value={selectedSale} onChange={(e) => setSelectedSale(e.target.value)} className={popoverSelectCls}>
-                        <option value="ALL">Tất cả Sale</option>
-                        {saleStaff.map((u) => (
-                          <option key={u.id} value={u.id}>{u.name}</option>
+                      <select value={selectedMat} onChange={(e) => setSelectedMat(e.target.value)} className={popoverSelectCls}>
+                        <option value="ALL">Tất cả chất liệu</option>
+                        {materials.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
                       </select>
                       <ChevronDown size={14} className={selectArrowCls} />
                     </div>
                   </div>
-                )}
 
-                {/* Order — lọc theo người xử lý/báo giá (role ORDER) */}
-                {orderStaff.length > 0 && (
-                  <div>
-                    <label className={popoverLabelCls}>Order</label>
-                    <div className="relative">
-                      <select value={selectedOrder} onChange={(e) => setSelectedOrder(e.target.value)} className={popoverSelectCls}>
-                        <option value="ALL">Tất cả Order</option>
-                        {orderStaff.map((u) => (
-                          <option key={u.id} value={u.id}>{u.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className={selectArrowCls} />
+                  {/* Sale — lọc theo người tạo yêu cầu (role SALE) */}
+                  {saleStaff.length > 0 && (
+                    <div>
+                      <label className={popoverLabelCls}>Sale</label>
+                      <div className="relative">
+                        <select value={selectedSale} onChange={(e) => setSelectedSale(e.target.value)} className={popoverSelectCls}>
+                          <option value="ALL">Tất cả Sale</option>
+                          {saleStaff.map((u) => (
+                            <option key={u.id} value={u.id}>{u.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className={selectArrowCls} />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Time Range */}
+                  {/* Order — lọc theo người xử lý/báo giá (role ORDER) */}
+                  {orderStaff.length > 0 && (
+                    <div>
+                      <label className={popoverLabelCls}>Order</label>
+                      <div className="relative">
+                        <select value={selectedOrder} onChange={(e) => setSelectedOrder(e.target.value)} className={popoverSelectCls}>
+                          <option value="ALL">Tất cả Order</option>
+                          {orderStaff.map((u) => (
+                            <option key={u.id} value={u.id}>{u.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className={selectArrowCls} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lọc nhanh theo thời gian / Khoảng ngày tùy chọn — 2 cột ngang */}
+                <div className="grid grid-cols-2 gap-[12px]">
                 <div>
                   <label className={popoverLabelCls}>Lọc nhanh theo thời gian</label>
                   <div className="relative">
@@ -288,6 +314,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       className={dateInputCls}
                     />
                   </div>
+                </div>
                 </div>
               </div>
             )}

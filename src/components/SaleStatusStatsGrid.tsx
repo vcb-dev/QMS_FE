@@ -15,9 +15,11 @@ const STATUS_ITEMS: { key: keyof StatusCounts; value: string; label: string; col
 interface SaleStatusStatsGridProps {
   // Bấm vào 1 ô trạng thái — điều hướng sang trang danh sách, lọc sẵn theo trạng thái đó
   onSelectStatus?: (status: string) => void;
+  // "Chỉ mình tôi" ở Tổng quan — undefined nghĩa là xem tất cả
+  ownerId?: string;
 }
 
-export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSelectStatus }) => {
+export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSelectStatus, ownerId }) => {
   const [period, setPeriod] = React.useState<Period>('WEEK');
   const [current, setCurrent] = React.useState<StatusCounts>(EMPTY_COUNTS);
   const [previous, setPrevious] = React.useState<StatusCounts>(EMPTY_COUNTS);
@@ -30,8 +32,8 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      fetchQuoteRequestStats({ timeRange: currentRange }),
-      fetchQuoteRequestStats({ timeRange: previousRange }),
+      fetchQuoteRequestStats({ timeRange: currentRange, ownerId }),
+      fetchQuoteRequestStats({ timeRange: previousRange, ownerId }),
     ])
       .then(([currRes, prevRes]) => {
         if (cancelled) return;
@@ -42,7 +44,7 @@ export const SaleStatusStatsGrid: React.FC<SaleStatusStatsGridProps> = ({ onSele
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [period]);
+  }, [period, ownerId]);
 
   const renderChange = (currVal: number, prevVal: number) => {
     if (prevVal === 0) {

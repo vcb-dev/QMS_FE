@@ -494,7 +494,7 @@ export const StaffPage: React.FC = () => {
           <h2 className={cardHeadingCls}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
           </h2>
-          <span className="text-[14px] text-muted">Thời gian trung bình báo giá & xử lý của từng Order</span>
+          <span className="text-[14px] text-muted">Thời gian trung vị báo giá & xử lý của từng Order</span>
 
           {pricerStats.length > 0 ? (
             <div className="overflow-x-auto mt-[14px]">
@@ -503,8 +503,8 @@ export const StaffPage: React.FC = () => {
                   <tr className="border-b border-[#f1f5f9] text-left">
                     <th className={staffThCls}>Order</th>
                     <th className={clsx(staffThCls, 'text-right')}>Đã xử lý</th>
-                    <th className={clsx(staffThCls, 'text-right')}>TB báo giá</th>
-                    <th className={clsx(staffThCls, 'text-right')}>TB xử lý</th>
+                    <th className={clsx(staffThCls, 'text-right')}>Trung vị báo giá</th>
+                    <th className={clsx(staffThCls, 'text-right')}>Trung vị xử lý</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -513,12 +513,12 @@ export const StaffPage: React.FC = () => {
                       <td className="p-[10px] font-bold text-[#0f172a]">{p.name}</td>
                       <td className="p-[10px] text-right text-[#334155]">{p.totalHandled}</td>
                       <td className="p-[10px] text-right text-[#0f766e] font-bold">
-                        {p.avgQuoteMs !== null ? formatDuration(0, p.avgQuoteMs) : '---'}
+                        {p.medianQuoteMs !== null ? formatDuration(0, p.medianQuoteMs) : '---'}
                       </td>
                       <td className="p-[10px] text-right text-[#334155] font-bold">
                         <span className="inline-flex items-center gap-[4px]">
                           <Clock size={12} color="#94a3b8" />
-                          {p.avgProcessMs !== null ? formatDuration(0, p.avgProcessMs) : '---'}
+                          {p.medianProcessMs !== null ? formatDuration(0, p.medianProcessMs) : '---'}
                         </span>
                       </td>
                     </tr>

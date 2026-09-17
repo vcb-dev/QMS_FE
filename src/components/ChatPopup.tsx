@@ -14,8 +14,9 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
   socket,
   unreadCount,
   onOpenChange,
+  initialOpen = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(initialOpen);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
