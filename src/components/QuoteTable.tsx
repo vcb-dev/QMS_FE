@@ -57,6 +57,31 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   unreadCounts,
   onOpenChat,
 }) => {
+  // Độ cao dòng bảng (kiểu Lark) — chỉ đổi padding dọc, nhớ lựa chọn qua reload bằng localStorage
+  // (sở thích riêng máy đang xem, không cần đồng bộ server).
+  type RowHeight = 'compact' | 'normal' | 'tall';
+  const ROW_HEIGHT_OPTIONS: { value: RowHeight; label: string }[] = [
+    { value: 'compact', label: 'Thấp' },
+    { value: 'normal', label: 'Vừa' },
+    { value: 'tall', label: 'Cao' },
+  ];
+  const ROW_HEIGHT_CLS: Record<RowHeight, string> = {
+    compact: '[&_td]:py-[4px] [&_th]:py-[4px]',
+    normal: '[&_td]:py-[10px] [&_th]:py-[8px]',
+    tall: '[&_td]:py-[18px] [&_th]:py-[10px]',
+  };
+  const [rowHeight, setRowHeight] = useState<RowHeight>(() => {
+    try {
+      const saved = localStorage.getItem('quoteTableRowHeight');
+      return saved === 'compact' || saved === 'normal' || saved === 'tall' ? saved : 'normal';
+    } catch {
+      return 'normal';
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('quoteTableRowHeight', rowHeight); } catch { /* private mode — bỏ qua */ }
+  }, [rowHeight]);
+
   // Ảnh sản phẩm đang bấm xem zoom — null = không mở lightbox
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   // Mức zoom trong lightbox — lăn chuột để tăng/giảm, 1 = vừa khung
@@ -88,9 +113,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     };
   }, [isDragging]);
 
-  // Chỉ Order cần cột thiết yếu (mã, tên, ảnh, chất liệu, loại sản phẩm, thời gian,
-  // trạng thái, số đo, bộ phận, giá, VAT). Sale và Admin xem đủ mọi cột.
-  const isCompactView = currentRole === 'ORDER';
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -473,14 +495,35 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   };
 
   return (
-    <div className="w-full overflow-x-auto border border-border rounded-[10px]">
-      <table className="w-full min-w-[1500px] border-collapse text-[12.5px] [&_th]:text-left [&_th]:py-[6px] [&_th]:px-[10px] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:py-[6px] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]">
+    <div className="w-full">
+      <div className="flex items-center justify-end gap-[6px] mb-[8px]">
+        <span className="text-[11px] text-muted font-semibold">Độ cao dòng:</span>
+        {ROW_HEIGHT_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setRowHeight(opt.value)}
+            className={clsx(
+              'py-[4px] px-[10px] rounded-[6px] text-[11px] font-bold border cursor-pointer',
+              rowHeight === opt.value
+                ? 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]'
+                : 'bg-surface text-muted border-border hover:bg-[#f8fafc]',
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <div className="w-full overflow-x-auto border border-border rounded-[10px]">
+      <table className={clsx(
+        'w-full min-w-[1500px] border-collapse text-[12.5px] [&_th]:text-left [&_th]:px-[10px] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]',
+        ROW_HEIGHT_CLS[rowHeight],
+      )}>
         <thead>
           <tr>
             <th>Mã Hỏi Giá</th>
             <th>Thời Gian Tạo</th>
             <th>Trạng Thái</th>
-            {!isCompactView && <th>Khách Hàng / Hỏi Giá</th>}
             <th>Danh Mục</th>
             <th>Ảnh</th>
             <th>Tên Sản Phẩm</th>
@@ -488,26 +531,25 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th className="text-[#3730a3]">VAT</th>
             <th className="text-[#0f766e]">Báo Giá Khách (Có VAT)</th>
             <th>Số Đo Kích Thước</th>
-            {!isCompactView && <th>Tỷ Lệ Chốt</th>}
-            {!isCompactView && <th>Yêu Cầu / Muốn Nhận</th>}
-            {!isCompactView && <th>Người Báo Giá</th>}
-            {!isCompactView && (
-              <th>
-                <span className="inline-flex items-center gap-[4px]">
-                  Mốc Xử Lý
-                  <span
-                    title={
-                      'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc ORDER tiếp nhận.\n' +
-                      'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
-                      'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.'
-                    }
-                    className="inline-flex cursor-help text-faint"
-                  >
-                    <HelpCircle size={13} />
-                  </span>
+            <th>Người Báo Giá</th>
+            <th>
+              <span className="inline-flex items-center gap-[4px]">
+                Mốc Xử Lý
+                <span
+                  title={
+                    'Nhận xử lý sau: từ lúc tạo yêu cầu đến lúc ORDER tiếp nhận.\n' +
+                    'Báo giá sau: từ lúc tiếp nhận đến lúc báo giá.\n' +
+                    'Trả lại sau: từ lúc tiếp nhận đến lúc trả lại Sale.'
+                  }
+                  className="inline-flex cursor-help text-faint"
+                >
+                  <HelpCircle size={13} />
                 </span>
-              </th>
-            )}
+              </span>
+            </th>
+            <th>Tỷ Lệ Chốt</th>
+            <th>Yêu Cầu / Muốn Nhận</th>
+            <th>Khách Hàng / Hỏi Giá</th>
             <th>Bộ Phận</th>
           </tr>
         </thead>
@@ -583,11 +625,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     : '---'}
                 </td>
                 <td>{renderStatusCell(r, isMyReq)}</td>
-                {!isCompactView && (
-                  <td>
-                    <strong className="text-[#0f172a]">{displayCustomerName}</strong>
-                  </td>
-                )}
                 <td>
                   <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[11px] font-semibold">
                     {r.category?.name || '---'}
@@ -613,7 +650,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </div>
                 </td>
                 <td>
-                  <div title={r.productName} className="font-bold text-[#0f172a] max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
+                  <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
                     {r.productName}
                   </div>
                 </td>
@@ -667,20 +704,17 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   <td className="text-faint text-center">---</td>
                 )}
                 <td className="text-[12px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
-                {!isCompactView && (
-                  <td className="text-[11px] text-[#475569] font-semibold">
-                    {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}
-                  </td>
-                )}
-                {!isCompactView && (
-                  <td className="text-[11px] text-[#d97706] max-w-[160px] overflow-hidden text-ellipsis font-semibold">
-                    {displayNote}
-                  </td>
-                )}
-                {!isCompactView && (
-                  <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
-                )}
-                {!isCompactView && <td>{renderProcessingTimeCell(r)}</td>}
+                <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
+                <td>{renderProcessingTimeCell(r)}</td>
+                <td className="text-[11px] text-[#475569] font-semibold">
+                  {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}
+                </td>
+                <td className="text-[11px] text-[#d97706] max-w-[200px] whitespace-normal font-semibold leading-[1.5]">
+                  {displayNote}
+                </td>
+                <td>
+                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
+                </td>
                 <td>
                   <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[11px] font-semibold">
                     {displayDeptName}
@@ -691,6 +725,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           })}
         </tbody>
       </table>
+      </div>
 
       {zoomedImage && createPortal(
         <div
