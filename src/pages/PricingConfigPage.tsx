@@ -19,9 +19,11 @@ import {
   updateBaseMetalPrice,
   createMaterial,
   updateMaterial,
+  deleteMaterial,
   fetchPricingFormulas,
   createPricingFormula,
   updatePricingFormula,
+  deletePricingFormula,
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
 import type{BaseMetal, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
@@ -493,6 +495,20 @@ export const PricingConfigPage: React.FC = () => {
     }
   };
 
+  // Xóa lưu ngay như thêm — BE tự chặn nếu đang là công thức mặc định hoặc còn chất liệu dùng,
+  // lỗi đó hiện thẳng qua formulaError.
+  const handleDeleteFormula = async (id: string, name: string) => {
+    if (!window.confirm(`Xóa công thức "${name}"?`)) return;
+    setFormulaError(null);
+    try {
+      await deletePricingFormula(id);
+      setFormulas((prev) => prev.filter((f) => f.id !== id));
+      setInitialFormulas((prev) => prev.filter((f) => f.id !== id));
+    } catch (err: any) {
+      setFormulaError(err.message || 'Không thể xóa công thức');
+    }
+  };
+
   // Chỉ cập nhật local state — lưu xuống BE khi bấm nút "Lưu cấu hình" ở dưới
   const handleCategoryLaborCostChange = (id: string, laborCost: number) => {
     setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, laborCost } : c)));
@@ -591,6 +607,21 @@ export const PricingConfigPage: React.FC = () => {
       setAddingMaterial(false);
     } catch (err: any) {
       setMaterialError(err.message || 'Không thể thêm chất liệu');
+    }
+  };
+
+  // Xóa lưu ngay như thêm/sửa (không staged) — confirm tay vì chất liệu không có staging/undo
+  // như đá (Lưu cấu hình mới xóa thật) nên xóa là mất luôn không hoàn tác được.
+  const handleDeleteMaterial = async (id: string, name: string) => {
+    if (!window.confirm(`Xóa chất liệu "${name}"?`)) return;
+    setMaterialError(null);
+    try {
+      await deleteMaterial(id);
+      setMaterials((prev) => prev.filter((m) => m.id !== id));
+      setInitialMaterials((prev) => prev.filter((m) => m.id !== id));
+      invalidateMasterData();
+    } catch (err: any) {
+      setMaterialError(err.message || 'Không thể xóa chất liệu');
     }
   };
 
@@ -736,7 +767,7 @@ export const PricingConfigPage: React.FC = () => {
                         <th className={clsx(thCls, 'w-[18%]')}>Kim loại gốc</th>
                         <th className={clsx(thCls, 'w-[16%]')}>% tính giá</th>
                         <th className={clsx(thCls, 'w-[32%]')}>Công thức tính lãi</th>
-                        <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
+                        <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -787,6 +818,7 @@ export const PricingConfigPage: React.FC = () => {
                             <td className={tdCenterCls}>
                               <div className="flex gap-[10px] justify-center">
                                 <EditIconButton onClick={() => setEditingMaterialIds((prev) => toggleInArray(prev, m.id))} active={isEditing} />
+                                <DeleteIconButton onClick={() => handleDeleteMaterial(m.id, m.name)} title="Xóa chất liệu" />
                               </div>
                             </td>
                           </tr>
@@ -911,13 +943,16 @@ export const PricingConfigPage: React.FC = () => {
                       (f.isDefault ? ' • Mặc định tính lãi phần Đá.' : '')
                     }
                     action={
-                      <button
-                        type="button"
-                        onClick={() => (f.formulaType === 'MULTIPLIER' ? addMultiplier(f.id) : addTier(f.id))}
-                        className={btnGhostSmallCls}
-                      >
-                        <Plus size={12} /> {f.formulaType === 'MULTIPLIER' ? 'Thêm hệ số' : 'Thêm bậc'}
-                      </button>
+                      <div className="flex items-center gap-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => (f.formulaType === 'MULTIPLIER' ? addMultiplier(f.id) : addTier(f.id))}
+                          className={btnGhostSmallCls}
+                        >
+                          <Plus size={12} /> {f.formulaType === 'MULTIPLIER' ? 'Thêm hệ số' : 'Thêm bậc'}
+                        </button>
+                        <DeleteIconButton onClick={() => handleDeleteFormula(f.id, f.name)} title="Xóa công thức" />
+                      </div>
                     }
                   >
                     {f.formulaType === 'MULTIPLIER' ? (
@@ -927,7 +962,7 @@ export const PricingConfigPage: React.FC = () => {
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[60px]')}>STT</th>
                               <th className={thCls}>Hệ số nhân</th>
-                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
+                              <th className={clsx(thCls, 'w-[90px] !text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -968,7 +1003,7 @@ export const PricingConfigPage: React.FC = () => {
                             <tr className={tableHeadRowCls}>
                               <th className={clsx(thCls, 'w-[42%]')}>Chi phí tối đa (VNĐ)</th>
                               <th className={clsx(thCls, 'w-[38%]')}>Biên độ lợi nhuận (%)</th>
-                              <th className={clsx(thCls, 'w-[90px] text-right')}>Thao tác</th>
+                              <th className={clsx(thCls, 'w-[90px] !text-right')}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1273,8 +1308,8 @@ const StoneGroupTable: React.FC<{
               <th className={clsx(thCls, 'w-[26%]')}>Tên đá</th>
               <th className={clsx(thCls, 'w-[18%]')}>Giác cắt</th>
               <th className={clsx(thCls, 'w-[15%]')}>Size (mm)</th>
-              <th className={clsx(thCls, 'w-[26%]')}>Giá (VNĐ)</th>
-              <th className={clsx(thCls, 'w-[90px] text-center')}>Thao tác</th>
+              <th className={clsx(thCls, 'w-[31%]')}>Giá (VNĐ)</th>
+              <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
