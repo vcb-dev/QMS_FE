@@ -302,6 +302,7 @@ export const StaffPage: React.FC = () => {
                   <th className={staffThCls}>Tên</th>
                   <th className={staffThCls}>Email</th>
                   <th className={staffThCls}>Vai trò</th>
+                  <th className={staffThCls}>Thời gian tạo</th>
                   <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
@@ -326,6 +327,9 @@ export const StaffPage: React.FC = () => {
                           <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
                         ))}
                       </select>
+                    </td>
+                    <td className="p-[10px] text-muted">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
                     </td>
                     <td className="p-[10px] text-right">
                       <div className="inline-flex gap-[6px]">
@@ -371,6 +375,7 @@ export const StaffPage: React.FC = () => {
                   <th className={staffThCls}>Email</th>
                   <th className={staffThCls}>Vai trò</th>
                   <th className={staffThCls}>Trạng thái</th>
+                  <th className={staffThCls}>Thời gian tạo</th>
                   <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
@@ -392,6 +397,9 @@ export const StaffPage: React.FC = () => {
                       )}>
                         {u.isActive ? 'Đang hoạt động' : 'Đã khóa'}
                       </span>
+                    </td>
+                    <td className="p-[10px] text-muted">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
                     </td>
                     <td className="p-[10px] text-right">
                       <button
