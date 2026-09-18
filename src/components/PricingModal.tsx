@@ -11,7 +11,7 @@ import {
 import type { CalculateBatchResultItem } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
-import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { getPriceBreakdown, renderPriceBreakdownLines, getCostBreakdown, renderCostBreakdownLines } from '../utils/priceBreakdown';
 import { getPrimaryOption, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
 import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
@@ -688,6 +688,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             {formatCurrency(opt.quotedPrice)}
                           </strong>
                           {renderPriceBreakdownLines(getPriceBreakdown(opt))}
+                          {renderCostBreakdownLines(getCostBreakdown(opt))}
                         </div>
                           <button
                             type="button"
@@ -724,6 +725,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                                     {formatCurrency(childOpt.quotedPrice)}
                                   </strong>
                                   {renderPriceBreakdownLines(getPriceBreakdown(childOpt))}
+                                  {renderCostBreakdownLines(getCostBreakdown(childOpt))}
                                 </div>
                                 <button
                                   type="button"
