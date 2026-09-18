@@ -516,21 +516,21 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       </div>
       <div className="w-full overflow-x-auto border border-border rounded-[10px]">
       <table className={clsx(
-        'w-full min-w-[1500px] border-collapse text-[12.5px] [&_th]:text-left [&_th]:px-[10px] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]',
+        'w-full border-collapse text-[15.5px] [&_th]:text-left [&_th]:px-[10px] [&_th]:text-[14px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]',
         ROW_HEIGHT_CLS[rowHeight],
       )}>
         <thead>
           <tr>
-            <th>Mã Hỏi Giá</th>
+            <th>Tên Sản Phẩm</th>
             <th>Thời Gian Tạo</th>
             <th>Trạng Thái</th>
-            <th>Danh Mục</th>
             <th>Ảnh</th>
-            <th>Tên Sản Phẩm</th>
+            <th>Danh Mục</th>
             <th>Chất Liệu</th>
+            <th>Số Đo Kích Thước</th>
             <th className="text-[#3730a3]">VAT</th>
             <th className="text-[#0f766e]">Báo Giá Khách (Có VAT)</th>
-            <th>Số Đo Kích Thước</th>
+            <th>Mã Hỏi Giá</th>
             <th>Người Báo Giá</th>
             <th>
               <span className="inline-flex items-center gap-[4px]">
@@ -597,26 +597,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 onClick={() => onSelect(r.id)}
               >
                 <td>
-                  <span className="inline-flex items-center gap-[6px]">
-                    <strong className="font-mono text-[12px] text-[#1e293b]">{r.code || r.id}</strong>
-                    {canChat && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onOpenChat(r.id); }}
-                        title={unread > 0 ? `${unread} tin nhắn chưa đọc` : 'Trao đổi'}
-                        className="relative inline-flex items-center justify-center w-[20px] h-[20px] bg-transparent border-0 text-muted cursor-pointer p-0"
-                      >
-                        <MessageCircle size={14} />
-                        {unread > 0 && (
-                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[9px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
-                            {unread > 9 ? '9+' : unread}
-                          </span>
-                        )}
-                      </button>
-                    )}
-                  </span>
+                  <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
+                    {r.productName}
+                  </div>
                 </td>
-                <td className="text-muted text-[11px]">
+                <td className="text-muted text-[14px]">
                   {r.createdAt
                     ? new Date(r.createdAt).toLocaleString('vi-VN', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
@@ -625,11 +610,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     : '---'}
                 </td>
                 <td>{renderStatusCell(r, isMyReq)}</td>
-                <td>
-                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[11px] font-semibold">
-                    {r.category?.name || '---'}
-                  </span>
-                </td>
                 <td>
                   <div className="relative inline-block">
                     <img
@@ -643,20 +623,21 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       }}
                     />
                     {r.images && r.images.length > 1 && (
-                      <span className="absolute bottom-[-2px] right-[-2px] bg-[#0f172a] text-surface text-[9.5px] font-extrabold py-[1px] px-[4px] rounded-[4px] border border-surface pointer-events-none">
+                      <span className="absolute bottom-[-2px] right-[-2px] bg-[#0f172a] text-surface text-[12.5px] font-extrabold py-[1px] px-[4px] rounded-[4px] border border-surface pointer-events-none">
                         +{r.images.length - 1}
                       </span>
                     )}
                   </div>
                 </td>
                 <td>
-                  <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
-                    {r.productName}
-                  </div>
+                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
+                    {r.category?.name || '---'}
+                  </span>
                 </td>
                 <td>
                   <MaterialsCell materials={materialsList} />
                 </td>
+                <td className="text-[15px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
                 <td className="text-[#4338ca] font-bold text-center">
                   {currentRole === 'SALE'
                     ? (r.vat == null ? '---' : r.vat === 0 ? 'Không VAT' : 'Có VAT')
@@ -703,7 +684,26 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 ) : (
                   <td className="text-faint text-center">---</td>
                 )}
-                <td className="text-[12px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
+                <td>
+                  <span className="inline-flex items-center gap-[6px]">
+                    <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
+                    {canChat && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onOpenChat(r.id); }}
+                        title={unread > 0 ? `${unread} tin nhắn chưa đọc` : 'Trao đổi'}
+                        className="relative inline-flex items-center justify-center w-[20px] h-[20px] bg-transparent border-0 text-muted cursor-pointer p-0"
+                      >
+                        <MessageCircle size={14} />
+                        {unread > 0 && (
+                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[12px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
+                            {unread > 9 ? '9+' : unread}
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </span>
+                </td>
                 <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
                 <td>{renderProcessingTimeCell(r)}</td>
                 <td className="text-[11px] text-[#475569] font-semibold">
