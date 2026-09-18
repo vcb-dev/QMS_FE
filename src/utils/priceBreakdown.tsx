@@ -32,6 +32,32 @@ export function renderPriceBreakdownLines(
   );
 }
 
+type CostBreakdownInput = {
+  metalRawCost?: number | null;
+  laborCost?: number | null;
+  stoneCost?: number | null;
+};
+
+// Giá vốn (kim loại gốc / công chế tác / đá gốc) — BE tính sẵn từng field riêng, FE chỉ đọc và
+// hiện từng dòng, KHÔNG cộng gộp thành 1 số (tránh trùng công thức với BE). Chỉ nơi gọi hàm này
+// giới hạn theo role ORDER/ADMIN (PricingModal chỉ 2 role đó mở được).
+export function getCostBreakdown(opt: CostBreakdownInput): CostBreakdownInput | null {
+  if (opt.metalRawCost == null) return null;
+  return opt;
+}
+
+export function renderCostBreakdownLines(bd: CostBreakdownInput | null): React.ReactNode {
+  if (!bd || bd.metalRawCost == null) return null;
+  const lineCls = 'text-[13.5px] font-semibold leading-[15px] text-[#b45309]';
+  return (
+    <span className="flex flex-col mt-[2px]">
+      <span className={lineCls}>Vốn kim loại: {formatCurrency(bd.metalRawCost)}</span>
+      {!!bd.laborCost && <span className={lineCls}>Công chế tác: {formatCurrency(bd.laborCost)}</span>}
+      {!!bd.stoneCost && <span className={lineCls}>Vốn đá: {formatCurrency(bd.stoneCost)}</span>}
+    </span>
+  );
+}
+
 // Khoảng giá 1 phần (chất liệu hoặc đá) ở Thư Viện — dùng lại logic formatPriceRange.
 export function formatBreakdownRange(
   min: number | null | undefined,
