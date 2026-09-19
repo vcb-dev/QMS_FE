@@ -671,9 +671,9 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     <div className="bg-page py-[6px] px-[8px] rounded-[6px] mb-[4px] border border-border">
                       <div className="font-extrabold text-[#475569] mb-[3px]">Chi tiết từng kim loại:</div>
                       {finalOption.materials.map((m: QuoteOptionMaterial, idx: number) => (
-                        <div key={idx} className="flex justify-between text-[#334155] mt-[2px]">
-                          <span>• {m.materialName || m.material?.name || 'Kim loại'}:</span>
-                          <strong>{m.weightChi != null ? `${m.weightChi} chỉ` : '---'}</strong>
+                        <div key={idx} className="flex justify-between items-baseline text-[#334155] mt-[2px]">
+                          <span>• {m.materialName || m.material?.name || 'Kim loại'} ({m.weightChi != null ? `${m.weightChi} chỉ` : '---'}):</span>
+                          <strong>{m.rawCost != null ? formatCurrency(Number(m.rawCost)) : '---'}</strong>
                         </div>
                       ))}
                     </div>
