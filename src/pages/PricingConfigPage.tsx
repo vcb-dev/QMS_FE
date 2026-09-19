@@ -369,7 +369,7 @@ export const PricingConfigPage: React.FC = () => {
               }
             })()
           : Promise.resolve(),
-        categoriesDirty
+        changedCategories.length > 0
           ? updateProductCategoriesBulk(changedCategories.map((c) => ({ id: c.id, laborCost: c.laborCost || 0, vatRate: c.vatRate || 0 })))
           : Promise.resolve(),
         changedStonePrices.length > 0
