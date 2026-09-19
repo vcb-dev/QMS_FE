@@ -13,6 +13,7 @@ import {
   returnQuoteRequest,
   resubmitQuoteRequest,
   markQuoteClosed,
+  invalidateMasterData,
 } from '../services/api';
 
 // `listDataEnabled=false` (khi đang ở trang KHÔNG đọc `requests[]` — Thư viện/Máy tính giá/Nhân
@@ -403,8 +404,12 @@ export function useQuoteRequests(
       }
       return createQuoteRequest(payload);
     }, {
-      onSuccess: () =>
-        setToastMessage(wasEditing ? 'Đã cập nhật yêu cầu báo giá.' : 'Đã tạo yêu cầu báo giá thành công.'),
+      onSuccess: () => {
+        setToastMessage(wasEditing ? 'Đã cập nhật yêu cầu báo giá.' : 'Đã tạo yêu cầu báo giá thành công.');
+        // Sale có thể vừa tạo danh mục mới (chọn "Khác" + gõ tên) ngay trong form này — xóa cache
+        // master data để lần mở form kế tiếp load lại, thấy danh mục mới thay vì list cũ đã cache.
+        invalidateMasterData();
+      },
     });
   };
 
