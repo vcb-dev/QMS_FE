@@ -355,7 +355,11 @@ export const PricingConfigPage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      await Promise.all([
+      const categoryDeletePromise = pendingDeleteCategoryIds.length > 0
+        ? deleteProductCategoriesMany(pendingDeleteCategoryIds)
+        : Promise.resolve<{ deleted: number; failedIds: string[] } | null>(null);
+
+      const [, , , , categoryDeleteResult] = await Promise.all([
         // Cập nhật giá kim loại TUẦN TỰ, không Promise.all: mỗi PATCH chạy transaction Serializable
         // trên base_metal_price_history, gửi song song nhiều cái sẽ đụng nhau -> Postgres P2034.
         metalPricesDirty
@@ -365,14 +369,14 @@ export const PricingConfigPage: React.FC = () => {
               }
             })()
           : Promise.resolve(),
-        categoriesDirty
+        changedCategories.length > 0
           ? updateProductCategoriesBulk(changedCategories.map((c) => ({ id: c.id, laborCost: c.laborCost || 0, vatRate: c.vatRate || 0 })))
           : Promise.resolve(),
         changedStonePrices.length > 0
           ? updateStonePrices(changedStonePrices.map((s) => ({ id: s.id, price: s.price })))
           : Promise.resolve(),
         pendingDeleteStoneIds.length > 0 ? deleteStonesMany(pendingDeleteStoneIds) : Promise.resolve(),
-        pendingDeleteCategoryIds.length > 0 ? deleteProductCategoriesMany(pendingDeleteCategoryIds) : Promise.resolve(),
+        categoryDeletePromise,
         materialsDirty
           ? Promise.all(changedMaterials.map((m) => updateMaterial(m.id, { priceRatioPct: m.priceRatioPct, pricingFormulaId: m.pricingFormulaId, baseMetalId: m.baseMetalId })))
           : Promise.resolve(),
@@ -384,7 +388,12 @@ export const PricingConfigPage: React.FC = () => {
       setInitialBaseMetals(baseMetals);
       setInitialMaterials(materials);
       setInitialFormulas(formulas);
-      const remainingCategories = categories.filter((c) => !pendingDeleteCategoryIds.includes(c.id));
+      // BE từ chối xóa danh mục đang có yêu cầu báo giá dùng (failedIds) — chỉ bỏ khỏi UI những
+      // danh mục BE ĐÃ xóa thật, không xóa nhìn thấy trên UI rồi nó lại hiện lại lúc tải trang sau.
+      const failedCategoryIds = categoryDeleteResult?.failedIds || [];
+      const remainingCategories = categories.filter(
+        (c) => !pendingDeleteCategoryIds.includes(c.id) || failedCategoryIds.includes(c.id),
+      );
       setCategories(remainingCategories);
       setInitialCategories(remainingCategories);
       setPendingDeleteCategoryIds([]);
@@ -401,7 +410,11 @@ export const PricingConfigPage: React.FC = () => {
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
-      showToast('success', 'Đã lưu cấu hình thành công');
+      if (failedCategoryIds.length > 0) {
+        showToast('error', `${failedCategoryIds.length} danh mục đang có yêu cầu báo giá dùng, không thể xóa`);
+      } else {
+        showToast('success', 'Đã lưu cấu hình thành công');
+      }
     } catch (err: any) {
       const message = err.message || 'Lưu cấu hình thất bại';
       setError(message);
