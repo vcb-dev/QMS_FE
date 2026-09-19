@@ -445,18 +445,27 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   };
 
   // Dán ảnh copy từ ngoài (VD: cắt màn hình, copy từ web) thẳng vào form, khỏi phải tải về máy
-  // rồi chọn file lại — chỉ lấy phần ảnh trong clipboard, không chặn dán chữ bình thường.
-  const handlePasteImage = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    const imageFiles = Array.from(items)
-      .filter((item) => item.type.startsWith('image/'))
-      .map((item) => item.getAsFile())
-      .filter((f): f is File => !!f);
-    if (imageFiles.length > 0) {
-      addImageFiles(imageFiles);
-    }
-  };
+  // rồi chọn file lại — chỉ lấy phần ảnh trong clipboard, không chặn dán chữ bình thường. Nghe ở
+  // document (không gắn onPaste vào 1 element) vì lúc mở modal, focus mặc định rơi vào nút/control
+  // đầu tiên (useModalA11y) — trình duyệt CHỈ bắn sự kiện paste khi đang focus input/textarea/
+  // contentEditable, focus vào nút bấm thường thì Ctrl+V không có tác dụng gì cả.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleDocumentPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles = Array.from(items)
+        .filter((item) => item.type.startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => !!f);
+      if (imageFiles.length > 0) {
+        addImageFiles(imageFiles);
+      }
+    };
+    document.addEventListener('paste', handleDocumentPaste);
+    return () => document.removeEventListener('paste', handleDocumentPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, totalImageCount]);
 
   const removeExistingImage = (indexToRemove: number) => {
     setExistingImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
@@ -576,7 +585,6 @@ export const CreateModal: React.FC<CreateModalProps> = ({
         aria-modal="true"
         aria-labelledby="modalCreateTitle"
         tabIndex={-1}
-        onPaste={handlePasteImage}
         className={clsx(modalCardCls, '!max-w-[920px] !rounded-[20px] overflow-hidden flex flex-col !max-h-[90vh]')}
       >
         {/* Header matching design */}
