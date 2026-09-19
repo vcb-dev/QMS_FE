@@ -480,7 +480,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               res.materialPrice != null
                 ? { material: res.materialPrice, stone: res.stonePrice ?? 0 }
                 : undefined,
-            materials: payload.materials,
+            // Gắn giá vốn RIÊNG từng kim loại (res.breakdown, BE tính sẵn) vào từng dòng material
+            // để lưu lại — FE chỉ đọc, không tự tính.
+            materials: payload.materials.map((m) => ({
+              ...m,
+              rawCost: res.breakdown.find((b) => b.materialId === m.materialId)?.cost,
+            })),
             stones: payload.stones,
             stoneDescription:
               calcStoneMode === 'manual'
