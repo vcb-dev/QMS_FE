@@ -597,8 +597,25 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 onClick={() => onSelect(r.id)}
               >
                 <td>
-                  <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
-                    {r.productName}
+                  <div className="inline-flex items-start gap-[6px]">
+                    <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
+                      {r.productName}
+                    </div>
+                    {canChat && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onOpenChat(r.id); }}
+                        title={unread > 0 ? `${unread} tin nhắn chưa đọc` : 'Trao đổi'}
+                        className="relative inline-flex items-center justify-center w-[20px] h-[20px] bg-transparent border-0 text-muted cursor-pointer p-0 shrink-0"
+                      >
+                        <MessageCircle size={14} />
+                        {unread > 0 && (
+                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[12px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
+                            {unread > 9 ? '9+' : unread}
+                          </span>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </td>
                 <td className="text-muted text-[14px]">
@@ -685,24 +702,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   <td className="text-faint text-center">---</td>
                 )}
                 <td>
-                  <span className="inline-flex items-center gap-[6px]">
-                    <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
-                    {canChat && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onOpenChat(r.id); }}
-                        title={unread > 0 ? `${unread} tin nhắn chưa đọc` : 'Trao đổi'}
-                        className="relative inline-flex items-center justify-center w-[20px] h-[20px] bg-transparent border-0 text-muted cursor-pointer p-0"
-                      >
-                        <MessageCircle size={14} />
-                        {unread > 0 && (
-                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[12px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
-                            {unread > 9 ? '9+' : unread}
-                          </span>
-                        )}
-                      </button>
-                    )}
-                  </span>
+                  <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
                 </td>
                 <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
                 <td>{renderProcessingTimeCell(r)}</td>
