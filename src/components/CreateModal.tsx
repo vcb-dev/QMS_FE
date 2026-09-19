@@ -418,26 +418,54 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   const MAX_IMAGES = UI_CONSTANTS.CREATE_QUOTE_REQUEST.MAX_IMAGES;
 
+  // Dùng chung cho cả chọn file (input) và dán ảnh (Ctrl+V) — cùng 1 luật giới hạn MAX_IMAGES.
+  const addImageFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    if (totalImageCount >= MAX_IMAGES) {
+      alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
+      return;
+    }
+
+    const availableSlots = MAX_IMAGES - totalImageCount;
+    const filesToProcess = files.slice(0, availableSlots);
+
+    if (files.length > availableSlots) {
+      alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
+    }
+
+    setNewImageFiles((prev) => [...prev, ...filesToProcess]);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (totalImageCount >= MAX_IMAGES) {
-        alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
-        e.target.value = '';
-        return;
-      }
-
-      const availableSlots = MAX_IMAGES - totalImageCount;
-      const filesToProcess = Array.from(files).slice(0, availableSlots);
-
-      if (files.length > availableSlots) {
-        alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
-      }
-
-      setNewImageFiles((prev) => [...prev, ...filesToProcess]);
+      addImageFiles(Array.from(files));
     }
     e.target.value = '';
   };
+
+  // Dán ảnh copy từ ngoài (VD: cắt màn hình, copy từ web) thẳng vào form, khỏi phải tải về máy
+  // rồi chọn file lại — chỉ lấy phần ảnh trong clipboard, không chặn dán chữ bình thường. Nghe ở
+  // document (không gắn onPaste vào 1 element) vì lúc mở modal, focus mặc định rơi vào nút/control
+  // đầu tiên (useModalA11y) — trình duyệt CHỈ bắn sự kiện paste khi đang focus input/textarea/
+  // contentEditable, focus vào nút bấm thường thì Ctrl+V không có tác dụng gì cả.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleDocumentPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles = Array.from(items)
+        .filter((item) => item.type.startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => !!f);
+      if (imageFiles.length > 0) {
+        addImageFiles(imageFiles);
+      }
+    };
+    document.addEventListener('paste', handleDocumentPaste);
+    return () => document.removeEventListener('paste', handleDocumentPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, totalImageCount]);
 
   const removeExistingImage = (indexToRemove: number) => {
     setExistingImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
