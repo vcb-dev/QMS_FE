@@ -749,7 +749,12 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   {displayNote}
                 </td>
                 <td>
-                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
+                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">
+                    {r.customer?.name || r.requester?.name || '---'}
+                  </div>
+                  {r.customer?.name && r.requester?.name && (
+                    <div className="text-[12px] text-muted mt-[2px]">{r.requester.name}</div>
+                  )}
                 </td>
                 <td>
                   <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
