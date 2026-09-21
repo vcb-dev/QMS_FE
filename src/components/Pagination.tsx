@@ -49,7 +49,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const isLast = currentPage === totalPages || totalPages === 0;
 
   return (
-    <div className="flex items-center justify-between py-[12px] px-[16px] bg-white border-t border-[#e2e8f0] rounded-b-[10px] text-[12.5px] text-[#64748b]">
+    <div className="flex items-center justify-between py-[12px] px-[16px] bg-white border-t border-[#e2e8f0] rounded-b-[10px] text-[15.5px] text-[#334155]">
       {/* Summary Info & Page Size */}
       <div className="flex items-center gap-[14px]">
         <span>
@@ -60,7 +60,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="py-[4px] px-[8px] rounded-[6px] border border-[#cbd5e1] bg-[#f8fafc] text-[12px] font-semibold outline-none cursor-pointer"
+            className="py-[4px] px-[8px] rounded-[6px] border border-[#cbd5e1] bg-[#f8fafc] text-[15px] font-semibold outline-none cursor-pointer"
           >
             {pageSizeOptions.map((n) => (
               <option key={n} value={n}>{n}</option>
@@ -100,7 +100,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             key={page}
             onClick={() => onPageChange(page)}
             className={clsx(
-              "py-[4px] px-[10px] rounded-[6px] text-[12px] cursor-pointer min-w-[28px]",
+              "py-[4px] px-[10px] rounded-[6px] text-[15px] cursor-pointer min-w-[28px]",
               page === currentPage
                 ? "border border-[#2563eb] bg-[#2563eb] text-white font-bold"
                 : "border border-[#cbd5e1] bg-white text-[#334155] font-semibold"

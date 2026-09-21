@@ -77,13 +77,13 @@ const PriceTooltip: React.FC<any> = ({ active, payload }) => {
   const d = new Date(pt.time);
   const delta = pt.deltaPct;
   return (
-    <div className="bg-surface border border-border rounded-[8px] py-[8px] px-[10px] text-[12px] shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+    <div className="bg-surface border border-border rounded-[8px] py-[8px] px-[10px] text-[15px] shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
       <div className="font-extrabold text-[#0f172a]">{d.toLocaleDateString('vi-VN')}</div>
-      <div className="text-[11px] text-faint mb-[4px]">{d.toLocaleTimeString('vi-VN')}</div>
+      <div className="text-[14px] text-faint mb-[4px]">{d.toLocaleTimeString('vi-VN')}</div>
       <div className="font-bold text-[#0f172a]">Giá: {formatCurrency(pt.price)}</div>
       {delta != null && Math.abs(delta) >= 0.005 && (
         <div
-          className="text-[11.5px] font-bold"
+          className="text-[14.5px] font-bold"
           // động — giữ inline
           style={{ color: delta > 0 ? TREND_UP : TREND_DOWN }}
         >
@@ -226,7 +226,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
                 type="button"
                 onClick={() => applyQuickRange(opt.value)}
                 className={clsx(
-                  'py-[6px] px-[12px] rounded-[6px] border-0 text-[11.5px] font-bold cursor-pointer',
+                  'py-[6px] px-[12px] rounded-[6px] border-0 text-[14.5px] font-bold cursor-pointer',
                   quickRange === opt.value ? 'bg-[#0f172a] text-white' : 'bg-[#f1f5f9] text-muted',
                 )}
               >
@@ -242,7 +242,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
             onChange={(e) => { setStartDate(e.target.value); setQuickRange(null); }}
             className={dateInputNoFullCls}
           />
-          <span className="text-[11px] font-bold text-faint">đến</span>
+          <span className="text-[14px] font-bold text-faint">đến</span>
           <input
             type="date"
             value={endDate}
@@ -255,7 +255,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
             <button
               type="button"
               onClick={() => applyQuickRange('THIS_MONTH')}
-              className="bg-transparent border-0 text-[#b91c1c] text-[11.5px] font-bold cursor-pointer"
+              className="bg-transparent border-0 text-[#b91c1c] text-[14.5px] font-bold cursor-pointer"
             >
               Xóa bộ lọc
             </button>
@@ -268,15 +268,15 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
           <div className="pt-[16px] px-[20px] pb-[4px] shrink-0">
             <div className="flex items-start justify-between flex-wrap gap-[10px] mb-[6px]">
               <div>
-                <div className="text-[11px] font-bold text-faint uppercase tracking-[0.3px]">
+                <div className="text-[14px] font-bold text-faint uppercase tracking-[0.3px]">
                   {baseMetals.find((m) => m.id === metalFilter)?.name || ''}
                 </div>
                 <div className="flex items-baseline gap-[10px] mt-[2px]">
-                  <span className="text-[22px] font-black text-[#0f172a] [font-variant-numeric:tabular-nums]">
+                  <span className="text-[25px] font-black text-[#0f172a] [font-variant-numeric:tabular-nums]">
                     {formatCurrency(trend.last)}
                   </span>
                   <span
-                    className="inline-flex items-center gap-[2px] text-[12.5px] font-bold"
+                    className="inline-flex items-center gap-[2px] text-[15.5px] font-bold"
                     // động — giữ inline
                     style={{ color: trend.color }}
                   >
@@ -294,7 +294,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
                     type="button"
                     onClick={() => setMetalFilter(m.id)}
                     className={clsx(
-                      'py-[5px] px-[11px] rounded-[6px] border-0 text-[11.5px] font-bold cursor-pointer',
+                      'py-[5px] px-[11px] rounded-[6px] border-0 text-[14.5px] font-bold cursor-pointer',
                       metalFilter === m.id ? 'bg-[#0f172a] text-white' : 'bg-[#f1f5f9] text-muted',
                     )}
                   >
@@ -339,13 +339,13 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
         )}
 
         <div className={clsx(modalBodyCls, 'flex-1 min-h-0 overflow-auto !p-0 block')}>
-          {loading && <p className="text-[12.5px] text-muted p-[20px]">Đang tải...</p>}
-          {error && <p className="text-[12.5px] text-[#dc2626] p-[20px]">{error}</p>}
+          {loading && <p className="text-[15.5px] text-muted p-[20px]">Đang tải...</p>}
+          {error && <p className="text-[15.5px] text-[#dc2626] p-[20px]">{error}</p>}
           {!loading && !error && filteredRows.length === 0 && (
-            <p className="text-[12.5px] text-faint p-[20px]">Không có lịch sử thay đổi giá phù hợp bộ lọc.</p>
+            <p className="text-[15.5px] text-faint p-[20px]">Không có lịch sử thay đổi giá phù hợp bộ lọc.</p>
           )}
           {!loading && !error && filteredRows.length > 0 && (
-            <table className="w-full min-w-[620px] table-fixed border-collapse text-[12.5px]">
+            <table className="w-full min-w-[620px] table-fixed border-collapse text-[15.5px]">
               <colgroup>
                 <col className="w-[20%]" />
                 <col className="w-[17%]" />
@@ -370,7 +370,7 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
                     <td className="py-[10px] px-[12px] text-right">
                       {r.changePct != null && r.changePct !== 0 ? (
                         <span className={clsx(
-                          'inline-flex items-center gap-[2px] text-[11.5px] font-bold',
+                          'inline-flex items-center gap-[2px] text-[14.5px] font-bold',
                           r.changePct > 0 ? 'text-[#16a34a]' : 'text-[#dc2626]',
                         )}>
                           {r.changePct > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
@@ -380,10 +380,10 @@ export const MetalPriceHistoryModal: React.FC<MetalPriceHistoryModalProps> = ({ 
                         <span className="text-[#cbd5e1]">—</span>
                       )}
                     </td>
-                    <td className="py-[10px] px-[12px] text-faint text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap">
+                    <td className="py-[10px] px-[12px] text-faint text-[14.5px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {new Date(r.createdAt).toLocaleString('vi-VN')}
                     </td>
-                    <td className="py-[10px] px-[20px] text-faint text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap">
+                    <td className="py-[10px] px-[20px] text-faint text-[14.5px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {r.updatedByName || 'Hệ thống'}
                     </td>
                   </tr>

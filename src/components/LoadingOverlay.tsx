@@ -18,7 +18,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = 'Đang
       <span
         className="w-[22px] h-[22px] rounded-full border-[3px] border-solid border-[#e2e8f0] border-t-[#475569] animate-[spin_0.8s_linear_infinite] shrink-0"
       />
-      <span className="text-[13.5px] font-bold text-[#0f172a]">{message}</span>
+      <span className="text-[16.5px] font-bold text-[#0f172a]">{message}</span>
     </div>
   </div>
 );
