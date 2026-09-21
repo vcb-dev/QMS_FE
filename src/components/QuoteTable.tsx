@@ -653,7 +653,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   <div className="relative inline-block">
                     <img
                       src={r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE}
-                      className="w-[30px] h-[30px] rounded-[6px] object-cover border border-border cursor-zoom-in"
+                      className="w-[48px] h-[48px] rounded-[8px] object-cover border border-border cursor-zoom-in"
                       alt="SP"
                       onClick={(e) => {
                         e.stopPropagation();
