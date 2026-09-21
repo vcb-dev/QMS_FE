@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw } from 'lucide-react';
+import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw, Search, ArrowUpDown } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
 import type { StaffUser, UserStatsResponse, StaffPerformanceResponse, Role } from '../types';
@@ -62,6 +62,17 @@ export const StaffPage: React.FC = () => {
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
   // Role admin chọn khi duyệt từng tài khoản chờ (mặc định giữ role hiện tại — Lark tạo ra là SALE)
   const [approveRole, setApproveRole] = useState<Record<string, Role>>({});
+
+  // Tìm kiếm/sắp xếp/phân trang cho 2 bảng hiệu suất (Sale / Order) — dữ liệu đã tải hết 1 lần
+  // (performance.saleStats/pricerStats), lọc-sắp-trang hoàn toàn ở FE, giống bảng tài khoản trên.
+  const [saleSearch, setSaleSearch] = useState('');
+  const [saleSortDir, setSaleSortDir] = useState<'asc' | 'desc'>('asc');
+  const [salePage, setSalePage] = useState(1);
+  const [salePageSize, setSalePageSize] = useState(10);
+  const [pricerSearch, setPricerSearch] = useState('');
+  const [pricerSortDir, setPricerSortDir] = useState<'asc' | 'desc'>('asc');
+  const [pricerPage, setPricerPage] = useState(1);
+  const [pricerPageSize, setPricerPageSize] = useState(10);
 
   // Bộ lọc thời gian — mặc định 'ALL' để không ẩn tài khoản chờ duyệt cũ. Khoảng ngày tùy chọn
   // (startDate/endDate) khi có sẽ được BE ưu tiên hơn preset. Mọi số liệu tính ở BE.
@@ -173,6 +184,23 @@ export const StaffPage: React.FC = () => {
   const deptStats = (userStats?.byDept || []).map((d) => [d.name, d.count] as [string, number]);
   const saleStats = performance?.saleStats || [];
   const pricerStats = performance?.pricerStats || [];
+
+  const sortByName = <T extends { name: string }>(list: T[], dir: 'asc' | 'desc'): T[] =>
+    [...list].sort((a, b) => dir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+
+  const filteredSaleStats = sortByName(
+    saleStats.filter((s) => s.name.toLowerCase().includes(saleSearch.trim().toLowerCase())),
+    saleSortDir,
+  );
+  const saleTotalPages = Math.max(1, Math.ceil(filteredSaleStats.length / salePageSize));
+  const pagedSaleStats = filteredSaleStats.slice((salePage - 1) * salePageSize, salePage * salePageSize);
+
+  const filteredPricerStats = sortByName(
+    pricerStats.filter((p) => p.name.toLowerCase().includes(pricerSearch.trim().toLowerCase())),
+    pricerSortDir,
+  );
+  const pricerTotalPages = Math.max(1, Math.ceil(filteredPricerStats.length / pricerPageSize));
+  const pagedPricerStats = filteredPricerStats.slice((pricerPage - 1) * pricerPageSize, pricerPage * pricerPageSize);
 
   if (error) {
     return <div className="p-[40px] text-center text-[#dc2626]"> {error}</div>;
@@ -302,6 +330,7 @@ export const StaffPage: React.FC = () => {
                   <th className={staffThCls}>Tên</th>
                   <th className={staffThCls}>Email</th>
                   <th className={staffThCls}>Vai trò</th>
+                  <th className={staffThCls}>Thời gian tạo</th>
                   <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
@@ -326,6 +355,9 @@ export const StaffPage: React.FC = () => {
                           <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
                         ))}
                       </select>
+                    </td>
+                    <td className="p-[10px] text-muted">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
                     </td>
                     <td className="p-[10px] text-right">
                       <div className="inline-flex gap-[6px]">
@@ -371,6 +403,7 @@ export const StaffPage: React.FC = () => {
                   <th className={staffThCls}>Email</th>
                   <th className={staffThCls}>Vai trò</th>
                   <th className={staffThCls}>Trạng thái</th>
+                  <th className={staffThCls}>Thời gian tạo</th>
                   <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
                 </tr>
               </thead>
@@ -392,6 +425,9 @@ export const StaffPage: React.FC = () => {
                       )}>
                         {u.isActive ? 'Đang hoạt động' : 'Đã khóa'}
                       </span>
+                    </td>
+                    <td className="p-[10px] text-muted">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
                     </td>
                     <td className="p-[10px] text-right">
                       <button
@@ -462,19 +498,40 @@ export const StaffPage: React.FC = () => {
           </h2>
           <span className="text-[14px] text-muted">Số yêu cầu đã tạo & đã chốt của từng Sale</span>
 
-          {saleStats.length > 0 ? (
-            <div className="overflow-x-auto mt-[14px]">
+          {saleStats.length > 0 && (
+            <div className="relative mt-[12px] w-[220px]">
+              <Search size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
+              <input
+                type="text"
+                value={saleSearch}
+                onChange={(e) => { setSaleSearch(e.target.value); setSalePage(1); }}
+                placeholder="Tìm theo tên Sale..."
+                className="w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] pl-[30px] pr-[10px] text-[14px] text-[#0f172a] outline-none box-border"
+              />
+            </div>
+          )}
+
+          {filteredSaleStats.length > 0 ? (
+            <div className="overflow-x-auto mt-[10px]">
               <table className="w-full border-collapse text-[15.5px]">
                 <thead>
                   <tr className="border-b border-[#f1f5f9] text-left">
-                    <th className={staffThCls}>Sale</th>
+                    <th className={staffThCls}>
+                      <button
+                        type="button"
+                        onClick={() => setSaleSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                        className="inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase text-muted"
+                      >
+                        Sale <ArrowUpDown size={11} />
+                      </button>
+                    </th>
                     <th className={clsx(staffThCls, 'text-right')}>Đã tạo</th>
                     <th className={clsx(staffThCls, 'text-right')}>Đã chốt</th>
                     <th className={clsx(staffThCls, 'text-right')}>Tỷ lệ chốt</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {saleStats.map((s) => (
+                  {pagedSaleStats.map((s) => (
                     <tr key={s.id} className="border-b border-[#f8fafc]">
                       <td className="p-[10px] font-bold text-[#0f172a]">{s.name}</td>
                       <td className="p-[10px] text-right text-[#334155]">{s.total}</td>
@@ -484,9 +541,19 @@ export const StaffPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              <Pagination
+                currentPage={salePage}
+                totalPages={saleTotalPages}
+                totalItems={filteredSaleStats.length}
+                pageSize={salePageSize}
+                onPageChange={setSalePage}
+                onPageSizeChange={(size) => { setSalePageSize(size); setSalePage(1); }}
+              />
             </div>
           ) : (
-            <div className={emptyTextCls}>Chưa có Sale nào trong hệ thống</div>
+            <div className={emptyTextCls}>
+              {saleStats.length === 0 ? 'Chưa có Sale nào trong hệ thống' : 'Không tìm thấy Sale nào khớp'}
+            </div>
           )}
         </div>
 
@@ -496,19 +563,40 @@ export const StaffPage: React.FC = () => {
           </h2>
           <span className="text-[14px] text-muted">Thời gian trung vị báo giá & xử lý của từng Order</span>
 
-          {pricerStats.length > 0 ? (
-            <div className="overflow-x-auto mt-[14px]">
+          {pricerStats.length > 0 && (
+            <div className="relative mt-[12px] w-[220px]">
+              <Search size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
+              <input
+                type="text"
+                value={pricerSearch}
+                onChange={(e) => { setPricerSearch(e.target.value); setPricerPage(1); }}
+                placeholder="Tìm theo tên Order..."
+                className="w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] pl-[30px] pr-[10px] text-[14px] text-[#0f172a] outline-none box-border"
+              />
+            </div>
+          )}
+
+          {filteredPricerStats.length > 0 ? (
+            <div className="overflow-x-auto mt-[10px]">
               <table className="w-full border-collapse text-[15.5px]">
                 <thead>
                   <tr className="border-b border-[#f1f5f9] text-left">
-                    <th className={staffThCls}>Order</th>
+                    <th className={staffThCls}>
+                      <button
+                        type="button"
+                        onClick={() => setPricerSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                        className="inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase text-muted"
+                      >
+                        Order <ArrowUpDown size={11} />
+                      </button>
+                    </th>
                     <th className={clsx(staffThCls, 'text-right')}>Đã xử lý</th>
                     <th className={clsx(staffThCls, 'text-right')}>Trung vị báo giá</th>
                     <th className={clsx(staffThCls, 'text-right')}>Trung vị xử lý</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pricerStats.map((p) => (
+                  {pagedPricerStats.map((p) => (
                     <tr key={p.id} className="border-b border-[#f8fafc]">
                       <td className="p-[10px] font-bold text-[#0f172a]">{p.name}</td>
                       <td className="p-[10px] text-right text-[#334155]">{p.totalHandled}</td>
@@ -525,9 +613,19 @@ export const StaffPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              <Pagination
+                currentPage={pricerPage}
+                totalPages={pricerTotalPages}
+                totalItems={filteredPricerStats.length}
+                pageSize={pricerPageSize}
+                onPageChange={setPricerPage}
+                onPageSizeChange={(size) => { setPricerPageSize(size); setPricerPage(1); }}
+              />
             </div>
           ) : (
-            <div className={emptyTextCls}>Chưa có Order nào trong hệ thống</div>
+            <div className={emptyTextCls}>
+              {pricerStats.length === 0 ? 'Chưa có Order nào trong hệ thống' : 'Không tìm thấy Order nào khớp'}
+            </div>
           )}
         </div>
       </div>
