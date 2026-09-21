@@ -55,6 +55,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // VAT lấy theo danh mục sản phẩm của yêu cầu đang báo giá (ProductCategory.vatRate),
   // fallback về PRICING_DEFAULTS nếu danh mục chưa cấu hình
   const defaultVatRate = selectedReq?.category?.vatRate ?? PRICING_DEFAULTS.VAT_PCT;
+  // Đơn ĐÃ có giá (QUOTED/CLOSED) mở lại modal này là để SỬA giá, không phải báo giá lần đầu —
+  // chỉ đổi label nút, luồng gửi thật đã tự rẽ nhánh ở handlePricingSubmit (useQuoteRequests.ts).
+  const isEditMode = selectedReq?.status === 'QUOTED' || selectedReq?.status === 'CLOSED';
 
   // 1. Danh sách các phương án báo giá hiện tại
   const [options, setOptions] = useState<QuoteOption[]>([]);
@@ -1156,6 +1159,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               title={
                 !hasValidPrice
                   ? 'Cần có ít nhất 1 phương án báo giá hợp lệ (> 0đ) để gửi báo giá'
+                  : isEditMode
+                  ? 'Cập nhật lại giá đã báo cho yêu cầu này'
                   : 'Xác nhận và gửi báo giá này'
               }
               className={clsx(
@@ -1166,7 +1171,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 submitting ? 'opacity-70' : 'opacity-100'
               )}
             >
-              {submitting ? 'Đang lưu...' : 'Xác Nhận & Gửi Báo Giá'}
+              {submitting ? 'Đang lưu...' : isEditMode ? 'Cập Nhật Giá' : 'Xác Nhận & Gửi Báo Giá'}
             </button>
           </div>
         </form>
