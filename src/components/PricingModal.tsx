@@ -11,7 +11,7 @@ import {
 import type { CalculateBatchResultItem } from '../services/api';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
-import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { getPriceBreakdown, renderPriceBreakdownLines, getCostBreakdown, renderCostBreakdownLines } from '../utils/priceBreakdown';
 import { getPrimaryOption, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
 import type { StoneCatalogItem, StoneRow } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
@@ -483,7 +483,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               res.materialPrice != null
                 ? { material: res.materialPrice, stone: res.stonePrice ?? 0 }
                 : undefined,
-            materials: payload.materials,
+            // Gắn giá vốn RIÊNG từng kim loại (res.breakdown, BE tính sẵn) vào từng dòng material
+            // để lưu lại — FE chỉ đọc, không tự tính.
+            materials: payload.materials.map((m) => ({
+              ...m,
+              rawCost: res.breakdown.find((b) => b.materialId === m.materialId)?.cost,
+            })),
             stones: payload.stones,
             stoneDescription:
               calcStoneMode === 'manual'
@@ -691,6 +696,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             {formatCurrency(opt.quotedPrice)}
                           </strong>
                           {renderPriceBreakdownLines(getPriceBreakdown(opt))}
+                          {renderCostBreakdownLines(getCostBreakdown(opt))}
                         </div>
                           <button
                             type="button"
@@ -727,6 +733,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                                     {formatCurrency(childOpt.quotedPrice)}
                                   </strong>
                                   {renderPriceBreakdownLines(getPriceBreakdown(childOpt))}
+                                  {renderCostBreakdownLines(getCostBreakdown(childOpt))}
                                 </div>
                                 <button
                                   type="button"

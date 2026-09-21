@@ -113,6 +113,9 @@ export interface QuoteOptionMaterial {
   materialId: string;
   materialName?: string;
   weightChi?: number;
+  // Giá vốn kim loại thô RIÊNG của dòng chất liệu này (khác metalRawCost trên QuoteOption là
+  // tổng cả phương án) — BE tính sẵn, FE chỉ đọc. NULL ở record cũ tạo trước khi có field này.
+  rawCost?: number | null;
   material?: {
     id: string;
     name: string;
