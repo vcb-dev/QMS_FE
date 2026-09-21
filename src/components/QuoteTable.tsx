@@ -611,7 +611,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const priceOpt = getPrimaryOption(r);
             const priceBd = getPriceBreakdown({ priceBreakdown: priceOpt?.priceBreakdown });
 
-            const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
             const displayNote = r.desiredLeadTime || '---';
 
