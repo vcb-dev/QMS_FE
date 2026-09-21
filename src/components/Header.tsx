@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { Role, User, QuoteRequest, HeaderSearchProduct } from '../types';
 import { LogOut, User as UserIcon, ShieldCheck, X, Search, ChevronRight } from 'lucide-react';
 import { fetchQuoteRequests } from '../services/api';
@@ -43,11 +43,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Search tổng — chỉ hiện ở trang Tổng Quan (path "/"), gộp chung kết quả Yêu Cầu (mã đơn/tên
-  // khách hàng) và Sản Phẩm (danh mục/chất liệu đã báo giá) từ CÙNG 1 lượt gọi API search sẵn có.
-  const location = useLocation();
+  // Search tổng — hiện ở mọi trang, gộp chung kết quả Yêu Cầu (mã đơn/tên khách hàng) và
+  // Sản Phẩm (danh mục/chất liệu đã báo giá) từ CÙNG 1 lượt gọi API search sẵn có.
   const navigate = useNavigate();
-  const showSearch = location.pathname === '/';
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<QuoteRequest[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -173,10 +171,9 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="relative bg-white text-[#0f172a] border-b border-border h-[64px] py-0 px-[24px] box-border flex items-center justify-end select-none transition-all duration-300">
 
-      {/* Search tổng — chỉ hiện ở Tổng Quan, canh giữa header. Gộp 2 mục: Yêu Cầu (mã đơn/tên
+      {/* Search tổng — hiện ở mọi trang, canh giữa header. Gộp 2 mục: Yêu Cầu (mã đơn/tên
           khách hàng) và Sản Phẩm (danh mục/chất liệu đã báo giá) từ cùng 1 kết quả search. */}
-      {showSearch && (
-        <div ref={searchWrapRef} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px]">
+      <div ref={searchWrapRef} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px]">
           <div className="relative flex items-center">
             <Search size={15} className="absolute left-[12px] text-faint pointer-events-none" />
             <input
@@ -282,7 +279,6 @@ export const Header: React.FC<HeaderProps> = ({
             document.body,
           )}
         </div>
-      )}
 
       {/* Right Action Bar */}
       <div className="flex items-center gap-[14px]">
