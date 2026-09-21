@@ -8,6 +8,7 @@ import {
   deleteQuoteRequest,
   acceptQuoteRequest,
   completeQuoteRequest,
+  editQuotedPrice,
   selectQuoteOption,
   rejectQuoteRequest,
   returnQuoteRequest,
@@ -451,19 +452,30 @@ export function useQuoteRequests(
     },
   ) => {
     if (!pricingReqId) return;
-    const version = requests.find((r) => r.id === pricingReqId)?.version;
+    const targetReq = requests.find((r) => r.id === pricingReqId);
+    const version = targetReq?.version;
+    // Đơn đã có giá (QUOTED/CLOSED) mở lại PricingModal để SỬA giá — chỉ ghi đè đúng phương án
+    // đang chọn làm giá chính, khác completeQuoteRequest (xóa hết & tạo lại toàn bộ options, chỉ
+    // dùng cho lần báo giá đầu tiên khi đơn còn PROCESSING).
+    const isEditingQuotedPrice = targetReq?.status === 'QUOTED' || targetReq?.status === 'CLOSED';
     await runAction(
       'Đang cập nhật báo giá...',
       'Không thể báo giá',
       () =>
-        completeQuoteRequest(
-          pricingReqId,
-          quotedPrice,
-          vat,
-          options,
-          extras,
-          version,
-        ),
+        isEditingQuotedPrice
+          ? editQuotedPrice(
+              pricingReqId,
+              options?.find((o) => o.isSelected) || options?.[0] || { optionName: 'Phương án', quotedPrice, vat },
+              version,
+            )
+          : completeQuoteRequest(
+              pricingReqId,
+              quotedPrice,
+              vat,
+              options,
+              extras,
+              version,
+            ),
       { onSuccess: () => setPricingReqId(null) },
     );
   };
