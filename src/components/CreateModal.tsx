@@ -5,7 +5,7 @@ import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { useModalA11y } from '../hooks/useModalA11y';
 import { materialGroupKey } from '../utils/quoteOption';
-import { X, Upload, PlusCircle } from 'lucide-react';
+import { X, Upload, PlusCircle, HelpCircle } from 'lucide-react';
 import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
 import {
@@ -418,26 +418,67 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   const MAX_IMAGES = UI_CONSTANTS.CREATE_QUOTE_REQUEST.MAX_IMAGES;
 
+  // Dùng chung cho cả chọn file (input) và dán ảnh (Ctrl+V) — cùng 1 luật giới hạn MAX_IMAGES.
+  const addImageFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    if (totalImageCount >= MAX_IMAGES) {
+      alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
+      return;
+    }
+
+    const availableSlots = MAX_IMAGES - totalImageCount;
+    const filesToProcess = files.slice(0, availableSlots);
+
+    if (files.length > availableSlots) {
+      alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
+    }
+
+    setNewImageFiles((prev) => [...prev, ...filesToProcess]);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (totalImageCount >= MAX_IMAGES) {
-        alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
-        e.target.value = '';
-        return;
-      }
-
-      const availableSlots = MAX_IMAGES - totalImageCount;
-      const filesToProcess = Array.from(files).slice(0, availableSlots);
-
-      if (files.length > availableSlots) {
-        alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
-      }
-
-      setNewImageFiles((prev) => [...prev, ...filesToProcess]);
+      addImageFiles(Array.from(files));
     }
     e.target.value = '';
   };
+
+  // Dán ảnh copy từ ngoài (VD: cắt màn hình, copy từ web) thẳng vào form, khỏi phải tải về máy
+  // rồi chọn file lại — chỉ lấy phần ảnh trong clipboard, không chặn dán chữ bình thường. Nghe ở
+  // document (không gắn onPaste vào 1 element) vì lúc mở modal, focus mặc định rơi vào nút/control
+  // đầu tiên (useModalA11y) — trình duyệt CHỈ bắn sự kiện paste khi đang focus input/textarea/
+  // contentEditable, focus vào nút bấm thường thì Ctrl+V không có tác dụng gì cả.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleDocumentPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles = Array.from(items)
+        .filter((item) => item.type.startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => !!f);
+      if (imageFiles.length > 0) {
+        addImageFiles(imageFiles);
+      }
+    };
+    document.addEventListener('paste', handleDocumentPaste);
+    return () => document.removeEventListener('paste', handleDocumentPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, totalImageCount]);
+
+  // Chặn drop ngoài đúng ô dropzone (VD: nhả chuột lệch 1 px ra ngoài viền) — mặc định trình
+  // duyệt sẽ điều hướng cả tab sang file/URL vừa thả, thoát khỏi modal và mất luôn dữ liệu đang nhập.
+  useEffect(() => {
+    if (!isOpen) return;
+    const preventDefault = (e: DragEvent) => e.preventDefault();
+    window.addEventListener('dragover', preventDefault);
+    window.addEventListener('drop', preventDefault);
+    return () => {
+      window.removeEventListener('dragover', preventDefault);
+      window.removeEventListener('drop', preventDefault);
+    };
+  }, [isOpen]);
 
   const removeExistingImage = (indexToRemove: number) => {
     setExistingImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
@@ -451,11 +492,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
+  const addVideoFile = (file: File) => {
     if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
       alert(`Kích thước video vượt quá giới hạn cho phép (tối đa ${MAX_VIDEO_SIZE_MB}MB)!`);
       return;
@@ -463,6 +500,13 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
     setExistingVideoUrl(null);
     setNewVideoFile(file);
+  };
+
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    addVideoFile(file);
   };
 
   const removeVideo = () => {
@@ -568,8 +612,20 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               className="h-[32px] object-contain"
             />
             <div>
-              <h2 id="modalCreateTitle" className="text-[21px] font-extrabold m-0 text-[#0f172a]">
+              <h2 id="modalCreateTitle" className="text-[21px] font-extrabold m-0 text-[#0f172a] flex items-center gap-[6px]">
                 Tạo Yêu Cầu Báo Giá Chế Tác Mới
+                <span
+                  title={
+                    'Cách thêm ảnh sản phẩm:\n' +
+                    '- Kéo thả ảnh (từ web, file explorer...) vào ô "Ảnh sản phẩm"\n' +
+                    '- Hoặc copy ảnh (Ctrl+C / chuột phải Copy image) rồi bấm Ctrl+V khi modal đang mở\n' +
+                    '- Hoặc bấm vào ô "Ảnh sản phẩm" để chọn file\n' +
+                    'Video chỉ hỗ trợ kéo thả hoặc bấm chọn file, chưa hỗ trợ paste.'
+                  }
+                  className="inline-flex cursor-help text-muted"
+                >
+                  <HelpCircle size={16} />
+                </span>
               </h2>
               <p className="text-[15px] text-muted mt-[2px] mr-0 mb-0 ml-0">
                 Điền đầy đủ các trường thông tin chuẩn nghiệp vụ VCB để chuyển bộ phận Định Giá
@@ -968,6 +1024,20 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     }
                     triggerFileInput();
                   }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (totalImageCount >= MAX_IMAGES) {
+                      alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh/yêu cầu!`);
+                      return;
+                    }
+                    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+                    if (files.length > 0) addImageFiles(files);
+                  }}
                 >
                   <div className="mb-[6px]">
                     <Upload size={30} color="#64748b" />
@@ -1077,6 +1147,16 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   <div
                     className="upload-dropzone min-h-[90px] flex flex-col items-center justify-center border-2 border-dashed border-[#cbd5e1] rounded-[12px] bg-[#f8fafc] cursor-pointer p-[14px] text-center"
                     onClick={triggerVideoInput}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('video/'));
+                      if (file) addVideoFile(file);
+                    }}
                   >
                     <Upload size={24} color="#64748b" />
                     <div className="font-bold text-[16px] text-[#0f172a] mt-[4px]">
