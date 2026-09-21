@@ -611,7 +611,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const priceOpt = getPrimaryOption(r);
             const priceBd = getPriceBreakdown({ priceBreakdown: priceOpt?.priceBreakdown });
 
-            const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
             const displayNote = r.desiredLeadTime || '---';
 
@@ -633,24 +632,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 onClick={() => onSelect(r.id)}
               >
                 <td>
-                  <span className="inline-flex items-center gap-[6px]">
-                    <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
-                    {canChat && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onOpenChat(r.id); }}
-                        title={unread > 0 ? `${unread} tin nhắn chưa đọc` : 'Trao đổi'}
-                        className="relative inline-flex items-center justify-center w-[20px] h-[20px] bg-transparent border-0 text-muted cursor-pointer p-0"
-                      >
-                        <MessageCircle size={14} />
-                        {unread > 0 && (
-                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[12px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
-                            {unread > 9 ? '9+' : unread}
-                          </span>
-                        )}
-                      </button>
-                    )}
-                  </span>
+                  <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
                 </td>
                 <td className="text-muted text-[14px]">
                   {r.createdAt
@@ -670,7 +652,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   <div className="relative inline-block">
                     <img
                       src={r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE}
-                      className="w-[30px] h-[30px] rounded-[6px] object-cover border border-border cursor-zoom-in"
+                      className="w-[48px] h-[48px] rounded-[8px] object-cover border border-border cursor-zoom-in"
                       alt="SP"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -686,8 +668,25 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   </div>
                 </td>
                 <td>
-                  <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
-                    {r.productName}
+                  <div className="inline-flex items-start gap-[6px]">
+                    <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
+                      {r.productName}
+                    </div>
+                    {canChat && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onOpenChat(r.id); }}
+                        title={unread > 0 ? `${unread} tin nhắn chưa đọc` : 'Trao đổi'}
+                        className="relative inline-flex items-center justify-center w-[20px] h-[20px] bg-transparent border-0 text-muted cursor-pointer p-0 shrink-0"
+                      >
+                        <MessageCircle size={14} />
+                        {unread > 0 && (
+                          <span className="absolute top-[-4px] right-[-5px] bg-[#ef4444] text-white rounded-full text-[12px] font-extrabold min-w-[13px] h-[13px] leading-[13px] text-center px-[2px]">
+                            {unread > 9 ? '9+' : unread}
+                          </span>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </td>
                 <td>
@@ -749,7 +748,12 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   {displayNote}
                 </td>
                 <td>
-                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
+                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">
+                    {r.customer?.name || r.requester?.name || '---'}
+                  </div>
+                  {r.customer?.name && r.requester?.name && (
+                    <div className="text-[12px] text-muted mt-[2px]">{r.requester.name}</div>
+                  )}
                 </td>
                 <td>
                   <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
