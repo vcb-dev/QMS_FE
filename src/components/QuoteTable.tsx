@@ -467,7 +467,27 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       );
     }
 
+    // Sửa giá đã báo (nếu được phép) — ADMIN mọi đơn, ORDER chỉ đơn mình báo giá.
+    const canEditQuotedPrice =
+      currentRole === 'ADMIN' ||
+      (currentRole === 'ORDER' &&
+        (r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email));
+
     if (r.status === 'QUOTED') {
+      if (canEditQuotedPrice) {
+        return (
+          <StatusDropdown
+            current="QUOTED"
+            options={[
+              { value: 'QUOTED', ...STATUS_META.QUOTED, label: 'Đã báo giá' },
+              { value: 'EDIT_PRICE', label: 'Sửa giá đã báo', icon: <Edit size={13} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+            ]}
+            onChange={(val) => {
+              if (val === 'EDIT_PRICE') onPricing(r.id);
+            }}
+          />
+        );
+      }
       return (
         <span className={clsx(statusPillCls, statusPillDoneCls)} title="Trạng thái hoàn tất">
           <CheckCircle size={13} color="#15803d" /> Đã báo giá
@@ -476,6 +496,22 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     }
 
     if (r.status === 'CLOSED') {
+      if (canEditQuotedPrice) {
+        return (
+          <StatusDropdown
+            current="CLOSED"
+            options={[
+              { value: 'CLOSED', ...STATUS_META.CLOSED, label: 'Đã chốt' },
+              { value: 'EDIT_PRICE', label: 'Sửa giá đã báo', icon: <Edit size={13} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+            ]}
+            onChange={(val) => {
+              if (val !== 'EDIT_PRICE') return;
+              if (!window.confirm('Khách đã chốt giá này rồi. Sửa sẽ thay đổi giá đã thống nhất với khách — tiếp tục?')) return;
+              onPricing(r.id);
+            }}
+          />
+        );
+      }
       return (
         <span className={clsx(statusPillCls, 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]')} title="Khách đã chốt mua">
           <Award size={13} color="#6d28d9" /> Đã chốt

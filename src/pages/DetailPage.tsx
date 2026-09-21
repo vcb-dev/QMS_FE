@@ -345,6 +345,29 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               Báo giá
             </button>
           )}
+        {/* Sửa giá đã báo — mở lại PricingModal (tự nạp sẵn phương án đang là giá chính) để tính
+            lại, chỉ ghi đè đúng phương án đó, không đụng trạng thái đơn (xem editQuotedPrice BE). */}
+        {(currentRole === 'ADMIN' ||
+          (currentRole === 'ORDER' &&
+            (selectedReq.assignee?.id === currentUser.id ||
+              selectedReq.assignee?.email === currentUser.email))) &&
+          (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED') && (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  selectedReq.status === 'CLOSED' &&
+                  !window.confirm('Khách đã chốt giá này rồi. Sửa sẽ thay đổi giá đã thống nhất với khách — tiếp tục?')
+                ) {
+                  return;
+                }
+                onPricing(selectedReq.id);
+              }}
+              className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[9px] px-[18px] text-[16px] font-extrabold text-[#334155] cursor-pointer shadow-sm"
+            >
+              Sửa giá đã báo
+            </button>
+          )}
       </div>
 
       {/* Main 2-Column Content Grid */}
