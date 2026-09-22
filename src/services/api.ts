@@ -786,8 +786,28 @@ export async function fetchStones(stoneType?: 'MAIN' | 'SIDE') {
   return apiCall(dedupedGet('/stones', stoneType ? { stoneType } : undefined), 'Không thể tải danh mục đá');
 }
 
+export async function fetchStonesPaginated(params: {
+  stoneType?: 'MAIN' | 'SIDE';
+  page: number;
+  limit: number;
+  search?: string;
+  cut?: string;
+  name?: string;
+  status?: string;
+}) {
+  return apiCall(api.get('/stones', { params }), 'Không thể tải danh mục đá phân trang');
+}
+
+export async function fetchStoneStats(stoneType?: 'MAIN' | 'SIDE') {
+  return apiCall(api.get('/stones/stats', { params: stoneType ? { stoneType } : undefined }), 'Không thể tải thống kê đá');
+}
+
 export async function createStone(payload: { stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number }) {
   return apiCall(api.post('/stones', payload), 'Không thể thêm đá mới');
+}
+
+export async function updateStone(id: string, payload: { stoneType?: 'MAIN' | 'SIDE'; name?: string; cut?: string; size?: string; price?: number }) {
+  return apiCall(api.put(`/stones/${id}`, payload), 'Không thể cập nhật đá');
 }
 
 export async function updateStonePrices(items: { id: string; price: number }[]) {
