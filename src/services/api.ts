@@ -1031,4 +1031,7 @@ export async function updateDmBridge(
   );
 }
 
-
+export async function fetchDepartments() {
+  return apiCall(dedupedGet('/departments'), 'Không thể tải danh sách phòng ban');
+}
+export async function fetchDepartmentsPaginated(page: number, limit: number, search?: string) { return apiCall(api.get('/departments', { params: { page, limit, search } }), 'Lỗi tải danh sách bộ phận'); } export async function createDepartment(name: string) { return apiCall(api.post('/departments', { name }), 'Lỗi tạo bộ phận'); } export async function updateDepartment(id: string, name: string) { return apiCall(api.patch('/departments/' + id, { name }), 'Lỗi cập nhật bộ phận'); } export async function deleteDepartment(id: string) { return apiCall(api.delete('/departments/' + id), 'Lỗi xóa bộ phận'); }
