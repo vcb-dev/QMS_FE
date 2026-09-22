@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp } from 'lucide-react';
 import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role } from '../types';
+import { formatStoneDisplay } from '../utils/stoneFormatter';
 import {
   fetchMasterData,
   calculatePriceMultiApi,
@@ -1090,7 +1091,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           >
                             <option value="">-- Chọn sản phẩm --</option>
                             {stoneCatalog.filter((s) => s.stoneType === sRow.stoneType).map((s) => (
-                              <option key={s.id} value={s.id}>{s.name} ({formatCurrency(s.price)})</option>
+                              <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
                             ))}
                           </select>
                           <input
@@ -1179,3 +1180,4 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     </div>
   );
 };
+
