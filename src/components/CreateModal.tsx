@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import type { Customer, CreateModalProps } from '../types';
-import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
+import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones, fetchDepartments } from '../services/api';
 import { useAuth } from '../auth/AuthGate';
 import { formatStoneDisplay } from '../utils/stoneFormatter';
 import { useModalA11y } from '../hooks/useModalA11y';
@@ -67,6 +67,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   // Location Data
   const [provinces, setProvinces] = useState<{ id: string; name: string; code?: string }[]>([]);
   const [wards, setWards] = useState<{ id: string; name: string; code?: string }[]>([]);
+
+  // Department
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
 
   // Lazy Customer Search
   const [customerSearch, setCustomerSearch] = useState('');
@@ -259,6 +263,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     if (editingReq) {
       setIsNewCustomerMode(false);
       setSelectedCustomerId(editingReq.customer?.id || '');
+      setSelectedDepartmentId((editingReq as any).department?.id || (editingReq as any).departmentId || '');
       setSelectedCategoryId(editingReq.category?.id || (categories[0]?.id || ''));
       setNewCategoryName('');
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
@@ -280,6 +285,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setNewCustomerProvince('');
       setNewCustomerWard('');
       setNewCategoryName('');
+      setSelectedDepartmentId('');
 
       if (calculatorData) {
         if (calculatorData.categoryId) {
@@ -364,12 +370,17 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     }
   }, [editingReq, categories, isOpen, calculatorData, materials, stoneOptionsAll]);
 
-  // Load Provinces on Modal Open
+  // Load Provinces & Departments on Modal Open
   useEffect(() => {
     if (isOpen) {
       fetchProvinces().then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setProvinces(data);
+        }
+      });
+      fetchDepartments().then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDepartments(data);
         }
       });
     }
@@ -572,6 +583,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
       await onSubmit({
         customerId: finalCustomerId,
+        departmentId: selectedDepartmentId || undefined,
         categoryId: selectedCategoryId === 'OTHER' ? (categories[0]?.id || '') : selectedCategoryId,
         newCategoryName: selectedCategoryId === 'OTHER' ? newCategoryName.trim() : undefined,
         materialIds: selectedMaterialIds,
@@ -681,6 +693,23 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               <div className={formGroupCls}>
                 <label className={formLabelCls}>Người hỏi giá (Sale) <span className={formReqCls}>*</span></label>
                 <input type="text" className={clsx(formControlCls, '!bg-[#f1f5f9]')} value={saleName} readOnly />
+              </div>
+
+              {/* Bộ phận / Phòng ban */}
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Bộ phận / Phòng ban</label>
+                <select
+                  className={formControlCls}
+                  value={selectedDepartmentId}
+                  onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                >
+                  <option value="">-- Chọn phòng ban --</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Danh Mục Sản Phẩm - DB Loaded */}
