@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
 import { useModalA11y } from '../hooks/useModalA11y';
-import { materialGroupKey } from '../utils/quoteOption';
+import { } from '../utils/quoteOption';
 import { X, Upload, PlusCircle, HelpCircle } from 'lucide-react';
 import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
@@ -138,22 +138,11 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const toggleMaterialId = (id: string) => {
     setSelectedMaterialIds((prev) => {
       if (prev.includes(id)) return prev.filter((mId) => mId !== id);
-      const first = prev.length > 0 ? materials.find((m) => m.id === prev[0]) : null;
-      const cand = materials.find((m) => m.id === id);
-      // Chốt chặn: chỉ ghép được chất liệu cùng một kim loại gốc.
-      if (first && cand && materialGroupKey(first) !== materialGroupKey(cand)) return prev;
       return [...prev, id];
     });
   };
 
-  // Nhóm kim loại gốc đang bị "chốt" theo chất liệu đầu tiên đã chọn — null khi chưa chọn gì.
-  const firstSelectedMaterial =
-    selectedMaterialIds.length > 0
-      ? materials.find((m) => m.id === selectedMaterialIds[0])
-      : undefined;
-  const selectedMaterialGroupKey = firstSelectedMaterial
-    ? materialGroupKey(firstSelectedMaterial)
-    : null;
+  
 
   // Loại đá (đá chủ/đá tấm) — không bắt buộc. Chọn loại xong mới tải danh mục đá cụ thể của loại đó.
   // Panel render qua createPortal ra document.body (position: fixed, tọa độ tự tính từ nút bấm) —
@@ -745,10 +734,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         <div className="p-[8px] text-[15px] text-faint">Chưa có chất liệu nào</div>
                       )}
                       {materials.map((m) => {
-                        const blocked =
-                          selectedMaterialGroupKey !== null &&
-                          !selectedMaterialIds.includes(m.id) &&
-                          materialGroupKey(m) !== selectedMaterialGroupKey;
+                        const blocked = false;
                         return (
                           <label
                             key={m.id}
@@ -1215,3 +1201,4 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     </div>
   );
 };
+
