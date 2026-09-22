@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw, Search, ArrowUpDown } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
@@ -8,6 +8,7 @@ import { formatDuration } from '../utils/currency';
 import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
 import { StatCard } from '../components/StatCard';
 import { UserAvatar } from '../components/UserAvatar';
+import { DepartmentManagement } from '../components/DepartmentManagement';
 import {
   dateInputPy6Cls,
   cardContainerCls,
@@ -181,7 +182,6 @@ export const StaffPage: React.FC = () => {
   const totalUsers = userStats?.totalUsers || 0;
   const byRole = userStats?.byRole || { SALE: 0, ORDER: 0, ADMIN: 0 };
   const pendingCount = userStats?.pendingCount || 0;
-  const deptStats = (userStats?.byDept || []).map((d) => [d.name, d.count] as [string, number]);
   const saleStats = performance?.saleStats || [];
   const pricerStats = performance?.pricerStats || [];
 
@@ -436,7 +436,7 @@ export const StaffPage: React.FC = () => {
                         onClick={() => handleToggleActive(u.id, u.isActive)}
                         className={clsx(
                           'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] text-surface text-[14.5px] font-bold',
-                          u.isActive ? 'border border-[#fecdd3] bg-[#fff1f2] text-[#be123c]' : 'border-0 bg-[#16a34a] text-surface',
+                          u.isActive ? 'border-0 bg-[#e11d48] text-surface' : 'border-0 bg-[#16a34a] text-surface',
                           actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
                         )}
                       >
@@ -466,29 +466,7 @@ export const StaffPage: React.FC = () => {
         )}
       </div>
 
-      {/* Phân bố theo bộ phận */}
-      <div className={cardContainerCls}>
-        <h2 className="text-[17px] font-extrabold text-[#0f172a] m-0 mb-[14px]">Phân bố theo bộ phận</h2>
-        {deptStats.length > 0 ? (
-          <div className="flex flex-col gap-[10px]">
-            {deptStats.map(([name, count]) => (
-              <div key={name} className="flex items-center gap-[12px]">
-                <span className="text-[15.5px] text-[#334155] font-semibold w-[160px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">{name}</span>
-                <div className="flex-1 bg-[#f1f5f9] rounded-[6px] h-[10px] overflow-hidden">
-                  <div
-                    className="bg-primary h-full rounded-[6px]"
-                    // động — giữ inline
-                    style={{ width: `${(count / (totalUsers || 1)) * 100}%` }}
-                  />
-                </div>
-                <span className="text-[15.5px] font-black text-[#0f172a] w-[24px] text-right shrink-0">{count}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-faint text-[15.5px] py-[20px] px-0">Chưa có dữ liệu</div>
-        )}
-      </div>
+      <DepartmentManagement />
 
       {/* 2.2 Hiệu suất Sale & Order */}
       <div className="grid grid-cols-2 gap-[16px]">
