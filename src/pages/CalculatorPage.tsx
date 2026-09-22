@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { Calculator, CheckCircle2, RotateCcw, Copy, Check, Plus, Trash2 } from 'lucide-react';
 import { fetchMasterData, calculatePriceMultiApi, calculatePriceBatchApi, fetchStones, fetchSilverMultipliers } from '../services/api';
 import type { CalculateBatchResultItem } from '../services/api';
@@ -6,6 +6,7 @@ import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
+import { formatStoneDisplay } from '../utils/stoneFormatter';
 import { formatOptionCopyLine, cleanOptionLabel, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
 import { VnGoldPriceTicker } from '../components/VnGoldPriceTicker';
 import type { CalculatorPageProps, StoneRow, StoneCatalogItem, CalcResult, QuoteOption } from '../types';
@@ -30,7 +31,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   const [dbMaterials, setDbMaterials] = useState<{ id: string; name: string; baseMetal?: { id: string; name: string } | null }[]>([]);
   // Danh mục đá (đá chủ/đá tấm) lấy từ bảng Stone trong DB — khai báo sớm vì useMaterialStoneRows
   // cần đọc stoneCatalog để tra đơn giá/tên đá.
-  const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
+    const [stoneCatalog, setStoneCatalog] = useState<StoneCatalogItem[]>([]);
 
   // Form Input States
   const [categoryId, setCategoryId] = useState('');
@@ -816,7 +817,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                               >
                                 <option value="">-- Chọn sản phẩm --</option>
                                 {stoneCatalog.filter((s) => s.stoneType === row.stoneType).map((s) => (
-                                  <option key={s.id} value={s.id}>{s.name}{s.size ? ` (${s.size})` : ''}</option>
+                                  <option key={s.id} value={s.id}>{formatStoneDisplay(s, currentRole)}</option>
                                 ))}
                               </select>
                             </div>
@@ -1058,7 +1059,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                         .filter((m) => m.materialName && (parseFloat(m.weightChi) || 0) > 0)
                         .map((m) => `${m.materialName}: ${m.weightChi} chỉ`);
                       stoneRows.forEach((r) => {
-                        const name = stoneCatalog.find((s) => s.id === r.stoneId)?.name;
+                        const stone = stoneCatalog.find((s) => s.id === r.stoneId);
+                        const name = stone ? formatStoneDisplay(stone, currentRole) : undefined;
                         if (name) parts.push(`${name} x${r.qty}`);
                       });
                       const note = parts.join(', ');
@@ -1123,3 +1125,4 @@ const BreakdownRow: React.FC<{ label: string; value: number; accent?: string }> 
     </span>
   </div>
 );
+
