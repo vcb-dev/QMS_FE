@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench, Coins, Layers, Gem, PlusCircle, TrendingUp, Percent, History, Settings, type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { MetalPriceHistoryModal } from '../components/MetalPriceHistoryModal';
+import { StonePricingTab } from '../components/StonePricingTab';
 import {
-  fetchStones,
   createStone,
   updateStonePrices,
-  deleteStonesMany,
-  importStonesPriceGridExcel,
+  updateStone,
   fetchMasterData,
   invalidateMasterData,
   updateProductCategoriesBulk,
@@ -95,7 +94,7 @@ const ConfirmCancelButtons: React.FC<{ onConfirm: () => void; onCancel: () => vo
     <button type="button" onClick={onConfirm} className={clsx(pcpIconBtnCls, pcpIconBtnEditCls)} title="Xác nhận thêm">
       <Check size={14} />
     </button>
-    <button type="button" onClick={onCancel} className={pcpIconBtnCls} title="Hủy">
+    <button type="button" onClick={onCancel} className={clsx(pcpIconBtnCls)} title="Hủy">
       <X size={14} />
     </button>
   </div>
@@ -209,7 +208,7 @@ export const PricingConfigPage: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'SOURCE' | 'RULES'>('SOURCE');
+  const [activeTab, setActiveTab] = useState<'SOURCE' | 'RULES' | 'STONES'>('SOURCE');
 
   const [baseMetals, setBaseMetals] = useState<BaseMetal[]>([]);
   const [initialBaseMetals, setInitialBaseMetals] = useState<BaseMetal[]>([]);
@@ -239,8 +238,8 @@ export const PricingConfigPage: React.FC = () => {
   const [categoryPage, setCategoryPage] = useState(1);
   const [newCategory, setNewCategory] = useState<{ name: string; laborCost: string; vatRate: string }>({ name: '', laborCost: '', vatRate: '10' });
 
-  const [stones, setStones] = useState<StoneItem[]>([]);
-  const [initialStones, setInitialStones] = useState<StoneItem[]>([]);
+  const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now());
+  const [pendingStoneUpdates, setPendingStoneUpdates] = useState<Record<string, { size?: string, price?: number }>>({});
   const [editingStoneIds, setEditingStoneIds] = useState<string[]>([]);
   const [pendingDeleteStoneIds, setPendingDeleteStoneIds] = useState<string[]>([]);
   const [stoneError, setStoneError] = useState<string | null>(null);
@@ -255,14 +254,12 @@ export const PricingConfigPage: React.FC = () => {
   const [importingPriceGrid, setImportingPriceGrid] = useState<{ MAIN: boolean; SIDE: boolean }>({ MAIN: false, SIDE: false });
 
   const loadAll = () => {
-    Promise.all([fetchStones(), fetchMasterData(), fetchBaseMetals(), fetchPricingFormulas()])
-      .then(([stoneRows, master, metals, formulaRows]) => {
+    Promise.all([fetchMasterData(), fetchBaseMetals(), fetchPricingFormulas()])
+      .then(([master, metals, formulaRows]) => {
         const metalList: BaseMetal[] = Array.isArray(metals) ? metals : [];
         setBaseMetals(metalList);
         setInitialBaseMetals(metalList);
-        const loadedStones = Array.isArray(stoneRows) ? stoneRows : [];
-        setStones(loadedStones);
-        setInitialStones(loadedStones);
+        setPendingStoneUpdates({});
         setPendingDeleteStoneIds([]);
         // Decimal từ Prisma có thể về dạng string qua JSON — ép vatRate về number ngay lúc load
         const cats = (Array.isArray(master?.categories) ? master.categories : []).map((c: CategoryItem) => ({
@@ -304,12 +301,6 @@ export const PricingConfigPage: React.FC = () => {
     return original && ((c.laborCost || 0) !== (original.laborCost || 0) || (c.vatRate || 0) !== (original.vatRate || 0));
   });
 
-  const changedStonePrices = stones.filter((s) => {
-    if (pendingDeleteStoneIds.includes(s.id)) return false;
-    const original = initialStones.find((o) => o.id === s.id);
-    return original && original.price !== s.price;
-  });
-
   const changedBaseMetals = baseMetals.filter((m) => {
     const original = initialBaseMetals.find((o) => o.id === m.id);
     return original && original.priceVnd !== m.priceVnd;
@@ -317,7 +308,7 @@ export const PricingConfigPage: React.FC = () => {
   const metalPricesDirty = changedBaseMetals.length > 0;
 
   const categoriesDirty = changedCategories.length > 0 || pendingDeleteCategoryIds.length > 0;
-  const stonesDirty = changedStonePrices.length > 0 || pendingDeleteStoneIds.length > 0;
+  const stonesDirty = Object.keys(pendingStoneUpdates).length > 0 || pendingDeleteStoneIds.length > 0;
 
   const changedMaterials = materials.filter((m) => {
     const original = initialMaterials.find((o) => o.id === m.id);
@@ -372,8 +363,8 @@ export const PricingConfigPage: React.FC = () => {
         changedCategories.length > 0
           ? updateProductCategoriesBulk(changedCategories.map((c) => ({ id: c.id, laborCost: c.laborCost || 0, vatRate: c.vatRate || 0 })))
           : Promise.resolve(),
-        changedStonePrices.length > 0
-          ? updateStonePrices(changedStonePrices.map((s) => ({ id: s.id, price: s.price })))
+        Object.keys(pendingStoneUpdates).length > 0
+          ? Promise.all(Object.entries(pendingStoneUpdates).map(([id, s]) => updateStone(id, { price: s.price, size: s.size })))
           : Promise.resolve(),
         pendingDeleteStoneIds.length > 0 ? deleteStonesMany(pendingDeleteStoneIds) : Promise.resolve(),
         categoryDeletePromise,
@@ -397,9 +388,8 @@ export const PricingConfigPage: React.FC = () => {
       setCategories(remainingCategories);
       setInitialCategories(remainingCategories);
       setPendingDeleteCategoryIds([]);
-      const remainingStones = stones.filter((s) => !pendingDeleteStoneIds.includes(s.id));
-      setStones(remainingStones);
-      setInitialStones(remainingStones);
+      setPendingStoneUpdates({});
+      setRefreshTimestamp(Date.now());
       setPendingDeleteStoneIds([]);
       setEditingFormulaIds([]);
       setEditingMaterialIds([]);
@@ -429,7 +419,8 @@ export const PricingConfigPage: React.FC = () => {
     setBaseMetals(initialBaseMetals);
     setCategories(initialCategories);
     setPendingDeleteCategoryIds([]);
-    setStones(initialStones);
+    setPendingStoneUpdates({});
+    setRefreshTimestamp(Date.now());
     setPendingDeleteStoneIds([]);
     setMaterials(initialMaterials);
     setFormulas(initialFormulas);
@@ -638,33 +629,11 @@ export const PricingConfigPage: React.FC = () => {
     }
   };
 
-  const handleAddStone = async () => {
-    setStoneError(null);
-    const price = parseFloat(newStone.price.replace(/\D/g, '')) || 0;
-    if (!newStone.name.trim() || price <= 0) {
-      setStoneError('Vui lòng nhập tên đá và giá hợp lệ');
-      return;
-    }
-    try {
-      const created = await createStone({ stoneType: newStone.stoneType, name: newStone.name.trim(), cut: newStone.cut.trim() || undefined, size: newStone.size.trim() || undefined, price });
-      setStones((prev) => [...prev, created]);
-      setInitialStones((prev) => [...prev, created]);
-      setNewStone({ stoneType: newStone.stoneType, name: '', cut: '', size: '', price: '' });
-      setAddingStoneType(null);
-    } catch (err: any) {
-      setStoneError(err.message || 'Không thể thêm đá');
-    }
-  };
-
-  const openAddStone = (stoneType: 'MAIN' | 'SIDE') => {
-    setNewStone({ stoneType, name: '', cut: '', size: '', price: '' });
-    setStoneError(null);
-    setAddingStoneType(stoneType);
-  };
+  
 
   // Chỉ cập nhật local state — lưu xuống BE khi bấm "Lưu cấu hình" ở dưới
   const handleUpdateStonePrice = (id: string, price: number) => {
-    setStones((prev) => prev.map((s) => (s.id === id ? { ...s, price } : s)));
+    setPendingStoneUpdates((prev) => ({ ...prev, [id]: price }));
   };
 
   // Đánh dấu xóa (hoặc bỏ đánh dấu) — chưa xóa thật, chỉ xóa thật khi bấm "Lưu cấu hình"
@@ -685,10 +654,10 @@ export const PricingConfigPage: React.FC = () => {
           ? `Đã import ${result.imported} đá mới, cập nhật giá ${result.updated} đá`
           : `Đã import ${result.imported} đá`,
       );
-      const rowsFresh = await fetchStones();
-      const freshList = Array.isArray(rowsFresh) ? rowsFresh : [];
-      setStones(freshList);
-      setInitialStones(freshList);
+      
+      // Force refresh tab
+      setPendingStoneUpdates({});
+      setRefreshTimestamp(Date.now());
     } catch (err: any) {
       setStoneError(err.message || 'Import thất bại');
     } finally {
@@ -696,8 +665,7 @@ export const PricingConfigPage: React.FC = () => {
     }
   };
 
-  const mainStones = stones.filter((s) => s.stoneType === 'MAIN');
-  const sideStones = stones.filter((s) => s.stoneType === 'SIDE');
+  
 
   return (
     <div className="flex flex-col">
@@ -715,6 +683,9 @@ export const PricingConfigPage: React.FC = () => {
             </button>
             <button type="button" className={clsx(pcpTabCls, activeTab === 'RULES' && pcpTabActiveCls)} onClick={() => setActiveTab('RULES')}>
               Quy tắc tính giá bán
+            </button>
+            <button type="button" className={clsx(pcpTabCls, activeTab === 'STONES' && pcpTabActiveCls)} onClick={() => setActiveTab('STONES')}>
+              Giá đá
             </button>
           </div>
         </div>
@@ -869,66 +840,24 @@ export const PricingConfigPage: React.FC = () => {
                   </table>
                 </div>
               </PanelSection>
-
-              {/* Quản lý bảng giá đá */}
-              <PanelSection
-                title="Quản lý bảng giá đá"
-                icon={Gem}
-              >
-                {stoneError && (
-                  <ErrorBanner message={stoneError} className="mb-[12px] whitespace-pre-line max-h-[160px] overflow-y-auto" />
-                )}
-                {importResult && <div className="mb-[12px] text-[#16a34a] text-[15px] font-bold">{importResult}</div>}
-
-                <StoneGroupTable
-                  title="Đá Chủ"
-                  addLabel="Thêm đá chủ"
-                  stoneType="MAIN"
-                  items={mainStones}
-                  initialStones={initialStones}
-                  pendingDeleteIds={pendingDeleteStoneIds}
-                  editingIds={editingStoneIds}
-                  page={mainPage}
-                  setPage={setMainPage}
-                  onPriceChange={handleUpdateStonePrice}
-                  onToggleDelete={handleToggleDeleteStone}
-                  onToggleEdit={(id) => setEditingStoneIds((prev) => toggleInArray(prev, id))}
-                  adding={addingStoneType === 'MAIN'}
-                  onOpenAdd={() => openAddStone('MAIN')}
-                  onCloseAdd={() => setAddingStoneType(null)}
-                  newStone={newStone}
-                  setNewStone={setNewStone}
-                  onConfirmAdd={handleAddStone}
-                  onImportPriceGrid={(f) => handleImportPriceGridFile(f, 'MAIN')}
-                  importingPriceGrid={importingPriceGrid.MAIN}
-                />
-
-                <div className="h-[22px]" />
-
-                <StoneGroupTable
-                  title="Đá Tấm"
-                  addLabel="Thêm đá tấm"
-                  stoneType="SIDE"
-                  items={sideStones}
-                  initialStones={initialStones}
-                  pendingDeleteIds={pendingDeleteStoneIds}
-                  editingIds={editingStoneIds}
-                  page={sidePage}
-                  setPage={setSidePage}
-                  onPriceChange={handleUpdateStonePrice}
-                  onToggleDelete={handleToggleDeleteStone}
-                  onToggleEdit={(id) => setEditingStoneIds((prev) => toggleInArray(prev, id))}
-                  adding={addingStoneType === 'SIDE'}
-                  onOpenAdd={() => openAddStone('SIDE')}
-                  onCloseAdd={() => setAddingStoneType(null)}
-                  newStone={newStone}
-                  setNewStone={setNewStone}
-                  onConfirmAdd={handleAddStone}
-                  onImportPriceGrid={(f) => handleImportPriceGridFile(f, 'SIDE')}
-                  importingPriceGrid={importingPriceGrid.SIDE}
-                />
-              </PanelSection>
             </>
+          )}
+
+          {activeTab === 'STONES' && (
+            <div className="py-[22px] px-0">
+              <StonePricingTab 
+                pendingStoneUpdates={pendingStoneUpdates}
+                setPendingStoneUpdates={setPendingStoneUpdates}
+                pendingDeleteStoneIds={pendingDeleteStoneIds}
+                setPendingDeleteStoneIds={setPendingDeleteStoneIds}
+                onImportPriceGrid={handleImportPriceGridFile}
+                importingPriceGrid={importingPriceGrid}
+                stoneError={stoneError}
+                setStoneError={setStoneError}
+                importResult={importResult}
+                refreshTimestamp={refreshTimestamp}
+              />
+            </div>
           )}
 
           {activeTab === 'RULES' && (
@@ -1262,155 +1191,6 @@ const CategoryTable: React.FC<{
 // Bảng đá theo loại (Đá Chủ / Đá Tấm) — hiển thị đồng thời cả hai
 // ==========================
 
-const StoneGroupTable: React.FC<{
-  title: string;
-  addLabel: string;
-  stoneType: 'MAIN' | 'SIDE';
-  items: StoneItem[];
-  initialStones: StoneItem[];
-  pendingDeleteIds: string[];
-  editingIds: string[];
-  page: number;
-  setPage: (p: number) => void;
-  onPriceChange: (id: string, price: number) => void;
-  onToggleDelete: (id: string) => void;
-  onToggleEdit: (id: string) => void;
-  adding: boolean;
-  onOpenAdd: () => void;
-  onCloseAdd: () => void;
-  newStone: { stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string };
-  setNewStone: React.Dispatch<React.SetStateAction<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string }>>;
-  onConfirmAdd: () => void;
-  onImportPriceGrid: (file: File) => void;
-  importingPriceGrid: boolean;
-}> = ({ title, addLabel, items, initialStones, pendingDeleteIds, editingIds, page, setPage, onPriceChange, onToggleDelete, onToggleEdit, adding, onOpenAdd, onCloseAdd, newStone, setNewStone, onConfirmAdd, onImportPriceGrid, importingPriceGrid }) => {
-  const totalPages = Math.max(1, Math.ceil(items.length / STONE_PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageItems = items.slice((safePage - 1) * STONE_PAGE_SIZE, safePage * STONE_PAGE_SIZE);
-  const gridFileInputRef = useRef<HTMLInputElement>(null);
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-[8px]">
-        <h4 className="text-[15px] font-extrabold text-[#334155] m-0">{title}</h4>
-        <input
-          ref={gridFileInputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0] || null;
-            if (f) onImportPriceGrid(f);
-            e.target.value = '';
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => gridFileInputRef.current?.click()}
-          disabled={importingPriceGrid}
-          className={clsx(btnGhostSmallCls, importingPriceGrid && 'opacity-60')}
-          title="Import bảng giá theo lưới shape/size (VD kim cương) — tên đá lấy từ dòng đầu file"
-        >
-          {importingPriceGrid ? <Loader2 size={12} className="animate-[spin_0.8s_linear_infinite]" /> : <Upload size={12} />} Nhập bảng giá
-        </button>
-      </div>
-      <div className="overflow-x-auto border border-[#e5e7eb] rounded-[10px]">
-        <table className="w-full table-fixed border-collapse text-[15.5px]">
-          <thead>
-            <tr className={tableHeadRowCls}>
-              <th className={clsx(thCls, 'w-[26%]')}>Tên đá</th>
-              <th className={clsx(thCls, 'w-[18%]')}>Giác cắt</th>
-              <th className={clsx(thCls, 'w-[15%]')}>Size (mm)</th>
-              <th className={clsx(thCls, 'w-[31%]')}>Giá (VNĐ)</th>
-              <th className={clsx(thCls, 'w-[90px] !text-center')}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageItems.map((s) => {
-              const original = initialStones.find((o) => o.id === s.id);
-              const markedDelete = pendingDeleteIds.includes(s.id);
-              const isDirty = !markedDelete && !!original && original.price !== s.price;
-              const isEditing = editingIds.includes(s.id);
-              return (
-                <tr key={s.id} className={clsx('border-b border-[#f1f5f9]', markedDelete ? 'bg-[#fef2f2]' : isDirty ? 'bg-[#fffbeb]' : '')}>
-                  <td className={clsx(tdCls, 'font-extrabold', markedDelete ? 'line-through text-[#334155]' : 'text-[#0f172a]')}>{s.name}</td>
-                  <td className={clsx(tdCls, markedDelete && 'text-[#334155]')}>{s.cut || '—'}</td>
-                  <td className={clsx(tdCls, markedDelete && 'text-[#334155]')}>{s.size || '—'}</td>
-                  <td className={tdCls}>
-                    {isEditing && !markedDelete ? (
-                      <MoneyField value={s.price} onChange={(v) => onPriceChange(s.id, v)} width="160px" />
-                    ) : (
-                      <ValueDisplay value={s.price} dirty={isDirty} />
-                    )}
-                  </td>
-                  <td className={tdCenterCls}>
-                    <div className="flex gap-[10px] justify-center">
-                      <EditIconButton onClick={() => onToggleEdit(s.id)} active={isEditing} />
-                      <DeleteIconButton onClick={() => onToggleDelete(s.id)} marked={markedDelete} />
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {items.length === 0 && !adding && (
-              <tr><td colSpan={5} className="p-[14px] text-center text-[#334155]">Chưa có đá nào</td></tr>
-            )}
-            {adding && (
-              <tr className={pcpAddRowCls}>
-                <td className={tdCls}><input autoFocus value={newStone.name} onChange={(e) => setNewStone((s) => ({ ...s, name: e.target.value }))} className={inputCls} placeholder="Tên đá" /></td>
-                <td className={tdCls}><input value={newStone.cut} onChange={(e) => setNewStone((s) => ({ ...s, cut: e.target.value }))} className={inputCls} placeholder="Giác cắt" /></td>
-                <td className={tdCls}><input value={newStone.size} onChange={(e) => setNewStone((s) => ({ ...s, size: e.target.value }))} className={inputCls} placeholder="Size" /></td>
-                <td className={tdCls}><MoneyField value={parseFloat(newStone.price) || 0} onChange={(v) => setNewStone((s) => ({ ...s, price: String(v) }))} width="160px" /></td>
-                <td className={tdCenterCls}>
-                  <ConfirmCancelButtons onConfirm={onConfirmAdd} onCancel={onCloseAdd} />
-                </td>
-              </tr>
-            )}
-            {/* Dòng đệm rỗng — khoá chiều cao bảng cố định STONE_PAGE_SIZE dòng, trang cuối ít đá
-                hơn không bị co lại ngắn hơn các trang đầy. Lặp lại đúng cấu trúc 5 cột + icon
-                thao tác của dòng thật (chỉ ẩn bằng invisible) để chiều cao khớp chính xác — 1 ô
-                colSpan duy nhất có thể thấp hơn dòng thật (dòng thật có icon/chữ đậm cao hơn). */}
-            {Array.from({
-              length: Math.max(
-                0,
-                STONE_PAGE_SIZE - pageItems.length - (adding ? 1 : 0) - (items.length === 0 && !adding ? 1 : 0),
-              ),
-            }).map((_, i) => (
-              <tr key={`filler-${i}`} aria-hidden="true" className="invisible">
-                <td className={clsx(tdCls, 'font-extrabold')}>&nbsp;</td>
-                <td className={tdCls}>&nbsp;</td>
-                <td className={tdCls}>&nbsp;</td>
-                <td className={tdCls}>&nbsp;</td>
-                <td className={tdCenterCls}>
-                  <div className="flex gap-[10px] justify-center">
-                    <EditIconButton onClick={() => {}} />
-                    <DeleteIconButton onClick={() => {}} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          {!adding && (
-            <tfoot>
-              <tr className={pcpAddRowCls}>
-                <td colSpan={5} className="p-[8px]">
-                  <button type="button" onClick={onOpenAdd} className="text-[#334155] hover:text-primary flex items-center justify-center gap-[6px] w-full bg-transparent border-0 cursor-pointer text-[15px] font-bold p-[4px]">
-                    <Plus size={13} /> {addLabel}
-                  </button>
-                </td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
 
-      {items.length > STONE_PAGE_SIZE && (
-        <div className="flex items-center justify-end gap-[8px] mt-[10px]">
-          <button type="button" onClick={() => setPage(Math.max(1, safePage - 1))} disabled={safePage <= 1} className={pageBtnCls(safePage <= 1)}>‹</button>
-          <span className="text-[14.5px] font-bold text-[#334155]">Trang {safePage}/{totalPages}</span>
-          <button type="button" onClick={() => setPage(Math.min(totalPages, safePage + 1))} disabled={safePage >= totalPages} className={pageBtnCls(safePage >= totalPages)}>›</button>
-        </div>
-      )}
-    </div>
-  );
-};
+export default PricingConfigPage;
