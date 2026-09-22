@@ -4,7 +4,6 @@ import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, 
 import { formatStoneDisplay } from '../utils/stoneFormatter';
 import {
   fetchMasterData,
-  calculatePriceMultiApi,
   calculatePriceBatchApi,
   fetchStones,
   fetchSilverMultipliers,
@@ -371,136 +370,64 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         return existing?.groupId || `g_${Date.now()}`;
       };
 
-      const mapCompare = (
-        results: CalculateBatchResultItem[],
-        gid: string,
-        offset: number,
-      ): QuoteOption[] =>
-        compareValid
-          .map((r, i) =>
-            mapOption(r.materialName, r.materialId, parseFloat(r.weightChi) || 0, results[i + offset], {
-              laborCost: l,
-              vatVal,
-              stoneSelections,
-              stoneDesc,
-              groupId: gid,
-              locked: true,
-            }),
-          )
-          .filter((o): o is QuoteOption => !!o);
+      
 
-      if (validRows.length === 1) {
-        const single = validRows[0];
-        const w = parseFloat(single.weightChi) || 0;
-        // 1 request duy nhất: phương án chính (index 0) + toàn bộ dòng "loại vàng khác".
-        const results = await calculatePriceBatchApi({
-          categoryId: selectedReq?.category?.id || undefined,
-          includeVat: calcIncludeVat,
-          items: [
-            {
-              materialNameOrKey: single.materialName,
-              weightChi: w,
-              laborCost: l,
-              stoneCost: manualStoneCost || undefined,
-              stones: stoneSelections,
-              vatRate: vatVal,
-              silverMultiplier: isSilverMaterialId(single.materialId || single.id) ? calcSilverMultiplier : undefined,
-            },
-            ...compareItems,
-          ],
-        });
-        const mainOpt = mapOption(
-          single.materialName,
-          single.materialId || single.id,
-          w,
-          results[0],
-          { laborCost: l, vatVal, stoneSelections, stoneDesc, groupId: `g_${Date.now()}`, locked: false },
-        );
-        if (!mainOpt) {
-          setCalcError(results[0]?.error || 'Không nhận được giá hợp lệ từ hệ thống');
+      
+      const mainItems = validRows.map((r) => ({
+        materialNameOrKey: r.materialName,
+        weightChi: parseFloat(r.weightChi) || 0,
+        laborCost: l,
+        stoneCost: manualStoneCost || undefined,
+        stones: stoneSelections,
+        vatRate: vatVal,
+        silverMultiplier: isSilverMaterialId(r.materialId || r.id) ? calcSilverMultiplier : undefined,
+      }));
+
+      const results = await calculatePriceBatchApi({
+        categoryId: selectedReq?.category?.id || undefined,
+        includeVat: calcIncludeVat,
+        items: [...mainItems, ...compareItems],
+      });
+
+      const newOpts: QuoteOption[] = [];
+      let primaryGroupId = '';
+
+      mainItems.forEach((item, idx) => {
+        const resItem = results[idx];
+        if (resItem.error) {
+          setCalcError(resItem.error);
           return;
         }
-        const gid = resolveGroupId(mainOpt.quotedPrice);
-        mainOpt.groupId = gid;
-        addOptionsToList([mainOpt, ...mapCompare(results, gid, 1)]);
-      } else {
-        const payload = {
-          materials: validRows.map((m) => ({
-            materialId: m.materialId || m.id,
-            materialName: m.materialName,
-            weightChi: parseFloat(m.weightChi) || 0,
-          })),
-          categoryId: selectedReq?.category?.id || undefined,
-          laborCost: l,
-          vatRate: vatVal,
-          includeVat: calcIncludeVat,
-          stones:
-            calcStoneMode === 'catalog' && calcStoneRows.length > 0
-              ? calcStoneRows
-                  .filter((r) => r.stoneId)
-                  .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-              : undefined,
-          manualStoneName:
-            calcStoneMode === 'manual' && calcManualStoneName.trim()
-              ? calcManualStoneName.trim()
-              : undefined,
-          manualStonePrice:
-            calcStoneMode === 'manual' && manualStoneCost > 0 ? manualStoneCost : undefined,
-        };
+        const gid = resolveGroupId(resItem.quotedPrice ?? 0);
+        if (idx === 0) primaryGroupId = gid;
+        const opt = mapOption(
+          item.materialNameOrKey,
+          validRows[idx].materialId || validRows[idx].id,
+          item.weightChi,
+          resItem,
+          { laborCost: l, vatVal, stoneSelections, stoneDesc, groupId: gid, locked: false }
+        );
+        if (opt) newOpts.push(opt);
+      });
 
-        const res = await calculatePriceMultiApi(payload);
-        const matSummary = validRows.map((m) => `${m.materialName} (${m.weightChi} chỉ)`).join(' + ');
-
-        const groupId = resolveGroupId(res.quotedPrice);
-        const compareOpts =
-          compareItems.length > 0
-            ? mapCompare(
-                await calculatePriceBatchApi({
-                  categoryId: selectedReq?.category?.id || undefined,
-                  includeVat: calcIncludeVat,
-                  items: compareItems,
-                }),
-                groupId,
-                0,
-              )
-            : [];
-
-        addOptionsToList([
-          {
-            // matSummary đã gồm tên + khối lượng từng chất liệu, đủ phân biệt các cụm.
-            optionName: `Phương án phối hợp (${matSummary})`,
-            materialName: matSummary,
-            weightChi: validRows.reduce((sum, m) => sum + (parseFloat(m.weightChi) || 0), 0),
-            laborCost: res.laborCost,
-            stoneCost: res.stoneCost,
-            totalMetalCost: res.totalMetalCost,
-            metalRawCost: res.metalRawCost,
-            stonePrice: res.stonePrice || 0,
-            vat: vatVal,
-            quotedPrice: res.quotedPrice,
-            isSelected: false,
-            groupId,
-            priceBreakdown:
-              res.materialPrice != null
-                ? { material: res.materialPrice, stone: res.stonePrice ?? 0 }
-                : undefined,
-            // Gắn giá vốn RIÊNG từng kim loại (res.breakdown, BE tính sẵn) vào từng dòng material
-            // để lưu lại — FE chỉ đọc, không tự tính.
-            materials: payload.materials.map((m) => ({
-              ...m,
-              rawCost: res.breakdown.find((b) => b.materialId === m.materialId)?.cost,
-            })),
-            stones: payload.stones,
-            stoneDescription:
-              calcStoneMode === 'manual'
-                ? calcManualStoneName
-                : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', '),
-            note: 'Tính từ máy tính giá',
-          },
-          ...compareOpts,
-        ]);
+      if (newOpts.length === 0) {
+        return;
       }
-    } catch (err: any) {
+
+      const compareOpts = compareValid.map((r, idx) => {
+        const resItem = results[mainItems.length + idx];
+        return mapOption(r.materialName, r.materialId, parseFloat(r.weightChi) || 0, resItem, {
+           laborCost: l,
+           vatVal,
+           stoneSelections,
+           stoneDesc,
+           groupId: primaryGroupId,
+           locked: true
+        });
+      }).filter((o): o is QuoteOption => !!o);
+
+      addOptionsToList([...newOpts, ...compareOpts]);
+      } catch (err: any) {
       console.error('Lỗi tính giá:', err);
       setCalcError(err.message || 'Lỗi khi tính giá');
     } finally {
