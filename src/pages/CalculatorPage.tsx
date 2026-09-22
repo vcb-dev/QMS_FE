@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Calculator, CheckCircle2, RotateCcw, Copy, Check, Plus, Trash2 } from 'lucide-react';
-import { fetchMasterData, calculatePriceMultiApi, calculatePriceBatchApi, fetchStones, fetchSilverMultipliers } from '../services/api';
+import { fetchMasterData,  calculatePriceBatchApi, fetchStones, fetchSilverMultipliers } from '../services/api';
 import type { CalculateBatchResultItem } from '../services/api';
 import { useMetalPrices } from '../hooks/useMetalPrices';
 import { PRICING_DEFAULTS } from '../constants';
@@ -218,25 +218,6 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   };
 
   // Các phương án "loại vàng khác" (compareRows) — bỏ qua dòng chưa nhập khối lượng, tính TẤT CẢ
-  // trong 1 request /quote-options/calculate-batch.
-  const buildCompareOptions = async (
-    vatValNum: number,
-    sharedStones: { stoneId: string; quantity: number }[] | undefined,
-    currentCatId: string | undefined,
-  ): Promise<QuoteOption[]> => {
-    const rows = compareRows.filter(
-      (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
-    );
-    if (rows.length === 0) return [];
-    const results = await calculatePriceBatchApi({
-      categoryId: currentCatId || undefined,
-      includeVat,
-      items: rows.map(compareBatchItem),
-    });
-    return rows
-      .map((r, i) => mapCompareOpt(r, results[i], vatValNum, sharedStones))
-      .filter((o): o is QuoteOption => !!o);
-  };
 
   const runCalculate = async () => {
     const validRows = materialRows.filter((m) => m.materialName && (parseFloat(m.weightChi) || 0) > 0);
@@ -254,161 +235,85 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     setIsDebouncing(false);
     setErrorMessage(null);
     try {
-      if (validRows.length === 1) {
-        // Luồng 1 chất liệu: tính giá chính qua /calculate. KHÔNG còn tự sinh bảng so sánh tuổi
-        // vàng — các phương án "loại vàng khác" do người dùng tự thêm ở khối compareRows.
-        const singleRow = validRows[0];
-        const w = parseFloat(singleRow.weightChi) || 0;
-        const singleMat = dbMaterials.find((dm) => dm.id === singleRow.materialId);
+      
+      const sharedStones = catalogStoneSelections.length > 0 ? catalogStoneSelections : undefined;
+      const vatValNum = includeVat ? (vatPct || 10) : 0;
+      
+      const mainItems = validRows.map((r) => {
+        const singleMat = dbMaterials.find((dm) => dm.id === r.materialId);
         const isSingleSilver = singleMat?.baseMetal?.name === 'Bạc';
+        return {
+          materialNameOrKey: r.materialName,
+          weightChi: parseFloat(r.weightChi) || 0,
+          laborCost: laborCost || 0,
+          stoneCost: manualStoneCost || undefined,
+          stones: sharedStones,
+          vatRate: vatPct || 0,
+          silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
+        };
+      });
 
-        const sharedStones =
-          catalogStoneSelections.length > 0 ? catalogStoneSelections : undefined;
-        const vatValNum = includeVat ? (vatPct || 10) : 0;
+      const compareValid = compareRows.filter((r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0);
+      
+      const batch = await calculatePriceBatchApi({
+        categoryId: currentCatId || undefined,
+        includeVat,
+        items: [
+          ...mainItems,
+          ...compareValid.map(compareBatchItem),
+        ],
+      });
 
-        // 1 request duy nhất: phương án chính (index 0) + tất cả dòng "loại vàng khác".
-        const compareValid = compareRows.filter(
-          (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
-        );
-        const batch = await calculatePriceBatchApi({
-          categoryId: currentCatId || undefined,
-          includeVat,
-          items: [
-            {
-              materialNameOrKey: singleRow.materialName,
-              weightChi: w,
-              laborCost: laborCost || 0,
-              stoneCost: manualStoneCost || undefined,
-              stones: sharedStones,
-              vatRate: vatPct || 0,
-              silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
-            },
-            ...compareValid.map(compareBatchItem),
-          ],
+      if (requestId !== calcRequestIdRef.current) return;
+
+      const res = batch[0]; // Display the breakdown of the first main option
+      if (res && !res.error && typeof res.quotedPrice === 'number' && Number.isFinite(res.quotedPrice)) {
+        setQuotedPrice(res.quotedPrice);
+        setCalcResult({
+          totalMetalCost: res.totalMetalCost ?? 0,
+          metalRawCost: res.metalRawCost,
+          laborCost: res.laborCost ?? 0,
+          stoneCost: res.stoneCost ?? 0,
+          stonePrice: res.stonePrice ?? 0,
+          materialPrice: res.materialPrice,
+          vatRate: vatPct || 10,
+          vatAmount: res.vatAmount ?? 0,
+          metalVatAmount: res.metalVatAmount,
+          metalProfit: res.metalProfit,
+          stoneVatAmount: res.stoneVatAmount,
+          stoneProfit: res.stoneProfit,
+          quotedPrice: res.quotedPrice,
+          profitMarginLabel: res.profitMarginLabel,
         });
+      } else {
+        setQuotedPrice(null);
+        setCalcResult(null);
+        setErrorMessage(res?.error || 'Không nhận được giá hợp lệ từ hệ thống');
+      }
 
-        if (requestId !== calcRequestIdRef.current) return; // đã có input mới hơn, bỏ kết quả cũ này
-
-        const res = batch[0];
-        if (res && !res.error && typeof res.quotedPrice === 'number' && Number.isFinite(res.quotedPrice)) {
-          setQuotedPrice(res.quotedPrice);
-          // BE chỉ trả đủ cấu thành giá cho ORDER/ADMIN — Sale nhận bản rút gọn (chỉ quotedPrice).
-          // Khối JSX đọc field đầy đủ đã tự khóa sau guard currentRole nên an toàn ở runtime.
-          setCalcResult({
-            totalMetalCost: res.totalMetalCost ?? 0,
-            metalRawCost: res.metalRawCost,
-            laborCost: res.laborCost ?? 0,
-            stoneCost: res.stoneCost ?? 0,
-            stonePrice: res.stonePrice ?? 0,
-            materialPrice: res.materialPrice,
-            vatRate: vatPct || 10,
-            vatAmount: res.vatAmount ?? 0,
-            metalVatAmount: res.metalVatAmount,
-            metalProfit: res.metalProfit,
-            stoneVatAmount: res.stoneVatAmount,
-            stoneProfit: res.stoneProfit,
-            quotedPrice: res.quotedPrice,
-            profitMarginLabel: res.profitMarginLabel,
-          });
-        } else {
-          setQuotedPrice(null);
-          setCalcResult(null);
-          setErrorMessage(res?.error || 'Không nhận được giá hợp lệ từ hệ thống');
-        }
-
-        const mainOption = batchResultToOption({
-          optionName: singleRow.materialName,
-          materialName: singleRow.materialName,
-          materialId: singleRow.materialId || undefined,
-          weightChi: w,
-          res,
+      const mainOptions = validRows.map((r, i) => {
+        return batchResultToOption({
+          optionName: r.materialName,
+          materialName: r.materialName,
+          materialId: r.materialId || undefined,
+          weightChi: parseFloat(r.weightChi) || 0,
+          res: batch[i],
           vat: vatValNum,
           locked: false,
           stones: sharedStones,
         });
+      }).filter((o): o is QuoteOption => !!o);
 
-        const compareOptions = compareValid
-          .map((r, i) => mapCompareOpt(r, batch[i + 1], vatValNum, sharedStones))
-          .filter((o): o is QuoteOption => !!o);
-
-        setPriceOptions(
-          mainOption ? [{ ...mainOption, isSelected: true }, ...compareOptions] : compareOptions,
-        );
-      } else {
-        // Luồng NHIỀU chất liệu: Gọi API calculate-multi
-        const multiPayload = {
-          materials: validRows.map((m) => ({
-            materialId: m.materialId || m.id,
-            materialName: m.materialName,
-            weightChi: parseFloat(m.weightChi) || 0,
-          })),
-          categoryId: currentCatId || undefined,
-          laborCost: laborCost || 0,
-          vatRate: vatPct || 0,
-          includeVat,
-          stones: catalogStoneSelections.length > 0 ? catalogStoneSelections : undefined,
-          manualStoneName: manualStoneCost > 0 ? 'Đá tổng' : undefined,
-          manualStonePrice: manualStoneCost > 0 ? manualStoneCost : undefined,
-        };
-
-        const res = await calculatePriceMultiApi(multiPayload);
-        const vatValNum = includeVat ? (vatPct || 10) : 0;
-        const compareOptions = await buildCompareOptions(
-          vatValNum,
-          multiPayload.stones,
-          currentCatId,
-        );
-
-        if (requestId !== calcRequestIdRef.current) return;
-
-        if (res && typeof res.quotedPrice === 'number' && Number.isFinite(res.quotedPrice)) {
-          setQuotedPrice(res.quotedPrice);
-          setCalcResult({
-            totalMetalCost: res.totalMetalCost,
-            metalRawCost: res.metalRawCost,
-            laborCost: res.laborCost,
-            stoneCost: res.stoneCost,
-            stonePrice: res.stonePrice || 0,
-            materialPrice: res.materialPrice,
-            vatRate: vatPct || 10,
-            vatAmount: res.vatAmount,
-            metalVatAmount: res.metalVatAmount,
-            metalProfit: res.metalProfit,
-            stoneVatAmount: res.stoneVatAmount,
-            stoneProfit: res.stoneProfit,
-            quotedPrice: res.quotedPrice,
-            breakdown: res.breakdown,
-          });
-
-          // Option tóm tắt cho nhiều chất liệu — phải mang đủ field cấu thành giá (totalMetalCost/
-          // laborCost/stoneCost/vat...) để trang Chi Tiết Yêu Cầu tách hiển thị được như lúc tính,
-          // và materials/stones structured để BE lưu đúng QuoteOptionMaterial/QuoteOptionStone.
-          const matSummary = validRows.map((m) => `${m.materialName} (${m.weightChi} chỉ)`).join(' + ');
-          setPriceOptions([
-            {
-              optionName: `Phương án phối hợp (${matSummary})`,
-              materialName: matSummary,
-              weightChi: validRows.reduce((sum, m) => sum + (parseFloat(m.weightChi) || 0), 0),
-              laborCost: res.laborCost,
-              stoneCost: res.stoneCost,
-              totalMetalCost: res.totalMetalCost,
-              metalRawCost: res.metalRawCost,
-              stonePrice: res.stonePrice || 0,
-              vat: includeVat ? (vatPct || 10) : 0,
-              quotedPrice: res.quotedPrice,
-              isSelected: true,
-              materials: validRows.map((m) => ({ materialId: m.materialId || m.id, weightChi: parseFloat(m.weightChi) || 0 })),
-              stones: multiPayload.stones,
-            },
-            ...compareOptions,
-          ]);
-        } else {
-          setQuotedPrice(null);
-          setCalcResult(null);
-          setErrorMessage('Không nhận được giá hợp lệ từ hệ thống');
-        }
+      if (mainOptions.length > 0) {
+        mainOptions[0].isSelected = true; // Select the first one by default
       }
-    } catch (err: any) {
+
+      const compareOptions = compareValid
+        .map((r, i) => mapCompareOpt(r, batch[mainItems.length + i], vatValNum, sharedStones))
+        .filter((o): o is QuoteOption => !!o);
+
+      setPriceOptions([...mainOptions, ...compareOptions]);
+      } catch (err: any) {
       if (requestId !== calcRequestIdRef.current) return;
       console.error('Lỗi tính giá BE:', err);
       setErrorMessage(err.message || 'Không thể tính giá từ hệ thống');
