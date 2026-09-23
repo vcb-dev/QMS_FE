@@ -214,15 +214,6 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
         
         <div className="flex-1 overflow-y-auto pr-[4px]">
           <div className="flex flex-col gap-[4px]">
-            <button 
-              onClick={() => { setSelectedName(null); setSelectedCut(null); setSelectedIds([]); }}
-              className={clsx(
-                "flex justify-between items-center px-[12px] py-[8px] rounded-[8px] text-[14.5px] transition-colors text-left",
-                selectedName === null ? "bg-[#eff6ff] text-[#1e40af] font-bold" : "text-[#334155] hover:bg-[#f8fafc] font-medium"
-              )}
-            >
-              <span>Tất cả {selectedType === 'MAIN' ? 'Đá Chủ' : 'Đá Tấm'}</span>
-            </button>
             {(selectedType === 'MAIN' ? mainTypes : sideTypes).map(t => (
               <button 
                 key={t.name}
