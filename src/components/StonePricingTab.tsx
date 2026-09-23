@@ -31,10 +31,14 @@ export interface StonePricingTabProps {
   stoneError: string | null;
   setStoneError: React.Dispatch<React.SetStateAction<string | null>>;
   importResult?: string | null;
+  // Đổi mỗi lần import lưới giá thành công (Date.now()) — buộc tab tải lại danh sách đá, vì import
+  // xong stones đổi hẳn ở BE mà loadStones() không tự biết để refetch (không phụ thuộc state nào
+  // của tab này thay đổi).
+  refreshTimestamp?: number;
 }
 
 export const StonePricingTab: React.FC<StonePricingTabProps> = ({
-  pendingStoneUpdates, setPendingStoneUpdates, pendingDeleteStoneIds, setPendingDeleteStoneIds, onImportPriceGrid, importingPriceGrid, stoneError, setStoneError, importResult
+  pendingStoneUpdates, setPendingStoneUpdates, pendingDeleteStoneIds, setPendingDeleteStoneIds, onImportPriceGrid, importingPriceGrid, stoneError, setStoneError, importResult, refreshTimestamp
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
@@ -89,6 +93,14 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
   useEffect(() => {
     loadStones();
   }, [loadStones]); // Do not put pendingStoneUpdates here to avoid refetch on typing
+
+  // Import lưới giá xong (parent bump refreshTimestamp) -> tải lại cả danh sách lẫn thống kê loại.
+  useEffect(() => {
+    if (refreshTimestamp == null) return;
+    loadStats();
+    loadStones();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTimestamp]);
 
   useEffect(() => {
     setPage(1);
@@ -375,7 +387,7 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
                       <div className="flex items-center justify-center gap-[6px]">
                         <button onClick={() => {
                           setEditingStoneId(s.id);
-                          setNewStone({ name: s.name, cut: s.cut || '', size: s.size, price: String(s.price) });
+                          setNewStone({ name: s.name, cut: s.cut || '', size: s.size || '', price: String(s.price) });
                           setStoneModalOpen(true);
                         }} className="p-[6px] text-[#94a3b8] hover:text-[#3b82f6] transition-colors rounded hover:bg-[#eff6ff]">
                           <Pencil size={16} />

@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Save, Plus, Trash2, Pencil, Check, X, Upload, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench, Coins, Layers, Gem, PlusCircle, TrendingUp, Percent, History, Settings, type LucideIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Plus, Trash2, Pencil, Check, X, AlertTriangle, RotateCcw, Loader2, CheckCircle2, XCircle, Wrench, Coins, Layers, PlusCircle, TrendingUp, Percent, History, Settings, type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { MetalPriceHistoryModal } from '../components/MetalPriceHistoryModal';
 import { StonePricingTab } from '../components/StonePricingTab';
 import {
-  createStone,
-  updateStonePrices,
   updateStone,
+  deleteStonesMany,
+  importStonesPriceGridExcel,
   fetchMasterData,
   invalidateMasterData,
   updateProductCategoriesBulk,
@@ -25,8 +25,8 @@ import {
   deletePricingFormula,
 } from '../services/api';
 import { formatNumberVN } from '../utils/currency';
-import type{BaseMetal, StoneItem, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
-import {UNLIMITED_MAX_COST, STONE_PAGE_SIZE, CATEGORY_PAGE_SIZE} from "../constants/index";
+import type{BaseMetal, CategoryItem, Material, PricingFormula, PricingFormulaType, MarginTier} from '../types';
+import {UNLIMITED_MAX_COST, CATEGORY_PAGE_SIZE} from "../constants/index";
 import { thCls, tdCls, tdCenterCls, tableHeadRowCls, labelCls, btnPrimaryCls, btnSecondaryCls, btnGhostSmallCls, pageBtnCls, inputCls, valueBoxCls, suffixCls, fieldErrorCls, pcpIconBtnCls, pcpIconBtnEditCls, pcpIconBtnUndoCls, numInputCls, pcpTabCls, pcpTabActiveCls, pcpAddRowCls } from '../styles/classNames';
 const toggleInArray = <T,>(arr: T[], val: T): T[] => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 // Chặn thật sự ngay lúc gõ (không chỉ báo lỗi) — kẹp giá trị về đúng khoảng 0-100% (VAT/lợi nhuận,
@@ -240,15 +240,8 @@ export const PricingConfigPage: React.FC = () => {
 
   const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now());
   const [pendingStoneUpdates, setPendingStoneUpdates] = useState<Record<string, { size?: string, price?: number }>>({});
-  const [editingStoneIds, setEditingStoneIds] = useState<string[]>([]);
   const [pendingDeleteStoneIds, setPendingDeleteStoneIds] = useState<string[]>([]);
   const [stoneError, setStoneError] = useState<string | null>(null);
-  const [addingStoneType, setAddingStoneType] = useState<'MAIN' | 'SIDE' | null>(null);
-  const [mainPage, setMainPage] = useState(1);
-  const [sidePage, setSidePage] = useState(1);
-  const [newStone, setNewStone] = useState<{ stoneType: 'MAIN' | 'SIDE'; name: string; cut: string; size: string; price: string }>({
-    stoneType: 'MAIN', name: '', cut: '', size: '', price: '',
-  });
   const [importResult, setImportResult] = useState<string | null>(null);
   // Import bảng giá lưới shape/size (VD kim cương) — riêng đá chủ/đá tấm, stoneType chốt theo nút bấm.
   const [importingPriceGrid, setImportingPriceGrid] = useState<{ MAIN: boolean; SIDE: boolean }>({ MAIN: false, SIDE: false });
@@ -394,7 +387,6 @@ export const PricingConfigPage: React.FC = () => {
       setEditingFormulaIds([]);
       setEditingMaterialIds([]);
       setEditingCategoryIds([]);
-      setEditingStoneIds([]);
       if (materialsDirty || categoriesDirty || metalPricesDirty || formulasDirty) {
         invalidateMasterData();
       }
@@ -427,9 +419,7 @@ export const PricingConfigPage: React.FC = () => {
     setEditingFormulaIds([]);
     setEditingMaterialIds([]);
     setEditingCategoryIds([]);
-    setEditingStoneIds([]);
     setAddingCategory(false);
-    setAddingStoneType(null);
     setAddingMaterial(false);
     setAddingFormula(false);
   };
@@ -627,18 +617,6 @@ export const PricingConfigPage: React.FC = () => {
     } catch (err: any) {
       setMaterialError(err.message || 'Không thể xóa chất liệu');
     }
-  };
-
-  
-
-  // Chỉ cập nhật local state — lưu xuống BE khi bấm "Lưu cấu hình" ở dưới
-  const handleUpdateStonePrice = (id: string, price: number) => {
-    setPendingStoneUpdates((prev) => ({ ...prev, [id]: price }));
-  };
-
-  // Đánh dấu xóa (hoặc bỏ đánh dấu) — chưa xóa thật, chỉ xóa thật khi bấm "Lưu cấu hình"
-  const handleToggleDeleteStone = (id: string) => {
-    setPendingDeleteStoneIds((prev) => toggleInArray(prev, id));
   };
 
   // Import bảng giá lưới shape/size (file không có cột Loại/Tên riêng dòng, tên đá lấy từ dòng
