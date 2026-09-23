@@ -279,10 +279,23 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
         </div>
 
         <div className="flex justify-between items-center mb-[16px]">
-          <label className="flex items-center gap-[8px] cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 rounded border-[#cbd5e1] text-[#3b82f6] focus:ring-[#3b82f6]" checked={selectedIds.length === paginatedStones.length && paginatedStones.length > 0} onChange={toggleAll} />
-            <span className="text-[14.5px] font-medium text-[#334155]">Chọn tất cả</span>
-          </label>
+          <div className="flex items-center gap-[16px]">
+            <label className="flex items-center gap-[8px] cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 rounded border-[#cbd5e1] text-[#3b82f6] focus:ring-[#3b82f6]" checked={selectedIds.length === paginatedStones.length && paginatedStones.length > 0} onChange={toggleAll} />
+              <span className="text-[14.5px] font-medium text-[#334155]">Chọn tất cả</span>
+            </label>
+            {selectedIds.length > 0 && (
+              <button
+                onClick={() => {
+                  setPendingDeleteStoneIds(prev => [...new Set([...prev, ...selectedIds])]);
+                  setSelectedIds([]);
+                }}
+                className="flex items-center gap-[6px] text-[14.5px] font-bold text-[#ef4444] hover:text-[#b91c1c] transition-colors"
+              >
+                <Trash2 size={16} /> Xóa đã chọn ({selectedIds.length})
+              </button>
+            )}
+          </div>
           <div className="flex gap-[12px]">
             <input 
               type="file" 
