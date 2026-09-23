@@ -125,9 +125,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     setCompareRows([]);
 
-    // Bản nháp chưa có giá (VD: "Yêu cầu ban đầu" tự tạo lúc Sale gửi yêu cầu) không phải 1 phương
-    // án báo giá thật — không đưa vào state options, nếu không sẽ lệch số thứ tự "Phương án N" và
-    // bị gửi kèm lên BE lúc Xác Nhận, tạo dư 1 row quote_options + quote_option_materials rỗng.
+    // Bản nháp chưa có giá (VD: mỗi chất liệu Sale chọn lúc tạo đơn — BE tự tách thành 1 option
+    // nháp/chất liệu, xem quote-requests.service.ts) không phải 1 phương án báo giá thật — không
+    // đưa vào state options, tránh lệch số thứ tự "Phương án N" và bị gửi kèm lên BE lúc Xác Nhận,
+    // tạo dư row quote_options rỗng. Order tính giá qua máy tính bên dưới (đã tự điền sẵn các chất
+    // liệu này — xem khối load calcMaterialRows/compareRows ngay dưới), ra option thật thì mới hiện.
     const realOptions = (selectedReq.options || []).filter((opt) => opt.quotedPrice != null);
     if (realOptions.length > 0) {
       // Phương án Sale THẬT SỰ chọn — ưu tiên CLOSED/SELECTED; nếu đơn cũ/dữ liệu thiếu cờ này
@@ -168,16 +170,58 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     const reqMaterials = selectedReq.materials || [];
     const primaryOpt = getPrimaryOption({ options: selectedReq.options });
+    const realOptionsList = (selectedReq.options || []).filter((opt) => opt.quotedPrice != null);
+    
+    let loadedRows: any[] = [];
+    if (realOptionsList.length > 0) {
+      // Đã có phương án tính giá thật — chỉ lấy nguyên liệu từ ĐÚNG phương án chính đó vào máy
+      // tính. KHÔNG gộp vật liệu từ nhiều phương án đã có giá vào cùng 1 lần tính, sẽ trùng lặp
+      // (ví dụ phương án chính và phương án đính kèm cùng dùng Vàng 10K).
+      const targetOption = getPrimaryOption({ options: realOptionsList });
+      if (targetOption?.materials) {
+        targetOption.materials.forEach((m: QuoteOptionMaterial, mIdx: number) => {
+          loadedRows.push({
+            id: `m_${mIdx}_${Date.now()}`,
+            materialId: m.materialId || m.id || '',
+            materialName: m.materialName || m.material?.name || '',
+            weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
+          });
+        });
+      }
+    } else if (selectedReq.options && selectedReq.options.length > 0) {
+      // Chưa phương án nào có giá thật — mỗi option hiện có là 1 nháp BE tự tách, ĐÚNG 1 chất
+      // liệu riêng mỗi option (không trùng nhau). Chất liệu ĐẦU TIÊN làm chính (calcMaterialRows),
+      // các chất liệu còn lại tự điền vào "Phương án loại vàng khác" (compareRows) với ĐÚNG khối
+      // lượng Sale đã chọn — Order bấm "Tính Giá Ngay" 1 lần ra đủ 1 phương án chính + các phương
+      // án tham khảo, đúng khối máy tính so sánh sẵn có, không cần thêm khái niệm thẻ nháp mới.
+      const draftMaterials: { materialId: string; materialName: string; weightChi: string }[] = [];
+      selectedReq.options.forEach((opt: any) => {
+        (opt.materials || []).forEach((m: QuoteOptionMaterial) => {
+          draftMaterials.push({
+            materialId: m.materialId || m.id || '',
+            materialName: m.materialName || m.material?.name || '',
+            weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
+          });
+        });
+      });
+      if (draftMaterials.length > 0) {
+        const [first, ...rest] = draftMaterials;
+        loadedRows.push({ id: `m_0_${Date.now()}`, ...first });
+        if (rest.length > 0) {
+          setCompareRows(
+            rest.map((m, idx) => ({
+              id: `cmp_draft_${idx}_${Date.now()}`,
+              materialId: m.materialId,
+              materialName: m.materialName,
+              weightChi: m.weightChi,
+            })),
+          );
+        }
+      }
+    }
 
-    if (primaryOpt?.materials && primaryOpt.materials.length > 0) {
-      setCalcMaterialRows(
-        primaryOpt.materials.map((m: QuoteOptionMaterial, idx: number) => ({
-          id: `m_${idx}_${Date.now()}`,
-          materialId: m.materialId || m.id || '',
-          materialName: m.materialName || m.material?.name || '',
-          weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
-        })),
-      );
+    if (loadedRows.length > 0) {
+      setCalcMaterialRows(loadedRows);
     } else if (reqMaterials.length > 0) {
       setCalcMaterialRows(
         reqMaterials.map((m, idx) => ({
