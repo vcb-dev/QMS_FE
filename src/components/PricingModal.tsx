@@ -168,16 +168,28 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     const reqMaterials = selectedReq.materials || [];
     const primaryOpt = getPrimaryOption({ options: selectedReq.options });
+    const realOptionsList = (selectedReq.options || []).filter((opt) => opt.quotedPrice != null);
+    
+    let loadedRows: any[] = [];
+    if (realOptionsList.length > 0) {
+      const mainOptions = realOptionsList.filter((o) => !o.locked);
+      const sourceOptions = mainOptions.length > 0 ? mainOptions : [getPrimaryOption({ options: realOptionsList })].filter(Boolean);
+      sourceOptions.forEach((opt: any, oIdx: number) => {
+        if (opt.materials) {
+          opt.materials.forEach((m: QuoteOptionMaterial, mIdx: number) => {
+            loadedRows.push({
+              id: `m_${oIdx}_${mIdx}_${Date.now()}`,
+              materialId: m.materialId || m.id || '',
+              materialName: m.materialName || m.material?.name || '',
+              weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
+            });
+          });
+        }
+      });
+    }
 
-    if (primaryOpt?.materials && primaryOpt.materials.length > 0) {
-      setCalcMaterialRows(
-        primaryOpt.materials.map((m: QuoteOptionMaterial, idx: number) => ({
-          id: `m_${idx}_${Date.now()}`,
-          materialId: m.materialId || m.id || '',
-          materialName: m.materialName || m.material?.name || '',
-          weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
-        })),
-      );
+    if (loadedRows.length > 0) {
+      setCalcMaterialRows(loadedRows);
     } else if (reqMaterials.length > 0) {
       setCalcMaterialRows(
         reqMaterials.map((m, idx) => ({
