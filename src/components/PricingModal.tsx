@@ -172,22 +172,26 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     const realOptionsList = (selectedReq.options || []).filter((opt) => opt.quotedPrice != null);
     
     let loadedRows: any[] = [];
-    if (realOptionsList.length > 0) {
-      const mainOptions = realOptionsList.filter((o) => !o.locked);
-      const sourceOptions = mainOptions.length > 0 ? mainOptions : [getPrimaryOption({ options: realOptionsList })].filter(Boolean);
-      sourceOptions.forEach((opt: any, oIdx: number) => {
-        if (opt.materials) {
-          opt.materials.forEach((m: QuoteOptionMaterial, mIdx: number) => {
-            loadedRows.push({
-              id: `m_${oIdx}_${mIdx}_${Date.now()}`,
-              materialId: m.materialId || m.id || '',
-              materialName: m.materialName || m.material?.name || '',
-              weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
-            });
+    // NẾU đơn đã có giá thật (realOptionsList) -> Ưu tiên lấy material từ các option có giá (không khóa).
+    // NẾU đơn hoàn toàn mới (chưa có giá thật) -> Lấy material từ TẤT CẢ các option nháp (unpriced fallback options).
+    const optionsToExtractMaterials = realOptionsList.length > 0 
+      ? (realOptionsList.filter((o) => !o.locked).length > 0 
+          ? realOptionsList.filter((o) => !o.locked) 
+          : [getPrimaryOption({ options: realOptionsList })].filter(Boolean))
+      : (selectedReq.options || []);
+
+    optionsToExtractMaterials.forEach((opt: any, oIdx: number) => {
+      if (opt.materials) {
+        opt.materials.forEach((m: QuoteOptionMaterial, mIdx: number) => {
+          loadedRows.push({
+            id: `m_${oIdx}_${mIdx}_${Date.now()}`,
+            materialId: m.materialId || m.id || '',
+            materialName: m.materialName || m.material?.name || '',
+            weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
           });
-        }
-      });
-    }
+        });
+      }
+    });
 
     if (loadedRows.length > 0) {
       setCalcMaterialRows(loadedRows);
