@@ -447,7 +447,7 @@ export async function updateQuoteRequest(id: string, payload: any) {
 }
 
 export async function changeQuoteStatus(id: string, payload: {
-  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'MARK_CLOSED';
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'MARK_CLOSED' | 'EDIT_PRICE';
   version?: number;
   quotedPrice?: number;
   vat?: number;
@@ -603,6 +603,22 @@ export async function completeQuoteRequest(
     ?.map((opt) => sanitizeQuoteOption(opt, extras?.materialWeights, extras?.stones))
     .filter((opt): opt is SanitizedQuoteOptionPayload => !!opt);
   return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version });
+}
+
+// Sửa giá đã báo cho đơn ĐANG QUOTED/CLOSED — chỉ gửi đúng 1 phương án (đang chọn làm giá chính),
+// khác completeQuoteRequest (gửi cả mảng, BE xóa hết & tạo lại). BE chỉ ghi đè đúng phương án chính
+// hiện có, giữ nguyên status/selectionStatus (CLOSED sửa giá thì vẫn CLOSED).
+export async function editQuotedPrice(
+  id: string,
+  option: QuoteOptionDraft,
+  version?: number,
+) {
+  const cleanOption = sanitizeQuoteOption(option);
+  return changeQuoteStatus(id, {
+    action: 'EDIT_PRICE',
+    options: cleanOption ? [cleanOption] : [],
+    version,
+  });
 }
 
 export async function selectQuoteOption(id: string, optionId: string) {
@@ -1015,4 +1031,7 @@ export async function updateDmBridge(
   );
 }
 
-
+export async function fetchDepartments() {
+  return apiCall(dedupedGet('/departments'), 'Không thể tải danh sách phòng ban');
+}
+export async function fetchDepartmentsPaginated(page: number, limit: number, search?: string) { return apiCall(api.get('/departments', { params: { page, limit, search } }), 'Lỗi tải danh sách bộ phận'); } export async function createDepartment(name: string) { return apiCall(api.post('/departments', { name }), 'Lỗi tạo bộ phận'); } export async function updateDepartment(id: string, name: string) { return apiCall(api.patch('/departments/' + id, { name }), 'Lỗi cập nhật bộ phận'); } export async function deleteDepartment(id: string) { return apiCall(api.delete('/departments/' + id), 'Lỗi xóa bộ phận'); }

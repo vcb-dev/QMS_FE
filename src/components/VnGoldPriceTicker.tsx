@@ -44,20 +44,20 @@ export const VnGoldPriceTicker: React.FC = () => {
     <div className="bg-surface border border-border rounded-[14px] py-[18px] px-[22px] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
       <div className="flex items-center justify-between mb-[14px] gap-[10px] flex-wrap">
         <div className="flex items-center gap-[10px] flex-wrap">
-          <span className="text-[12.5px] font-black text-[#d97706] uppercase tracking-[0.6px]">
+          <span className="text-[15.5px] font-black text-[#d97706] uppercase tracking-[0.6px]">
             Giá Vàng Thị Trường
           </span>
-          <span className="inline-flex items-center gap-[5px] text-[9.5px] font-extrabold text-[#16a34a] tracking-[0.5px]">
+          <span className="inline-flex items-center gap-[5px] text-[12.5px] font-extrabold text-[#16a34a] tracking-[0.5px]">
             <span className="w-[6px] h-[6px] rounded-full bg-[#16a34a] animate-[livePulse_1.4s_ease-in-out_infinite]" />
             TRỰC TIẾP
           </span>
-          <span className="text-[10.5px] text-[#94a3b8]">
+          <span className="text-[13.5px] text-[#334155]">
             (chỉ tham khảo, không dùng để tính giá)
           </span>
         </div>
         <div className="flex items-center gap-[10px]">
           {updatedAt && (
-            <span className="text-[10.5px] text-[#94a3b8]">
+            <span className="text-[13.5px] text-[#334155]">
               {new Date(updatedAt).toLocaleTimeString('vi-VN')}
             </span>
           )}
@@ -76,9 +76,9 @@ export const VnGoldPriceTicker: React.FC = () => {
         </div>
       </div>
 
-      {error && <div className="text-[11.5px] text-[#dc2626]"> {error}</div>}
+      {error && <div className="text-[14.5px] text-[#dc2626]"> {error}</div>}
       {!error && items.length === 0 && (
-        <div className="text-[11.5px] text-[#94a3b8]">Đang tải giá vàng thị trường...</div>
+        <div className="text-[14.5px] text-[#334155]">Đang tải giá vàng thị trường...</div>
       )}
 
       {items.length > 0 && (
@@ -96,16 +96,16 @@ export const VnGoldPriceTicker: React.FC = () => {
                   idx === 0 ? 'border-l-0' : 'border-l border-[#e2e8f0]',
                 )}
               >
-                <div className="text-[11px] font-bold text-[#64748b] whitespace-nowrap tracking-[0.2px]">
+                <div className="text-[14px] font-bold text-[#334155] whitespace-nowrap tracking-[0.2px]">
                   {cleanLabel(it.label)}
                 </div>
-                <div className="text-[20px] font-black text-[#0f172a] mt-[4px] [font-variant-numeric:tabular-nums] whitespace-nowrap">
-                  {formatNumberVN(it.priceVnd)} <span className="text-[12px] font-bold text-[#64748b] ml-[2px]">VNĐ</span>
+                <div className="text-[23px] font-black text-[#0f172a] mt-[4px] [font-variant-numeric:tabular-nums] whitespace-nowrap">
+                  {formatNumberVN(it.priceVnd)} <span className="text-[15px] font-bold text-[#334155] ml-[2px]">VNĐ</span>
                 </div>
                 <div
                   className={clsx(
-                    'flex items-center gap-[4px] mt-[4px] text-[11.5px] font-extrabold',
-                    isUp ? 'text-[#16a34a]' : isDown ? 'text-[#dc2626]' : 'text-[#94a3b8]',
+                    'flex items-center gap-[4px] mt-[4px] text-[14.5px] font-extrabold',
+                    isUp ? 'text-[#16a34a]' : isDown ? 'text-[#dc2626]' : 'text-[#334155]',
                   )}
                 >
                   <Icon size={12} />

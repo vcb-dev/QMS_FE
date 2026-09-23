@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import type { Customer, CreateModalProps } from '../types';
-import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones } from '../services/api';
+import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones, fetchDepartments } from '../services/api';
 import { useModalA11y } from '../hooks/useModalA11y';
 import { materialGroupKey } from '../utils/quoteOption';
-import { X, Upload, PlusCircle } from 'lucide-react';
+import { X, Upload, PlusCircle, HelpCircle } from 'lucide-react';
 import { UI_CONSTANTS, CLOSE_RATE_OPTIONS } from '../constants';
 import { CustomerSelectorSection } from './CustomerSelectorSection';
 import {
@@ -23,13 +23,13 @@ import {
 // Chip "✓ tên" cho chất liệu/đá đã chọn — dùng cho cả material và stone, khác nhau ở điều
 // kiện ẩn nút xóa (material dựa vào calculatorData.materials/materialType, stone dựa cả object).
 const SelectedChip: React.FC<{ label: string; onRemove?: () => void; removeTitle?: string }> = ({ label, onRemove, removeTitle }) => (
-  <span className="bg-[#f1f5f9] border border-[#cbd5e1] text-[#334155] py-[4px] px-[10px] rounded-[16px] text-[11.5px] font-bold inline-flex items-center gap-[6px]">
+  <span className="bg-[#f1f5f9] border border-[#cbd5e1] text-[#334155] py-[4px] px-[10px] rounded-[16px] text-[14.5px] font-bold inline-flex items-center gap-[6px]">
     ✓ {label}
     {onRemove && (
       <button
         type="button"
         onClick={onRemove}
-        className="bg-transparent border-0 text-[#334155] cursor-pointer p-0 text-[12px] leading-[1] font-extrabold"
+        className="bg-transparent border-0 text-[#334155] cursor-pointer p-0 text-[15px] leading-[1] font-extrabold"
         title={removeTitle}
       >
         ✕
@@ -64,6 +64,10 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   // Location Data
   const [provinces, setProvinces] = useState<{ id: string; name: string; code?: string }[]>([]);
   const [wards, setWards] = useState<{ id: string; name: string; code?: string }[]>([]);
+
+  // Department
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
 
   // Lazy Customer Search
   const [customerSearch, setCustomerSearch] = useState('');
@@ -256,6 +260,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     if (editingReq) {
       setIsNewCustomerMode(false);
       setSelectedCustomerId(editingReq.customer?.id || '');
+      setSelectedDepartmentId((editingReq as any).department?.id || (editingReq as any).departmentId || '');
       setSelectedCategoryId(editingReq.category?.id || (categories[0]?.id || ''));
       setNewCategoryName('');
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
@@ -277,6 +282,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setNewCustomerProvince('');
       setNewCustomerWard('');
       setNewCategoryName('');
+      setSelectedDepartmentId('');
 
       if (calculatorData) {
         if (calculatorData.categoryId) {
@@ -361,12 +367,17 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     }
   }, [editingReq, categories, isOpen, calculatorData, materials, stoneOptionsAll]);
 
-  // Load Provinces on Modal Open
+  // Load Provinces & Departments on Modal Open
   useEffect(() => {
     if (isOpen) {
       fetchProvinces().then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setProvinces(data);
+        }
+      });
+      fetchDepartments().then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDepartments(data);
         }
       });
     }
@@ -418,26 +429,67 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   const MAX_IMAGES = UI_CONSTANTS.CREATE_QUOTE_REQUEST.MAX_IMAGES;
 
+  // Dùng chung cho cả chọn file (input) và dán ảnh (Ctrl+V) — cùng 1 luật giới hạn MAX_IMAGES.
+  const addImageFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    if (totalImageCount >= MAX_IMAGES) {
+      alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
+      return;
+    }
+
+    const availableSlots = MAX_IMAGES - totalImageCount;
+    const filesToProcess = files.slice(0, availableSlots);
+
+    if (files.length > availableSlots) {
+      alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
+    }
+
+    setNewImageFiles((prev) => [...prev, ...filesToProcess]);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (totalImageCount >= MAX_IMAGES) {
-        alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh cho mỗi yêu cầu báo giá!`);
-        e.target.value = '';
-        return;
-      }
-
-      const availableSlots = MAX_IMAGES - totalImageCount;
-      const filesToProcess = Array.from(files).slice(0, availableSlots);
-
-      if (files.length > availableSlots) {
-        alert(`Đã tự động lấy ${availableSlots} ảnh đầu tiên (Tối đa ${MAX_IMAGES} ảnh/yêu cầu).`);
-      }
-
-      setNewImageFiles((prev) => [...prev, ...filesToProcess]);
+      addImageFiles(Array.from(files));
     }
     e.target.value = '';
   };
+
+  // Dán ảnh copy từ ngoài (VD: cắt màn hình, copy từ web) thẳng vào form, khỏi phải tải về máy
+  // rồi chọn file lại — chỉ lấy phần ảnh trong clipboard, không chặn dán chữ bình thường. Nghe ở
+  // document (không gắn onPaste vào 1 element) vì lúc mở modal, focus mặc định rơi vào nút/control
+  // đầu tiên (useModalA11y) — trình duyệt CHỈ bắn sự kiện paste khi đang focus input/textarea/
+  // contentEditable, focus vào nút bấm thường thì Ctrl+V không có tác dụng gì cả.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleDocumentPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles = Array.from(items)
+        .filter((item) => item.type.startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => !!f);
+      if (imageFiles.length > 0) {
+        addImageFiles(imageFiles);
+      }
+    };
+    document.addEventListener('paste', handleDocumentPaste);
+    return () => document.removeEventListener('paste', handleDocumentPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, totalImageCount]);
+
+  // Chặn drop ngoài đúng ô dropzone (VD: nhả chuột lệch 1 px ra ngoài viền) — mặc định trình
+  // duyệt sẽ điều hướng cả tab sang file/URL vừa thả, thoát khỏi modal và mất luôn dữ liệu đang nhập.
+  useEffect(() => {
+    if (!isOpen) return;
+    const preventDefault = (e: DragEvent) => e.preventDefault();
+    window.addEventListener('dragover', preventDefault);
+    window.addEventListener('drop', preventDefault);
+    return () => {
+      window.removeEventListener('dragover', preventDefault);
+      window.removeEventListener('drop', preventDefault);
+    };
+  }, [isOpen]);
 
   const removeExistingImage = (indexToRemove: number) => {
     setExistingImageUrls((prev) => prev.filter((_, idx) => idx !== indexToRemove));
@@ -451,11 +503,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
+  const addVideoFile = (file: File) => {
     if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
       alert(`Kích thước video vượt quá giới hạn cho phép (tối đa ${MAX_VIDEO_SIZE_MB}MB)!`);
       return;
@@ -463,6 +511,13 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
     setExistingVideoUrl(null);
     setNewVideoFile(file);
+  };
+
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    addVideoFile(file);
   };
 
   const removeVideo = () => {
@@ -525,6 +580,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
       await onSubmit({
         customerId: finalCustomerId,
+        departmentId: selectedDepartmentId || undefined,
         categoryId: selectedCategoryId === 'OTHER' ? (categories[0]?.id || '') : selectedCategoryId,
         newCategoryName: selectedCategoryId === 'OTHER' ? newCategoryName.trim() : undefined,
         materialIds: selectedMaterialIds,
@@ -568,10 +624,22 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               className="h-[32px] object-contain"
             />
             <div>
-              <h2 id="modalCreateTitle" className="text-[18px] font-extrabold m-0 text-[#0f172a]">
+              <h2 id="modalCreateTitle" className="text-[21px] font-extrabold m-0 text-[#0f172a] flex items-center gap-[6px]">
                 Tạo Yêu Cầu Báo Giá Chế Tác Mới
+                <span
+                  title={
+                    'Cách thêm ảnh sản phẩm:\n' +
+                    '- Kéo thả ảnh (từ web, file explorer...) vào ô "Ảnh sản phẩm"\n' +
+                    '- Hoặc copy ảnh (Ctrl+C / chuột phải Copy image) rồi bấm Ctrl+V khi modal đang mở\n' +
+                    '- Hoặc bấm vào ô "Ảnh sản phẩm" để chọn file\n' +
+                    'Video chỉ hỗ trợ kéo thả hoặc bấm chọn file, chưa hỗ trợ paste.'
+                  }
+                  className="inline-flex cursor-help text-muted"
+                >
+                  <HelpCircle size={16} />
+                </span>
               </h2>
-              <p className="text-[12px] text-muted mt-[2px] mr-0 mb-0 ml-0">
+              <p className="text-[15px] text-muted mt-[2px] mr-0 mb-0 ml-0">
                 Điền đầy đủ các trường thông tin chuẩn nghiệp vụ VCB để chuyển bộ phận Định Giá
               </p>
             </div>
@@ -590,7 +658,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             
             {/* Left Card: THÔNG TIN ĐƠN HÀNG */}
             <div className="bg-surface border border-border rounded-[16px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col gap-[16px]">
-              <h3 className="text-[13px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
+              <h3 className="text-[16px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
                 THÔNG TIN ĐƠN HÀNG
               </h3>
 
@@ -622,6 +690,23 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               <div className={formGroupCls}>
                 <label className={formLabelCls}>Người hỏi giá (Sale) <span className={formReqCls}>*</span></label>
                 <input type="text" className={clsx(formControlCls, '!bg-[#f1f5f9]')} value={saleName} readOnly />
+              </div>
+
+              {/* Bộ phận / Phòng ban */}
+              <div className={formGroupCls}>
+                <label className={formLabelCls}>Bộ phận / Phòng ban</label>
+                <select
+                  className={formControlCls}
+                  value={selectedDepartmentId}
+                  onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                >
+                  <option value="">-- Chọn phòng ban --</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Danh Mục Sản Phẩm - DB Loaded */}
@@ -686,7 +771,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                       className="absolute top-[calc(100%+4px)] left-0 right-0 z-20 bg-surface border border-[#cbd5e1] rounded-[8px] shadow-[0_8px_20px_rgba(0,0,0,0.12)] max-h-[220px] overflow-y-auto p-[6px]"
                     >
                       {materials.length === 0 && (
-                        <div className="p-[8px] text-[12px] text-faint">Chưa có chất liệu nào</div>
+                        <div className="p-[8px] text-[15px] text-faint">Chưa có chất liệu nào</div>
                       )}
                       {materials.map((m) => {
                         const blocked =
@@ -698,7 +783,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             key={m.id}
                             title={blocked ? 'Phải cùng kim loại gốc với chất liệu đã chọn' : undefined}
                             className={clsx(
-                              'flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[13px] font-semibold text-[#334155]',
+                              'flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[16px] font-semibold text-[#334155]',
                               blocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
                             )}
                           >
@@ -790,14 +875,14 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                               type="button"
                               onClick={() => toggleStoneType(t)}
                               className={clsx(
-                                'flex-1 flex items-center justify-center gap-[6px] py-[7px] px-[10px] rounded-[7px] text-[13px] font-bold cursor-pointer transition-[background_0.12s,color_0.12s]',
+                                'flex-1 flex items-center justify-center gap-[6px] py-[7px] px-[10px] rounded-[7px] text-[16px] font-bold cursor-pointer transition-[background_0.12s,color_0.12s]',
                                 active ? 'border border-[#0f172a] bg-[#e2e8f0] text-[#0f172a]' : 'border border-border bg-surface text-[#475569]'
                               )}
                             >
                               {t === 'MAIN' ? 'Đá chủ' : 'Đá tấm'}
                               <span
                                 className={clsx(
-                                  'text-[11px] font-bold py-[1px] px-[6px] rounded-full',
+                                  'text-[14px] font-bold py-[1px] px-[6px] rounded-full',
                                   active ? 'bg-[#cbd5e1] text-[#0f172a]' : 'bg-[#e2e8f0] text-muted'
                                 )}
                               >
@@ -815,7 +900,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             value={stoneSearchQuery}
                             onChange={(e) => setStoneSearchQuery(e.target.value)}
                             placeholder="Tìm tên đá..."
-                            className="w-full py-[7px] px-[10px] text-[13px] border border-[#cbd5e1] rounded-[6px] outline-none"
+                            className="w-full py-[7px] px-[10px] text-[16px] border border-[#cbd5e1] rounded-[6px] outline-none"
                           />
                         </div>
                       )}
@@ -834,7 +919,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         )}
                         {visibleStoneOptions.length > 0 && (
                           <label
-                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[12px] font-bold text-[#334155] cursor-pointer"
+                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[15px] font-bold text-[#334155] cursor-pointer"
                           >
                             <input
                               type="checkbox"
@@ -848,7 +933,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                         {visibleStoneOptions.map((s) => (
                           <label
                             key={s.id}
-                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[13px] font-semibold text-[#334155] cursor-pointer"
+                            className="flex items-center gap-[8px] py-[7px] px-[8px] rounded-[6px] text-[16px] font-semibold text-[#334155] cursor-pointer"
                             onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                           >
@@ -889,7 +974,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
             {/* Right Card: THÔNG SỐ & TÀI LIỆU BÁO GIÁ */}
             <div className="bg-surface border border-border rounded-[16px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col gap-[16px]">
-              <h3 className="text-[13px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
+              <h3 className="text-[16px] font-extrabold text-[#334155] m-0 uppercase tracking-[0.5px]">
                 THÔNG SỐ BÁO GIÁ & TÀI LIỆU
               </h3>
 
@@ -968,18 +1053,32 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     }
                     triggerFileInput();
                   }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (totalImageCount >= MAX_IMAGES) {
+                      alert(`Hệ thống giới hạn tối đa ${MAX_IMAGES} ảnh/yêu cầu!`);
+                      return;
+                    }
+                    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+                    if (files.length > 0) addImageFiles(files);
+                  }}
                 >
                   <div className="mb-[6px]">
                     <Upload size={30} color="#64748b" />
                   </div>
-                  <div className="font-bold text-[13px] text-[#0f172a] mb-[2px]">
+                  <div className="font-bold text-[16px] text-[#0f172a] mb-[2px]">
                     {totalImageCount >= MAX_IMAGES
                       ? `✓ Đã đạt tối đa ${MAX_IMAGES} ảnh mẫu`
                       : totalImageCount > 0
                       ? `✓ Đã chọn ${totalImageCount}/${MAX_IMAGES} ảnh (Bấm để chọn thêm)`
                       : 'Kéo thả hoặc bấm để chọn 1 hoặc nhiều ảnh'}
                   </div>
-                  <span className="text-[11px] text-muted">
+                  <span className="text-[14px] text-muted">
                     (Giới hạn tối đa {MAX_IMAGES} ảnh mẫu/yêu cầu | Hỗ trợ PNG, JPG, WEBP)
                   </span>
                 </div>
@@ -1002,7 +1101,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             e.stopPropagation();
                             removeExistingImage(idx);
                           }}
-                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[11px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[14px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
                           title="Xóa ảnh này"
                         >
                           ✕
@@ -1023,7 +1122,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                             e.stopPropagation();
                             removeNewImage(idx);
                           }}
-                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[11px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                          className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[20px] h-[20px] text-[14px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
                           title="Xóa ảnh này"
                         >
                           ✕
@@ -1035,7 +1134,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     {totalImageCount < MAX_IMAGES && (
                       <div
                         onClick={triggerFileInput}
-                        className="w-[76px] h-[76px] rounded-[10px] border-2 border-dashed border-[#cbd5e1] bg-[#f8fafc] flex flex-col items-center justify-center cursor-pointer text-[#475569] text-[11px] font-extrabold gap-[2px]"
+                        className="w-[76px] h-[76px] rounded-[10px] border-2 border-dashed border-[#cbd5e1] bg-[#f8fafc] flex flex-col items-center justify-center cursor-pointer text-[#475569] text-[14px] font-extrabold gap-[2px]"
                         title="Bấm để chọn thêm ảnh"
                       >
                         <Upload size={18} color="#64748b" />
@@ -1067,7 +1166,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     <button
                       type="button"
                       onClick={removeVideo}
-                      className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[22px] h-[22px] text-[12px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
+                      className="absolute -top-[6px] -right-[6px] bg-[#ef4444] text-surface border-0 rounded-full w-[22px] h-[22px] text-[15px] font-extrabold cursor-pointer flex items-center justify-center shadow-[0_2px_4px_rgba(0,0,0,0.2)]"
                       title="Xóa video này"
                     >
                       ✕
@@ -1077,12 +1176,22 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                   <div
                     className="upload-dropzone min-h-[90px] flex flex-col items-center justify-center border-2 border-dashed border-[#cbd5e1] rounded-[12px] bg-[#f8fafc] cursor-pointer p-[14px] text-center"
                     onClick={triggerVideoInput}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('video/'));
+                      if (file) addVideoFile(file);
+                    }}
                   >
                     <Upload size={24} color="#64748b" />
-                    <div className="font-bold text-[13px] text-[#0f172a] mt-[4px]">
+                    <div className="font-bold text-[16px] text-[#0f172a] mt-[4px]">
                       Bấm để chọn 1 video
                     </div>
-                    <span className="text-[11px] text-muted">
+                    <span className="text-[14px] text-muted">
                       (Tối đa {MAX_VIDEO_SIZE_MB}MB | MP4, MOV, WEBM)
                     </span>
                   </div>
@@ -1090,12 +1199,12 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               </div>
 
               {/* Operational Notice Banner */}
-              <div className="bg-[#f8fafc] border border-border rounded-[10px] p-[14px] text-[12.5px] text-[#475569] leading-[1.5]">
+              <div className="bg-[#f8fafc] border border-border rounded-[10px] p-[14px] text-[15.5px] text-[#475569] leading-[1.5]">
                 <strong>Lưu ý nghiệp vụ:</strong> Yêu cầu BÁO GIÁ phải có đầy đủ mô tả, ảnh mẫu và chất liệu. Thời gian xử lý từ 1-4 giờ.
               </div>
 
               {/* Process Confirmation Checkbox */}
-              <label className="font-bold cursor-pointer flex items-center gap-[8px] text-[13px] text-[#334155]">
+              <label className="font-bold cursor-pointer flex items-center gap-[8px] text-[16px] text-[#334155]">
                 <input
                   type="checkbox"
                   checked={understandProcess}
@@ -1115,7 +1224,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="bg-[#f1f5f9] border border-[#cbd5e1] rounded-[10px] py-[11px] px-[22px] text-[13.5px] font-bold text-[#475569] cursor-pointer"
+              className="bg-[#f1f5f9] border border-[#cbd5e1] rounded-[10px] py-[11px] px-[22px] text-[16.5px] font-bold text-[#475569] cursor-pointer"
             >
               Hủy bỏ
             </button>
@@ -1123,7 +1232,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
               type="submit"
               disabled={submitting}
               className={clsx(
-                'bg-[#e2e8f0] text-[#0f172a] border border-[#94a3b8] rounded-[10px] py-[12px] px-[28px] text-[14px] font-extrabold cursor-pointer flex items-center justify-center gap-[8px] shadow-none',
+                'bg-[#e2e8f0] text-[#0f172a] border border-[#94a3b8] rounded-[10px] py-[12px] px-[28px] text-[17px] font-extrabold cursor-pointer flex items-center justify-center gap-[8px] shadow-none',
                 submitting ? 'opacity-70' : 'opacity-100'
               )}
             >

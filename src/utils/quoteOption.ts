@@ -159,7 +159,7 @@ export const batchResultToOption = (input: {
         ? { material: res.materialPrice, stone: res.stonePrice ?? 0 }
         : undefined,
     materials: input.materialId
-      ? [{ materialId: input.materialId, weightChi: input.weightChi }]
+      ? [{ materialId: input.materialId, weightChi: input.weightChi, rawCost: res.metalRawCost }]
       : undefined,
     stones: input.stones,
     stoneDescription: input.stoneDescription,
