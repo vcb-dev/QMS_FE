@@ -106,6 +106,17 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
     setPage(1);
   }, [search, selectedName, selectedType, selectedCut, statusFilter]);
 
+  // Vào tab lần đầu -> tự chọn loại đá đầu tiên thay vì rơi vào "Tất cả" (nút đó đã bỏ khỏi sidebar).
+  const didAutoSelectName = useRef(false);
+  useEffect(() => {
+    if (didAutoSelectName.current || types.length === 0) return;
+    const first = types.find(t => t.type === selectedType);
+    if (first) {
+      setSelectedName(first.name);
+      didAutoSelectName.current = true;
+    }
+  }, [types, selectedType]);
+
   const mainTypes = types.filter(t => t.type === 'MAIN' && t.name.toLowerCase().includes(search.toLowerCase()));
   const sideTypes = types.filter(t => t.type === 'SIDE' && t.name.toLowerCase().includes(search.toLowerCase()));
 
