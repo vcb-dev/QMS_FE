@@ -124,7 +124,9 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
     return Array.from(new Set(stones.map(s => s.cut || 'Tròn')));
   }, [stones]);
 
-  if (!selectedCut && cuts.length > 0) setSelectedCut(cuts[0]);
+  // KHÔNG tự áp filter cut đầu tiên — nếu 1 loại đá có nhiều giác cắt khác nhau (hoặc đá cũ chưa có
+  // cut), auto-lọc theo đúng 1 giác cắt sẽ làm mất các dòng còn lại khỏi bảng dù badge đếm vẫn đủ.
+  // selectedCut để trống (Tất cả giác cắt) mặc định, chỉ lọc khi người dùng bấm chọn tab.
 
   const paginatedStones = useMemo(() => {
     return stones.map(s => {
