@@ -128,6 +128,9 @@ export interface QuoteOptionStone {
   optionId?: string;
   stoneId: string;
   stoneName?: string;
+  // BE mapOptionDetail (dùng cho response chi tiết) trả stoneType PHẲNG ở đây, không lồng trong
+  // `stone` nữa — `stone` bên dưới chỉ còn dùng ở vài chỗ khác đọc dữ liệu chưa qua mapOptionDetail.
+  stoneType?: string;
   quantity: number;
   stone?: {
     id: string;
@@ -299,6 +302,9 @@ export type MaterialRow = {
   stoneType: 'MAIN' | 'SIDE' | '';
   stoneId: string;
   qty: number;
+  // Tên đá tại thời điểm load — dùng làm nhãn dự phòng khi đá đã ngừng bán (isActive=false, không
+  // còn trong stoneCatalog để chọn) nhưng option cũ vẫn tham chiếu tới, tránh hiện dropdown trống.
+  stoneName?: string;
 };
 
 export type StoneCatalogItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
