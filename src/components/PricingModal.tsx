@@ -498,8 +498,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   };
 
-  // Gộp 1 phương án "báo giá nhanh" (chỉ optionName + quotedPrice + vat, không chất liệu/đá) vào
-  // "Các Phương Án Báo Giá" — dùng chung addOptionsToList với máy tính, không gọi API tính giá nào.
+  // Gộp 1 phương án "báo giá nhanh" (optionName + quotedPrice + vat, KHÔNG gọi API tính giá nào)
+  // vào "Các Phương Án Báo Giá" — vẫn đính kèm đúng chất liệu/đá Sale đã yêu cầu lúc tạo đơn (đang
+  // nằm sẵn trong calcMaterialRows/calcStoneRows do effect mở modal nạp vào), chỉ bỏ qua bước tính
+  // giá theo công thức, không bỏ luôn thông tin chất liệu/đá.
   const handleAddQuickOption = () => {
     const price = parseFloat(quickPrice) || 0;
     if (price <= 0) {
@@ -507,9 +509,30 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       return;
     }
     setCalcError(null);
+
+    const validMaterialRows = calcMaterialRows.filter(
+      (m) => m.materialId && (parseFloat(m.weightChi) || 0) > 0,
+    );
+    const materials = validMaterialRows.map((m) => ({
+      materialId: m.materialId,
+      weightChi: parseFloat(m.weightChi) || 0,
+    }));
+    const materialNameDisplay = validMaterialRows.map((m) => m.materialName).join(', ');
+
+    const stoneSelections =
+      calcStoneMode === 'catalog' && calcStoneRows.length > 0
+        ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+        : undefined;
+
     addOptionsToList([
       {
         optionName: quickOptionName.trim() || 'Báo giá nhanh',
+        materialName: materialNameDisplay || undefined,
+        weightChi: validMaterialRows.length === 1 ? parseFloat(validMaterialRows[0].weightChi) || 0 : undefined,
+        materials: materials.length > 0 ? materials : undefined,
+        stones: stoneSelections,
+        stoneDescription: calcStoneMode === 'manual' ? (calcManualStoneName || undefined) : undefined,
+        stoneCost: calcStoneMode === 'manual' ? (parseFloat(calcManualStonePrice) || 0) : undefined,
         quotedPrice: price,
         vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,
         groupId: `g_${Date.now()}`,
