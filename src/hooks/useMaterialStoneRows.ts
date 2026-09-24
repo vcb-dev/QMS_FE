@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { MaterialRow, StoneRow, StoneCatalogItem } from '../types';
-import { materialGroupKey } from '../utils/quoteOption';
 
 const genRowId = () => `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
@@ -16,24 +15,12 @@ export function useMaterialStoneRows(
   const [materialRows, setMaterialRows] = useState<MaterialRow[]>(initialMaterialRows);
   const [stoneRows, setStoneRows] = useState<StoneRow[]>([]);
 
-  // Từ 2 dòng chất liệu trở lên -> khoá chung 1 nhóm kim loại gốc (không trộn Vàng với Bạc/Bạch
-  // kim...), lấy nhóm theo dòng ĐẦU TIÊN khớp được 1 chất liệu thật trong dbMaterials. Chỉ 1 dòng
-  // thì chưa khoá gì — dòng đó tự do chọn, nhóm chỉ chốt khi thêm dòng thứ 2.
-  const anchorMaterial =
-    materialRows.length > 1
-      ? materialRows
-          .map((r) => dbMaterials.find((m) => m.id === r.materialId))
-          .find((m): m is StoneRowsMaterial => !!m)
-      : undefined;
-  const lockedMaterialGroupKey = anchorMaterial ? materialGroupKey(anchorMaterial) : null;
+  // Mỗi dòng chất liệu giờ là 1 phương án so sánh độc lập (xem feat/split-material-options) — thoải
+  // mái trộn Vàng/Bạc/Bạch kim trong cùng 1 lượt tính, không còn khoá chung 1 nhóm kim loại gốc nữa.
+  const lockedMaterialGroupKey: string | null = null;
 
   const addMaterialRow = () => {
-    // Dòng mới phải cùng nhóm với các dòng đã có (nếu đang bị khoá) — không mặc định dbMaterials[0]
-    // vô điều kiện như trước, tránh thêm ngay 1 dòng khác nhóm rồi phải sửa lại.
-    const candidates = lockedMaterialGroupKey
-      ? dbMaterials.filter((m) => materialGroupKey(m) === lockedMaterialGroupKey)
-      : dbMaterials;
-    const first = candidates[0] ?? dbMaterials[0];
+    const first = dbMaterials[0];
     setMaterialRows((prev) => [
       ...prev,
       { id: genRowId(), materialId: first?.id || '', materialName: first?.name || '', weightChi: '1.0' },
