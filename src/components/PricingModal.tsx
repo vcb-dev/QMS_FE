@@ -433,15 +433,18 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         calcStoneRows
           .filter((r) => r.stoneId && r.stoneType === 'SIDE' && r.parentId === mainRowId)
           .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }));
+      // Tên phương án chỉ hiện đá CHỦ (kèm lát cắt + size), không ghép tên đá tấm vào.
+      const mainStoneLabel = (stoneId: string) => {
+        const s = stoneCatalog.find((c) => c.id === stoneId);
+        return s ? [s.name, s.cut, s.size].filter(Boolean).join(' - ') : stoneName(stoneId);
+      };
       const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number }[]; stoneDesc: string }[] =
         mainStoneRows.length > 0
           ? mainStoneRows.map((mainRow) => {
               const allSide = [...sideStonesOfMain(mainRow.id), ...sharedSideStoneSelections];
               return {
                 stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...allSide],
-                stoneDesc: [stoneName(mainRow.stoneId), ...allSide.map((s) => stoneName(s.stoneId))]
-                  .filter(Boolean)
-                  .join(', '),
+                stoneDesc: mainStoneLabel(mainRow.stoneId),
               };
             })
           : [
