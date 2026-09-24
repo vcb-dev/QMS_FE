@@ -619,7 +619,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             // có người xử lý (assignee) — PENDING chưa ai nhận thì chưa có ai để nhắn.
             const isChatParticipant =
               (r.requester?.id ?? r.requesterId) === currentUser.id ||
-              (r.assignee?.id ?? r.assigneeId) === currentUser.id;
+              (r.assignee?.id ?? r.assigneeId) === currentUser.id ||
+              currentRole === 'ORDER' ||
+              currentRole === 'ADMIN';
             const canChat = isChatParticipant && !!(r.assignee?.id ?? r.assigneeId);
             const unread = unreadCounts[r.id] || 0;
 

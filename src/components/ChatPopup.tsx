@@ -240,13 +240,23 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
           </div>
 
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-[12px] flex flex-col gap-[8px]">
-            {messages.map((m) => {
+            {messages.map((m, idx) => {
               const mine = m.senderId === currentUserId;
               const isSending = m.status === 'sending';
               const isFailed = m.status === 'failed';
+              // Chat nhóm (nhiều Order/Admin cùng phòng) — hiện tên NGƯỜI KHÁC đậm, ngay trên bubble
+              // để dễ nhận ra ai đang nói mà không phải nhìn xuống dòng giờ nhỏ. Không lặp tên nếu
+              // liền trước là cùng 1 người gửi (đỡ rối khi 1 người nhắn nhiều dòng liên tiếp).
+              const prevSenderId = messages[idx - 1]?.senderId;
+              const showSenderName = !mine && prevSenderId !== m.senderId;
 
               return (
                 <div key={m.id} className={clsx('flex flex-col', mine ? 'items-end' : 'items-start')}>
+                  {showSenderName && (
+                    <span className="text-[13.5px] font-extrabold text-[#334155] mb-[2px] ml-[3px]">
+                      {m.senderName}
+                    </span>
+                  )}
                   <div
                     className={clsx(
                       'max-w-[80%] py-[8px] px-[12px] rounded-[12px] text-[16px] transition-opacity duration-200',
@@ -273,7 +283,7 @@ export const ChatPopup: React.FC<ChatPopupProps> = ({
                     {m.content}
                   </div>
                   <span className="text-[13px] text-faint mt-[2px] flex items-center gap-[4px]">
-                    {m.senderName} · {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                     {isSending && <span className="text-[#3b82f6] italic">· Đang gửi...</span>}
                     {isFailed && <span className="text-[#ef4444] font-semibold">· Gửi lỗi</span>}
                   </span>
