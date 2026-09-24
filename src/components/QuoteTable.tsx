@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X, MessageCircle } from 'lucide-react';
+import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X, MessageCircle, ArrowRightLeft } from 'lucide-react';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -35,6 +35,7 @@ type QuoteTableProps = Pick<
   selectedId: string | null;
   onSelect: (id: string) => void;
   onReturn?: (id: string) => void;
+  onReassign?: (id: string) => void;
   // Badge tin nhắn chưa đọc + mở chat ngay tại bảng — đơn nào không có key nghĩa là 0.
   unreadCounts: Record<string, number>;
   onOpenChat: (id: string) => void;
@@ -52,6 +53,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onPricing,
   onReject,
   onReturn,
+  onReassign,
   onResubmit,
   onMarkClosed,
   unreadCounts,
@@ -449,11 +451,15 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             { value: 'QUOTED',        ...STATUS_META.QUOTED,        label: 'Chốt giá (Đã báo giá)' },
             { value: 'NEED_MORE_INFO',...STATUS_META.NEED_MORE_INFO, label: 'Trả lại Sale (Cần bổ sung)' },
             { value: 'REJECTED',      ...STATUS_META.REJECTED,      label: 'Từ chối hẳn' },
+            ...(onReassign
+              ? [{ value: 'REASSIGN', label: 'Chuyển cho Order khác', icon: <ArrowRightLeft size={13} />, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' }]
+              : []),
           ]}
           onChange={(val) => {
             if (val === 'QUOTED') onPricing(r.id);
             else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
             else if (val === 'REJECTED') onReject(r.id);
+            else if (val === 'REASSIGN' && onReassign) onReassign(r.id);
           }}
         />
       );

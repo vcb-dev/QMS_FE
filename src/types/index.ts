@@ -555,6 +555,7 @@ export interface RequestsPageProps {
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
   onReturn: (id: string) => void;
+  onReassign?: (id: string) => void;
   onResubmit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onMarkClosed?: (id: string) => void;

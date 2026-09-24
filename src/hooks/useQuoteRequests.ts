@@ -14,6 +14,7 @@ import {
   returnQuoteRequest,
   resubmitQuoteRequest,
   markQuoteClosed,
+  reassignQuoteRequest,
 } from '../services/api';
 
 // `listDataEnabled=false` (khi đang ở trang KHÔNG đọc `requests[]` — Thư viện/Máy tính giá/Nhân
@@ -80,6 +81,7 @@ export function useQuoteRequests(
   const [pricingReqId, setPricingReqId] = useState<string | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [returnReqId, setReturnReqId] = useState<string | null>(null);
+  const [reassignReqId, setReassignReqId] = useState<string | null>(null);
   // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
   // (chỉ mở popup khi có >1 phương án đã báo giá — 1 phương án thì chốt thẳng, không cần hỏi).
   const [closeOptionReqId, setCloseOptionReqId] = useState<string | null>(null);
@@ -492,6 +494,14 @@ export function useQuoteRequests(
     });
   };
 
+  const handleReassignSubmit = async (newAssigneeId: string) => {
+    if (!reassignReqId) return;
+    const version = requests.find((r) => r.id === reassignReqId)?.version;
+    await runAction('Đang chuyển giao yêu cầu...', 'Không thể chuyển giao', () => reassignQuoteRequest(reassignReqId, newAssigneeId, version), {
+      onSuccess: () => setReassignReqId(null),
+    });
+  };
+
   const handleReturnSubmit = async (reason: string) => {
     if (!returnReqId) return;
     const version = requests.find((r) => r.id === returnReqId)?.version;
@@ -590,6 +600,8 @@ export function useQuoteRequests(
     setRejectReqId,
     returnReqId,
     setReturnReqId,
+    reassignReqId,
+    setReassignReqId,
     closeOptionReqId,
     setCloseOptionReqId,
     handleTabChange,
@@ -604,6 +616,7 @@ export function useQuoteRequests(
     handleSelectOption,
     handleRejectSubmit,
     handleReturnSubmit,
+    handleReassignSubmit,
     handleResubmitDirect,
     handleMarkClosed,
     handleMarkClosedClick,
