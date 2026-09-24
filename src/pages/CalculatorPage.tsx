@@ -667,7 +667,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   {stoneInputMode === 'table' && (
                     <button
                       type="button"
-                      onClick={addStoneRow}
+                      onClick={() => addStoneRow()}
                       className="bg-[#f3f3f3] border border-[#a3a3a3] text-[#000000] text-[15px] font-extrabold rounded-[6px] py-[6px] px-[14px] cursor-pointer"
                     >
                       + THÊM ĐÁ
