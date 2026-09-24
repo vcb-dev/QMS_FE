@@ -761,6 +761,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             type="checkbox"
                             checked={!!opt.isSelected}
                             onChange={() => handleSelectOption(idx)}
+                            onClick={(e) => e.stopPropagation()}
                             className="w-[16px] h-[16px] accent-[#16a34a] cursor-pointer"
                           />
                           <div className="min-w-0">
