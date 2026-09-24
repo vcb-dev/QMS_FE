@@ -320,7 +320,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // khóa tự động được chọn làm giá chính.
   const addOptionsToList = (newOpts: QuoteOption[]) => {
     setOptions((prev) => {
-      const keyOf = (o: QuoteOption) => o.materials?.[0]?.materialId || o.materialName;
+      // Khóa gồm cả chất liệu lẫn tổ hợp đá chủ đính kèm — 1 chất liệu có thể ra nhiều phương án
+      // khác nhau theo từng tổ hợp đá chủ (stoneCombos), không được gộp các tổ hợp khác nhau lại.
+      const keyOf = (o: QuoteOption) => {
+        const matKey = o.materials?.[0]?.materialId || o.materialName || '';
+        const stoneKey = (o.stones || []).map((s) => s.stoneId).sort().join(',');
+        return `${matKey}|${stoneKey}`;
+      };
       const next = [...prev];
       newOpts.forEach((opt) => {
         if (opt.quotedPrice == null) return;
@@ -516,9 +522,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           setCalcError(resItem.error);
           return;
         }
-        const gid = resolveGroupId(validRows[idx].materialId || validRows[idx].id);
-        if (idx === 0) primaryGroupId = gid;
         const { row, combo } = mainItemMeta[idx];
+        const gid = resolveGroupId(row.materialId || row.id);
+        if (idx === 0) primaryGroupId = gid;
         const opt = mapOption(
           item.materialNameOrKey,
           row.materialId || row.id,
