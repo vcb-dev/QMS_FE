@@ -67,13 +67,32 @@ export const StaffPage: React.FC = () => {
   // Tìm kiếm/sắp xếp/phân trang cho 2 bảng hiệu suất (Sale / Order) — dữ liệu đã tải hết 1 lần
   // (performance.saleStats/pricerStats), lọc-sắp-trang hoàn toàn ở FE, giống bảng tài khoản trên.
   const [saleSearch, setSaleSearch] = useState('');
+  const [saleSortField, setSaleSortField] = useState<'name' | 'total' | 'closed' | 'closeRate'>('name');
   const [saleSortDir, setSaleSortDir] = useState<'asc' | 'desc'>('asc');
   const [salePage, setSalePage] = useState(1);
   const [salePageSize, setSalePageSize] = useState(10);
   const [pricerSearch, setPricerSearch] = useState('');
+  const [pricerSortField, setPricerSortField] = useState<'name' | 'totalHandled' | 'medianQuoteMs' | 'medianProcessMs'>('name');
   const [pricerSortDir, setPricerSortDir] = useState<'asc' | 'desc'>('asc');
   const [pricerPage, setPricerPage] = useState(1);
   const [pricerPageSize, setPricerPageSize] = useState(10);
+
+  // Bấm lại đúng cột đang sort thì đảo chiều; đổi cột khác thì mặc định desc (số) / asc (tên) —
+  // đúng thói quen "xem người cao nhất trước" cho các cột năng suất.
+  const toggleSaleSort = (field: typeof saleSortField) => {
+    if (saleSortField === field) setSaleSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSaleSortField(field);
+      setSaleSortDir(field === 'name' ? 'asc' : 'desc');
+    }
+  };
+  const togglePricerSort = (field: typeof pricerSortField) => {
+    if (pricerSortField === field) setPricerSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setPricerSortField(field);
+      setPricerSortDir(field === 'name' ? 'asc' : 'desc');
+    }
+  };
 
   // Bộ lọc thời gian — mặc định 'ALL' để không ẩn tài khoản chờ duyệt cũ. Khoảng ngày tùy chọn
   // (startDate/endDate) khi có sẽ được BE ưu tiên hơn preset. Mọi số liệu tính ở BE.
@@ -185,18 +204,33 @@ export const StaffPage: React.FC = () => {
   const saleStats = performance?.saleStats || [];
   const pricerStats = performance?.pricerStats || [];
 
-  const sortByName = <T extends { name: string }>(list: T[], dir: 'asc' | 'desc'): T[] =>
-    [...list].sort((a, b) => dir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+  // Sort chung cho cả 2 bảng hiệu suất theo field bất kỳ (tên hoặc số liệu năng suất) — chuỗi thì
+  // localeCompare, số thì so trực tiếp; null (VD chưa có trung vị) xếp cuối bất kể chiều sort.
+  const sortByField = <T extends Record<string, unknown>>(list: T[], field: string, dir: 'asc' | 'desc'): T[] =>
+    [...list].sort((a, b) => {
+      const av = a[field];
+      const bv = b[field];
+      if (typeof av === 'string' || typeof bv === 'string') {
+        return dir === 'asc'
+          ? String(av).localeCompare(String(bv))
+          : String(bv).localeCompare(String(av));
+      }
+      const an = av == null ? -Infinity : Number(av);
+      const bn = bv == null ? -Infinity : Number(bv);
+      return dir === 'asc' ? an - bn : bn - an;
+    });
 
-  const filteredSaleStats = sortByName(
+  const filteredSaleStats = sortByField(
     saleStats.filter((s) => s.name.toLowerCase().includes(saleSearch.trim().toLowerCase())),
+    saleSortField,
     saleSortDir,
   );
   const saleTotalPages = Math.max(1, Math.ceil(filteredSaleStats.length / salePageSize));
   const pagedSaleStats = filteredSaleStats.slice((salePage - 1) * salePageSize, salePage * salePageSize);
 
-  const filteredPricerStats = sortByName(
+  const filteredPricerStats = sortByField(
     pricerStats.filter((p) => p.name.toLowerCase().includes(pricerSearch.trim().toLowerCase())),
+    pricerSortField,
     pricerSortDir,
   );
   const pricerTotalPages = Math.max(1, Math.ceil(filteredPricerStats.length / pricerPageSize));
@@ -497,15 +531,51 @@ export const StaffPage: React.FC = () => {
                     <th className={staffThCls}>
                       <button
                         type="button"
-                        onClick={() => setSaleSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                        className="inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase text-muted"
+                        onClick={() => toggleSaleSort('name')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase',
+                          saleSortField === 'name' ? 'text-primary' : 'text-muted'
+                        )}
                       >
                         Sale <ArrowUpDown size={11} />
                       </button>
                     </th>
-                    <th className={clsx(staffThCls, 'text-right')}>Đã tạo</th>
-                    <th className={clsx(staffThCls, 'text-right')}>Đã chốt</th>
-                    <th className={clsx(staffThCls, 'text-right')}>Tỷ lệ chốt</th>
+                    <th className={clsx(staffThCls, 'text-right')}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSaleSort('total')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                          saleSortField === 'total' ? 'text-primary' : 'text-muted'
+                        )}
+                      >
+                        Đã tạo <ArrowUpDown size={11} />
+                      </button>
+                    </th>
+                    <th className={clsx(staffThCls, 'text-right')}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSaleSort('closed')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                          saleSortField === 'closed' ? 'text-primary' : 'text-muted'
+                        )}
+                      >
+                        Đã chốt <ArrowUpDown size={11} />
+                      </button>
+                    </th>
+                    <th className={clsx(staffThCls, 'text-right')}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSaleSort('closeRate')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                          saleSortField === 'closeRate' ? 'text-primary' : 'text-muted'
+                        )}
+                      >
+                        Tỷ lệ chốt <ArrowUpDown size={11} />
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -562,15 +632,51 @@ export const StaffPage: React.FC = () => {
                     <th className={staffThCls}>
                       <button
                         type="button"
-                        onClick={() => setPricerSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                        className="inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase text-muted"
+                        onClick={() => togglePricerSort('name')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase',
+                          pricerSortField === 'name' ? 'text-primary' : 'text-muted'
+                        )}
                       >
                         Order <ArrowUpDown size={11} />
                       </button>
                     </th>
-                    <th className={clsx(staffThCls, 'text-right')}>Đã xử lý</th>
-                    <th className={clsx(staffThCls, 'text-right')}>Trung vị báo giá</th>
-                    <th className={clsx(staffThCls, 'text-right')}>Trung vị xử lý</th>
+                    <th className={clsx(staffThCls, 'text-right')}>
+                      <button
+                        type="button"
+                        onClick={() => togglePricerSort('totalHandled')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                          pricerSortField === 'totalHandled' ? 'text-primary' : 'text-muted'
+                        )}
+                      >
+                        Đã xử lý <ArrowUpDown size={11} />
+                      </button>
+                    </th>
+                    <th className={clsx(staffThCls, 'text-right')}>
+                      <button
+                        type="button"
+                        onClick={() => togglePricerSort('medianQuoteMs')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                          pricerSortField === 'medianQuoteMs' ? 'text-primary' : 'text-muted'
+                        )}
+                      >
+                        Trung vị báo giá <ArrowUpDown size={11} />
+                      </button>
+                    </th>
+                    <th className={clsx(staffThCls, 'text-right')}>
+                      <button
+                        type="button"
+                        onClick={() => togglePricerSort('medianProcessMs')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                          pricerSortField === 'medianProcessMs' ? 'text-primary' : 'text-muted'
+                        )}
+                      >
+                        Trung vị xử lý <ArrowUpDown size={11} />
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
