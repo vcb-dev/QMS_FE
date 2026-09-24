@@ -54,6 +54,10 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  // Danh sách giác cắt cho dải tab — nạp riêng, KHÔNG lọc theo selectedCut. Nếu lấy từ `stones` (đã
+  // bị lọc đúng 1 giác cắt đang chọn) thì bấm 1 tab là các tab còn lại biến mất luôn (tự lọc lại
+  // chính nó).
+  const [cuts, setCuts] = useState<string[]>([]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -94,11 +98,34 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
     loadStones();
   }, [loadStones]); // Do not put pendingStoneUpdates here to avoid refetch on typing
 
+  // Nạp dải tab giác cắt riêng — cùng bộ lọc name/type/search/status như bảng chính nhưng KHÔNG
+  // truyền cut, để đổi tab không tự thu hẹp chính danh sách tab.
+  const loadCuts = useCallback(async () => {
+    try {
+      const res = await fetchStonesPaginated({
+        page: 1,
+        limit: 1000,
+        stoneType: selectedType || undefined,
+        name: selectedName || undefined,
+        search: search || undefined,
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      });
+      setCuts(Array.from(new Set((res.data || []).map((s: StoneItem) => s.cut || 'Tròn'))));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [selectedType, selectedName, search, statusFilter]);
+
+  useEffect(() => {
+    loadCuts();
+  }, [loadCuts]);
+
   // Import lưới giá xong (parent bump refreshTimestamp) -> tải lại cả danh sách lẫn thống kê loại.
   useEffect(() => {
     if (refreshTimestamp == null) return;
     loadStats();
     loadStones();
+    loadCuts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTimestamp]);
 
@@ -119,10 +146,6 @@ export const StonePricingTab: React.FC<StonePricingTabProps> = ({
 
   const mainTypes = types.filter(t => t.type === 'MAIN' && t.name.toLowerCase().includes(search.toLowerCase()));
   const sideTypes = types.filter(t => t.type === 'SIDE' && t.name.toLowerCase().includes(search.toLowerCase()));
-
-  const cuts = useMemo(() => {
-    return Array.from(new Set(stones.map(s => s.cut || 'Tròn')));
-  }, [stones]);
 
   // KHÔNG tự áp filter cut đầu tiên — nếu 1 loại đá có nhiều giác cắt khác nhau (hoặc đá cũ chưa có
   // cut), auto-lọc theo đúng 1 giác cắt sẽ làm mất các dòng còn lại khỏi bảng dù badge đếm vẫn đủ.
