@@ -315,27 +315,29 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   if (!isOpen) return null;
 
   // Gộp thẳng phương án mới tính được vào "Các Phương Án Báo Giá" (không có bước xem trước/bấm
-  // "Thêm" thủ công). Phương án trùng giá với phương án đã có bị bỏ qua (không có ý nghĩa so
-  // sánh thêm). Nếu danh sách chưa có phương án nào được chọn, phương án ĐẦU TIÊN không bị khóa
-  // (đúng chất liệu Sale yêu cầu) tự động được chọn làm giá chính; các phương án khác chất liệu
-  // (locked=true) vẫn được thêm vào cùng danh sách để hiện dạng "OPTION ĐÍNH KÈM — CHỈ THAM KHẢO".
+  // "Thêm" thủ công). Tính lại cùng 1 chất liệu (materialId trùng) thì THAY giá cũ, không tách
+  // thành card riêng. Nếu danh sách chưa có phương án nào được chọn, phương án ĐẦU TIÊN không bị
+  // khóa tự động được chọn làm giá chính.
   const addOptionsToList = (newOpts: QuoteOption[]) => {
     setOptions((prev) => {
-      const seenPrices = new Set(prev.map((o) => Number(o.quotedPrice)));
-      const added: QuoteOption[] = [];
+      const keyOf = (o: QuoteOption) => o.materials?.[0]?.materialId || o.materialName;
+      const next = [...prev];
       newOpts.forEach((opt) => {
         if (opt.quotedPrice == null) return;
-        const price = Number(opt.quotedPrice);
-        if (seenPrices.has(price)) return;
-        seenPrices.add(price);
-        added.push(opt);
+        const key = keyOf(opt);
+        const existingIdx = key ? next.findIndex((o) => keyOf(o) === key) : -1;
+        if (existingIdx >= 0) {
+          next[existingIdx] = { ...opt, isSelected: next[existingIdx].isSelected };
+        } else {
+          next.push(opt);
+        }
       });
-      const hasSelected = prev.some((o) => o.isSelected);
+      const hasSelected = next.some((o) => o.isSelected);
       if (!hasSelected) {
-        const firstSelectable = added.find((o) => !o.locked);
+        const firstSelectable = next.find((o) => !o.locked);
         if (firstSelectable) firstSelectable.isSelected = true;
       }
-      return [...prev, ...added];
+      return next;
     });
   };
 
@@ -462,15 +464,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         silverMultiplier: isSilverMaterialId(r.materialId) ? calcSilverMultiplier : undefined,
       }));
 
-      // Bấm "Tính Giá Ngay" lần 2 (chỉ thêm phương án so sánh, giá chính không đổi) — phương án
-      // chính bị addOptionsToList bỏ qua vì trùng giá. Phải gán các phương án so sánh MỚI vào ĐÚNG
-      // groupId của phương án chính đang có, nếu không chúng thành "mồ côi" và không hiện lên.
-      const resolveGroupId = (primaryPrice: number): string => {
+      // Bấm "Tính Giá Ngay" lại cho cùng 1 chất liệu (giá có thể đổi) — khớp theo materialId thay
+      // vì giá, để nhận đúng groupId cũ (addOptionsToList sẽ thay giá, không tách card mới).
+      const resolveGroupId = (materialId: string | undefined): string => {
         const existing = options.find(
-          (o) =>
-            !o.locked &&
-            o.quotedPrice != null &&
-            Number(o.quotedPrice) === Number(primaryPrice),
+          (o) => !o.locked && o.materials?.[0]?.materialId === materialId,
         );
         return existing?.groupId || `g_${Date.now()}`;
       };
@@ -518,7 +516,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           setCalcError(resItem.error);
           return;
         }
-        const gid = resolveGroupId(resItem.quotedPrice ?? 0);
+        const gid = resolveGroupId(validRows[idx].materialId || validRows[idx].id);
         if (idx === 0) primaryGroupId = gid;
         const { row, combo } = mainItemMeta[idx];
         const opt = mapOption(
