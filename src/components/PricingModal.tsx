@@ -346,12 +346,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       stoneDesc: string;
       groupId: string;
       locked: boolean;
+      // Có từ 2 tổ hợp đá chủ trở lên — thêm tên đá vào optionName để phân biệt các phương án
+      // cùng chất liệu nhưng khác đá chủ.
+      stoneSuffix?: string;
     },
   ): QuoteOption | null =>
     batchResultToOption({
       optionName: ctx.locked
         ? `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
-        : `${materialName} · ${weightChi} chỉ`,
+        : ctx.stoneSuffix
+          ? `${materialName} · ${weightChi} chỉ · ${ctx.stoneSuffix}`
+          : `${materialName} · ${weightChi} chỉ`,
       materialName,
       materialId,
       weightChi,
@@ -395,6 +400,37 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const manualStoneCost =
         calcStoneMode === 'manual' ? parseFloat(calcManualStonePrice) || 0 : 0;
 
+      // Đá CHỦ (MAIN) mỗi loại là 1 trục so sánh riêng — giống chất liệu (khớp computeLibraryGroupKey
+      // ở BE cũng chỉ định danh sản phẩm theo đá MAIN, đá TẤM chỉ là chi tiết phụ). Đá TẤM (SIDE)
+      // gắn CHUNG vào mọi tổ hợp, không tách. Chọn N chất liệu × M đá chủ = N×M phương án độc lập.
+      const mainStoneRows =
+        calcStoneMode === 'catalog' ? calcStoneRows.filter((r) => r.stoneId && r.stoneType === 'MAIN') : [];
+      const sideStoneSelections =
+        calcStoneMode === 'catalog'
+          ? calcStoneRows
+              .filter((r) => r.stoneId && r.stoneType === 'SIDE')
+              .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+          : [];
+      const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number }[]; stoneDesc: string }[] =
+        mainStoneRows.length > 0
+          ? mainStoneRows.map((mainRow) => ({
+              stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...sideStoneSelections],
+              stoneDesc: [stoneName(mainRow.stoneId), ...sideStoneSelections.map((s) => stoneName(s.stoneId))]
+                .filter(Boolean)
+                .join(', '),
+            }))
+          : [
+              {
+                stoneSelections: sideStoneSelections.length > 0 ? sideStoneSelections : undefined,
+                stoneDesc:
+                  calcStoneMode === 'manual'
+                    ? calcManualStoneName
+                    : sideStoneSelections.map((s) => stoneName(s.stoneId)).join(', '),
+              },
+            ];
+
+      // Đá dùng cho "Phương án loại vàng khác" (tham khảo) — giữ nguyên hành vi cũ (KHÔNG tách theo
+      // đá chủ), đỡ nổ số lượng phương án tham khảo khi autoGoldMode tự liệt kê nhiều dòng.
       const stoneSelections =
         calcStoneMode === 'catalog' && calcStoneRows.length > 0
           ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
@@ -432,18 +468,32 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         return existing?.groupId || `g_${Date.now()}`;
       };
 
-      
-
-      
-      const mainItems = validRows.map((r) => ({
-        materialNameOrKey: r.materialName,
-        weightChi: parseFloat(r.weightChi) || 0,
-        laborCost: l,
-        stoneCost: manualStoneCost || undefined,
-        stones: stoneSelections,
-        vatRate: vatVal,
-        silverMultiplier: isSilverMaterialId(r.materialId || r.id) ? calcSilverMultiplier : undefined,
-      }));
+      // Mỗi (chất liệu × tổ hợp đá) là 1 phương án độc lập — validRows.length === 1 &&
+      // stoneCombos.length === 1 thì ra đúng 1 item, y hệt hành vi cũ trước khi có đá chủ tách riêng.
+      const mainItems: {
+        materialNameOrKey: string;
+        weightChi: number;
+        laborCost: number;
+        stoneCost?: number;
+        stones?: { stoneId: string; quantity: number }[];
+        vatRate: number;
+        silverMultiplier?: number;
+      }[] = [];
+      const mainItemMeta: { row: (typeof validRows)[number]; combo: (typeof stoneCombos)[number] }[] = [];
+      validRows.forEach((r) => {
+        stoneCombos.forEach((combo) => {
+          mainItems.push({
+            materialNameOrKey: r.materialName,
+            weightChi: parseFloat(r.weightChi) || 0,
+            laborCost: l,
+            stoneCost: manualStoneCost || undefined,
+            stones: combo.stoneSelections,
+            vatRate: vatVal,
+            silverMultiplier: isSilverMaterialId(r.materialId || r.id) ? calcSilverMultiplier : undefined,
+          });
+          mainItemMeta.push({ row: r, combo });
+        });
+      });
 
       const results = await calculatePriceBatchApi({
         categoryId: selectedReq?.category?.id || undefined,
@@ -463,12 +513,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         }
         const gid = resolveGroupId(resItem.quotedPrice ?? 0);
         if (idx === 0) primaryGroupId = gid;
+        const { row, combo } = mainItemMeta[idx];
         const opt = mapOption(
           item.materialNameOrKey,
-          validRows[idx].materialId || validRows[idx].id,
+          row.materialId || row.id,
           item.weightChi,
           resItem,
-          { laborCost: l, vatVal, stoneSelections, stoneDesc, groupId: gid, locked: false }
+          {
+            laborCost: l,
+            vatVal,
+            stoneSelections: combo.stoneSelections,
+            stoneDesc: combo.stoneDesc,
+            groupId: gid,
+            locked: false,
+            stoneSuffix: stoneCombos.length > 1 ? combo.stoneDesc : undefined,
+          }
         );
         if (opt) newOpts.push(opt);
       });
