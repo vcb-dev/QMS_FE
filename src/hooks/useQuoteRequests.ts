@@ -449,6 +449,7 @@ export function useQuoteRequests(
       manualStoneName?: string;
       manualStonePrice?: number;
       stones?: { stoneId: string; quantity: number }[];
+      inspectionFee?: number;
     },
   ) => {
     if (!pricingReqId) return;
@@ -467,6 +468,7 @@ export function useQuoteRequests(
               pricingReqId,
               options?.find((o) => o.isSelected) || options?.[0] || { optionName: 'Phương án', quotedPrice, vat },
               version,
+              extras?.inspectionFee,
             )
           : completeQuoteRequest(
               pricingReqId,

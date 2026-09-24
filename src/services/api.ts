@@ -459,6 +459,7 @@ export async function changeQuoteStatus(id: string, payload: {
   manualStoneName?: string;
   manualStonePrice?: number;
   stones?: { stoneId: string; quantity: number }[];
+  inspectionFee?: number;
 }) {
   return apiCall(api.patch(`/quote-requests/${id}/status`, payload), 'Lỗi khi cập nhật trạng thái yêu cầu');
 }
@@ -596,13 +597,14 @@ export async function completeQuoteRequest(
     manualStoneName?: string;
     manualStonePrice?: number;
     stones?: { stoneId: string; quantity: number }[];
+    inspectionFee?: number;
   },
   version?: number,
 ) {
   const cleanOptions = options
     ?.map((opt) => sanitizeQuoteOption(opt, extras?.materialWeights, extras?.stones))
     .filter((opt): opt is SanitizedQuoteOptionPayload => !!opt);
-  return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version });
+  return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version, inspectionFee: extras?.inspectionFee });
 }
 
 // Sửa giá đã báo cho đơn ĐANG QUOTED/CLOSED — chỉ gửi đúng 1 phương án (đang chọn làm giá chính),
@@ -612,12 +614,14 @@ export async function editQuotedPrice(
   id: string,
   option: QuoteOptionDraft,
   version?: number,
+  inspectionFee?: number,
 ) {
   const cleanOption = sanitizeQuoteOption(option);
   return changeQuoteStatus(id, {
     action: 'EDIT_PRICE',
     options: cleanOption ? [cleanOption] : [],
     version,
+    inspectionFee,
   });
 }
 
@@ -724,6 +728,8 @@ export interface CalculateBatchResultItem {
   vatAmount?: number;
   quotedPrice?: number;
   materialPrice?: number;
+  // Tiền kiểm định đã cộng sẵn vào quotedPrice — BE trả riêng để FE hiển thị đúng dòng.
+  inspectionFee?: number;
   // Cấu thành lãi/VAT — BE tính sẵn, FE chỉ hiển thị.
   metalVatAmount?: number;
   metalProfit?: number;
@@ -736,6 +742,7 @@ export interface CalculateBatchResultItem {
 export async function calculatePriceBatchApi(payload: {
   categoryId?: string;
   includeVat?: boolean;
+  inspectionFee?: number;
   items: {
     materialNameOrKey: string;
     weightChi: number;
@@ -761,6 +768,7 @@ export interface CalculateMultiResult {
   vatAmount: number;
   quotedPrice: number;
   materialPrice?: number;
+  inspectionFee?: number;
   // Cấu thành lãi/VAT — BE tính sẵn, FE chỉ hiển thị.
   metalVatAmount?: number;
   metalProfit?: number;
@@ -775,6 +783,7 @@ export async function calculatePriceMultiApi(payload: {
   laborCost?: number;
   vatRate?: number;
   includeVat?: boolean;
+  inspectionFee?: number;
   manualStoneName?: string;
   manualStonePrice?: number;
   stones?: { stoneId: string; quantity: number }[];
