@@ -230,6 +230,8 @@ export interface QuoteRequest {
   // clickable link ở trang chi tiết cho Order xem.
   note?: string;
   closeRatePct?: number;
+  // Tiền kiểm định Order nhập lúc báo giá — đã cộng sẵn vào quotedPrice của từng option.
+  inspectionFee?: number;
   vat?: number;
   quotedPrice?: number;
   quotedDate?: string;
