@@ -1,4 +1,4 @@
-export type Role = 'SALE' | 'ORDER' | 'ADMIN';
+﻿export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
 export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CLOSED';
 
