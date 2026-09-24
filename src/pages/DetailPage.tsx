@@ -163,10 +163,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     };
   }, [socket, id, selectedReq?.id]);
 
-  // Chat chỉ dành cho đúng 2 người liên quan tới yêu cầu (requester + assignee)
+  // Chat nhóm theo yêu cầu: người tạo (Sale) + assignee luôn vào được, cộng bất kỳ ORDER/ADMIN
+  // nào khác (khớp quyền BE ở QuoteChatService.assertParticipant).
   const isChatParticipant =
     !!selectedReq &&
-    (currentUser.id === selectedReq.requesterId || currentUser.id === selectedReq.assigneeId);
+    (currentUser.id === selectedReq.requesterId ||
+      currentUser.id === selectedReq.assigneeId ||
+      currentRole === 'ORDER' ||
+      currentRole === 'ADMIN');
 
   // 2. Chat phòng: Join room và lắng nghe tin nhắn mới qua socket dùng chung
   useEffect(() => {
