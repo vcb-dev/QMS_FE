@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role } from '../types';
 import { formatStoneDisplay } from '../utils/stoneFormatter';
@@ -627,56 +627,47 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const handleSelectOption = (idx: number) => {
     setOptions((prev) => {
       const chosen = prev[idx];
-      if (chosen?.locked) return prev;
       // Order chọn 1 phương án Order TỰ TÍNH (không thuộc cụm 'sale') thay cho giá Sale đề xuất —
-      // giá Sale coi như bị thay thế hẳn, bỏ luôn khỏi danh sách (không gửi kèm lên BE nữa) thay vì
-      // giữ lại làm hàng đính kèm, tránh lưu dư 2 phương án cho cùng 1 yêu cầu khi Xác Nhận.
+      // giá Sale coi như bị thay thế hẳn, bỏ luôn khỏi danh sách (giữ nguyên hành vi cũ này).
       const base = chosen && chosen.groupId !== 'sale'
         ? prev.filter((o) => o.groupId !== 'sale')
         : prev;
-      return base.map((opt) => ({
-        ...opt,
-        isSelected: opt === chosen,
-      }));
+      return base.map((opt) => (opt === chosen ? { ...opt, isSelected: !opt.isSelected } : opt));
     });
   };
 
   const handleRemoveOption = (idx: number) => {
-    setOptions((prev) => {
-      const removed = prev[idx];
-      let next = prev.filter((_, i) => i !== idx);
-      // Xóa phương án CHÍNH (không locked) thì xóa luôn cả cụm phương án đính kèm lồng trong card
-      // của nó (cùng groupId) — các phương án đính kèm không có ý nghĩa gì khi đứng riêng.
-      if (removed && !removed.locked && removed.groupId) {
-        next = next.filter((o) => !(o.locked && o.groupId === removed.groupId));
-      }
-      // Phương án bị xóa từng là giá chính — chuyển giá chính sang phương án CHỌN ĐƯỢC đầu tiên
-      // còn lại (bỏ qua option đính kèm/locked, vì đó không phải 1 lựa chọn hợp lệ).
-      if (removed?.isSelected) {
-        const fallback = next.find((o) => !o.locked);
-        if (fallback) fallback.isSelected = true;
-      }
-      return next;
-    });
+    setOptions((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Đá tấm Sale nhập sẵn (chưa gắn đá chủ nào) tự copy thành con của MỖI đá chủ mới Order thêm —
+  // copy độc lập (id mới), không phải tham chiếu chung, Order sửa/xóa riêng từng bên không ảnh hưởng nhau.
+  const handleAddMainStoneOption = () => {
+    const newMainId = addStoneRow('MAIN');
+    const orphanSides = calcStoneRows.filter((r) => r.stoneType === 'SIDE' && !r.parentId);
+    if (orphanSides.length > 0) {
+      setCalcStoneRows((prev) => [
+        ...prev,
+        ...orphanSides.map((r) => ({ ...r, id: `${newMainId}_${r.id}`, parentId: newMainId })),
+      ]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const selectedOpt = options.find((o) => o.isSelected) || options[0];
-    const hasValidPrice =
-      options.length > 0 &&
-      selectedOpt != null &&
-      typeof selectedOpt.quotedPrice === 'number' &&
-      Number(selectedOpt.quotedPrice) > 0;
-
-    if (!hasValidPrice || !selectedOpt) {
-      alert('Vui lòng tính và thêm ít nhất 1 phương án báo giá hợp lệ trước khi lưu!');
+    const selectedOpts = options.filter(
+      (o) => o.isSelected && typeof o.quotedPrice === 'number' && Number(o.quotedPrice) > 0,
+    );
+    if (selectedOpts.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 phương án báo giá để gửi!');
       return;
     }
 
-    const primaryPrice = selectedOpt.quotedPrice;
-    const primaryVat = selectedOpt.vat != null ? Number(selectedOpt.vat) : defaultVatRate;
+    // primaryPrice/primaryVat: tham số legacy cho onSubmit() — completeQuoteRequest ở BE
+    // nhận rồi dùng options[] là chính, nhưng vẫn cần truyền 1 giá trị hợp lệ.
+    const primaryPrice = selectedOpts[0].quotedPrice;
+    const primaryVat = selectedOpts[0].vat != null ? Number(selectedOpts[0].vat) : defaultVatRate;
 
     setSubmitting(true);
     try {
@@ -689,12 +680,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   };
 
-  const selectedOpt = options.find((o) => o.isSelected) || options[0];
-  const hasValidPrice =
-    options.length > 0 &&
-    selectedOpt != null &&
-    typeof selectedOpt.quotedPrice === 'number' &&
-    Number(selectedOpt.quotedPrice) > 0;
+  const selectedOpts = options.filter(
+    (o) => o.isSelected && typeof o.quotedPrice === 'number' && Number(o.quotedPrice) > 0,
+  );
+  const hasValidPrice = selectedOpts.length > 0;
 
   const isSilverPresent = calcMaterialRows.some((m) => isSilverMaterialId(m.materialId || m.id));
 
@@ -704,20 +693,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const pricedOptions = options
     .map((opt, idx) => ({ opt, idx }))
     .filter(({ opt }) => opt.quotedPrice != null);
-
-  // Phương án CHÍNH (không locked) hiện dạng card top-level; phương án đính kèm (locked) được
-  // lồng vào bên trong card của phương án chính CÙNG groupId, thay vì hiện dạng list rời bên dưới.
-  const primaryEntries = pricedOptions.filter(({ opt }) => !opt.locked);
-  const lockedByGroup = new Map<string, typeof pricedOptions>();
-  pricedOptions
-    .filter(({ opt }) => opt.locked)
-    .forEach((entry) => {
-      const gid = entry.opt.groupId;
-      const hasMatchingPrimary = !!gid && primaryEntries.some((p) => p.opt.groupId === gid);
-      const key = hasMatchingPrimary ? (gid as string) : `_ungrouped_${entry.idx}`;
-      if (!lockedByGroup.has(key)) lockedByGroup.set(key, []);
-      lockedByGroup.get(key)!.push(entry);
-    });
 
   return (
     <div className={modalBackdropCls}>
@@ -754,22 +729,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <div className="flex items-center gap-[8px]">
                 <Layers size={18} color="#d97706" />
                 <h3 className="text-[18px] font-extrabold text-[#0f172a] m-0">
-                  Các Phương Án Báo Giá ({primaryEntries.length})
+                  Các Phương Án Báo Giá ({pricedOptions.length})
                 </h3>
               </div>
               <span className="text-[14.5px] text-muted">
-                Chọn 1 phương án làm giá chính để chốt
+                Chọn các phương án muốn gửi báo giá cho khách
               </span>
             </div>
 
-            {primaryEntries.length === 0 ? (
+            {pricedOptions.length === 0 ? (
               <div className="bg-[#f8fafc] p-[16px] rounded-[10px] text-center text-muted text-[16px]">
                 Chưa có phương án nào. Hãy dùng bảng máy tính bên dưới và bấm <strong>"Tính Giá Ngay"</strong> — phương án sẽ tự hiện lên đây.
               </div>
             ) : (
               <div className="flex flex-col gap-[8px]">
-                {primaryEntries.map(({ opt, idx }) => {
-                  const children = opt.groupId ? lockedByGroup.get(opt.groupId) || [] : [];
+                {pricedOptions.map(({ opt, idx }) => {
                   return (
                     <div
                       key={idx}
@@ -784,8 +758,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       >
                         <div className="flex items-center gap-[10px] min-w-0">
                           <input
-                            type="radio"
-                            name="selectedOptionRadio"
+                            type="checkbox"
                             checked={!!opt.isSelected}
                             onChange={() => handleSelectOption(idx)}
                             className="w-[16px] h-[16px] accent-[#16a34a] cursor-pointer"
@@ -795,7 +768,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                               {opt.optionName || `Phương án ${idx + 1}`}
                               {opt.isSelected && (
                                 <span className="ml-[8px] bg-[#16a34a] text-surface text-[13px] font-extrabold py-[2px] px-[8px] rounded-[20px]">
-                                  ĐÃ CHỌN LÀM GIÁ CHÍNH
+                                  ĐÃ CHỌN
                                 </span>
                               )}
                             </div>
@@ -828,43 +801,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           </button>
                         </div>
                       </div>
-
-                      {/* Phương án đính kèm (khác chất liệu Sale/tuổi vàng khác) — lồng trong card
-                          của phương án chính cùng cụm, chỉ để tham khảo, không có radio chọn. */}
-                      {children.length > 0 && (
-                        <div className="pt-0 pr-[14px] pb-[12px] pl-[40px] flex flex-col gap-[6px]">
-                          <span className="text-[13.5px] font-extrabold text-faint uppercase">
-                            Phương án đính kèm — chỉ tham khảo
-                          </span>
-                          {children.map(({ opt: childOpt, idx: childIdx }) => (
-                            <div
-                              key={childIdx}
-                              className="flex items-center justify-between gap-[8px] py-[6px] px-[10px] bg-surface border border-dashed border-[#cbd5e1] rounded-[8px]"
-                            >
-                              <span className="text-[15px] font-bold text-muted min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                                {childOpt.optionName || childOpt.materialName}
-                              </span>
-                              <div className="flex items-center gap-[8px] shrink-0">
-                                <div className="flex flex-col items-end">
-                                  <strong className="text-[16px] font-extrabold text-[#16a34a] tabular-nums">
-                                    {formatCurrency(childOpt.quotedPrice)}
-                                  </strong>
-                                  {renderPriceBreakdownLines(getPriceBreakdown(childOpt))}
-                                  {renderCostBreakdownLines(getCostBreakdown(childOpt))}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveOption(childIdx)}
-                                  title="Xóa phương án đính kèm này"
-                                  className="bg-transparent border-0 text-faint cursor-pointer flex items-center"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -1381,7 +1317,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => addStoneRow('MAIN')}
+                        onClick={handleAddMainStoneOption}
                         className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
                       >
                         + Thêm option đá mới
