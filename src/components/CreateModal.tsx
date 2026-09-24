@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import type { Customer, CreateModalProps } from '../types';
 import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones, fetchDepartments } from '../services/api';
+import { useAuth } from '../auth/AuthGate';
+import { formatStoneDisplay } from '../utils/stoneFormatter';
 import { useModalA11y } from '../hooks/useModalA11y';
 import { materialGroupKey } from '../utils/quoteOption';
 import { X, Upload, PlusCircle, HelpCircle } from 'lucide-react';
@@ -48,6 +50,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   saleName,
   calculatorData,
 }) => {
+  const { currentRole } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useModalA11y(onClose, isOpen);
 
@@ -943,7 +946,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                               onChange={() => toggleStoneId(s.id)}
                               className={checkboxSmallCls}
                             />
-                            {s.name}
+                            {formatStoneDisplay(s, currentRole)}
                           </label>
                         ))}
                       </div>
