@@ -40,7 +40,6 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   const {
     materialRows,
     setMaterialRows,
-    addMaterialRow,
     updateMaterialRow,
     removeMaterialRow,
     lockedMaterialGroupKey,
@@ -55,6 +54,8 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
   // — mặc định nạp từ cấu hình chuẩn (Material.laborCost/PricingConfig.defaultVatRate) rồi cho sửa tự do.
   const [laborCost, setLaborCost] = useState<number>(PRICING_DEFAULTS.LABOR_COST);
   const [vatPct, setVatPct] = useState<number>(PRICING_DEFAULTS.VAT_PCT);
+  // Tiền kiểm định — chỉ ORDER/ADMIN nhập, cộng vào quotedPrice ở BE. Sale không thấy field này.
+  const [inspectionFee, setInspectionFee] = useState<number>(0);
   // Sale chỉ chọn CÓ/KHÔNG cộng VAT, không tự set mức % (mức % luôn theo cấu hình chuẩn ORDER/ADMIN)
   const [includeVat, setIncludeVat] = useState<boolean>(true);
 
@@ -259,6 +260,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
       const batch = await calculatePriceBatchApi({
         categoryId: currentCatId || undefined,
         includeVat,
+        inspectionFee: isSale ? undefined : inspectionFee,
         items: [
           ...mainItems,
           ...compareValid.map(compareBatchItem),
@@ -346,7 +348,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     // trong deps sẽ kích auto-calc chạy lần 2 cho ra ĐÚNG kết quả cũ (call thừa). Đổi giá gốc trong
     // lúc trang đang mở thì bấm "Tính lại giá".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDataReady, categoryId, materialRows, laborCost, vatPct, includeVat, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal, compareRows]);
+  }, [initialDataReady, categoryId, materialRows, laborCost, vatPct, includeVat, inspectionFee, selectedSilverMultiplier, stoneRows, stoneInputMode, manualStoneTotal, compareRows]);
 
   // Nút "Tính giá ngay" / "Tính lại giá" — bấm để tính ngay, khỏi chờ debounce
   const handleCalculate = () => {
@@ -378,13 +380,6 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
           <div className={cardCls}>
             <div className="flex items-center justify-between mb-[16px] flex-wrap gap-[10px]">
               <h3 className="text-[18px] font-extrabold text-[#0f172a] m-0">Thông số Sản phẩm & Kim loại</h3>
-              <button
-                type="button"
-                onClick={addMaterialRow}
-                className="flex items-center gap-[6px] bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] text-[#334155] text-[15px] font-extrabold py-[7px] px-[14px] cursor-pointer transition-[all_0.15s_ease]"
-              >
-                <Plus size={14} color="#475569" /> Thêm chất liệu
-              </button>
             </div>
 
             {/* Danh mục sản phẩm */}
@@ -794,6 +789,18 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                           if (v !== '' && parseFloat(v) < 0) return;
                           setVatPct(Math.max(0, Math.min(100, parseFloat(v) || 0)));
                         }}
+                        className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold outline-none [font-variant-numeric:tabular-nums]"
+                      />
+                    </div>
+
+                    <div className={formGroupCls}>
+                      <label className={clsx(formLabelCls, 'text-[14px] font-extrabold text-[#334155] uppercase')}>
+                        TIỀN KIỂM ĐỊNH (VNĐ)
+                      </label>
+                      <input
+                        type="text"
+                        value={formatNumberVN(inspectionFee)}
+                        onChange={(e) => setInspectionFee(Math.max(0, parseFloat(e.target.value.replace(/\D/g, '')) || 0))}
                         className="w-full py-[10px] px-[14px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold outline-none [font-variant-numeric:tabular-nums]"
                       />
                     </div>
