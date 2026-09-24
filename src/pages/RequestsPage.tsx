@@ -25,6 +25,15 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   setCategoryFilter,
   materialFilter,
   setMaterialFilter,
+  saleFilter,
+  setSaleFilter,
+  pricerFilter,
+  setPricerFilter,
+  departmentFilter,
+  setDepartmentFilter,
+  departments,
+  saleUsers,
+  pricerUsers,
   ownerFilter,
   setOwnerFilter,
   timeRangeFilter,
@@ -148,6 +157,15 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         onCategoryFilterChange={(v) => { setCategoryFilter(v); setCurrentPage(1); }}
         materialFilter={materialFilter}
         onMaterialFilterChange={(v) => { setMaterialFilter(v); setCurrentPage(1); }}
+        saleFilter={saleFilter}
+        onSaleFilterChange={(v) => { setSaleFilter?.(v); setCurrentPage(1); }}
+        pricerFilter={pricerFilter}
+        onPricerFilterChange={(v) => { setPricerFilter?.(v); setCurrentPage(1); }}
+        departmentFilter={departmentFilter}
+        onDepartmentFilterChange={(v) => { setDepartmentFilter?.(v); setCurrentPage(1); }}
+        departments={departments}
+        saleUsers={saleUsers}
+        pricerUsers={pricerUsers}
         ownerFilter={ownerFilter}
         onOwnerFilterChange={(v) => { setOwnerFilter(v); setCurrentPage(1); }}
         timeRangeFilter={timeRangeFilter}

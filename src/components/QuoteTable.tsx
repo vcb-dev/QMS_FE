@@ -566,6 +566,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th>Số Đo Kích Thước</th>
             <th className="text-[#3730a3]">VAT</th>
             <th className="text-[#0f766e]">Báo Giá Khách (Có VAT)</th>
+            <th>Bộ Phận</th>
+            <th>Nhân Viên Sale</th>
             <th>Mã Hỏi Giá</th>
             <th>Người Báo Giá</th>
             <th>
@@ -586,7 +588,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th>Tỷ Lệ Chốt</th>
             <th>Yêu Cầu / Muốn Nhận</th>
             <th>Khách Hàng / Hỏi Giá</th>
-            <th>Bộ Phận</th>
           </tr>
         </thead>
         <tbody>
@@ -612,7 +613,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const priceBd = getPriceBreakdown({ priceBreakdown: priceOpt?.priceBreakdown });
 
             const displayCustomerName = r.customer?.name || r.requester?.name || '---';
-            const displayDeptName = r.requester?.department?.name || '---';
+            const displayDeptName = r.department?.name || '---';
+            const displaySaleName = r.requester?.name || '---';
             const displayNote = r.desiredLeadTime || '---';
 
             // Chat chỉ giữa 2 người liên quan tới đơn (giống DetailPage) và chỉ có ý nghĩa khi đã
@@ -738,6 +740,12 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   <td className="text-faint text-center">---</td>
                 )}
                 <td>
+                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
+                    {displayDeptName}
+                  </span>
+                </td>
+                <td><strong className="text-[#334155]">{displaySaleName}</strong></td>
+                <td>
                   <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
                 </td>
                 <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
@@ -750,11 +758,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 </td>
                 <td>
                   <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
-                </td>
-                <td>
-                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
-                    {displayDeptName}
-                  </span>
                 </td>
               </tr>
             );
