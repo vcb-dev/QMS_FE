@@ -928,8 +928,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   )}
                 </div>
 
-                {/* 2. Tiền công, VAT & tiền kiểm định — cùng 1 dòng */}
-                <div className="grid grid-cols-[1fr_140px_140px] gap-[12px]">
+                {/* 2. Tiền công, VAT & tiền kiểm định — cùng 1 dòng. Cột VAT rộng hơn 2 cột kia vì
+                    còn chứa checkbox "Cộng" bên cạnh ô số, hẹp quá thì tràn ra ngoài cột. */}
+                <div className="grid grid-cols-[1fr_170px_130px] gap-[12px]">
                   <div>
                     <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
                       Tiền Công Chế Tác (₫)
