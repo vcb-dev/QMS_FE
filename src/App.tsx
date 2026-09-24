@@ -22,6 +22,7 @@ const CreateModal = lazy(() => import('./components/CreateModal').then((m) => ({
 const PricingModal = lazy(() => import('./components/PricingModal').then((m) => ({ default: m.PricingModal })));
 const RejectModal = lazy(() => import('./components/RejectModal').then((m) => ({ default: m.RejectModal })));
 const ReturnModal = lazy(() => import('./components/ReturnModal').then((m) => ({ default: m.ReturnModal })));
+const ReassignModal = lazy(() => import('./components/ReassignModal').then((m) => ({ default: m.ReassignModal })));
 const MarkClosedModal = lazy(() => import('./components/MarkClosedModal').then((m) => ({ default: m.MarkClosedModal })));
 const ExportModal = lazy(() => import('./components/ExportModal').then((m) => ({ default: m.ExportModal })));
 
@@ -73,12 +74,12 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
     loading, loadingMessage,
     listLoading, toastMessage, setToastMessage, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
-    returnReqId, setReturnReqId, closeOptionReqId, setCloseOptionReqId,
+    returnReqId, setReturnReqId, reassignReqId, setReassignReqId, closeOptionReqId, setCloseOptionReqId,
     handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handleQuoteNow,
     handlePricingSubmit,
-    handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
+    handleRejectSubmit, handleReturnSubmit, handleReassignSubmit, handleResubmitDirect,
     handleMarkClosedClick, handleCloseOptionSubmit,
     refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole, listDataEnabled, masterDataEnabled);
@@ -238,6 +239,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 onPricing={(id) => setPricingReqId(id)}
                 onReject={(id) => setRejectReqId(id)}
                 onReturn={(id) => setReturnReqId(id)}
+                onReassign={(id) => setReassignReqId(id)}
                 onResubmit={handleResubmitDirect}
                 onDelete={handleDeleteRequest}
                 onMarkClosed={handleMarkClosedClick}
@@ -319,6 +321,12 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
         {returnReqId !== null && (
           <ReturnModal isOpen onClose={() => setReturnReqId(null)}
             onSubmit={handleReturnSubmit} />
+        )}
+
+        {reassignReqId !== null && (
+          <ReassignModal isOpen onClose={() => setReassignReqId(null)}
+            onSubmit={handleReassignSubmit}
+            currentAssigneeId={requests.find((r) => r.id === reassignReqId)?.assignee?.id} />
         )}
 
         {closeOptionReqId !== null && (

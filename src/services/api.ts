@@ -450,7 +450,7 @@ export async function updateQuoteRequest(id: string, payload: any) {
 }
 
 export async function changeQuoteStatus(id: string, payload: {
-  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'MARK_CLOSED' | 'EDIT_PRICE';
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'MARK_CLOSED' | 'EDIT_PRICE' | 'REASSIGN';
   version?: number;
   quotedPrice?: number;
   vat?: number;
@@ -463,8 +463,13 @@ export async function changeQuoteStatus(id: string, payload: {
   manualStonePrice?: number;
   stones?: { stoneId: string; quantity: number }[];
   inspectionFee?: number;
+  newAssigneeId?: string;
 }) {
   return apiCall(api.patch(`/quote-requests/${id}/status`, payload), 'Lỗi khi cập nhật trạng thái yêu cầu');
+}
+
+export async function reassignQuoteRequest(id: string, newAssigneeId: string, version?: number) {
+  return changeQuoteStatus(id, { action: 'REASSIGN', newAssigneeId, version });
 }
 
 export async function acceptQuoteRequest(id: string, version: number) {

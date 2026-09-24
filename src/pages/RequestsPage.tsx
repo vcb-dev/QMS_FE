@@ -59,6 +59,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onPricing,
   onReject,
   onReturn,
+  onReassign,
   onResubmit,
   onMarkClosed,
   onOpenCreate,
@@ -226,6 +227,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onPricing={onPricing}
           onReject={onReject}
           onReturn={onReturn}
+          onReassign={onReassign}
           onResubmit={onResubmit}
           onMarkClosed={onMarkClosed}
           unreadCounts={unreadCounts}
