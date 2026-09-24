@@ -302,6 +302,8 @@ export type MaterialRow = {
   stoneType: 'MAIN' | 'SIDE' | '';
   stoneId: string;
   qty: number;
+  // Chỉ set khi stoneType SIDE — id của dòng đá chủ (MAIN) mà viên đá tấm này đính kèm riêng.
+  parentId?: string;
   // Tên đá tại thời điểm load — dùng làm nhãn dự phòng khi đá đã ngừng bán (isActive=false, không
   // còn trong stoneCatalog để chọn) nhưng option cũ vẫn tham chiếu tới, tránh hiện dropdown trống.
   stoneName?: string;
