@@ -258,12 +258,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
       setCalcStoneRows(
-        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => ({
-          id: `stone_${idx}_${Date.now()}`,
-          stoneType: (s.stone?.stoneType as 'MAIN' | 'SIDE' | '') || '',
-          stoneId: s.stoneId,
-          qty: s.quantity || 1,
-        })),
+        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
+          // BE (mapOptionDetail) trả stones[] dạng PHẲNG (stoneId/stoneName/stoneType) — không còn
+          // field lồng `stone: {...}` nữa. stoneCatalog chỉ tra thêm khi thiếu (đá cũ ngừng bán vẫn
+          // giữ được type/tên đúng nhờ đọc thẳng field phẳng, không phụ thuộc catalog active-only).
+          const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
+          return {
+            id: `stone_${idx}_${Date.now()}`,
+            stoneType: (s.stoneType || s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
+            stoneId: s.stoneId,
+            stoneName: s.stoneName || s.stone?.name || catalogMatch?.name,
+            qty: s.quantity || 1,
+          };
+        }),
       );
       setCalcStoneMode('catalog');
     } else if (primaryOpt?.stoneCost != null && Number(primaryOpt.stoneCost) > 0) {
@@ -277,7 +284,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     setCalcError(null);
-  }, [isOpen, selectedReq, dbMaterials, defaultVatRate, setCalcMaterialRows, setCalcStoneRows, setCompareRows]);
+  }, [isOpen, selectedReq, dbMaterials, stoneCatalog, defaultVatRate, setCalcMaterialRows, setCalcStoneRows, setCompareRows]);
 
   // Đổi chất liệu/khối lượng/đá hoặc tiền công/VAT sau khi đã bấm "Tính Giá Ngay" — chỉ xóa lỗi cũ.
   // Kết quả tính đã được thêm thẳng vào "Các Phương Án Báo Giá" ngay khi tính xong (xem
@@ -1061,6 +1068,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             )}
                           >
                             <option value="">-- Chọn sản phẩm --</option>
+                            {/* Đá đang chọn đã ngừng bán (isActive=false) thì không còn trong stoneCatalog —
+                                chèn thêm 1 option dự phòng bằng tên đã lưu, tránh dropdown hiện trống dù đã có đá. */}
+                            {sRow.stoneId && !stoneCatalog.some((s) => s.id === sRow.stoneId) && (
+                              <option value={sRow.stoneId}>{sRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                            )}
                             {stoneCatalog.filter((s) => s.stoneType === sRow.stoneType).map((s) => (
                               <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
                             ))}
