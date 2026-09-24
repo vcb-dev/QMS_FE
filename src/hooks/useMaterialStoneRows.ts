@@ -49,8 +49,8 @@ export function useMaterialStoneRows(
     setMaterialRows((prev) => (prev.length <= 1 ? prev : prev.filter((r) => r.id !== id)));
   };
 
-  const addStoneRow = () => {
-    setStoneRows((prev) => [...prev, { id: genRowId(), stoneType: '', stoneId: '', qty: 1 }]);
+  const addStoneRow = (stoneType: StoneRow['stoneType'] = '') => {
+    setStoneRows((prev) => [...prev, { id: genRowId(), stoneType, stoneId: '', qty: 1 }]);
   };
 
   const updateStoneRow = (id: string, patch: Partial<StoneRow>) => {

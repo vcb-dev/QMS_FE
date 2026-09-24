@@ -13,7 +13,7 @@ import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines, getCostBreakdown, renderCostBreakdownLines } from '../utils/priceBreakdown';
 import { getPrimaryOption, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
-import type { StoneCatalogItem, StoneRow } from '../types';
+import type { StoneCatalogItem } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
 import { clsx } from 'clsx';
@@ -1285,61 +1285,102 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       />
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-[6px]">
-                      {calcStoneRows.map((sRow) => (
-                        <div key={sRow.id} className="grid grid-cols-[90px_1fr_70px_28px] gap-[8px] items-center">
-                          <select
-                            value={sRow.stoneType}
-                            onChange={(e) => updateStoneRow(sRow.id, { stoneType: e.target.value as StoneRow['stoneType'], stoneId: '' })}
-                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px]"
-                          >
-                            <option value="">Loại đá</option>
-                            <option value="MAIN">Đá chủ</option>
-                            <option value="SIDE">Đá tấm</option>
-                          </select>
-                          <select
-                            value={sRow.stoneId}
-                            disabled={!sRow.stoneType}
-                            onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
-                            className={clsx(
-                              'py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px]',
-                              sRow.stoneType ? 'bg-surface' : 'bg-[#f1f5f9]'
-                            )}
-                          >
-                            <option value="">-- Chọn sản phẩm --</option>
-                            {/* Đá đang chọn đã ngừng bán (isActive=false) thì không còn trong stoneCatalog —
-                                chèn thêm 1 option dự phòng bằng tên đã lưu, tránh dropdown hiện trống dù đã có đá. */}
-                            {sRow.stoneId && !stoneCatalog.some((s) => s.id === sRow.stoneId) && (
-                              <option value={sRow.stoneId}>{sRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
-                            )}
-                            {stoneCatalog.filter((s) => s.stoneType === sRow.stoneType).map((s) => (
-                              <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
-                            ))}
-                          </select>
-                          <input
-                            type="number"
-                            min={1}
-                            value={sRow.qty}
-                            onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                            placeholder="SL"
-                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeStoneRow(sRow.id)}
-                            className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                    <div className="flex flex-col gap-[14px]">
+                      {/* Đá chủ — mỗi dòng là 1 phương án so sánh riêng (tự ra 1 option báo giá),
+                          đá tấm bên dưới đính kèm chung cho MỌI đá chủ. */}
+                      <div>
+                        <span className="text-[13px] font-extrabold text-faint uppercase block mb-[6px]">
+                          Đá Chủ (mỗi dòng = 1 phương án so sánh)
+                        </span>
+                        <div className="flex flex-col gap-[6px]">
+                          {calcStoneRows.filter((r) => r.stoneType === 'MAIN').map((sRow) => (
+                            <div key={sRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                              <select
+                                value={sRow.stoneId}
+                                onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
+                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface"
+                              >
+                                <option value="">-- Chọn sản phẩm --</option>
+                                {sRow.stoneId && !stoneCatalog.some((s) => s.id === sRow.stoneId) && (
+                                  <option value={sRow.stoneId}>{sRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                                )}
+                                {stoneCatalog.filter((s) => s.stoneType === 'MAIN').map((s) => (
+                                  <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number"
+                                min={1}
+                                value={sRow.qty}
+                                onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                                placeholder="SL"
+                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeStoneRow(sRow.id)}
+                                className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={addStoneRow}
-                        className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
-                      >
-                        + Thêm loại đá
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => addStoneRow('MAIN')}
+                          className="mt-[6px] self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
+                        >
+                          + Thêm option đá mới
+                        </button>
+                      </div>
+
+                      <div>
+                        <span className="text-[13px] font-extrabold text-faint uppercase block mb-[6px]">
+                          Đá Tấm (đính kèm)
+                        </span>
+                        <div className="flex flex-col gap-[6px]">
+                          {calcStoneRows.filter((r) => r.stoneType === 'SIDE').map((sRow) => (
+                            <div key={sRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                              <select
+                                value={sRow.stoneId}
+                                onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
+                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface"
+                              >
+                                <option value="">-- Chọn sản phẩm --</option>
+                                {sRow.stoneId && !stoneCatalog.some((s) => s.id === sRow.stoneId) && (
+                                  <option value={sRow.stoneId}>{sRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                                )}
+                                {stoneCatalog.filter((s) => s.stoneType === 'SIDE').map((s) => (
+                                  <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number"
+                                min={1}
+                                value={sRow.qty}
+                                onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                                placeholder="SL"
+                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeStoneRow(sRow.id)}
+                                className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addStoneRow('SIDE')}
+                          className="mt-[6px] self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
+                        >
+                          + Thêm đá
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
