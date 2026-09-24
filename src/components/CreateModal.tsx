@@ -533,6 +533,11 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       return;
     }
 
+    if (!selectedDepartmentId) {
+      alert('Vui lòng chọn phòng ban!');
+      return;
+    }
+
     if (!understandProcess) {
       alert('Vui lòng tích xác nhận "Tôi đã nắm rõ quy trình"!');
       return;
@@ -572,7 +577,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
       await onSubmit({
         customerId: finalCustomerId,
-        departmentId: selectedDepartmentId || undefined,
+        departmentId: selectedDepartmentId,
         categoryId: selectedCategoryId === 'OTHER' ? (categories[0]?.id || '') : selectedCategoryId,
         newCategoryName: selectedCategoryId === 'OTHER' ? newCategoryName.trim() : undefined,
         materialIds: selectedMaterialIds,
@@ -686,7 +691,7 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
               {/* Bộ phận / Phòng ban */}
               <div className={formGroupCls}>
-                <label className={formLabelCls}>Bộ phận / Phòng ban</label>
+                <label className={formLabelCls}>Bộ phận / Phòng ban <span className={formReqCls}>*</span></label>
                 <select
                   className={formControlCls}
                   value={selectedDepartmentId}
