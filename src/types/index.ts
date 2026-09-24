@@ -128,6 +128,8 @@ export interface QuoteOptionStone {
   optionId?: string;
   stoneId: string;
   stoneName?: string;
+  // Field phẳng BE trả — `stone` bên dưới chỉ còn dùng ở vài chỗ khác.
+  stoneType?: string;
   quantity: number;
   stone?: {
     id: string;
@@ -300,6 +302,8 @@ export type MaterialRow = {
   stoneType: 'MAIN' | 'SIDE' | '';
   stoneId: string;
   qty: number;
+  // Nhãn dự phòng khi đá đã ngừng bán, không còn trong catalog.
+  stoneName?: string;
 };
 
 export type StoneCatalogItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };

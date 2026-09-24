@@ -277,13 +277,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
       setCalcStoneRows(
         primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
-          // BE trả kèm s.stone (include: {stone: true}) nhưng phòng trường hợp thiếu (hoặc effect
-          // này chạy trước khi stoneCatalog tải xong) — tra thêm theo stoneId trong catalog đã tải.
+          // BE trả stones[] dạng phẳng (stoneType/stoneName), không lồng stone{} nữa.
           const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
           return {
             id: `stone_${idx}_${Date.now()}`,
-            stoneType: (s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
+            stoneType: (s.stoneType || s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
             stoneId: s.stoneId,
+            stoneName: s.stoneName || s.stone?.name || catalogMatch?.name,
             qty: s.quantity || 1,
           };
         }),
@@ -1301,6 +1301,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                             )}
                           >
                             <option value="">-- Chọn sản phẩm --</option>
+                            {/* Đá ngừng bán không còn trong catalog — chèn option dự phòng theo tên đã lưu. */}
+                            {sRow.stoneId && !stoneCatalog.some((s) => s.id === sRow.stoneId) && (
+                              <option value={sRow.stoneId}>{sRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                            )}
                             {stoneCatalog.filter((s) => s.stoneType === sRow.stoneType).map((s) => (
                               <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
                             ))}
