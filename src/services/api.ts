@@ -253,7 +253,7 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   return apiCall(api.post('/auth/reset-password', payload), 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; withLivePrice?: boolean }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; withLivePrice?: boolean; requesterId?: string; assigneeId?: string; departmentId?: string }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -261,6 +261,9 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.categoryId && filter.categoryId !== 'ALL') params.categoryId = filter.categoryId;
   if (filter?.materialId && filter.materialId !== 'ALL') params.materialId = filter.materialId;
   if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
+  if (filter?.requesterId) params.requesterId = filter.requesterId;
+  if (filter?.assigneeId) params.assigneeId = filter.assigneeId;
+  if (filter?.departmentId && filter.departmentId !== 'ALL') params.departmentId = filter.departmentId;
   if (filter?.page) params.page = filter.page;
   if (filter?.limit) params.limit = filter.limit;
   if (filter?.includeCounts) params.includeCounts = true;

@@ -62,9 +62,10 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
   const masterDataEnabled = onRequestsList || location.pathname.startsWith('/library');
 
   const {
-    requests, categories, materials, selectedId, setSelectedId,
+    requests, categories, materials, departments, saleUsers, pricerUsers, selectedId, setSelectedId,
     selectedReq, pricingReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
+    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, departmentFilter, setDepartmentFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     includeLocked, setIncludeLocked,
@@ -209,11 +210,15 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
             <Route path="/requests" element={
               <RequestsPage
                 requests={requests} categories={categories} materials={materials}
+                departments={departments} saleUsers={saleUsers} pricerUsers={pricerUsers}
                 currentRole={currentRole} currentUser={currentUser!} socket={globalSocket} counts={counts}
                 statusSubFilter={statusSubFilter} setStatusSubFilter={setStatusSubFilter}
                 searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                 categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
                 materialFilter={materialFilter} setMaterialFilter={setMaterialFilter}
+                saleFilter={saleFilter} setSaleFilter={setSaleFilter}
+                pricerFilter={pricerFilter} setPricerFilter={setPricerFilter}
+                departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter}
                 ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
                 timeRangeFilter={timeRangeFilter} setTimeRangeFilter={setTimeRangeFilter}
                 startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
