@@ -276,12 +276,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
       setCalcStoneRows(
-        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => ({
-          id: `stone_${idx}_${Date.now()}`,
-          stoneType: (s.stone?.stoneType as 'MAIN' | 'SIDE' | '') || '',
-          stoneId: s.stoneId,
-          qty: s.quantity || 1,
-        })),
+        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
+          // BE trả kèm s.stone (include: {stone: true}) nhưng phòng trường hợp thiếu (hoặc effect
+          // này chạy trước khi stoneCatalog tải xong) — tra thêm theo stoneId trong catalog đã tải.
+          const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
+          return {
+            id: `stone_${idx}_${Date.now()}`,
+            stoneType: (s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
+            stoneId: s.stoneId,
+            qty: s.quantity || 1,
+          };
+        }),
       );
       setCalcStoneMode('catalog');
     } else if (primaryOpt?.stoneCost != null && Number(primaryOpt.stoneCost) > 0) {
@@ -295,7 +300,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     setCalcError(null);
-  }, [isOpen, selectedReq, dbMaterials, defaultVatRate, setCalcMaterialRows, setCalcStoneRows, setCompareRows]);
+  }, [isOpen, selectedReq, dbMaterials, stoneCatalog, defaultVatRate, setCalcMaterialRows, setCalcStoneRows, setCompareRows]);
 
   // Đổi chất liệu/khối lượng/đá hoặc tiền công/VAT sau khi đã bấm "Tính Giá Ngay" — chỉ xóa lỗi cũ.
   // Kết quả tính đã được thêm thẳng vào "Các Phương Án Báo Giá" ngay khi tính xong (xem
@@ -1011,13 +1016,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           // dù <option> khớp giờ đã tồn tại (dropdown hiện trống dù value đúng).
                           key={dbMaterials.length}
                           value={row.materialId}
-                          disabled={!!selectedReq}
                           onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
-                          title={selectedReq ? 'Không thể đổi chất liệu Sale đã yêu cầu' : undefined}
-                          className={clsx(
-                            'py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold',
-                            selectedReq ? 'bg-[#f1f5f9] text-muted cursor-not-allowed' : 'bg-surface cursor-pointer'
-                          )}
+                          className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface cursor-pointer"
                         >
                           {dbMaterials
                             // Từ 2 dòng chất liệu trở lên -> chỉ cho chọn cùng nhóm kim loại gốc với
