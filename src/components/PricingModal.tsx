@@ -275,18 +275,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
+      // 1 option đã lưu = đúng 1 tổ hợp (1 đá chủ + đá tấm của nó) — mọi đá tấm trong option này
+      // đều thuộc về đá chủ duy nhất đó (nếu có), gán parentId sau khi đã biết id đá chủ.
+      const loadedRows = primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
+        const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
+        return {
+          id: `stone_${idx}_${Date.now()}`,
+          stoneType: (s.stoneType || s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
+          stoneId: s.stoneId,
+          stoneName: s.stoneName || s.stone?.name || catalogMatch?.name,
+          qty: s.quantity || 1,
+        };
+      });
+      const loadedMainId = loadedRows.find((r) => r.stoneType === 'MAIN')?.id;
       setCalcStoneRows(
-        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
-          // BE trả stones[] dạng phẳng (stoneType/stoneName), không lồng stone{} nữa.
-          const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
-          return {
-            id: `stone_${idx}_${Date.now()}`,
-            stoneType: (s.stoneType || s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
-            stoneId: s.stoneId,
-            stoneName: s.stoneName || s.stone?.name || catalogMatch?.name,
-            qty: s.quantity || 1,
-          };
-        }),
+        loadedRows.map((r) => (r.stoneType === 'SIDE' ? { ...r, parentId: loadedMainId } : r)),
       );
       setCalcStoneMode('catalog');
     } else if (primaryOpt?.stoneCost != null && Number(primaryOpt.stoneCost) > 0) {
@@ -413,32 +416,41 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const manualStoneCost =
         calcStoneMode === 'manual' ? parseFloat(calcManualStonePrice) || 0 : 0;
 
-      // Đá CHỦ (MAIN) mỗi loại là 1 trục so sánh riêng — giống chất liệu (khớp computeLibraryGroupKey
+      // Đá CHỦ (MAIN) mỗi dòng là 1 trục so sánh riêng — giống chất liệu (khớp computeLibraryGroupKey
       // ở BE cũng chỉ định danh sản phẩm theo đá MAIN, đá TẤM chỉ là chi tiết phụ). Đá TẤM (SIDE)
-      // gắn CHUNG vào mọi tổ hợp, không tách. Chọn N chất liệu × M đá chủ = N×M phương án độc lập.
+      // đính kèm RIÊNG cho đúng đá chủ cha (parentId) — không còn dùng chung cho mọi đá chủ.
       const mainStoneRows =
         calcStoneMode === 'catalog' ? calcStoneRows.filter((r) => r.stoneId && r.stoneType === 'MAIN') : [];
-      const sideStoneSelections =
+      const mainStoneRowIds = new Set(mainStoneRows.map((r) => r.id));
+      // Đá tấm không có parentId hợp lệ (dữ liệu cũ trước khi tách nhóm) — coi như đính kèm chung.
+      const sharedSideStoneSelections =
         calcStoneMode === 'catalog'
           ? calcStoneRows
-              .filter((r) => r.stoneId && r.stoneType === 'SIDE')
+              .filter((r) => r.stoneId && r.stoneType === 'SIDE' && !(r.parentId && mainStoneRowIds.has(r.parentId)))
               .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
           : [];
+      const sideStonesOfMain = (mainRowId: string) =>
+        calcStoneRows
+          .filter((r) => r.stoneId && r.stoneType === 'SIDE' && r.parentId === mainRowId)
+          .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }));
       const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number }[]; stoneDesc: string }[] =
         mainStoneRows.length > 0
-          ? mainStoneRows.map((mainRow) => ({
-              stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...sideStoneSelections],
-              stoneDesc: [stoneName(mainRow.stoneId), ...sideStoneSelections.map((s) => stoneName(s.stoneId))]
-                .filter(Boolean)
-                .join(', '),
-            }))
+          ? mainStoneRows.map((mainRow) => {
+              const allSide = [...sideStonesOfMain(mainRow.id), ...sharedSideStoneSelections];
+              return {
+                stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...allSide],
+                stoneDesc: [stoneName(mainRow.stoneId), ...allSide.map((s) => stoneName(s.stoneId))]
+                  .filter(Boolean)
+                  .join(', '),
+              };
+            })
           : [
               {
-                stoneSelections: sideStoneSelections.length > 0 ? sideStoneSelections : undefined,
+                stoneSelections: sharedSideStoneSelections.length > 0 ? sharedSideStoneSelections : undefined,
                 stoneDesc:
                   calcStoneMode === 'manual'
                     ? calcManualStoneName
-                    : sideStoneSelections.map((s) => stoneName(s.stoneId)).join(', '),
+                    : sharedSideStoneSelections.map((s) => stoneName(s.stoneId)).join(', '),
               },
             ];
 
@@ -1283,102 +1295,146 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       />
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-[14px]">
-                      {/* Đá chủ — mỗi dòng là 1 phương án so sánh riêng (tự ra 1 option báo giá),
-                          đá tấm bên dưới đính kèm chung cho MỌI đá chủ. */}
-                      <div>
-                        <span className="text-[13px] font-extrabold text-faint uppercase block mb-[6px]">
-                          Đá Chủ (mỗi dòng = 1 phương án so sánh)
-                        </span>
-                        <div className="flex flex-col gap-[6px]">
-                          {calcStoneRows.filter((r) => r.stoneType === 'MAIN').map((sRow) => (
-                            <div key={sRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
-                              <select
-                                value={sRow.stoneId}
-                                onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
-                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface"
-                              >
-                                <option value="">-- Chọn sản phẩm --</option>
-                                {sRow.stoneId && !stoneCatalog.some((s) => s.id === sRow.stoneId) && (
-                                  <option value={sRow.stoneId}>{sRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
-                                )}
-                                {stoneCatalog.filter((s) => s.stoneType === 'MAIN').map((s) => (
-                                  <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
-                                ))}
-                              </select>
-                              <input
-                                type="number"
-                                min={1}
-                                value={sRow.qty}
-                                onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                                placeholder="SL"
-                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeStoneRow(sRow.id)}
-                                className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => addStoneRow('MAIN')}
-                          className="mt-[6px] self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
-                        >
-                          + Thêm option đá mới
-                        </button>
-                      </div>
+                    <div className="flex flex-col gap-[10px]">
+                      {/* Mỗi đá chủ tự ra 1 phương án báo giá riêng, đá tấm bên dưới CHỈ đính kèm
+                          cho đúng đá chủ đó (không dùng chung giữa các đá chủ). */}
+                      {calcStoneRows.filter((r) => r.stoneType === 'MAIN').map((mainRow) => (
+                        <div key={mainRow.id} className="border border-[#e2e8f0] rounded-[8px] p-[10px] bg-[#f8fafc]">
+                          <div className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                            <select
+                              value={mainRow.stoneId}
+                              onChange={(e) => updateStoneRow(mainRow.id, { stoneId: e.target.value })}
+                              className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface font-bold"
+                            >
+                              <option value="">-- Chọn đá chủ --</option>
+                              {mainRow.stoneId && !stoneCatalog.some((s) => s.id === mainRow.stoneId) && (
+                                <option value={mainRow.stoneId}>{mainRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                              )}
+                              {stoneCatalog.filter((s) => s.stoneType === 'MAIN').map((s) => (
+                                <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="number"
+                              min={1}
+                              value={mainRow.qty}
+                              onChange={(e) => updateStoneRow(mainRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                              placeholder="SL"
+                              className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeStoneRow(mainRow.id)}
+                              className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
 
-                      <div>
-                        <span className="text-[13px] font-extrabold text-faint uppercase block mb-[6px]">
-                          Đá Tấm (đính kèm)
-                        </span>
-                        <div className="flex flex-col gap-[6px]">
-                          {calcStoneRows.filter((r) => r.stoneType === 'SIDE').map((sRow) => (
-                            <div key={sRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
-                              <select
-                                value={sRow.stoneId}
-                                onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
-                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface"
-                              >
-                                <option value="">-- Chọn sản phẩm --</option>
-                                {sRow.stoneId && !stoneCatalog.some((s) => s.id === sRow.stoneId) && (
-                                  <option value={sRow.stoneId}>{sRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
-                                )}
-                                {stoneCatalog.filter((s) => s.stoneType === 'SIDE').map((s) => (
-                                  <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
-                                ))}
-                              </select>
-                              <input
-                                type="number"
-                                min={1}
-                                value={sRow.qty}
-                                onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                                placeholder="SL"
-                                className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeStoneRow(sRow.id)}
-                                className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          ))}
+                          {/* Đá tấm riêng của đá chủ này */}
+                          <div className="pl-[16px] mt-[8px] flex flex-col gap-[6px] border-l-[2px] border-[#e2e8f0]">
+                            {calcStoneRows.filter((r) => r.stoneType === 'SIDE' && r.parentId === mainRow.id).map((sideRow) => (
+                              <div key={sideRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                                <select
+                                  value={sideRow.stoneId}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { stoneId: e.target.value })}
+                                  className="py-[5px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] bg-surface"
+                                >
+                                  <option value="">-- Chọn đá tấm --</option>
+                                  {sideRow.stoneId && !stoneCatalog.some((s) => s.id === sideRow.stoneId) && (
+                                    <option value={sideRow.stoneId}>{sideRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                                  )}
+                                  {stoneCatalog.filter((s) => s.stoneType === 'SIDE').map((s) => (
+                                    <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={sideRow.qty}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                                  placeholder="SL"
+                                  className="py-[5px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] text-right font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeStoneRow(sideRow.id)}
+                                  className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => addStoneRow('SIDE', mainRow.id)}
+                              className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[3px] px-[8px] text-[13.5px] font-bold text-primary cursor-pointer"
+                            >
+                              + Thêm đá tấm cho đá chủ này
+                            </button>
+                          </div>
                         </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => addStoneRow('MAIN')}
+                        className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
+                      >
+                        + Thêm option đá mới
+                      </button>
+
+                      {/* Đá tấm chưa gắn đá chủ nào (chưa có đá chủ, hoặc dữ liệu cũ trước khi tách nhóm) */}
+                      {calcStoneRows.some((r) => r.stoneType === 'SIDE' && !r.parentId) && (
+                        <div>
+                          <span className="text-[13px] font-extrabold text-faint uppercase block mb-[6px]">
+                            Đá Tấm (chưa gắn đá chủ)
+                          </span>
+                          <div className="flex flex-col gap-[6px]">
+                            {calcStoneRows.filter((r) => r.stoneType === 'SIDE' && !r.parentId).map((sideRow) => (
+                              <div key={sideRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                                <select
+                                  value={sideRow.stoneId}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { stoneId: e.target.value })}
+                                  className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface"
+                                >
+                                  <option value="">-- Chọn sản phẩm --</option>
+                                  {sideRow.stoneId && !stoneCatalog.some((s) => s.id === sideRow.stoneId) && (
+                                    <option value={sideRow.stoneId}>{sideRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                                  )}
+                                  {stoneCatalog.filter((s) => s.stoneType === 'SIDE').map((s) => (
+                                    <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={sideRow.qty}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                                  placeholder="SL"
+                                  className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeStoneRow(sideRow.id)}
+                                  className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {calcStoneRows.filter((r) => r.stoneType === 'MAIN').length === 0 && (
                         <button
                           type="button"
                           onClick={() => addStoneRow('SIDE')}
-                          className="mt-[6px] self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
+                          className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
                         >
-                          + Thêm đá
+                          + Thêm đá tấm
                         </button>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
