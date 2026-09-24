@@ -552,21 +552,21 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       </div>
       <div className="w-full overflow-x-auto border border-border rounded-[10px]">
       <table className={clsx(
-        'w-full min-w-[1500px] border-collapse text-[15.5px] [&_th]:text-left [&_th]:px-[10px] [&_th]:text-[14px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]',
+        'w-full border-collapse text-[15.5px] [&_th]:text-left [&_th]:px-[10px] [&_th]:text-[14px] [&_th]:font-bold [&_th]:uppercase [&_th]:text-muted [&_th]:border-b [&_th]:border-border [&_th]:bg-[#f8fafc] [&_th]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_td]:px-[10px] [&_td]:border-b [&_td]:border-[#f1f5f9] [&_td]:align-middle [&_td]:whitespace-nowrap [&_tr]:cursor-pointer [&_tr]:transition-[background] [&_tr]:duration-150 [&_tr:hover]:bg-[#f8fafc]',
         ROW_HEIGHT_CLS[rowHeight],
       )}>
         <thead>
           <tr>
-            <th>Mã Hỏi Giá</th>
+            <th>Tên Sản Phẩm</th>
             <th>Thời Gian Tạo</th>
             <th>Trạng Thái</th>
-            <th>Danh Mục</th>
             <th>Ảnh</th>
-            <th>Tên Sản Phẩm</th>
+            <th>Danh Mục</th>
             <th>Chất Liệu</th>
+            <th>Số Đo Kích Thước</th>
             <th className="text-[#3730a3]">VAT</th>
             <th className="text-[#0f766e]">Báo Giá Khách (Có VAT)</th>
-            <th>Số Đo Kích Thước</th>
+            <th>Mã Hỏi Giá</th>
             <th>Người Báo Giá</th>
             <th>
               <span className="inline-flex items-center gap-[4px]">
@@ -611,6 +611,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const priceOpt = getPrimaryOption(r);
             const priceBd = getPriceBreakdown({ priceBreakdown: priceOpt?.priceBreakdown });
 
+            const displayCustomerName = r.customer?.name || r.requester?.name || '---';
             const displayDeptName = r.requester?.department?.name || '---';
             const displayNote = r.desiredLeadTime || '---';
 
@@ -631,42 +632,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 )}
                 onClick={() => onSelect(r.id)}
               >
-                <td>
-                  <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
-                </td>
-                <td className="text-muted text-[14px]">
-                  {r.createdAt
-                    ? new Date(r.createdAt).toLocaleString('vi-VN', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit',
-                      })
-                    : '---'}
-                </td>
-                <td>{renderStatusCell(r, isMyReq)}</td>
-                <td>
-                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
-                    {r.category?.name || '---'}
-                  </span>
-                </td>
-                <td>
-                  <div className="relative inline-block">
-                    <img
-                      src={r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE}
-                      className="w-[48px] h-[48px] rounded-[8px] object-cover border border-border cursor-zoom-in"
-                      alt="SP"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setZoomScale(1);
-                        setZoomedImage(r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE);
-                      }}
-                    />
-                    {r.images && r.images.length > 1 && (
-                      <span className="absolute bottom-[-2px] right-[-2px] bg-[#0f172a] text-surface text-[12.5px] font-extrabold py-[1px] px-[4px] rounded-[4px] border border-surface pointer-events-none">
-                        +{r.images.length - 1}
-                      </span>
-                    )}
-                  </div>
-                </td>
                 <td>
                   <div className="inline-flex items-start gap-[6px]">
                     <div className="font-bold text-[#0f172a] max-w-[240px] whitespace-normal break-words leading-[1.5]">
@@ -689,9 +654,43 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     )}
                   </div>
                 </td>
+                <td className="text-muted text-[14px]">
+                  {r.createdAt
+                    ? new Date(r.createdAt).toLocaleString('vi-VN', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })
+                    : '---'}
+                </td>
+                <td>{renderStatusCell(r, isMyReq)}</td>
+                <td>
+                  <div className="relative inline-block">
+                    <img
+                      src={r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE}
+                      className="w-[30px] h-[30px] rounded-[6px] object-cover border border-border cursor-zoom-in"
+                      alt="SP"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setZoomScale(1);
+                        setZoomedImage(r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE);
+                      }}
+                    />
+                    {r.images && r.images.length > 1 && (
+                      <span className="absolute bottom-[-2px] right-[-2px] bg-[#0f172a] text-surface text-[12.5px] font-extrabold py-[1px] px-[4px] rounded-[4px] border border-surface pointer-events-none">
+                        +{r.images.length - 1}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td>
+                  <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
+                    {r.category?.name || '---'}
+                  </span>
+                </td>
                 <td>
                   <MaterialsCell materials={materialsList} />
                 </td>
+                <td className="text-[15px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
                 <td className="text-[#4338ca] font-bold text-center">
                   {currentRole === 'SALE'
                     ? (r.vat == null ? '---' : r.vat === 0 ? 'Không VAT' : 'Có VAT')
@@ -738,7 +737,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 ) : (
                   <td className="text-faint text-center">---</td>
                 )}
-                <td className="text-[15px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
+                <td>
+                  <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
+                </td>
                 <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
                 <td>{renderProcessingTimeCell(r)}</td>
                 <td className="text-[14px] text-[#475569] font-semibold">
@@ -748,12 +749,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                   {displayNote}
                 </td>
                 <td>
-                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">
-                    {r.customer?.name || r.requester?.name || '---'}
-                  </div>
-                  {r.customer?.name && r.requester?.name && (
-                    <div className="text-[12px] text-muted mt-[2px]">{r.requester.name}</div>
-                  )}
+                  <div className="max-w-[180px] whitespace-normal font-bold text-[#0f172a] leading-[1.5]">{displayCustomerName}</div>
                 </td>
                 <td>
                   <span className="bg-[#f1f5f9] text-[#475569] py-[3px] px-[8px] rounded-[6px] text-[14px] font-semibold">
