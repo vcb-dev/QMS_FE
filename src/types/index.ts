@@ -1,4 +1,4 @@
-export type Role = 'SALE' | 'ORDER' | 'ADMIN';
+﻿export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
 export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CLOSED';
 
@@ -507,7 +507,7 @@ export type PricingFormula = {
   isDefault: boolean;
   updatedAt?: string;
 };
-export type StoneItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
+export type StoneItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number; updatedAt?: string; };
 export type CategoryItem = { id: string; name: string; laborCost?: number | null; vatRate?: number | null };
 
 
