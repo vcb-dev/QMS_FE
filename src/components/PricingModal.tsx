@@ -928,8 +928,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   )}
                 </div>
 
-                {/* 2. Tiền công & VAT */}
-                <div className="grid grid-cols-[1fr_140px] gap-[12px]">
+                {/* 2. Tiền công, VAT & tiền kiểm định — cùng 1 dòng. Cột VAT rộng hơn 2 cột kia vì
+                    còn chứa checkbox "Cộng" bên cạnh ô số, hẹp quá thì tràn ra ngoài cột. */}
+                <div className="grid grid-cols-[1fr_170px_130px] gap-[12px]">
                   <div>
                     <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
                       Tiền Công Chế Tác (₫)
@@ -972,21 +973,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       </label>
                     </div>
                   </div>
-                </div>
 
-                {/* Tiền kiểm định — cộng thẳng vào giá báo khách của mọi phương án tính trong modal này */}
-                <div>
-                  <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
-                    Tiền Kiểm Định (₫)
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={formatNumberVN(calcInspectionFee)}
-                    onChange={(e) => setCalcInspectionFee(e.target.value.replace(/\D/g, ''))}
-                    placeholder="0"
-                    className="w-full py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface"
-                  />
+                  <div>
+                    <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
+                      Tiền Kiểm Định (₫)
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNumberVN(calcInspectionFee)}
+                      onChange={(e) => setCalcInspectionFee(e.target.value.replace(/\D/g, ''))}
+                      placeholder="0"
+                      className="w-full py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface"
+                    />
+                  </div>
                 </div>
 
                 {/* Hệ số nhân Bạc (nếu có Bạc) */}
