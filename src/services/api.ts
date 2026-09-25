@@ -229,8 +229,32 @@ export async function getUserStatsApi(filter?: StaffTimeFilter): Promise<UserSta
   return apiCall(dedupedGet('/users/stats', staffTimeParams(filter)), 'Không thể lấy thống kê người dùng');
 }
 
-export async function getStaffPerformanceApi(filter?: StaffTimeFilter): Promise<StaffPerformanceResponse> {
-  return apiCall(dedupedGet('/quote-requests/staff-performance', staffTimeParams(filter)), 'Không thể lấy hiệu suất nhân viên');
+export type StaffPerformanceFilter = StaffTimeFilter & {
+  saleSearch?: string;
+  saleSortField?: 'name' | 'total' | 'closed' | 'closeRate';
+  saleSortDir?: 'asc' | 'desc';
+  salePage?: number;
+  salePageSize?: number;
+  pricerSearch?: string;
+  pricerSortField?: 'name' | 'totalHandled' | 'medianQuoteMs' | 'medianProcessMs';
+  pricerSortDir?: 'asc' | 'desc';
+  pricerPage?: number;
+  pricerPageSize?: number;
+};
+
+export async function getStaffPerformanceApi(filter?: StaffPerformanceFilter): Promise<StaffPerformanceResponse> {
+  const params: Record<string, any> = { ...staffTimeParams(filter) };
+  if (filter?.saleSearch) params.saleSearch = filter.saleSearch;
+  if (filter?.saleSortField) params.saleSortField = filter.saleSortField;
+  if (filter?.saleSortDir) params.saleSortDir = filter.saleSortDir;
+  if (filter?.salePage) params.salePage = filter.salePage;
+  if (filter?.salePageSize) params.salePageSize = filter.salePageSize;
+  if (filter?.pricerSearch) params.pricerSearch = filter.pricerSearch;
+  if (filter?.pricerSortField) params.pricerSortField = filter.pricerSortField;
+  if (filter?.pricerSortDir) params.pricerSortDir = filter.pricerSortDir;
+  if (filter?.pricerPage) params.pricerPage = filter.pricerPage;
+  if (filter?.pricerPageSize) params.pricerPageSize = filter.pricerPageSize;
+  return apiCall(dedupedGet('/quote-requests/staff-performance', params), 'Không thể lấy hiệu suất nhân viên');
 }
 
 export async function approveUserApi(userId: string, role?: string): Promise<User> {

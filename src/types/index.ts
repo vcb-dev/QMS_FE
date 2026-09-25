@@ -604,8 +604,14 @@ export interface UserStatsResponse {
 }
 
 export interface StaffPerformanceResponse {
-  saleStats: { id: string; name: string; total: number; closed: number; closeRate: number }[];
-  pricerStats: { id: string; name: string; totalHandled: number; medianQuoteMs: number | null; medianProcessMs: number | null }[];
+  saleStats: {
+    items: { id: string; name: string; total: number; closed: number; closeRate: number }[];
+    total: number;
+  };
+  pricerStats: {
+    items: { id: string; name: string; totalHandled: number; medianQuoteMs: number | null; medianProcessMs: number | null }[];
+    total: number;
+  };
 }
 
 export interface CreateModalProps {

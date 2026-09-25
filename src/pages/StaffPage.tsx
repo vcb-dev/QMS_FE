@@ -64,8 +64,8 @@ export const StaffPage: React.FC = () => {
   // Role admin chọn khi duyệt từng tài khoản chờ (mặc định giữ role hiện tại — Lark tạo ra là SALE)
   const [approveRole, setApproveRole] = useState<Record<string, Role>>({});
 
-  // Tìm kiếm/sắp xếp/phân trang cho 2 bảng hiệu suất (Sale / Order) — dữ liệu đã tải hết 1 lần
-  // (performance.saleStats/pricerStats), lọc-sắp-trang hoàn toàn ở FE, giống bảng tài khoản trên.
+  // Tìm kiếm/sắp xếp/phân trang cho 2 bảng hiệu suất (Sale / Order) — BE tự lọc/sort/cắt trang
+  // theo các state này (xem effect nạp performance bên dưới), FE chỉ giữ state UI.
   const [saleSearch, setSaleSearch] = useState('');
   const [saleSortField, setSaleSortField] = useState<'name' | 'total' | 'closed' | 'closeRate'>('name');
   const [saleSortDir, setSaleSortDir] = useState<'asc' | 'desc'>('asc');
@@ -115,14 +115,12 @@ export const StaffPage: React.FC = () => {
     Promise.all([
       getAllUsersApi(filter),
       getUserStatsApi(filter),
-      getStaffPerformanceApi(filter),
       getAuditStatsApi(filter).catch(() => ({})),
     ])
-      .then(([userList, stats, perf, auditStats]) => {
+      .then(([userList, stats, auditStats]) => {
         if (myRequestId !== requestIdRef.current) return;
         setUsers(userList || []);
         setUserStats(stats);
-        setPerformance(perf);
         setActionStats(auditStats || {});
         setError(null);
       })
@@ -137,6 +135,50 @@ export const StaffPage: React.FC = () => {
         }
       });
   }, [timeRange, startDate, endDate]);
+
+  // Bảng hiệu suất (Sale/Order) nạp riêng — search/sort/phân trang của cả 2 bảng đều là tham số
+  // BE, đổi cái nào cũng gọi lại. Debounce nhẹ để gõ tìm kiếm không bắn API mỗi phím.
+  const performanceRequestIdRef = useRef(0);
+  useEffect(() => {
+    const myRequestId = ++performanceRequestIdRef.current;
+    const timer = setTimeout(() => {
+      getStaffPerformanceApi({
+        timeRange,
+        startDate,
+        endDate,
+        saleSearch,
+        saleSortField,
+        saleSortDir,
+        salePage,
+        salePageSize,
+        pricerSearch,
+        pricerSortField,
+        pricerSortDir,
+        pricerPage,
+        pricerPageSize,
+      })
+        .then((perf) => {
+          if (myRequestId !== performanceRequestIdRef.current) return;
+          setPerformance(perf);
+        })
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [
+    timeRange,
+    startDate,
+    endDate,
+    saleSearch,
+    saleSortField,
+    saleSortDir,
+    salePage,
+    salePageSize,
+    pricerSearch,
+    pricerSortField,
+    pricerSortDir,
+    pricerPage,
+    pricerPageSize,
+  ]);
 
   const applyPreset = (value: string) => {
     setTimeRange(value);
@@ -201,40 +243,12 @@ export const StaffPage: React.FC = () => {
   const totalUsers = userStats?.totalUsers || 0;
   const byRole = userStats?.byRole || { SALE: 0, ORDER: 0, ADMIN: 0 };
   const pendingCount = userStats?.pendingCount || 0;
-  const saleStats = performance?.saleStats || [];
-  const pricerStats = performance?.pricerStats || [];
-
-  // Sort chung cho cả 2 bảng hiệu suất theo field bất kỳ (tên hoặc số liệu năng suất) — chuỗi thì
-  // localeCompare, số thì so trực tiếp; null (VD chưa có trung vị) xếp cuối bất kể chiều sort.
-  const sortByField = <T extends Record<string, unknown>>(list: T[], field: string, dir: 'asc' | 'desc'): T[] =>
-    [...list].sort((a, b) => {
-      const av = a[field];
-      const bv = b[field];
-      if (typeof av === 'string' || typeof bv === 'string') {
-        return dir === 'asc'
-          ? String(av).localeCompare(String(bv))
-          : String(bv).localeCompare(String(av));
-      }
-      const an = av == null ? -Infinity : Number(av);
-      const bn = bv == null ? -Infinity : Number(bv);
-      return dir === 'asc' ? an - bn : bn - an;
-    });
-
-  const filteredSaleStats = sortByField(
-    saleStats.filter((s) => s.name.toLowerCase().includes(saleSearch.trim().toLowerCase())),
-    saleSortField,
-    saleSortDir,
-  );
-  const saleTotalPages = Math.max(1, Math.ceil(filteredSaleStats.length / salePageSize));
-  const pagedSaleStats = filteredSaleStats.slice((salePage - 1) * salePageSize, salePage * salePageSize);
-
-  const filteredPricerStats = sortByField(
-    pricerStats.filter((p) => p.name.toLowerCase().includes(pricerSearch.trim().toLowerCase())),
-    pricerSortField,
-    pricerSortDir,
-  );
-  const pricerTotalPages = Math.max(1, Math.ceil(filteredPricerStats.length / pricerPageSize));
-  const pagedPricerStats = filteredPricerStats.slice((pricerPage - 1) * pricerPageSize, pricerPage * pricerPageSize);
+  // Search/sort/phân trang của 2 bảng hiệu suất giờ tính hết ở BE (effect nạp performance bên
+  // dưới) — ở đây chỉ đọc thẳng trang dữ liệu đã sẵn sàng, không tự lọc/sort/cắt trang nữa.
+  const pagedSaleStats = performance?.saleStats?.items || [];
+  const saleTotalPages = Math.max(1, Math.ceil((performance?.saleStats?.total || 0) / salePageSize));
+  const pagedPricerStats = performance?.pricerStats?.items || [];
+  const pricerTotalPages = Math.max(1, Math.ceil((performance?.pricerStats?.total || 0) / pricerPageSize));
 
   if (error) {
     return <div className="p-[40px] text-center text-[#dc2626]"> {error}</div>;
@@ -510,7 +524,7 @@ export const StaffPage: React.FC = () => {
           </h2>
           <span className="text-[14px] text-muted">Số yêu cầu đã tạo & đã chốt của từng Sale</span>
 
-          {saleStats.length > 0 && (
+          {(performance !== null || saleSearch) && (
             <div className="relative mt-[12px] w-[220px]">
               <Search size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
               <input
@@ -523,7 +537,7 @@ export const StaffPage: React.FC = () => {
             </div>
           )}
 
-          {filteredSaleStats.length > 0 ? (
+          {pagedSaleStats.length > 0 ? (
             <div className="overflow-x-auto mt-[10px]">
               <table className="w-full border-collapse text-[15.5px]">
                 <thead>
@@ -592,7 +606,7 @@ export const StaffPage: React.FC = () => {
               <Pagination
                 currentPage={salePage}
                 totalPages={saleTotalPages}
-                totalItems={filteredSaleStats.length}
+                totalItems={performance?.saleStats?.total || 0}
                 pageSize={salePageSize}
                 onPageChange={setSalePage}
                 onPageSizeChange={(size) => { setSalePageSize(size); setSalePage(1); }}
@@ -600,7 +614,7 @@ export const StaffPage: React.FC = () => {
             </div>
           ) : (
             <div className={emptyTextCls}>
-              {saleStats.length === 0 ? 'Chưa có Sale nào trong hệ thống' : 'Không tìm thấy Sale nào khớp'}
+              {saleSearch ? 'Không tìm thấy Sale nào khớp' : 'Chưa có Sale nào trong hệ thống'}
             </div>
           )}
         </div>
@@ -611,7 +625,7 @@ export const StaffPage: React.FC = () => {
           </h2>
           <span className="text-[14px] text-muted">Thời gian trung vị báo giá & xử lý của từng Order</span>
 
-          {pricerStats.length > 0 && (
+          {(performance !== null || pricerSearch) && (
             <div className="relative mt-[12px] w-[220px]">
               <Search size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
               <input
@@ -624,7 +638,7 @@ export const StaffPage: React.FC = () => {
             </div>
           )}
 
-          {filteredPricerStats.length > 0 ? (
+          {pagedPricerStats.length > 0 ? (
             <div className="overflow-x-auto mt-[10px]">
               <table className="w-full border-collapse text-[15.5px]">
                 <thead>
@@ -700,7 +714,7 @@ export const StaffPage: React.FC = () => {
               <Pagination
                 currentPage={pricerPage}
                 totalPages={pricerTotalPages}
-                totalItems={filteredPricerStats.length}
+                totalItems={performance?.pricerStats?.total || 0}
                 pageSize={pricerPageSize}
                 onPageChange={setPricerPage}
                 onPageSizeChange={(size) => { setPricerPageSize(size); setPricerPage(1); }}
@@ -708,7 +722,7 @@ export const StaffPage: React.FC = () => {
             </div>
           ) : (
             <div className={emptyTextCls}>
-              {pricerStats.length === 0 ? 'Chưa có Order nào trong hệ thống' : 'Không tìm thấy Order nào khớp'}
+              {pricerSearch ? 'Không tìm thấy Order nào khớp' : 'Chưa có Order nào trong hệ thống'}
             </div>
           )}
         </div>
