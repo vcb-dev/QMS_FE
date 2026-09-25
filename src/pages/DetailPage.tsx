@@ -332,10 +332,9 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               Báo giá luôn
             </button>
           )}
-        {(currentRole === 'ADMIN' ||
-          (currentRole === 'ORDER' &&
-            (selectedReq.assignee?.id === currentUser.id ||
-              selectedReq.assignee?.email === currentUser.email))) &&
+        {/* BE cho phép bất kỳ Order nào báo giá vào request PROCESSING của Order khác
+            (fix/quote-any-order-can-quote) — bỏ điều kiện check assigneeId. */}
+        {(currentRole === 'ADMIN' || currentRole === 'ORDER') &&
           selectedReq.status === 'PROCESSING' && (
             <button
               type="button"
@@ -347,10 +346,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           )}
         {/* Sửa giá đã báo — mở lại PricingModal (tự nạp sẵn phương án đang là giá chính) để tính
             lại, chỉ ghi đè đúng phương án đó, không đụng trạng thái đơn (xem editQuotedPrice BE). */}
-        {(currentRole === 'ADMIN' ||
-          (currentRole === 'ORDER' &&
-            (selectedReq.assignee?.id === currentUser.id ||
-              selectedReq.assignee?.email === currentUser.email))) &&
+        {(currentRole === 'ADMIN' || currentRole === 'ORDER') &&
           (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED') && (
             <button
               type="button"
