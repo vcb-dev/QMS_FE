@@ -405,8 +405,12 @@ export function useQuoteRequests(
       const updated = await action();
       setSelectedId(updated.id);
       if (opts?.bumpCounts !== false) needCountsRef.current = true;
-      opts?.onSuccess?.(updated);
+      // Nạp lại danh sách TRƯỚC khi gọi onSuccess — "Báo giá luôn" (handleQuoteNow) chain
+      // accept() rồi onSuccess mở PricingModal ngay; PricingModal đọc version từ `requests` (state
+      // cũ, snapshot trước accept). Gọi onSuccess trước khi requests kịp refresh nghĩa là modal mở
+      // ra với version cũ, gửi báo giá luôn dính optimistic-lock 409 dù chỉ 1 mình user thao tác.
       await loadData(false);
+      opts?.onSuccess?.(updated);
     } catch (err: any) {
       // Optimistic-lock conflict (BE ném 409 khi version FE gửi lệch version DB): người khác vừa
       // sửa đơn này — không phải lỗi thao tác của user. Báo nhẹ + tải lại danh sách cho đồng bộ.
