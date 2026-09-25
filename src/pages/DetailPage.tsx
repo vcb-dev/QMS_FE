@@ -293,14 +293,20 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     ? formatDuration(new Date(selectedReq.acceptedAt || selectedReq.createdAt).getTime(), new Date(selectedReq.updatedAt).getTime())
     : null;
 
+  // "Báo giá nhanh" (Order gõ thẳng tổng tiền, không qua công thức) không có costBreakdown vì BE
+  // không tính formula cho option này (xem computeCostBreakdown ở option-mapper.util.ts) — chất
+  // liệu/khối lượng gõ kèm chỉ là ghi chú tự do, không đáng tin làm thông số sản phẩm hiển thị.
+  const isQuickPriceOption = !!finalOption && !finalOption.costBreakdown;
+
   // Đọc chất liệu từ phương án đang hiển thị (finalOption) — không lấy field cấp request
   // (selectedReq.materials/material chỉ là bản tóm tắt của phương án đại diện, có thể trống nếu
   // phương án đó chưa gắn chất liệu). "Vàng Trắng 18K" cũ là placeholder demo, hiện SAI cho mọi đơn
-  // khi thiếu data thật — đổi thành nhãn rõ ràng là chưa có dữ liệu.
+  // khi thiếu data thật — đổi thành nhãn rõ ràng là chưa có dữ liệu. Báo giá nhanh thì bỏ qua chất
+  // liệu của option, chỉ giữ chất liệu Sale đã gửi lúc tạo đơn (selectedReq.materials/material).
   const materialsList =
-    finalOption?.materials && finalOption.materials.length > 0
+    !isQuickPriceOption && finalOption?.materials && finalOption.materials.length > 0
       ? finalOption.materials.map((m) => m.materialName || m.material?.name).filter((n): n is string => !!n)
-      : finalOption?.materialName
+      : !isQuickPriceOption && finalOption?.materialName
         ? [finalOption.materialName]
         : selectedReq.materials && selectedReq.materials.length > 0
           ? selectedReq.materials.map((m) => m.name)
@@ -569,7 +575,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
                       <SpecBadge icon={<Tag size={14} color="#2563eb" />} label="DANH MỤC" value={selectedReq.category?.name || 'Chưa phân loại'} />
 
-                      <SpecBadge icon={<Scale size={14} color="#8b5cf6" />} label="KHỐI LƯỢNG (CHỈ)" value={weightDisplay} />
+                      {/* Báo giá nhanh: khối lượng gõ kèm không đáng tin làm thông số sản phẩm — ẩn hẳn */}
+                      {!isQuickPriceOption && (
+                        <SpecBadge icon={<Scale size={14} color="#8b5cf6" />} label="KHỐI LƯỢNG (CHỈ)" value={weightDisplay} />
+                      )}
 
                       <SpecBadge
                         icon={<Ruler size={14} color="#16a34a" />}
