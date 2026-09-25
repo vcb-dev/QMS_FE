@@ -854,8 +854,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                               )}
                             </div>
                             <div className="text-[15px] text-muted mt-[2px]">
-                              {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
-                              {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
+                              {/* Báo giá nhanh (Order gõ thẳng tổng tiền) không chạy công thức nên không có
+                                  totalMetalCost/metalRawCost — chất liệu/khối lượng gõ kèm chỉ là ghi chú tự
+                                  do, không đáng tin để hiện như thông số đã tính, nên ẩn luôn. */}
+                              {opt.totalMetalCost == null && opt.metalRawCost == null ? '' : (
+                                <>
+                                  {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
+                                  {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
+                                </>
+                              )}
                               {opt.vat != null ? ` · VAT ${opt.vat}%` : ''}
                             </div>
                           </div>
