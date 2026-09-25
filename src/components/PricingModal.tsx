@@ -665,9 +665,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }));
     const materialNameDisplay = validMaterialRows.map((m) => m.materialName).join(', ');
 
+    // Báo giá nhanh gộp CẢ calcStoneRows (có thể nhiều nhóm đá chủ/đá tấm khác nhau) vào 1 option
+    // duy nhất — khác máy tính giá (mỗi đá chủ tách 1 option riêng) nên phải tự tính parentIndex
+    // theo VỊ TRÍ thật trong mảng đang gửi (không cố định 0 như bên máy tính giá).
+    const validStoneRows = calcStoneMode === 'catalog' ? calcStoneRows.filter((r) => r.stoneId) : [];
     const stoneSelections =
-      calcStoneMode === 'catalog' && calcStoneRows.length > 0
-        ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+      validStoneRows.length > 0
+        ? validStoneRows.map((r) => {
+            const parentIdx = r.parentId ? validStoneRows.findIndex((other) => other.id === r.parentId) : -1;
+            return {
+              stoneId: r.stoneId,
+              quantity: r.qty,
+              ...(parentIdx >= 0 ? { parentIndex: parentIdx } : {}),
+            };
+          })
         : undefined;
 
     addOptionsToList([
