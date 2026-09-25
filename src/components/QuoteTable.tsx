@@ -433,11 +433,20 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       const isAssignedToCurrentPricing =
         r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email;
 
+      // BE cho phép bất kỳ Order nào báo giá thẳng vào request đang do Order khác tiếp nhận
+      // (fix/quote-any-order-can-quote). Tuy nhiên REJECT/RETURN vẫn chỉ dành cho assignee hiện tại.
       if (currentRole === 'ORDER' && !isAssignedToCurrentPricing) {
         return (
-          <span className={clsx(statusPillCls, statusPillProcessCls)} title="Yêu cầu đang do nhân sự Order khác xử lý">
-            <Clock size={13} color="#b45309" /> Đang xử lý
-          </span>
+          <StatusDropdown
+            current="PROCESSING"
+            options={[
+              { value: 'PROCESSING', ...STATUS_META.PROCESSING },
+              { value: 'QUOTED',     ...STATUS_META.QUOTED, label: 'Chốt giá (Đã báo giá)' },
+            ]}
+            onChange={(val) => {
+              if (val === 'QUOTED') onPricing(r.id);
+            }}
+          />
         );
       }
 
@@ -467,11 +476,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       );
     }
 
-    // Sửa giá đã báo (nếu được phép) — ADMIN mọi đơn, ORDER chỉ đơn mình báo giá.
-    const canEditQuotedPrice =
-      currentRole === 'ADMIN' ||
-      (currentRole === 'ORDER' &&
-        (r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email));
+    // Sửa giá đã báo — ADMIN mọi đơn, ORDER bất kỳ (không cần là assignee, đồng bộ BE fix).
+    const canEditQuotedPrice = currentRole === 'ADMIN' || currentRole === 'ORDER';
 
     if (r.status === 'QUOTED') {
       if (canEditQuotedPrice) {
