@@ -102,7 +102,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // chọn 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau).
   // Tính riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo, không chọn
   // làm giá chính) cùng groupId với phương án chính.
-  const { compareRows, setCompareRows, addCompareRow, updateCompareRow, removeCompareRow, autoGoldMode } = useCompareRows(dbMaterials, calcMaterialRows);
+  // Bật khi đã nạp SẴN chất liệu tham khảo THẬT từ đơn (Sale nhập lúc tạo đơn) — chặn chế độ tự
+  // liệt kê vàng ghi đè/khóa mất dữ liệu thật đó (xem effect nạp options bên dưới).
+  const [disableAutoGoldMode, setDisableAutoGoldMode] = useState(false);
+  const { compareRows, setCompareRows, addCompareRow, updateCompareRow, removeCompareRow, autoGoldMode } = useCompareRows(dbMaterials, calcMaterialRows, disableAutoGoldMode);
 
   // Đá đính
   const [calcStoneMode, setCalcStoneMode] = useState<'catalog' | 'manual'>('catalog');
@@ -137,6 +140,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     if (!isOpen || !selectedReq) return;
 
     setCompareRows([]);
+    setDisableAutoGoldMode(false);
     setCalcInspectionFee(selectedReq.inspectionFee != null ? String(selectedReq.inspectionFee) : '0');
     setPricingMode('calculator');
     setQuickOptionName('Báo giá nhanh');
@@ -235,6 +239,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               weightChi: m.weightChi,
             })),
           );
+          setDisableAutoGoldMode(true);
         }
       }
     }
