@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role } from '../types';
 import { formatStoneDisplay } from '../utils/stoneFormatter';
 import {
@@ -82,6 +82,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     removeStoneRow,
     stoneName,
   } = useMaterialStoneRows(dbMaterials, stoneCatalog);
+  // Báo giá nhanh — Order gõ thẳng tổng tiền cho yêu cầu, không qua máy tính/công thức nào (VD:
+  // "vàng 10k, báo X đồng"). Tạo 1 QuoteOption chỉ có optionName + quotedPrice + vat, không kèm
+  // chất liệu/đá — BE (buildOptionCreateInput) đã hỗ trợ sẵn option rỗng materials/stones.
+  const [pricingMode, setPricingMode] = useState<'calculator' | 'quick'>('calculator');
+  const [quickOptionName, setQuickOptionName] = useState('Báo giá nhanh');
+  const [quickPrice, setQuickPrice] = useState('');
+  const [quickVat, setQuickVat] = useState<string>(String(PRICING_DEFAULTS.VAT_PCT));
+  const [quickIncludeVat, setQuickIncludeVat] = useState<boolean>(true);
   const [calcLaborCost, setCalcLaborCost] = useState<string>(String(PRICING_DEFAULTS.LABOR_COST));
   // Tiền kiểm định Order nhập — dùng chung cho mọi phương án tính trong modal này, cộng vào
   // quotedPrice ở BE (không tính ở FE). Lưu vào QuoteRequest lúc gửi báo giá.
@@ -130,6 +138,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     setCompareRows([]);
     setCalcInspectionFee(selectedReq.inspectionFee != null ? String(selectedReq.inspectionFee) : '0');
+    setPricingMode('calculator');
+    setQuickOptionName('Báo giá nhanh');
+    setQuickPrice('');
+    setQuickVat(String(defaultVatRate));
+    setQuickIncludeVat(true);
 
     // Bản nháp chưa có giá (VD: mỗi chất liệu Sale chọn lúc tạo đơn — BE tự tách thành 1 option
     // nháp/chất liệu, xem quote-requests.service.ts) không phải 1 phương án báo giá thật — không
@@ -485,6 +498,49 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   };
 
+  // Gộp 1 phương án "báo giá nhanh" (optionName + quotedPrice + vat, KHÔNG gọi API tính giá nào)
+  // vào "Các Phương Án Báo Giá" — vẫn đính kèm đúng chất liệu/đá Sale đã yêu cầu lúc tạo đơn (đang
+  // nằm sẵn trong calcMaterialRows/calcStoneRows do effect mở modal nạp vào), chỉ bỏ qua bước tính
+  // giá theo công thức, không bỏ luôn thông tin chất liệu/đá.
+  const handleAddQuickOption = () => {
+    const price = parseFloat(quickPrice) || 0;
+    if (price <= 0) {
+      setCalcError('Vui lòng nhập số tiền báo giá hợp lệ');
+      return;
+    }
+    setCalcError(null);
+
+    const validMaterialRows = calcMaterialRows.filter(
+      (m) => m.materialId && (parseFloat(m.weightChi) || 0) > 0,
+    );
+    const materials = validMaterialRows.map((m) => ({
+      materialId: m.materialId,
+      weightChi: parseFloat(m.weightChi) || 0,
+    }));
+    const materialNameDisplay = validMaterialRows.map((m) => m.materialName).join(', ');
+
+    const stoneSelections =
+      calcStoneMode === 'catalog' && calcStoneRows.length > 0
+        ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+        : undefined;
+
+    addOptionsToList([
+      {
+        optionName: quickOptionName.trim() || 'Báo giá nhanh',
+        materialName: materialNameDisplay || undefined,
+        weightChi: validMaterialRows.length === 1 ? parseFloat(validMaterialRows[0].weightChi) || 0 : undefined,
+        materials: materials.length > 0 ? materials : undefined,
+        stones: stoneSelections,
+        stoneDescription: calcStoneMode === 'manual' ? (calcManualStoneName || undefined) : undefined,
+        stoneCost: calcStoneMode === 'manual' ? (parseFloat(calcManualStonePrice) || 0) : undefined,
+        quotedPrice: price,
+        vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,
+        groupId: `g_${Date.now()}`,
+      },
+    ]);
+    setQuickPrice('');
+  };
+
   const handleSelectOption = (idx: number) => {
     setOptions((prev) => {
       const chosen = prev[idx];
@@ -758,6 +814,110 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
             {showCalculator && (
               <div className="flex flex-col gap-[14px]">
+                {/* Tab chọn chế độ: Máy Tính (tính theo chất liệu/đá) hoặc Báo Giá Nhanh (Order gõ
+                    thẳng tổng tiền cho yêu cầu, không qua công thức nào). */}
+                <div className="flex gap-[6px]">
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode('calculator')}
+                    className={clsx(
+                      'flex items-center gap-[6px] py-[6px] px-[12px] rounded-[6px] text-[14.5px] font-extrabold cursor-pointer',
+                      pricingMode === 'calculator'
+                        ? 'border border-[#0f172a] bg-[#0f172a] text-surface'
+                        : 'border border-[#cbd5e1] bg-surface text-[#334155]'
+                    )}
+                  >
+                    <Calculator size={14} /> Máy Tính
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode('quick')}
+                    className={clsx(
+                      'flex items-center gap-[6px] py-[6px] px-[12px] rounded-[6px] text-[14.5px] font-extrabold cursor-pointer',
+                      pricingMode === 'quick'
+                        ? 'border border-[#0f172a] bg-[#0f172a] text-surface'
+                        : 'border border-[#cbd5e1] bg-surface text-[#334155]'
+                    )}
+                  >
+                    <Zap size={14} /> Báo Giá Nhanh
+                  </button>
+                </div>
+
+                {pricingMode === 'quick' ? (
+                  <div className="flex flex-col gap-[14px]">
+                    <div className="grid grid-cols-[1fr_150px] gap-[12px]">
+                      <div>
+                        <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
+                          Tên Phương Án
+                        </label>
+                        <input
+                          type="text"
+                          value={quickOptionName}
+                          onChange={(e) => setQuickOptionName(e.target.value)}
+                          maxLength={200}
+                          placeholder="Báo giá nhanh"
+                          className="w-full py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface"
+                        />
+                      </div>
+                      <div>
+                        <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
+                          Thuế VAT (%)
+                        </label>
+                        <div className="flex items-center gap-[8px]">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={quickVat}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v !== '' && parseFloat(v) < 0) return;
+                              setQuickVat(v);
+                            }}
+                            className="w-[60px] py-[8px] px-[10px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface"
+                          />
+                          <label className="text-[14px] text-[#334155] font-bold flex items-center gap-[4px] cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={quickIncludeVat}
+                              onChange={(e) => setQuickIncludeVat(e.target.checked)}
+                              className="w-[15px] h-[15px] accent-primary"
+                            />
+                            Cộng
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
+                        Tổng Tiền Báo Giá (₫)
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNumberVN(quickPrice)}
+                        onChange={(e) => setQuickPrice(e.target.value.replace(/\D/g, ''))}
+                        placeholder="0"
+                        className="w-full py-[10px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[18px] font-extrabold bg-surface"
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      {calcError ? (
+                        <span className="text-[#dc2626] text-[15px] font-bold">{calcError}</span>
+                      ) : <span />}
+                      <button
+                        type="button"
+                        onClick={handleAddQuickOption}
+                        className="bg-[linear-gradient(135deg,#fbbf24,#f59e0b)] text-[#78350f] border-0 rounded-[8px] py-[10px] px-[20px] text-[16px] font-extrabold cursor-pointer shadow-[0_2px_6px_rgba(245,158,11,0.3)]"
+                      >
+                        Thêm Vào Danh Sách
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* 1. Chất liệu & Khối lượng */}
                 <div>
                   <div className="flex items-center justify-between mb-[8px]">
@@ -1132,6 +1292,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                     {calcLoading ? 'Đang tính...' : 'Tính Giá Ngay'}
                   </button>
                 </div>
+                  </>
+                )}
 
               </div>
             )}
