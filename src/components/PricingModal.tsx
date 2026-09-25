@@ -654,11 +654,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // copy độc lập (id mới), không phải tham chiếu chung, Order sửa/xóa riêng từng bên không ảnh hưởng nhau.
   const handleAddMainStoneOption = () => {
     const newMainId = addStoneRow('MAIN');
+    // Đá tấm chưa gắn đá chủ nào (Sale nhập sẵn, chưa từng copy đi đâu) — dùng làm template lần
+    // thêm đá chủ ĐẦU TIÊN. Từ lần 2 trở đi, đá tấm đó đã có parentId (đã gắn vào đá chủ trước),
+    // không còn "orphan" nữa — fallback lấy đúng đá tấm của đá chủ ĐẦU TIÊN đang có làm template,
+    // để đá chủ nào thêm sau cũng tự có sẵn đá tấm giống các đá chủ trước, không phải nhập lại tay.
     const orphanSides = calcStoneRows.filter((r) => r.stoneType === 'SIDE' && !r.parentId);
-    if (orphanSides.length > 0) {
+    const firstMain = calcStoneRows.find((r) => r.stoneType === 'MAIN' && r.id !== newMainId);
+    const templateSides =
+      orphanSides.length > 0
+        ? orphanSides
+        : firstMain
+          ? calcStoneRows.filter((r) => r.stoneType === 'SIDE' && r.parentId === firstMain.id)
+          : [];
+    if (templateSides.length > 0) {
       setCalcStoneRows((prev) => [
         ...prev,
-        ...orphanSides.map((r) => ({ ...r, id: `${newMainId}_${r.id}`, parentId: newMainId })),
+        ...templateSides.map((r) => ({ ...r, id: `${newMainId}_${r.id}`, parentId: newMainId })),
       ]);
     }
   };
