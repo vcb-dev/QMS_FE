@@ -454,7 +454,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         calcStoneRows
           .filter((r) => r.stoneId && r.stoneType === 'SIDE' && r.parentId === mainRowId)
           .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }));
-      // Tên phương án chỉ hiện đá CHỦ (kèm lát cắt + size), không ghép tên đá tấm vào.
+      // Tên phương án chỉ hiện đá CHỦ (kèm lát cắt + size), không ghép tên đá tấm vào — trừ tổ hợp
+      // không có đá chủ (orphanSideSelections bên dưới), lúc đó phải ghi rõ là đá tấm gì.
       const mainStoneLabel = (stoneId: string) => {
         const s = stoneCatalog.find((c) => c.id === stoneId);
         return s ? [s.name, s.cut, s.size].filter(Boolean).join(' - ') : stoneName(stoneId);
@@ -468,7 +469,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           ? [
               {
                 stoneSelections: orphanSideSelections,
-                stoneDesc: orphanSideSelections.map((s) => stoneName(s.stoneId)).join(', '),
+                stoneDesc: `Đá tấm: ${orphanSideSelections.map((s) => mainStoneLabel(s.stoneId)).join(', ')}`,
               },
             ]
           : []),
