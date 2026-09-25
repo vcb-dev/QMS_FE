@@ -337,7 +337,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // "Thêm" thủ công). Tính lại cùng 1 chất liệu (materialId trùng) thì THAY giá cũ, không tách
   // thành card riêng. Nếu danh sách chưa có phương án nào được chọn, phương án ĐẦU TIÊN không bị
   // khóa tự động được chọn làm giá chính.
-  const addOptionsToList = (newOpts: QuoteOption[]) => {
+  // skipDedup: báo giá nhanh (nhập tay) không có "tổ hợp" để gộp lại — mỗi lần bấm thêm là 1
+  // phương án riêng dù trùng chất liệu/đá với phương án trước, luôn thêm mới chứ không thay giá cũ.
+  const addOptionsToList = (newOpts: QuoteOption[], opts: { skipDedup?: boolean } = {}) => {
     setOptions((prev) => {
       // Khóa gồm cả chất liệu lẫn tổ hợp đá chủ đính kèm — 1 chất liệu có thể ra nhiều phương án
       // khác nhau theo từng tổ hợp đá chủ (stoneCombos), không được gộp các tổ hợp khác nhau lại.
@@ -349,6 +351,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const next = [...prev];
       newOpts.forEach((opt) => {
         if (opt.quotedPrice == null) return;
+        if (opts.skipDedup) {
+          next.push(opt);
+          return;
+        }
         const key = keyOf(opt);
         const existingIdx = key ? next.findIndex((o) => keyOf(o) === key) : -1;
         if (existingIdx >= 0) {
@@ -652,7 +658,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,
         groupId: `g_${Date.now()}`,
       },
-    ]);
+    ], { skipDedup: true });
     setQuickPrice('');
   };
 
