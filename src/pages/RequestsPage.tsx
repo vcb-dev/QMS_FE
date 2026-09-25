@@ -96,16 +96,19 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   };
 
   // Join room CHO MỌI dòng đang hiển thị (không chỉ dòng bấm vào) — để nghe được newMessage real-
-  // time ngay cả khi chưa bấm mở chat đơn nào. Chỉ join đơn mình thực sự tham gia (requester/
-  // assignee) và đã có người xử lý — khớp đúng điều kiện hiện icon ở QuoteTable. Join lại mỗi khi
-  // socket reconnect vì server không nhớ room cũ qua lần kết nối mới.
+  // time ngay cả khi chưa bấm mở chat đơn nào. Join đơn mình thực sự tham gia (requester/assignee)
+  // HOẶC bất kỳ ORDER/ADMIN nào (chat nhóm) — khớp đúng điều kiện hiện icon ở QuoteTable, đã có
+  // người xử lý mới join. Join lại mỗi khi socket reconnect vì server không nhớ room cũ qua lần
+  // kết nối mới.
   useEffect(() => {
     if (!socket) return;
     const joinVisibleRooms = () => {
       for (const r of requests) {
         const isParticipant =
           (r.requester?.id ?? r.requesterId) === currentUser.id ||
-          (r.assignee?.id ?? r.assigneeId) === currentUser.id;
+          (r.assignee?.id ?? r.assigneeId) === currentUser.id ||
+          currentRole === 'ORDER' ||
+          currentRole === 'ADMIN';
         const hasAssignee = !!(r.assignee?.id ?? r.assigneeId);
         if (isParticipant && hasAssignee) {
           // passive: true — chỉ đăng ký nhận badge, KHÔNG tính là "đang xem" (BE dựa vào cờ này để
@@ -117,7 +120,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
     if (socket.connected) joinVisibleRooms();
     socket.on('connect', joinVisibleRooms);
     return () => { socket.off('connect', joinVisibleRooms); };
-  }, [socket, requests, currentUser.id]);
+  }, [socket, requests, currentUser.id, currentRole]);
 
   // Tin nhắn mới tới cho 1 trong các room đã join ở trên -> cộng dồn badge ngay, không cần tải lại
   // danh sách. Bỏ qua tin do chính mình gửi, và bỏ qua đơn đang mở popup (popup tự đánh dấu đã đọc).
