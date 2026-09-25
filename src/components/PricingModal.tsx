@@ -650,30 +650,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     setOptions((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // Đá tấm Sale nhập sẵn (chưa gắn đá chủ nào) tự copy thành con của MỖI đá chủ mới Order thêm —
-  // copy độc lập (id mới), không phải tham chiếu chung, Order sửa/xóa riêng từng bên không ảnh hưởng nhau.
-  const handleAddMainStoneOption = () => {
-    const newMainId = addStoneRow('MAIN');
-    // Đá tấm chưa gắn đá chủ nào (Sale nhập sẵn, chưa từng copy đi đâu) — dùng làm template lần
-    // thêm đá chủ ĐẦU TIÊN. Từ lần 2 trở đi, đá tấm đó đã có parentId (đã gắn vào đá chủ trước),
-    // không còn "orphan" nữa — fallback lấy đúng đá tấm của đá chủ ĐẦU TIÊN đang có làm template,
-    // để đá chủ nào thêm sau cũng tự có sẵn đá tấm giống các đá chủ trước, không phải nhập lại tay.
-    const orphanSides = calcStoneRows.filter((r) => r.stoneType === 'SIDE' && !r.parentId);
-    const firstMain = calcStoneRows.find((r) => r.stoneType === 'MAIN' && r.id !== newMainId);
-    const templateSides =
-      orphanSides.length > 0
-        ? orphanSides
-        : firstMain
-          ? calcStoneRows.filter((r) => r.stoneType === 'SIDE' && r.parentId === firstMain.id)
-          : [];
-    if (templateSides.length > 0) {
-      setCalcStoneRows((prev) => [
-        ...prev,
-        ...templateSides.map((r) => ({ ...r, id: `${newMainId}_${r.id}`, parentId: newMainId })),
-      ]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -1357,7 +1333,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                       <button
                         type="button"
-                        onClick={handleAddMainStoneOption}
+                        onClick={() => addStoneRow('MAIN')}
                         className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
                       >
                         + Thêm option đá mới
