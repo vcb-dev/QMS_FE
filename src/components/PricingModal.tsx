@@ -704,6 +704,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     .map((opt, idx) => ({ opt, idx }))
     .filter(({ opt }) => opt.quotedPrice != null);
 
+  const allPricedSelected = pricedOptions.length > 0 && pricedOptions.every(({ opt }) => opt.isSelected);
+  const handleToggleSelectAll = () => {
+    const pricedIdxSet = new Set(pricedOptions.map(({ idx }) => idx));
+    const nextSelected = !allPricedSelected;
+    setOptions((prev) => prev.map((opt, i) => (pricedIdxSet.has(i) ? { ...opt, isSelected: nextSelected } : opt)));
+  };
+
   return (
     <div className={modalBackdropCls}>
       <div
@@ -742,9 +749,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   Các Phương Án Báo Giá ({pricedOptions.length})
                 </h3>
               </div>
-              <span className="text-[14.5px] text-muted">
-                Chọn các phương án muốn gửi báo giá cho khách
-              </span>
+              <div className="flex items-center gap-[10px]">
+                <span className="text-[14.5px] text-muted">
+                  Chọn các phương án muốn gửi báo giá cho khách
+                </span>
+                {pricedOptions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[14px] font-extrabold text-[#0f172a] cursor-pointer"
+                  >
+                    {allPricedSelected ? 'Bỏ chọn hết' : 'Chọn hết'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {pricedOptions.length === 0 ? (
