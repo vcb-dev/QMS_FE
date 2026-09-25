@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp, Zap } from 'lucide-react';
-import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role } from '../types';
+import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role, StoneRow } from '../types';
 import { formatStoneDisplay } from '../utils/stoneFormatter';
 import {
   fetchMasterData,
@@ -280,13 +280,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
-      // Sale lưu 1 danh sách đá phẳng (không phân nhóm) — mọi đá chủ (MAIN) sale đã chọn đều
-      // được gắn kèm TOÀN BỘ đá tấm (SIDE) sale đã chọn, mỗi đá chủ có bản sao riêng để Order
-      // sửa/xóa độc lập từng nhóm sau này. Không có đá chủ nào thì đá tấm giữ nguyên (chưa gắn).
+      // Dựng lại danh sách đá từ dữ liệu BE — giữ lại dbId/dbParentStoneId thật để map nhóm.
       const loadedRows = primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
         const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
         return {
-          id: `stone_${idx}_${Date.now()}`,
+          localId: `stone_${idx}_${Date.now()}`,
+          dbId: s.id,
+          dbParentStoneId: s.parentStoneId ?? null,
           stoneType: (s.stoneType || s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
           stoneId: s.stoneId,
           stoneName: s.stoneName || s.stone?.name || catalogMatch?.name,
@@ -294,20 +294,45 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         };
       });
       const loadedMainRows = loadedRows.filter((r) => r.stoneType === 'MAIN');
-      const loadedSideTemplates = loadedRows.filter((r) => r.stoneType === 'SIDE');
-      const finalStoneRows =
-        loadedMainRows.length > 0 && loadedSideTemplates.length > 0
-          ? [
-              ...loadedMainRows,
-              ...loadedMainRows.flatMap((mainRow) =>
-                loadedSideTemplates.map((tpl, idx) => ({
-                  ...tpl,
-                  id: `stone_side_${mainRow.id}_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-                  parentId: mainRow.id,
-                })),
-              ),
-            ]
-          : loadedRows;
+      const loadedSideRows = loadedRows.filter((r) => r.stoneType === 'SIDE');
+      // Dữ liệu MỚI (đã có cột parent_stone_id ở BE) — mọi dòng có dbId thật, SIDE tự biết đúng
+      // đá chủ nào qua dbParentStoneId, không cần đoán nữa.
+      const hasRealGroupingData = loadedRows.length > 0 && loadedRows.every((r) => r.dbId);
+      const dbIdToLocalId = new Map(loadedRows.map((r) => [r.dbId, r.localId]));
+
+      let finalStoneRows: StoneRow[];
+      if (hasRealGroupingData) {
+        // Dữ liệu mới: map thẳng 1-1, SIDE nào có dbParentStoneId thật thì trỏ đúng local id của
+        // đá chủ đó; không có (orphan) thì giữ nguyên không parentId.
+        finalStoneRows = loadedRows.map((r) => ({
+          id: r.localId,
+          stoneType: r.stoneType,
+          stoneId: r.stoneId,
+          stoneName: r.stoneName,
+          qty: r.qty,
+          ...(r.stoneType === 'SIDE' && r.dbParentStoneId && dbIdToLocalId.has(r.dbParentStoneId)
+            ? { parentId: dbIdToLocalId.get(r.dbParentStoneId)! }
+            : {}),
+        }));
+      } else if (loadedMainRows.length > 0 && loadedSideRows.length > 0) {
+        // Dữ liệu CŨ (lưu trước khi có cột parent_stone_id) — fallback: gắn hết đá tấm cho mọi
+        // đá chủ như trước đây (không biết đá tấm nào thuộc đá chủ nào).
+        finalStoneRows = [
+          ...loadedMainRows.map((r) => ({ id: r.localId, stoneType: r.stoneType, stoneId: r.stoneId, stoneName: r.stoneName, qty: r.qty })),
+          ...loadedMainRows.flatMap((mainRow) =>
+            loadedSideRows.map((tpl, idx) => ({
+              id: `stone_side_${mainRow.localId}_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              stoneType: tpl.stoneType,
+              stoneId: tpl.stoneId,
+              stoneName: tpl.stoneName,
+              qty: tpl.qty,
+              parentId: mainRow.localId,
+            })),
+          ),
+        ];
+      } else {
+        finalStoneRows = loadedRows.map((r) => ({ id: r.localId, stoneType: r.stoneType, stoneId: r.stoneId, stoneName: r.stoneName, qty: r.qty }));
+      }
       setCalcStoneRows(finalStoneRows);
       setCalcStoneMode('catalog');
     } else if (primaryOpt?.stoneCost != null && Number(primaryOpt.stoneCost) > 0) {
@@ -382,7 +407,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     ctx: {
       laborCost: number;
       vatVal: number;
-      stoneSelections?: { stoneId: string; quantity: number }[];
+      stoneSelections?: { stoneId: string; quantity: number; parentIndex?: number }[];
       stoneDesc: string;
       groupId: string;
       locked: boolean;
@@ -459,14 +484,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const sideStonesOfMain = (mainRowId: string) =>
         calcStoneRows
           .filter((r) => r.stoneId && r.stoneType === 'SIDE' && r.parentId === mainRowId)
-          .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }));
+          .map((r) => ({ stoneId: r.stoneId, quantity: r.qty, parentIndex: 0 }));
       // Tên phương án chỉ hiện đá CHỦ (kèm lát cắt + size), không ghép tên đá tấm vào — trừ tổ hợp
       // không có đá chủ (orphanSideSelections bên dưới), lúc đó phải ghi rõ là đá tấm gì.
       const mainStoneLabel = (stoneId: string) => {
         const s = stoneCatalog.find((c) => c.id === stoneId);
         return s ? [s.name, s.cut, s.size].filter(Boolean).join(' - ') : stoneName(stoneId);
       };
-      const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number }[]; stoneDesc: string }[] = [
+      const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number; parentIndex?: number }[]; stoneDesc: string }[] = [
         ...mainStoneRows.map((mainRow) => ({
           stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...sideStonesOfMain(mainRow.id)],
           stoneDesc: mainStoneLabel(mainRow.stoneId),
@@ -498,7 +523,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         weightChi: number;
         laborCost: number;
         stoneCost?: number;
-        stones?: { stoneId: string; quantity: number }[];
+        stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
         vatRate: number;
         silverMultiplier?: number;
       }[] = [];
@@ -535,7 +560,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         weightChi: number;
         laborCost: number;
         stoneCost?: number;
-        stones?: { stoneId: string; quantity: number }[];
+        stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
         vatRate: number;
         silverMultiplier?: number;
       }[] = [];

@@ -458,7 +458,7 @@ export async function changeQuoteStatus(id: string, payload: {
   materialWeights?: { materialId: string; weightChi: number }[];
   manualStoneName?: string;
   manualStonePrice?: number;
-  stones?: { stoneId: string; quantity: number }[];
+  stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
   inspectionFee?: number;
 }) {
   return apiCall(api.patch(`/quote-requests/${id}/status`, payload), 'Lỗi khi cập nhật trạng thái yêu cầu');
@@ -488,13 +488,13 @@ interface SanitizedQuoteOptionPayload {
   note?: string;
   stoneDescription?: string;
   materials?: { materialId: string; weightChi?: number }[];
-  stones?: { stoneId: string; quantity: number }[];
+  stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
 }
 
 function sanitizeQuoteOption(
   opt: QuoteOptionDraft | null | undefined,
   fallbackMaterials?: { materialId: string; weightChi: number }[],
-  fallbackStones?: { stoneId: string; quantity: number }[],
+  fallbackStones?: { stoneId: string; quantity: number; parentIndex?: number }[],
 ): SanitizedQuoteOptionPayload | null | undefined {
   if (!opt) return opt;
 
@@ -572,9 +572,14 @@ function sanitizeQuoteOption(
         const sId = s.stoneId || s.id;
         if (!sId || typeof sId !== 'string') return null;
         const qty = parseInt(String(s.quantity ?? s.qty ?? 1), 10) || 1;
+        const parentIndex =
+          typeof s.parentIndex === 'number' && Number.isInteger(s.parentIndex) && s.parentIndex >= 0
+            ? s.parentIndex
+            : undefined;
         return {
           stoneId: sId,
           quantity: qty,
+          ...(parentIndex !== undefined ? { parentIndex } : {}),
         };
       })
       .filter((s): s is NonNullable<typeof s> => s !== null);
@@ -596,7 +601,7 @@ export async function completeQuoteRequest(
     materialWeights?: { materialId: string; weightChi: number }[];
     manualStoneName?: string;
     manualStonePrice?: number;
-    stones?: { stoneId: string; quantity: number }[];
+    stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
     inspectionFee?: number;
   },
   version?: number,

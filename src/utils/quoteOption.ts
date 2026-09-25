@@ -132,7 +132,7 @@ export const batchResultToOption = (input: {
   vat: number;
   locked: boolean;
   groupId?: string;
-  stones?: { stoneId: string; quantity: number }[];
+  stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
   stoneDescription?: string;
   note?: string;
 }): QuoteOption | null => {

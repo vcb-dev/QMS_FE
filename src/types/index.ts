@@ -1,4 +1,4 @@
-﻿export type Role = 'SALE' | 'ORDER' | 'ADMIN';
+export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
 export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CLOSED';
 
@@ -132,6 +132,9 @@ export interface QuoteOptionStone {
   // `stone` nữa — `stone` bên dưới chỉ còn dùng ở vài chỗ khác đọc dữ liệu chưa qua mapOptionDetail.
   stoneType?: string;
   quantity: number;
+  // Trỏ tới id (ở trên) của dòng đá CHỦ (MAIN) mà đá tấm này gắn riêng — null/undefined = đá chủ,
+  // hoặc đá tấm orphan (dùng chung, không gắn đá chủ cụ thể nào). Chỉ có khi load lại option đã lưu.
+  parentStoneId?: string | null;
   stone?: {
     id: string;
     name: string;
@@ -201,6 +204,9 @@ export interface QuoteOptionDraftStone {
   id?: string;
   quantity?: number | string;
   qty?: number | string;
+  // Vị trí (index 0-based) của dòng đá CHỦ trong CHÍNH mảng stones[] gửi lên — BE resolve thành
+  // parentStoneId thật lúc insert. Chỉ set khi đá tấm này gắn riêng cho 1 đá chủ cụ thể.
+  parentIndex?: number;
 }
 
 export interface QuoteOptionDraft {
