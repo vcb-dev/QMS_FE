@@ -27,6 +27,7 @@ interface PricingModalProps {
     price: number,
     vat: number,
     options?: QuoteOption[],
+    extras?: { inspectionFee?: number },
   ) => Promise<void>;
   onOpenCalculator?: () => void;
   selectedReq?: QuoteRequest | null;
@@ -82,6 +83,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     stoneName,
   } = useMaterialStoneRows(dbMaterials, stoneCatalog);
   const [calcLaborCost, setCalcLaborCost] = useState<string>(String(PRICING_DEFAULTS.LABOR_COST));
+  // Tiền kiểm định Order nhập — dùng chung cho mọi phương án tính trong modal này, cộng vào
+  // quotedPrice ở BE (không tính ở FE). Lưu vào QuoteRequest lúc gửi báo giá.
+  const [calcInspectionFee, setCalcInspectionFee] = useState<string>('0');
   const [calcVat, setCalcVat] = useState<string>(String(PRICING_DEFAULTS.VAT_PCT));
   const [calcIncludeVat, setCalcIncludeVat] = useState<boolean>(true);
   const [calcSilverMultiplier, setCalcSilverMultiplier] = useState<number>(3);
@@ -125,6 +129,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     if (!isOpen || !selectedReq) return;
 
     setCompareRows([]);
+    setCalcInspectionFee(selectedReq.inspectionFee != null ? String(selectedReq.inspectionFee) : '0');
 
     // Bản nháp chưa có giá (VD: mỗi chất liệu Sale chọn lúc tạo đơn — BE tự tách thành 1 option
     // nháp/chất liệu, xem quote-requests.service.ts) không phải 1 phương án báo giá thật — không
@@ -430,6 +435,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const results = await calculatePriceBatchApi({
         categoryId: selectedReq?.category?.id || undefined,
         includeVat: calcIncludeVat,
+        inspectionFee: parseFloat(calcInspectionFee) || 0,
         items: [...mainItems, ...compareItems],
       });
 
@@ -535,7 +541,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmit(primaryPrice, primaryVat, options);
+      await onSubmit(primaryPrice, primaryVat, options, { inspectionFee: parseFloat(calcInspectionFee) || 0 });
       onClose();
     } catch (err: any) {
       alert(err.message || 'Lỗi khi lưu báo giá');
@@ -922,8 +928,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   )}
                 </div>
 
-                {/* 2. Tiền công & VAT */}
-                <div className="grid grid-cols-[1fr_140px] gap-[12px]">
+                {/* 2. Tiền kiểm định, tiền công & VAT — cùng 1 dòng. Tiền kiểm định + tiền công chia
+                    đều, VAT nhỏ bên phải (chỉ chứa số % + checkbox "Cộng"). */}
+                <div className="grid grid-cols-[1fr_1fr_150px] gap-[12px]">
+                  <div>
+                    <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
+                      Tiền Kiểm Định (₫)
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNumberVN(calcInspectionFee)}
+                      onChange={(e) => setCalcInspectionFee(e.target.value.replace(/\D/g, ''))}
+                      placeholder="0"
+                      className="w-full py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface"
+                    />
+                  </div>
+
                   <div>
                     <label className={clsx(labelUppercaseCls, 'block mb-[4px]')}>
                       Tiền Công Chế Tác (₫)
