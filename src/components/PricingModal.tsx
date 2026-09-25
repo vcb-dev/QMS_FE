@@ -275,8 +275,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
-      // 1 option đã lưu = đúng 1 tổ hợp (1 đá chủ + đá tấm của nó) — mọi đá tấm trong option này
-      // đều thuộc về đá chủ duy nhất đó (nếu có), gán parentId sau khi đã biết id đá chủ.
+      // Sale lưu 1 danh sách đá phẳng (không phân nhóm) — mọi đá chủ (MAIN) sale đã chọn đều
+      // được gắn kèm TOÀN BỘ đá tấm (SIDE) sale đã chọn, mỗi đá chủ có bản sao riêng để Order
+      // sửa/xóa độc lập từng nhóm sau này. Không có đá chủ nào thì đá tấm giữ nguyên (chưa gắn).
       const loadedRows = primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
         const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
         return {
@@ -287,10 +288,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           qty: s.quantity || 1,
         };
       });
-      const loadedMainId = loadedRows.find((r) => r.stoneType === 'MAIN')?.id;
-      setCalcStoneRows(
-        loadedRows.map((r) => (r.stoneType === 'SIDE' ? { ...r, parentId: loadedMainId } : r)),
-      );
+      const loadedMainRows = loadedRows.filter((r) => r.stoneType === 'MAIN');
+      const loadedSideTemplates = loadedRows.filter((r) => r.stoneType === 'SIDE');
+      const finalStoneRows =
+        loadedMainRows.length > 0 && loadedSideTemplates.length > 0
+          ? [
+              ...loadedMainRows,
+              ...loadedMainRows.flatMap((mainRow) =>
+                loadedSideTemplates.map((tpl, idx) => ({
+                  ...tpl,
+                  id: `stone_side_${mainRow.id}_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                  parentId: mainRow.id,
+                })),
+              ),
+            ]
+          : loadedRows;
+      setCalcStoneRows(finalStoneRows);
       setCalcStoneMode('catalog');
     } else if (primaryOpt?.stoneCost != null && Number(primaryOpt.stoneCost) > 0) {
       setCalcManualStonePrice(String(primaryOpt.stoneCost));
