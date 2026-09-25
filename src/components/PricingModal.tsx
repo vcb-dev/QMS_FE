@@ -437,8 +437,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const mainStoneRows =
         calcStoneMode === 'catalog' ? calcStoneRows.filter((r) => r.stoneId && r.stoneType === 'MAIN') : [];
       const mainStoneRowIds = new Set(mainStoneRows.map((r) => r.id));
-      // Đá tấm không có parentId hợp lệ (dữ liệu cũ trước khi tách nhóm) — coi như đính kèm chung.
-      const sharedSideStoneSelections =
+      // Đá tấm không gắn đúng 1 đá chủ hợp lệ (chưa gắn, hoặc đá chủ cha chưa chọn sản phẩm) — tự
+      // thành 1 phương án riêng (chỉ có đá tấm, không đá chủ), KHÔNG cộng dồn vào các đá chủ khác.
+      const orphanSideSelections =
         calcStoneMode === 'catalog'
           ? calcStoneRows
               .filter((r) => r.stoneId && r.stoneType === 'SIDE' && !(r.parentId && mainStoneRowIds.has(r.parentId)))
@@ -453,24 +454,26 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         const s = stoneCatalog.find((c) => c.id === stoneId);
         return s ? [s.name, s.cut, s.size].filter(Boolean).join(' - ') : stoneName(stoneId);
       };
-      const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number }[]; stoneDesc: string }[] =
-        mainStoneRows.length > 0
-          ? mainStoneRows.map((mainRow) => {
-              const allSide = [...sideStonesOfMain(mainRow.id), ...sharedSideStoneSelections];
-              return {
-                stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...allSide],
-                stoneDesc: mainStoneLabel(mainRow.stoneId),
-              };
-            })
-          : [
+      const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number }[]; stoneDesc: string }[] = [
+        ...mainStoneRows.map((mainRow) => ({
+          stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...sideStonesOfMain(mainRow.id)],
+          stoneDesc: mainStoneLabel(mainRow.stoneId),
+        })),
+        ...(orphanSideSelections.length > 0
+          ? [
               {
-                stoneSelections: sharedSideStoneSelections.length > 0 ? sharedSideStoneSelections : undefined,
-                stoneDesc:
-                  calcStoneMode === 'manual'
-                    ? calcManualStoneName
-                    : sharedSideStoneSelections.map((s) => stoneName(s.stoneId)).join(', '),
+                stoneSelections: orphanSideSelections,
+                stoneDesc: orphanSideSelections.map((s) => stoneName(s.stoneId)).join(', '),
               },
-            ];
+            ]
+          : []),
+      ];
+      if (stoneCombos.length === 0) {
+        stoneCombos.push({
+          stoneSelections: undefined,
+          stoneDesc: calcStoneMode === 'manual' ? calcManualStoneName : '',
+        });
+      }
 
       // Các dòng "loại vàng khác" hợp lệ (đã chọn chất liệu + nhập khối lượng > 0).
       const compareValid = compareRows.filter(
