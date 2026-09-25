@@ -295,9 +295,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       });
       const loadedMainRows = loadedRows.filter((r) => r.stoneType === 'MAIN');
       const loadedSideRows = loadedRows.filter((r) => r.stoneType === 'SIDE');
-      // Dữ liệu MỚI (đã có cột parent_stone_id ở BE) — mọi dòng có dbId thật, SIDE tự biết đúng
-      // đá chủ nào qua dbParentStoneId, không cần đoán nữa.
-      const hasRealGroupingData = loadedRows.length > 0 && loadedRows.every((r) => r.dbId);
+      // Dòng nào cũng có dbId thật (id luôn tồn tại kể cả dữ liệu cũ) — không dùng để phân biệt
+      // được. Chỉ tin dbParentStoneId khi có ÍT NHẤT 1 đá tấm mang giá trị thật — option lưu SAU
+      // khi có cột parent_stone_id mới có, option lưu TRƯỚC đó (dù mới hay cũ) luôn toàn NULL.
+      const hasRealGroupingData = loadedSideRows.length > 0 && loadedSideRows.some((r) => r.dbParentStoneId);
       const dbIdToLocalId = new Map(loadedRows.map((r) => [r.dbId, r.localId]));
 
       let finalStoneRows: StoneRow[];
