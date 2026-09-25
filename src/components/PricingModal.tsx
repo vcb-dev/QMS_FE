@@ -369,7 +369,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   ): QuoteOption | null =>
     batchResultToOption({
       optionName: ctx.locked
-        ? `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
+        ? ctx.stoneSuffix
+          ? `${materialName} · ${weightChi} chỉ · Loại vàng khác · ${ctx.stoneSuffix}`
+          : `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
         : ctx.stoneSuffix
           ? `${materialName} · ${weightChi} chỉ · ${ctx.stoneSuffix}`
           : `${materialName} · ${weightChi} chỉ`,
@@ -457,31 +459,37 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               },
             ];
 
-      // Đá dùng cho "Phương án loại vàng khác" (tham khảo) — giữ nguyên hành vi cũ (KHÔNG tách theo
-      // đá chủ), đỡ nổ số lượng phương án tham khảo khi autoGoldMode tự liệt kê nhiều dòng.
-      const stoneSelections =
-        calcStoneMode === 'catalog' && calcStoneRows.length > 0
-          ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-          : undefined;
-      const stoneDesc =
-        calcStoneMode === 'manual'
-          ? calcManualStoneName
-          : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', ');
-
       // Các dòng "loại vàng khác" hợp lệ (đã chọn chất liệu + nhập khối lượng > 0).
       const compareValid = compareRows.filter(
         (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
       );
-      const compareItems = compareValid.map((r) => ({
-        materialNameOrKey: r.materialName,
-        weightChi: parseFloat(r.weightChi) || 0,
-        laborCost: l,
-        stoneCost: manualStoneCost || undefined,
-        stones: stoneSelections,
-        vatRate: vatVal,
-        // BE chỉ áp hệ số nhân cho chất liệu dùng công thức MULTIPLIER (Bạc); gửi luôn cũng an toàn.
-        silverMultiplier: isSilverMaterialId(r.materialId) ? calcSilverMultiplier : undefined,
-      }));
+      // (chất liệu so sánh) × (tổ hợp đá chủ) — giống mainItems, không còn tính riêng 1 lần với
+      // list đá phẳng chung nữa: mỗi đá chủ vẫn phải ra 1 phương án so sánh riêng cho từng chất liệu.
+      const compareItems: {
+        materialNameOrKey: string;
+        weightChi: number;
+        laborCost: number;
+        stoneCost?: number;
+        stones?: { stoneId: string; quantity: number }[];
+        vatRate: number;
+        silverMultiplier?: number;
+      }[] = [];
+      const compareItemMeta: { row: (typeof compareValid)[number]; combo: (typeof stoneCombos)[number] }[] = [];
+      compareValid.forEach((r) => {
+        stoneCombos.forEach((combo) => {
+          compareItems.push({
+            materialNameOrKey: r.materialName,
+            weightChi: parseFloat(r.weightChi) || 0,
+            laborCost: l,
+            stoneCost: manualStoneCost || undefined,
+            stones: combo.stoneSelections,
+            vatRate: vatVal,
+            // BE chỉ áp hệ số nhân cho chất liệu dùng công thức MULTIPLIER (Bạc); gửi luôn cũng an toàn.
+            silverMultiplier: isSilverMaterialId(r.materialId) ? calcSilverMultiplier : undefined,
+          });
+          compareItemMeta.push({ row: r, combo });
+        });
+      });
 
       // Bấm "Tính Giá Ngay" lại cho cùng 1 chất liệu (giá có thể đổi) — khớp theo materialId thay
       // vì giá, để nhận đúng groupId cũ (addOptionsToList sẽ thay giá, không tách card mới).
@@ -560,15 +568,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         return;
       }
 
-      const compareOpts = compareValid.map((r, idx) => {
+      const compareOpts = compareItems.map((item, idx) => {
         const resItem = results[mainItems.length + idx];
-        return mapOption(r.materialName, r.materialId, parseFloat(r.weightChi) || 0, resItem, {
+        const { row, combo } = compareItemMeta[idx];
+        return mapOption(row.materialName, row.materialId, item.weightChi, resItem, {
            laborCost: l,
            vatVal,
-           stoneSelections,
-           stoneDesc,
+           stoneSelections: combo.stoneSelections,
+           stoneDesc: combo.stoneDesc,
            groupId: primaryGroupId,
-           locked: true
+           locked: true,
+           stoneSuffix: stoneCombos.length > 1 ? combo.stoneDesc : undefined,
         });
       }).filter((o): o is QuoteOption => !!o);
 
