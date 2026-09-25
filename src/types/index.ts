@@ -1,4 +1,4 @@
-﻿export type Role = 'SALE' | 'ORDER' | 'ADMIN';
+export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
 export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CLOSED';
 
@@ -223,6 +223,7 @@ export interface QuoteRequest {
   code: string;
   status: QuoteStatus;
   productName: string;
+  department?: { id: string; name: string };
   desiredLeadTime?: string;
   desiredDate?: string;
   customerMeasurements?: string;
@@ -530,6 +531,15 @@ export interface RequestsPageProps {
   setCategoryFilter: (v: string) => void;
   materialFilter: string;
   setMaterialFilter: (v: string) => void;
+  saleFilter?: string;
+  setSaleFilter?: (v: string) => void;
+  pricerFilter?: string;
+  setPricerFilter?: (v: string) => void;
+  departmentFilter?: string;
+  setDepartmentFilter?: (v: string) => void;
+  departments?: { id: string; name: string }[];
+  saleUsers?: User[];
+  pricerUsers?: User[];
   ownerFilter: string;
   setOwnerFilter: (v: string) => void;
   timeRangeFilter: string;

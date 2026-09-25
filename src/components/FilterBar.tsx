@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
-import type { Material, ProductCategory, StatusCounts } from '../types';
+import type { Material, ProductCategory, StatusCounts, User } from '../types';
 import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 import {
@@ -40,6 +40,15 @@ interface FilterBarProps {
   onEndDateChange?: (dateStr: string) => void;
   categories: ProductCategory[];
   materials: Material[];
+  saleFilter?: string;
+  onSaleFilterChange?: (userId: string) => void;
+  pricerFilter?: string;
+  onPricerFilterChange?: (userId: string) => void;
+  departmentFilter?: string;
+  onDepartmentFilterChange?: (deptId: string) => void;
+  departments?: { id: string; name: string }[];
+  saleUsers?: User[];
+  pricerUsers?: User[];
   onResetFilters: () => void;
   totalFiltered: number;
   totalTabItems: number;
@@ -69,6 +78,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onEndDateChange,
   categories,
   materials,
+  saleFilter = 'ALL',
+  onSaleFilterChange,
+  pricerFilter = 'ALL',
+  onPricerFilterChange,
+  departmentFilter = 'ALL',
+  onDepartmentFilterChange,
+  departments = [],
+  saleUsers = [],
+  pricerUsers = [],
   onResetFilters,
   actions,
   includeLocked = false,
@@ -92,6 +110,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     (scopeFilter !== 'ALL' ? 1 : 0) +
     (categoryFilter !== 'ALL' ? 1 : 0) +
     (materialFilter !== 'ALL' ? 1 : 0) +
+    (saleFilter !== 'ALL' ? 1 : 0) +
+    (pricerFilter !== 'ALL' ? 1 : 0) +
+    (departmentFilter !== 'ALL' ? 1 : 0) +
     (timeRangeFilter !== 'ALL' ? 1 : 0) +
     (startDateFilter ? 1 : 0) +
     (endDateFilter ? 1 : 0) +
@@ -240,6 +261,60 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       <option value="ALL">Tất cả chất liệu</option>
                       {materials.map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className={selectArrowCls} />
+                  </div>
+                </div>
+
+                {/* Sale */}
+                <div>
+                  <label className={popoverLabelCls}>Sale</label>
+                  <div className="relative">
+                    <select
+                      value={saleFilter}
+                      onChange={(e) => onSaleFilterChange?.(e.target.value)}
+                      className={selectCls}
+                    >
+                      <option value="ALL">Tất cả Sale</option>
+                      {saleUsers.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className={selectArrowCls} />
+                  </div>
+                </div>
+
+                {/* Người báo giá */}
+                <div>
+                  <label className={popoverLabelCls}>Người báo giá</label>
+                  <div className="relative">
+                    <select
+                      value={pricerFilter}
+                      onChange={(e) => onPricerFilterChange?.(e.target.value)}
+                      className={selectCls}
+                    >
+                      <option value="ALL">Tất cả Người báo giá</option>
+                      {pricerUsers.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className={selectArrowCls} />
+                  </div>
+                </div>
+
+                {/* Phòng ban */}
+                <div>
+                  <label className={popoverLabelCls}>Phòng ban</label>
+                  <div className="relative">
+                    <select
+                      value={departmentFilter}
+                      onChange={(e) => onDepartmentFilterChange?.(e.target.value)}
+                      className={selectCls}
+                    >
+                      <option value="ALL">Tất cả Phòng ban</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
                     <ChevronDown size={14} className={selectArrowCls} />
