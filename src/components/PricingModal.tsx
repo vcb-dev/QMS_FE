@@ -388,8 +388,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     batchResultToOption({
       optionName: ctx.locked
         ? ctx.stoneSuffix
-          ? `${materialName} · ${weightChi} chỉ · Loại vàng khác · ${ctx.stoneSuffix}`
-          : `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
+          ? `${materialName} · ${weightChi} chỉ · Loại chất liệu khác · ${ctx.stoneSuffix}`
+          : `${materialName} · ${weightChi} chỉ · Loại chất liệu khác (tham khảo)`
         : ctx.stoneSuffix
           ? `${materialName} · ${weightChi} chỉ · ${ctx.stoneSuffix}`
           : `${materialName} · ${weightChi} chỉ`,
@@ -402,7 +402,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       groupId: ctx.groupId,
       stones: ctx.stoneSelections,
       stoneDescription: ctx.stoneDesc,
-      note: ctx.locked ? 'Loại vàng khác — chỉ tham khảo' : 'Tính từ máy tính giá',
+      note: ctx.locked ? 'Loại chất liệu khác — chỉ tham khảo' : 'Tính từ máy tính giá',
     });
 
   const handleRunCalculate = async () => {
@@ -414,14 +414,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       return;
     }
 
-    // Dòng "loại vàng khác" đã chọn chất liệu nhưng CHƯA nhập khối lượng — bắt buộc nhập. Không áp
-    // dụng ở chế độ tự liệt kê vàng (autoGoldMode): phần lớn dòng auto rỗng theo thiết kế — bỏ qua
+    // Dòng "loại chất liệu khác" đã chọn chất liệu nhưng CHƯA nhập khối lượng — bắt buộc nhập. Không áp
+    // dụng ở chế độ tự liệt kê chất liệu (autoGoldMode): phần lớn dòng auto rỗng theo thiết kế — bỏ qua
     // lúc tính chứ không phải lỗi nhập thiếu.
     if (
       !autoGoldMode &&
       compareRows.some((r) => r.materialId && !((parseFloat(r.weightChi) || 0) > 0))
     ) {
-      setCalcError('Nhập khối lượng (chỉ) cho phương án loại vàng khác');
+      setCalcError('Nhập khối lượng (chỉ) cho phương án loại chất liệu khác');
       return;
     }
 
@@ -1062,7 +1062,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-[8px]">
                     <label className={labelUppercaseCls}>
-                      Phương án loại vàng khác (tham khảo)
+                      Phương án chất liệu khác (tham khảo)
                     </label>
                     {!autoGoldMode && (
                       <button
@@ -1077,7 +1077,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                   {compareRows.length === 0 ? (
                     <p className="text-[14.5px] text-faint m-0">
-                      Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
+                      Thêm chất liệu khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
                     </p>
                   ) : (
                     <div className="flex flex-col gap-[8px]">
