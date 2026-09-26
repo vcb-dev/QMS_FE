@@ -377,8 +377,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const next = [...prev];
       newOpts.forEach((opt) => {
         if (opt.quotedPrice == null) return;
+        // Mặc định tích chọn mọi phương án mới tính ra (trừ phương án bị khóa, VD hàng đính kèm
+        // của Sale) — Order chọn lọc bằng cách bỏ tích bớt, thay vì phải tự tích từng cái.
         if (opts.skipDedup) {
-          next.push(opt);
+          next.push({ ...opt, isSelected: !opt.locked });
           return;
         }
         const key = keyOf(opt);
@@ -386,7 +388,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         if (existingIdx >= 0) {
           next[existingIdx] = { ...opt, isSelected: next[existingIdx].isSelected };
         } else {
-          next.push(opt);
+          next.push({ ...opt, isSelected: !opt.locked });
         }
       });
       const hasSelected = next.some((o) => o.isSelected);
