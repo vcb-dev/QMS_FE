@@ -207,6 +207,33 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           });
         });
       }
+      // Phương án "loại chất liệu khác (tham khảo)" đã lưu — nạp lại vào compareRows để bấm "Tính
+      // Giá Ngay" tính lại được cả cụm (không chỉ phương án chính), khớp đúng note cố định
+      // mapOption gán lúc tạo (ctx.locked ? '...chỉ tham khảo' : ...). Không đụng các phương án phụ
+      // khác (tổ hợp đá riêng, báo giá nhanh...) — chỉ đúng loại này mới thuộc compareRows.
+      const compareOptions = realOptionsList.filter(
+        (opt) => opt !== targetOption && opt.note === 'Loại chất liệu khác — chỉ tham khảo',
+      );
+      const compareMaterials: { materialId: string; materialName: string; weightChi: string }[] = [];
+      compareOptions.forEach((opt: any) => {
+        (opt.materials || []).forEach((m: QuoteOptionMaterial) => {
+          compareMaterials.push({
+            materialId: m.materialId || m.id || '',
+            materialName: m.materialName || m.material?.name || '',
+            weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
+          });
+        });
+      });
+      if (compareMaterials.length > 0) {
+        setCompareRows(
+          compareMaterials.map((m, idx) => ({
+            id: `cmp_real_${idx}_${Date.now()}`,
+            materialId: m.materialId,
+            materialName: m.materialName,
+            weightChi: m.weightChi,
+          })),
+        );
+      }
     } else if (selectedReq.options && selectedReq.options.length > 0) {
       // Chưa phương án nào có giá thật — mỗi option hiện có là 1 nháp BE tự tách, ĐÚNG 1 chất
       // liệu riêng mỗi option (không trùng nhau). Chất liệu ĐẦU TIÊN làm chính (calcMaterialRows),
