@@ -211,14 +211,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       // Giá Ngay" tính lại được cả cụm (không chỉ phương án chính), khớp đúng note cố định
       // mapOption gán lúc tạo (ctx.locked ? '...chỉ tham khảo' : ...). Không đụng các phương án phụ
       // khác (tổ hợp đá riêng, báo giá nhanh...) — chỉ đúng loại này mới thuộc compareRows.
+      // Cùng 1 chất liệu tham khảo có thể lặp lại ở NHIỀU phương án (mỗi tổ hợp đá 1 phương án
+      // riêng, xem giải thích ở khối tổ hợp đá bên dưới) — chỉ lấy MỖI chất liệu 1 dòng, không lặp.
       const compareOptions = realOptionsList.filter(
         (opt) => opt !== targetOption && opt.note === 'Loại chất liệu khác — chỉ tham khảo',
       );
       const compareMaterials: { materialId: string; materialName: string; weightChi: string }[] = [];
+      const seenCompareMaterialIds = new Set<string>();
       compareOptions.forEach((opt: any) => {
         (opt.materials || []).forEach((m: QuoteOptionMaterial) => {
+          const materialId = m.materialId || m.id || '';
+          if (materialId && seenCompareMaterialIds.has(materialId)) return;
+          if (materialId) seenCompareMaterialIds.add(materialId);
           compareMaterials.push({
-            materialId: m.materialId || m.id || '',
+            materialId,
             materialName: m.materialName || m.material?.name || '',
             weightChi: m.weightChi != null ? String(m.weightChi) : '1.0',
           });
@@ -301,15 +307,36 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       setCalcVat(String(selectedReq.category.vatRate));
     }
 
-    if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
-      setCalcStoneRows(
-        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => ({
-          id: `stone_${idx}_${Date.now()}`,
-          stoneType: (s.stone?.stoneType as 'MAIN' | 'SIDE' | '') || '',
-          stoneId: s.stoneId,
-          qty: s.quantity || 1,
-        })),
-      );
+    // Nhiều phương án đã lưu có thể dùng CHUNG 1 tổ hợp đá (khác chất liệu, VD Vàng 10K + Vàng 14K
+    // cùng đính CZ Round) — máy tính giá cần TẤT CẢ tổ hợp đá riêng biệt đã lưu (mỗi tổ hợp = 1 dòng
+    // đá CHỦ trong calcStoneRows) để "Tính Giá Ngay" ra đủ lại từng đó phương án, không chỉ tổ hợp
+    // của phương án chính. Lấy đúng 1 phương án đại diện cho mỗi tổ hợp đá riêng biệt (chữ ký = tập
+    // stoneId đã sort, khớp keyOf trong addOptionsToList), rồi gộp đá của các phương án đại diện đó.
+    const stoneComboKey = (opt: any) => (opt.stones || []).map((s: any) => s.stoneId).sort().join(',');
+    let stoneSourceOptions: any[];
+    if (realOptionsList.length > 0) {
+      const seenStoneCombos = new Set<string>();
+      stoneSourceOptions = [];
+      realOptionsList.forEach((opt) => {
+        const key = stoneComboKey(opt);
+        if (!key || seenStoneCombos.has(key)) return;
+        seenStoneCombos.add(key);
+        stoneSourceOptions.push(opt);
+      });
+    } else {
+      stoneSourceOptions = primaryOpt ? [primaryOpt] : [];
+    }
+    const allStoneRows = stoneSourceOptions.flatMap((opt: any, optIdx: number) =>
+      (opt.stones || []).map((s: QuoteOptionStone, idx: number) => ({
+        id: `stone_${optIdx}_${idx}_${Date.now()}`,
+        stoneType: (s.stone?.stoneType as 'MAIN' | 'SIDE' | '') || '',
+        stoneId: s.stoneId,
+        qty: s.quantity || 1,
+      })),
+    );
+
+    if (allStoneRows.length > 0) {
+      setCalcStoneRows(allStoneRows);
       setCalcStoneMode('catalog');
     } else if (primaryOpt?.stoneCost != null && Number(primaryOpt.stoneCost) > 0) {
       setCalcManualStonePrice(String(primaryOpt.stoneCost));
