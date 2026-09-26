@@ -489,10 +489,13 @@ export function useQuoteRequests(
     if (!pricingReqId) return;
     const targetReq = requests.find((r) => r.id === pricingReqId);
     const version = targetReq?.version;
-    // Đơn đã có giá (QUOTED/CLOSED) mở lại PricingModal để SỬA giá — chỉ ghi đè đúng phương án
-    // đang chọn làm giá chính, khác completeQuoteRequest (xóa hết & tạo lại toàn bộ options, chỉ
-    // dùng cho lần báo giá đầu tiên khi đơn còn PROCESSING).
+    // Đơn đã có giá (QUOTED/CLOSED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
+    // completeQuoteRequest (xóa hết & tạo lại toàn bộ options, thêm/bớt/sửa tự do), chỉ khác action
+    // gửi lên (BE tự giữ nguyên status/assigneeId, không đẩy PROCESSING->QUOTED lần 2).
     const isEditingQuotedPrice = targetReq?.status === 'QUOTED' || targetReq?.status === 'CLOSED';
+    const fallbackOptions = options?.length
+      ? options
+      : [{ optionName: 'Phương án', quotedPrice, vat }];
     await runAction(
       'Đang cập nhật báo giá...',
       'Không thể báo giá',
@@ -500,7 +503,7 @@ export function useQuoteRequests(
         isEditingQuotedPrice
           ? editQuotedPrice(
               pricingReqId,
-              options?.find((o) => o.isSelected) || options?.[0] || { optionName: 'Phương án', quotedPrice, vat },
+              fallbackOptions,
               version,
               extras?.inspectionFee,
             )

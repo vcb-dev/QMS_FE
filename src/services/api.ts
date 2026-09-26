@@ -634,19 +634,21 @@ export async function completeQuoteRequest(
   return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version, inspectionFee: extras?.inspectionFee });
 }
 
-// Sửa giá đã báo cho đơn ĐANG QUOTED/CLOSED — chỉ gửi đúng 1 phương án (đang chọn làm giá chính),
-// khác completeQuoteRequest (gửi cả mảng, BE xóa hết & tạo lại). BE chỉ ghi đè đúng phương án chính
-// hiện có, giữ nguyên status/selectionStatus (CLOSED sửa giá thì vẫn CLOSED).
+// Sửa giá đã báo cho đơn ĐANG QUOTED/CLOSED — GIỐNG HỆT completeQuoteRequest (gửi cả mảng, BE xóa
+// hết & tạo lại toàn bộ phương án, thêm/bớt/sửa tự do), chỉ khác action. BE tự giữ nguyên
+// status/assigneeId (CLOSED sửa giá thì vẫn CLOSED, không đổi người báo giá).
 export async function editQuotedPrice(
   id: string,
-  option: QuoteOptionDraft,
+  options: QuoteOptionDraft[],
   version?: number,
   inspectionFee?: number,
 ) {
-  const cleanOption = sanitizeQuoteOption(option);
+  const cleanOptions = options
+    ?.map((opt) => sanitizeQuoteOption(opt))
+    .filter((opt): opt is SanitizedQuoteOptionPayload => !!opt);
   return changeQuoteStatus(id, {
     action: 'EDIT_PRICE',
-    options: cleanOption ? [cleanOption] : [],
+    options: cleanOptions,
     version,
     inspectionFee,
   });
