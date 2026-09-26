@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts, CalculatorHandoff, QuoteOption } from '../types';
 import {
   fetchQuoteRequests,
+  fetchQuoteRequestById,
   fetchMasterData,
   getAllUsersApi,
   fetchDepartments,
@@ -86,6 +87,9 @@ export function useQuoteRequests(
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingReq, setEditingReq] = useState<QuoteRequest | null>(null);
   const [pricingReqId, setPricingReqId] = useState<string | null>(null);
+  // Bản chi tiết đầy đủ (kèm stones của từng option) cho request đang mở PricingModal — mảng
+  // `requests` (GET list) dùng select rút gọn không có field `stones`, xem effect fetch bên dưới.
+  const [pricingReqDetail, setPricingReqDetail] = useState<QuoteRequest | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [returnReqId, setReturnReqId] = useState<string | null>(null);
   // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
@@ -570,11 +574,31 @@ export function useQuoteRequests(
     requests[0] ||
     null;
 
+  // GET /quote-requests (list, nguồn của `requests[]`) dùng select rút gọn không có field `stones`
+  // của option — mở PricingModal từ đó thì ô Thông Số Đá Quý luôn trống dù DB có đá thật. Tải lại
+  // bản chi tiết đầy đủ mỗi khi đổi pricingReqId, giống cách DetailPage.tsx đã xử lý cho selectedReq.
+  useEffect(() => {
+    if (!pricingReqId) {
+      setPricingReqDetail(null);
+      return;
+    }
+    let cancelled = false;
+    fetchQuoteRequestById(pricingReqId)
+      .then((data) => { if (!cancelled) setPricingReqDetail(data); })
+      .catch(() => { if (!cancelled) setPricingReqDetail(null); });
+    return () => { cancelled = true; };
+  }, [pricingReqId]);
+
   // Đơn PricingModal đang xử lý — PHẢI tra riêng theo pricingReqId, không được dùng chung
   // selectedReq (tra theo selectedId của DetailPage). Trước đây PricingModal nhận thẳng
   // selectedReq nên bấm "Báo Giá"/"Chốt giá" ở BẤT KỲ đơn nào cũng hiện data của đơn đang xem
   // chi tiết (hoặc requests[0] nếu chưa xem đơn nào) — sai hoàn toàn đơn vừa bấm.
-  const pricingReq = requests.find((r) => r.id === pricingReqId) || null;
+  // Ưu tiên bản chi tiết đầy đủ (pricingReqDetail) khi đã tải xong đúng đơn đang mở; fallback về
+  // data rút gọn trong requests[] trong lúc đang chờ fetch, tránh modal chớp trống lúc vừa mở.
+  const pricingReq =
+    pricingReqDetail?.id === pricingReqId
+      ? pricingReqDetail
+      : requests.find((r) => r.id === pricingReqId) || null;
 
   return {
     requests,
