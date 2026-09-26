@@ -129,9 +129,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   const [copiedOptIdx, setCopiedOptIdx] = useState<number | null>(null);
   const [copiedAllOpt, setCopiedAllOpt] = useState(false);
 
-  // Reset về ảnh đầu tiên khi chuyển sang đơn khác
+  // Phương án đang chọn xem ở "Bảng Kê Giá & VAT" — bấm vào 1 dòng trong "Các Phương Án Báo Giá"
+  // thì đổi bảng kê sang đúng phương án đó. Mặc định null = dùng phương án chính (finalOption).
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+
+  // Reset về ảnh đầu tiên và bỏ chọn phương án khi chuyển sang đơn khác
   useEffect(() => {
     setActiveImageIndex(0);
+    setSelectedOptionId(null);
   }, [selectedReq?.id]);
 
   // Xem ảnh phóng to — logic zoom/pan/phím tắt dùng chung ở <ImageLightbox>, ở đây chỉ giữ cờ mở/đóng
@@ -249,6 +254,12 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
   const finalOption = getPrimaryOption(selectedReq);
 
+  // Phương án đang hiển thị ở bảng kê giá bên phải — theo lựa chọn của người dùng nếu có bấm chọn,
+  // không thì mặc định về phương án chính như trước.
+  const displayedOption =
+    (selectedOptionId && pricedOptions.find((o) => o.id === selectedOptionId)) || finalOption;
+  const displayedPriceVal = displayedOption?.quotedPrice ? Number(displayedOption.quotedPrice) : 0;
+
 
   const STATUS_BADGE_LABELS: Record<string, string> = {
     PENDING: 'YÊU CẦU MỚI',
@@ -282,14 +293,20 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     ? formatDuration(new Date(selectedReq.acceptedAt || selectedReq.createdAt).getTime(), new Date(selectedReq.updatedAt).getTime())
     : null;
 
+  // "Báo giá nhanh" (Order gõ thẳng tổng tiền, không qua công thức) không có costBreakdown vì BE
+  // không tính formula cho option này (xem computeCostBreakdown ở option-mapper.util.ts) — chất
+  // liệu/khối lượng gõ kèm chỉ là ghi chú tự do, không đáng tin làm thông số sản phẩm hiển thị.
+  const isQuickPriceOption = !!finalOption && !finalOption.costBreakdown;
+
   // Đọc chất liệu từ phương án đang hiển thị (finalOption) — không lấy field cấp request
   // (selectedReq.materials/material chỉ là bản tóm tắt của phương án đại diện, có thể trống nếu
   // phương án đó chưa gắn chất liệu). "Vàng Trắng 18K" cũ là placeholder demo, hiện SAI cho mọi đơn
-  // khi thiếu data thật — đổi thành nhãn rõ ràng là chưa có dữ liệu.
+  // khi thiếu data thật — đổi thành nhãn rõ ràng là chưa có dữ liệu. Báo giá nhanh thì bỏ qua chất
+  // liệu của option, chỉ giữ chất liệu Sale đã gửi lúc tạo đơn (selectedReq.materials/material).
   const materialsList =
-    finalOption?.materials && finalOption.materials.length > 0
+    !isQuickPriceOption && finalOption?.materials && finalOption.materials.length > 0
       ? finalOption.materials.map((m) => m.materialName || m.material?.name).filter((n): n is string => !!n)
-      : finalOption?.materialName
+      : !isQuickPriceOption && finalOption?.materialName
         ? [finalOption.materialName]
         : selectedReq.materials && selectedReq.materials.length > 0
           ? selectedReq.materials.map((m) => m.name)
@@ -558,7 +575,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
                       <SpecBadge icon={<Tag size={14} color="#2563eb" />} label="DANH MỤC" value={selectedReq.category?.name || 'Chưa phân loại'} />
 
-                      <SpecBadge icon={<Scale size={14} color="#8b5cf6" />} label="KHỐI LƯỢNG (CHỈ)" value={weightDisplay} />
+                      {/* Báo giá nhanh: khối lượng gõ kèm không đáng tin làm thông số sản phẩm — ẩn hẳn */}
+                      {!isQuickPriceOption && (
+                        <SpecBadge icon={<Scale size={14} color="#8b5cf6" />} label="KHỐI LƯỢNG (CHỈ)" value={weightDisplay} />
+                      )}
 
                       <SpecBadge
                         icon={<Ruler size={14} color="#16a34a" />}
@@ -635,6 +655,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     isFinalStatus={selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'}
                     copied={copiedOptIdx === idx}
                     onCopy={() => handleCopyOptionPrice(idx, opt)}
+                    isSelected={opt.id ? opt.id === (selectedOptionId || finalOption?.id) : false}
+                    onSelect={() => opt.id && setSelectedOptionId(opt.id)}
                   />
                 ))}
               </div>
@@ -659,41 +681,52 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             </div>
 
             <div className="bg-surface rounded-[12px] p-[16px] border border-[#e5e7eb] mt-[4px]">
-              <span className="text-[13.5px] font-extrabold text-[#334155] tracking-[0.5px] uppercase block">
-                TỔNG BÁO GIÁ CHỐT
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[13.5px] font-extrabold text-[#334155] tracking-[0.5px] uppercase block">
+                  {selectedOptionId && selectedOptionId !== finalOption?.id ? 'GIÁ PHƯƠNG ÁN ĐANG XEM' : 'TỔNG BÁO GIÁ CHỐT'}
+                </span>
+                {selectedOptionId && selectedOptionId !== finalOption?.id && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOptionId(null)}
+                    className="text-[13px] font-bold text-[#2563eb] cursor-pointer bg-transparent border-0 p-0"
+                  >
+                    Về phương án chính
+                  </button>
+                )}
+              </div>
               <div
                 className={clsx(
                   'text-[29px] font-black mt-[4px]',
-                  priceVal > 0
+                  displayedPriceVal > 0
                     ? (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'
                         ? 'text-[#16a34a] not-italic opacity-100'
                         : 'text-[#334155] italic opacity-75')
                     : 'text-[#d97706] not-italic opacity-100',
                 )}
               >
-                {priceVal > 0 ? formatCurrency(priceVal) : 'Chưa có giá chốt'}
+                {displayedPriceVal > 0 ? formatCurrency(displayedPriceVal) : 'Chưa có giá chốt'}
               </div>
-              {priceVal > 0 && renderPriceBreakdownLines(
-                getPriceBreakdown({ priceBreakdown: finalOption?.priceBreakdown }),
+              {displayedPriceVal > 0 && renderPriceBreakdownLines(
+                getPriceBreakdown({ priceBreakdown: displayedOption?.priceBreakdown }),
               )}
-              
+
               {/* Sale chỉ cần biết có VAT hay không, không cần xem % chi tiết (ORDER/ADMIN mới xem chi tiết bên dưới) */}
-              {priceVal > 0 && currentRole === 'SALE' && finalOption && finalOption.vat != null && (
-                <div className={clsx('mt-[8px] text-[14.5px] font-bold', finalOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#334155]')}>
-                  {finalOption.vat > 0 ? 'Có VAT' : 'Không VAT'}
+              {displayedPriceVal > 0 && currentRole === 'SALE' && displayedOption && displayedOption.vat != null && (
+                <div className={clsx('mt-[8px] text-[14.5px] font-bold', displayedOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#334155]')}>
+                  {displayedOption.vat > 0 ? 'Có VAT' : 'Không VAT'}
                 </div>
               )}
 
               {/* Chi tiết cấu thành giá — chỉ ORDER/ADMIN xem, vẫn hiện kể cả khi đã CLOSED (Sale chỉ thấy tổng).
                   Chưa có giá chốt thì chưa có gì đáng tin để hiện — ẩn hết, chỉ để lại "Chưa có giá chốt". */}
-              {priceVal > 0 && (currentRole === 'ORDER' || currentRole === 'ADMIN') && finalOption &&
-               (finalOption.weightChi != null || finalOption.totalMetalCost != null || finalOption.laborCost != null || finalOption.stonePrice != null || finalOption.stoneCost != null || finalOption.vat != null) && (
+              {displayedPriceVal > 0 && (currentRole === 'ORDER' || currentRole === 'ADMIN') && displayedOption &&
+               (displayedOption.weightChi != null || displayedOption.totalMetalCost != null || displayedOption.laborCost != null || displayedOption.stonePrice != null || displayedOption.stoneCost != null || displayedOption.vat != null) && (
                 <div className="flex flex-col gap-[5px] mt-[10px] pt-[10px] border-t border-dashed border-border text-[14.5px] text-[#475569]">
-                  {finalOption.materials && finalOption.materials.length > 1 ? (
+                  {displayedOption.materials && displayedOption.materials.length > 1 ? (
                     <div className="bg-page py-[6px] px-[8px] rounded-[6px] mb-[4px] border border-border">
                       <div className="font-extrabold text-[#475569] mb-[3px]">Chi tiết từng kim loại:</div>
-                      {finalOption.materials.map((m: QuoteOptionMaterial, idx: number) => (
+                      {displayedOption.materials.map((m: QuoteOptionMaterial, idx: number) => (
                         <div key={idx} className="flex justify-between items-baseline text-[#334155] mt-[2px]">
                           <span>• {m.materialName || m.material?.name || 'Kim loại'} ({m.weightChi != null ? `${m.weightChi} chỉ` : '---'}):</span>
                           <strong>{m.rawCost != null ? formatCurrency(Number(m.rawCost)) : '---'}</strong>
@@ -701,73 +734,73 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                       ))}
                     </div>
                   ) : null}
-                  {finalOption.materialName && (
+                  {displayedOption.materialName && (
                     // động — component ngoài
-                    <SpecRow label="Chất liệu" value={finalOption.materialName} valueStyle={{ textAlign: 'right' }} />
+                    <SpecRow label="Chất liệu" value={displayedOption.materialName} valueStyle={{ textAlign: 'right' }} />
                   )}
-                  {finalOption.weightChi != null && (
-                    <SpecRow label="Tổng khối lượng" value={`${finalOption.weightChi} chỉ`} />
+                  {displayedOption.weightChi != null && (
+                    <SpecRow label="Tổng khối lượng" value={`${displayedOption.weightChi} chỉ`} />
                   )}
-                  {finalOption.costBreakdown ? (
+                  {displayedOption.costBreakdown ? (
                     <>
-                      {Number(finalOption.metalRawCost) > 0 && (
-                        <SpecRow label="Giá kim loại (giá gốc)" value={formatCurrency(Number(finalOption.metalRawCost))} />
+                      {Number(displayedOption.metalRawCost) > 0 && (
+                        <SpecRow label="Giá kim loại (giá gốc)" value={formatCurrency(Number(displayedOption.metalRawCost))} />
                       )}
-                      {finalOption.laborCost != null && (
-                        <SpecRow label="Công chế tác" value={formatCurrency(Number(finalOption.laborCost))} />
+                      {displayedOption.laborCost != null && (
+                        <SpecRow label="Công chế tác" value={formatCurrency(Number(displayedOption.laborCost))} />
                       )}
-                      {Number(finalOption.metalRawCost) > 0 && (
+                      {Number(displayedOption.metalRawCost) > 0 && (
                         <>
                           <SpecRow
                             label="VAT kim loại"
-                            value={formatCurrency(finalOption.costBreakdown.metalVatAmount)}
+                            value={formatCurrency(displayedOption.costBreakdown.metalVatAmount)}
                           />
                           <SpecRow
                             label="Tiền lãi kim loại"
                             // động — component ngoài
                             labelStyle={{ color: '#15803d', fontWeight: 700 }}
                             valueStyle={{ color: '#15803d' }}
-                            value={formatCurrency(finalOption.costBreakdown.metalProfit)}
+                            value={formatCurrency(displayedOption.costBreakdown.metalProfit)}
                           />
                         </>
                       )}
                     </>
-                  ) : finalOption.totalMetalCost != null && (
+                  ) : displayedOption.totalMetalCost != null && (
                     <SpecRow
-                      label={<>Giá kim loại {finalOption.stonePrice != null && '(đã gồm công, lãi, VAT)'}</>}
-                      value={formatCurrency(Number(finalOption.totalMetalCost))}
+                      label={<>Giá kim loại {displayedOption.stonePrice != null && '(đã gồm công, lãi, VAT)'}</>}
+                      value={formatCurrency(Number(displayedOption.totalMetalCost))}
                     />
                   )}
                   <div className="border-t border-dashed border-border my-[4px]" />
-                  {finalOption.costBreakdown && finalOption.stonePrice != null && finalOption.stoneCost != null ? (
+                  {displayedOption.costBreakdown && displayedOption.stonePrice != null && displayedOption.stoneCost != null ? (
                     <>
-                      <SpecRow label="Đá quý (giá gốc)" value={formatCurrency(Number(finalOption.stoneCost))} />
-                      <SpecRow label="VAT đá quý" value={formatCurrency(finalOption.costBreakdown.stoneVatAmount)} />
+                      <SpecRow label="Đá quý (giá gốc)" value={formatCurrency(Number(displayedOption.stoneCost))} />
+                      <SpecRow label="VAT đá quý" value={formatCurrency(displayedOption.costBreakdown.stoneVatAmount)} />
                       <SpecRow
                         label="Tiền lãi đá quý"
                         // động — component ngoài
                         labelStyle={{ color: '#15803d', fontWeight: 700 }}
                         valueStyle={{ color: '#15803d' }}
-                        value={formatCurrency(finalOption.costBreakdown.stoneProfit)}
+                        value={formatCurrency(displayedOption.costBreakdown.stoneProfit)}
                       />
                     </>
-                  ) : (finalOption.stonePrice != null || finalOption.stoneCost != null) && (
+                  ) : (displayedOption.stonePrice != null || displayedOption.stoneCost != null) && (
                     <SpecRow
-                      label={<>Tiền đá {finalOption.stonePrice != null && '(đã tính lãi)'}</>}
-                      value={formatCurrency(Number(finalOption.stonePrice ?? finalOption.stoneCost))}
+                      label={<>Tiền đá {displayedOption.stonePrice != null && '(đã tính lãi)'}</>}
+                      value={formatCurrency(Number(displayedOption.stonePrice ?? displayedOption.stoneCost))}
                     />
                   )}
-                  {!finalOption.costBreakdown && finalOption.totalMetalCost == null && finalOption.laborCost != null && (
-                    <SpecRow label="Tiền công" value={formatCurrency(Number(finalOption.laborCost))} />
+                  {!displayedOption.costBreakdown && displayedOption.totalMetalCost == null && displayedOption.laborCost != null && (
+                    <SpecRow label="Tiền công" value={formatCurrency(Number(displayedOption.laborCost))} />
                   )}
-                  {!finalOption.costBreakdown && finalOption.totalMetalCost == null && finalOption.vat != null && (
-                    <SpecRow label="VAT" value={`${finalOption.vat}%`} />
+                  {!displayedOption.costBreakdown && displayedOption.totalMetalCost == null && displayedOption.vat != null && (
+                    <SpecRow label="VAT" value={`${displayedOption.vat}%`} />
                   )}
-                  {finalOption.totalMetalCost != null && finalOption.metalRawCost == null && (finalOption.laborCost != null || finalOption.vat != null) && (
+                  {displayedOption.totalMetalCost != null && displayedOption.metalRawCost == null && (displayedOption.laborCost != null || displayedOption.vat != null) && (
                     <div className="text-[13.5px] text-[#334155] italic mt-[2px]">
-                      {finalOption.laborCost != null && `Trong đó tiền công vốn: ${formatCurrency(Number(finalOption.laborCost))}`}
-                      {finalOption.laborCost != null && finalOption.vat != null && ' · '}
-                      {finalOption.vat != null && `VAT ${finalOption.vat}%`}
+                      {displayedOption.laborCost != null && `Trong đó tiền công vốn: ${formatCurrency(Number(displayedOption.laborCost))}`}
+                      {displayedOption.laborCost != null && displayedOption.vat != null && ' · '}
+                      {displayedOption.vat != null && `VAT ${displayedOption.vat}%`}
                     </div>
                   )}
                 </div>

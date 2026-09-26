@@ -148,7 +148,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ images, activeInde
         onClick={(e) => e.stopPropagation()}
         onMouseDown={handleImageMouseDown}
         className={clsx(
-          "max-w-[85vw] max-h-[80vh] w-auto h-auto object-contain rounded-[10px] shadow-[0_16px_48px_rgba(0,0,0,0.6)] origin-center",
+          // min-w-0/min-h-0: flex item mặc định min-width/min-height = auto (= kích thước gốc ảnh)
+          // — với ảnh gốc lớn hơn 85vw/80vh, min-width auto đó thắng max-width (CSS: min luôn thắng
+          // max khi xung đột) nên ảnh tràn ra ngoài dù đã có max-w/max-h. Ép min về 0 để max-w/h ăn.
+          "min-w-0 min-h-0 max-w-[85vw] max-h-[80vh] w-auto h-auto object-contain rounded-[10px] shadow-[0_16px_48px_rgba(0,0,0,0.6)] origin-center",
           zoomScale > 1 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
         )}
         // động — giữ inline

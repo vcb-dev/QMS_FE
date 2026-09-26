@@ -12,17 +12,27 @@ interface OptionCardProps {
   isFinalStatus: boolean;
   copied: boolean;
   onCopy: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
 // 1 dòng trong danh sách "Các Phương Án Báo Giá" của DetailPage — tách riêng vì thân hàm .map() gốc
 // dài ~70 dòng, chỉ đọc từ opt/idx/isFinalStatus/copied nên tách được không cần đổi logic.
-export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus, copied, onCopy }) => {
+// Bấm vào dòng (trừ nút copy) để chọn xem chi tiết phương án đó ở "Bảng Kê Giá & VAT".
+export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus, copied, onCopy, isSelected, onSelect }) => {
   const price = opt.quotedPrice ? formatCurrency(Number(opt.quotedPrice)) : '---';
   const label = getOptionLabel(opt, idx);
   const summary = getOptionSummary(opt);
 
   return (
-    <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] rounded-[10px] bg-white border border-[#e2e8f0]">
+    <div
+      onClick={onSelect}
+      className={clsx(
+        'flex items-center justify-between gap-[12px] px-[14px] py-[12px] rounded-[10px] bg-white border transition-[border-color_0.15s_ease,box-shadow_0.15s_ease]',
+        onSelect && 'cursor-pointer',
+        isSelected ? 'border-[#2563eb] shadow-[0_0_0_2px_rgba(37,99,235,0.15)]' : 'border-[#e2e8f0]',
+      )}
+    >
       <div className="flex flex-col gap-[3px]">
         <span className="text-[16.5px] font-bold text-[#0f172a]">
           {label}
@@ -55,7 +65,7 @@ export const OptionCard: React.FC<OptionCardProps> = ({ opt, idx, isFinalStatus,
           <button
             type="button"
             title={`Copy dòng chữ: "${label}: ${price}"`}
-            onClick={onCopy}
+            onClick={(e) => { e.stopPropagation(); onCopy(); }}
             className={clsx(
               "shrink-0 flex items-center justify-center w-[26px] h-[26px] rounded-[7px] border border-[#cbd5e1] cursor-pointer",
               copied ? "bg-[#dcfce7] text-[#16a34a]" : "bg-white text-[#475569]"
