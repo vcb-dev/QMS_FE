@@ -719,55 +719,32 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // vào "Các Phương Án Báo Giá" — vẫn đính kèm đúng chất liệu/đá Sale đã yêu cầu lúc tạo đơn (đang
   // nằm sẵn trong calcMaterialRows/calcStoneRows do effect mở modal nạp vào), chỉ bỏ qua bước tính
   // giá theo công thức, không bỏ luôn thông tin chất liệu/đá.
-  const handleAddQuickOption = () => {
-    const price = parseFloat(quickPrice) || 0;
-    if (price <= 0) {
-      setCalcError('Vui lòng nhập số tiền báo giá hợp lệ');
-      return;
-    }
-    setCalcError(null);
-
-    const validMaterialRows = calcMaterialRows.filter(
-      (m) => m.materialId && (parseFloat(m.weightChi) || 0) > 0,
-    );
-    const materials = validMaterialRows.map((m) => ({
-      materialId: m.materialId,
-      weightChi: parseFloat(m.weightChi) || 0,
-    }));
-    const materialNameDisplay = validMaterialRows.map((m) => m.materialName).join(', ');
-
-    // Báo giá nhanh gộp CẢ calcStoneRows (có thể nhiều nhóm đá chủ/đá tấm khác nhau) vào 1 option
-    // duy nhất — khác máy tính giá (mỗi đá chủ tách 1 option riêng) nên phải tự tính parentIndex
-    // theo VỊ TRÍ thật trong mảng đang gửi (không cố định 0 như bên máy tính giá).
-    const validStoneRows = calcStoneMode === 'catalog' ? calcStoneRows.filter((r) => r.stoneId) : [];
-    const stoneSelections =
-      validStoneRows.length > 0
-        ? validStoneRows.map((r) => {
-            const parentIdx = r.parentId ? validStoneRows.findIndex((other) => other.id === r.parentId) : -1;
-            return {
-              stoneId: r.stoneId,
-              quantity: r.qty,
-              ...(parentIdx >= 0 ? { parentIndex: parentIdx } : {}),
-            };
-          })
-        : undefined;
-
-    addOptionsToList([
-      {
-        optionName: quickOptionName.trim() || 'Báo giá nhanh',
-        materialName: materialNameDisplay || undefined,
-        weightChi: validMaterialRows.length === 1 ? parseFloat(validMaterialRows[0].weightChi) || 0 : undefined,
-        materials: materials.length > 0 ? materials : undefined,
-        stones: stoneSelections,
-        stoneDescription: calcStoneMode === 'manual' ? (calcManualStoneName || undefined) : undefined,
-        stoneCost: calcStoneMode === 'manual' ? (parseFloat(calcManualStonePrice) || 0) : undefined,
-        quotedPrice: price,
-        vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,
-        groupId: `g_${Date.now()}`,
-      },
-    ], { skipDedup: true });
-    setQuickPrice('');
-  };
+        const handleAddQuickOption = () => {                                                     
+        const price = parseFloat(quickPrice) || 0;                                             
+        if (price <= 0) {                                                                      
+          setCalcError('Vui lòng nhập số tiền báo giá hợp lệ');                                
+          return;                                                                              
+        }             
+         if (price > 999_999_999_999) {
+          setCalcError('Số tiền báo giá không được vượt quá 999 tỷ đồng');
+          return;
+        }                                                                         
+        setCalcError(null);                                                                    
+                                                                                               
+        // Báo giá nhanh: thuần túy gồm tên + giá + VAT (không đá, không chất liệu)            
+        // Tự động bỏ các option nháp cũ của Sale và chọn option báo giá nhanh này làm chính   
+        setOptions((prev) => [                                                                 
+          ...prev.filter((o) => o.groupId !== 'sale').map((o) => ({ ...o, isSelected: false })),
+          {                                                                                    
+            optionName: quickOptionName.trim() || 'Báo giá nhanh',                             
+            quotedPrice: price,                                                                
+            vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,                              
+            isSelected: true,                                                                  
+            groupId: `g_${Date.now()}`,                                                        
+          },                                                                                   
+        ]);                                                                                    
+        setQuickPrice('');                                                                     
+      };  
 
   const handleSelectOption = (idx: number) => {
     setOptions((prev) => {
@@ -803,7 +780,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmit(primaryPrice, primaryVat, options, { inspectionFee: parseFloat(calcInspectionFee) || 0 });
+      await onSubmit(primaryPrice, primaryVat, selectedOpts, { inspectionFee: parseFloat(calcInspectionFee) || 0 });  
       onClose();
     } catch (err: any) {
       alert(err.message || 'Lỗi khi lưu báo giá');
@@ -1074,7 +1051,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                         type="text"
                         inputMode="numeric"
                         value={formatNumberVN(quickPrice)}
-                        onChange={(e) => setQuickPrice(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => setQuickPrice(e.target.value.replace(/\D/g, '').slice(0, 12))}
                         placeholder="0"
                         className="w-full py-[10px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[18px] font-extrabold bg-surface"
                       />

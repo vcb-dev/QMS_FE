@@ -9,6 +9,8 @@ export const ACTION_LABEL: Record<string, string> = {
   RESUBMIT_QUOTE: 'Gửi lại yêu cầu',
   MARK_CLOSED: 'Đánh dấu đã chốt',
   SELECT_OPTION: 'Chọn phương án báo giá',
+  EDIT_QUOTED_PRICE: 'Sửa giá đã báo',
+  DELETE_QUOTE_OPTION: 'Xóa phương án báo giá',
   CREATE_QUOTE: 'Tạo yêu cầu',
   UPDATE_QUOTE: 'Sửa yêu cầu',
   DELETE_QUOTE: 'Xóa yêu cầu',
