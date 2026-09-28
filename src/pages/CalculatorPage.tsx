@@ -47,6 +47,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     addStoneRow,
     updateStoneRow,
     removeStoneRow,
+    stoneName,
   } = useMaterialStoneRows(dbMaterials, stoneCatalog, [
     { id: '1', materialId: '', materialName: '', weightChi: PRICING_DEFAULTS.WEIGHT_CHI },
   ]);
@@ -237,22 +238,55 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
     setIsDebouncing(false);
     setErrorMessage(null);
     try {
-      
       const sharedStones = catalogStoneSelections.length > 0 ? catalogStoneSelections : undefined;
       const vatValNum = includeVat ? (vatPct || 10) : 0;
-      
-      const mainItems = validRows.map((r) => {
+
+      // Đá CHỦ (MAIN) mỗi loại là 1 trục so sánh riêng — giống chất liệu (khớp PricingModal +
+      // computeLibraryGroupKey BE, chỉ đá MAIN định danh sản phẩm). Đá TẤM (SIDE) gắn CHUNG vào mọi
+      // tổ hợp. N chất liệu × M đá chủ = N×M phương án độc lập.
+      const mainStoneRows =
+        stoneInputMode === 'table' ? stoneRows.filter((r) => r.stoneId && r.stoneType === 'MAIN') : [];
+      const sideStoneSelections =
+        stoneInputMode === 'table'
+          ? stoneRows
+              .filter((r) => r.stoneId && r.stoneType === 'SIDE')
+              .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+          : [];
+      const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number }[]; stoneDesc: string }[] =
+        mainStoneRows.length > 0
+          ? mainStoneRows.map((mainRow) => ({
+              stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...sideStoneSelections],
+              stoneDesc: [stoneName(mainRow.stoneId), ...sideStoneSelections.map((s) => stoneName(s.stoneId))]
+                .filter(Boolean)
+                .join(', '),
+            }))
+          : [{ stoneSelections: sharedStones, stoneDesc: '' }];
+
+      const mainItems: {
+        materialNameOrKey: string;
+        weightChi: number;
+        laborCost: number;
+        stoneCost?: number;
+        stones?: { stoneId: string; quantity: number }[];
+        vatRate: number;
+        silverMultiplier?: number;
+      }[] = [];
+      const mainItemMeta: { row: (typeof validRows)[number]; combo: (typeof stoneCombos)[number] }[] = [];
+      validRows.forEach((r) => {
         const singleMat = dbMaterials.find((dm) => dm.id === r.materialId);
         const isSingleSilver = singleMat?.baseMetal?.name === 'Bạc';
-        return {
-          materialNameOrKey: r.materialName,
-          weightChi: parseFloat(r.weightChi) || 0,
-          laborCost: laborCost || 0,
-          stoneCost: manualStoneCost || undefined,
-          stones: sharedStones,
-          vatRate: vatPct || 0,
-          silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
-        };
+        stoneCombos.forEach((combo) => {
+          mainItems.push({
+            materialNameOrKey: r.materialName,
+            weightChi: parseFloat(r.weightChi) || 0,
+            laborCost: laborCost || 0,
+            stoneCost: manualStoneCost || undefined,
+            stones: combo.stoneSelections,
+            vatRate: vatPct || 0,
+            silverMultiplier: isSingleSilver ? selectedSilverMultiplier : undefined,
+          });
+          mainItemMeta.push({ row: r, combo });
+        });
       });
 
       const compareValid = compareRows.filter((r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0);
@@ -294,16 +328,17 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
         setErrorMessage(res?.error || 'Không nhận được giá hợp lệ từ hệ thống');
       }
 
-      const mainOptions = validRows.map((r, i) => {
+      const mainOptions = mainItems.map((item, i) => {
+        const { row, combo } = mainItemMeta[i];
         return batchResultToOption({
-          optionName: r.materialName,
-          materialName: r.materialName,
-          materialId: r.materialId || undefined,
-          weightChi: parseFloat(r.weightChi) || 0,
+          optionName: stoneCombos.length > 1 ? `${row.materialName} · ${combo.stoneDesc}` : row.materialName,
+          materialName: row.materialName,
+          materialId: row.materialId || undefined,
+          weightChi: item.weightChi,
           res: batch[i],
           vat: vatValNum,
           locked: false,
-          stones: sharedStones,
+          stones: combo.stoneSelections,
         });
       }).filter((o): o is QuoteOption => !!o);
 
@@ -632,7 +667,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({
                   {stoneInputMode === 'table' && (
                     <button
                       type="button"
-                      onClick={addStoneRow}
+                      onClick={() => addStoneRow()}
                       className="bg-[#f3f3f3] border border-[#a3a3a3] text-[#000000] text-[15px] font-extrabold rounded-[6px] py-[6px] px-[14px] cursor-pointer"
                     >
                       + THÊM ĐÁ

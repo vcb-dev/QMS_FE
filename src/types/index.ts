@@ -128,7 +128,13 @@ export interface QuoteOptionStone {
   optionId?: string;
   stoneId: string;
   stoneName?: string;
+  // BE mapOptionDetail (dùng cho response chi tiết) trả stoneType PHẲNG ở đây, không lồng trong
+  // `stone` nữa — `stone` bên dưới chỉ còn dùng ở vài chỗ khác đọc dữ liệu chưa qua mapOptionDetail.
+  stoneType?: string;
   quantity: number;
+  // Trỏ tới id (ở trên) của dòng đá CHỦ (MAIN) mà đá tấm này gắn riêng — null/undefined = đá chủ,
+  // hoặc đá tấm orphan (dùng chung, không gắn đá chủ cụ thể nào). Chỉ có khi load lại option đã lưu.
+  parentStoneId?: string | null;
   stone?: {
     id: string;
     name: string;
@@ -198,6 +204,9 @@ export interface QuoteOptionDraftStone {
   id?: string;
   quantity?: number | string;
   qty?: number | string;
+  // Vị trí (index 0-based) của dòng đá CHỦ trong CHÍNH mảng stones[] gửi lên — BE resolve thành
+  // parentStoneId thật lúc insert. Chỉ set khi đá tấm này gắn riêng cho 1 đá chủ cụ thể.
+  parentIndex?: number;
 }
 
 export interface QuoteOptionDraft {
@@ -300,6 +309,11 @@ export type MaterialRow = {
   stoneType: 'MAIN' | 'SIDE' | '';
   stoneId: string;
   qty: number;
+  // Chỉ set khi stoneType SIDE — id của dòng đá chủ (MAIN) mà viên đá tấm này đính kèm riêng.
+  parentId?: string;
+  // Tên đá tại thời điểm load — dùng làm nhãn dự phòng khi đá đã ngừng bán (isActive=false, không
+  // còn trong stoneCatalog để chọn) nhưng option cũ vẫn tham chiếu tới, tránh hiện dropdown trống.
+  stoneName?: string;
 };
 
 export type StoneCatalogItem = { id: string; stoneType: 'MAIN' | 'SIDE'; name: string; cut?: string; size?: string; price: number };
