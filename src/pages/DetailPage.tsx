@@ -88,10 +88,15 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
   useEffect(() => {
     if (!id) return;
+    // options[] có mặt chưa đủ — danh sách yêu cầu (OPTION_LIST_SELECT ở BE) không select field
+    // `stones` của từng option, khác trang chi tiết (REQUEST_DETAIL_INCLUDE) luôn có field này (kể
+    // cả mảng rỗng). Thiếu field `stones` nghĩa là initialSelectedReq đang là bản nhẹ từ danh sách,
+    // chưa đủ đá để hiển thị đúng (VD PricingModal load lại đá Sale đã chọn lúc tạo đơn).
     const propMatches =
       initialSelectedReq &&
       (initialSelectedReq.id === id || initialSelectedReq.code === id) &&
-      Array.isArray(initialSelectedReq.options);
+      Array.isArray(initialSelectedReq.options) &&
+      initialSelectedReq.options.every((opt) => Array.isArray(opt.stones));
     if (propMatches) {
       setLoadedReq(initialSelectedReq);
       setIsLoading(false);

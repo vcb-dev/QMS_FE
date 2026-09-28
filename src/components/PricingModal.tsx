@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calculator, Plus, Trash2, Layers, ChevronDown, ChevronUp, Zap } from 'lucide-react';
-import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role } from '../types';
+import type { QuoteOption, QuoteOptionMaterial, QuoteOptionStone, QuoteRequest, Role, StoneRow } from '../types';
 import { formatStoneDisplay } from '../utils/stoneFormatter';
 import {
   fetchMasterData,
@@ -13,7 +13,7 @@ import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines, getCostBreakdown, renderCostBreakdownLines } from '../utils/priceBreakdown';
 import { getPrimaryOption, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
-import type { StoneCatalogItem, StoneRow } from '../types';
+import type { StoneCatalogItem } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
 import { clsx } from 'clsx';
@@ -102,7 +102,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // chọn 1 chất liệu khác + PHẢI nhập khối lượng riêng (tuổi vàng khác nhau khối lượng khác nhau).
   // Tính riêng từng dòng qua /quote-options/calculate, gắn locked=true (chỉ tham khảo, không chọn
   // làm giá chính) cùng groupId với phương án chính.
-  const { compareRows, setCompareRows, addCompareRow, updateCompareRow, removeCompareRow, autoGoldMode } = useCompareRows(dbMaterials, calcMaterialRows);
+  // Bật khi đã nạp SẴN chất liệu tham khảo THẬT từ đơn (Sale nhập lúc tạo đơn) — chặn chế độ tự
+  // liệt kê vàng ghi đè/khóa mất dữ liệu thật đó (xem effect nạp options bên dưới).
+  const [disableAutoGoldMode, setDisableAutoGoldMode] = useState(false);
+  const { compareRows, setCompareRows, addCompareRow, updateCompareRow, removeCompareRow, autoGoldMode } = useCompareRows(dbMaterials, calcMaterialRows, disableAutoGoldMode);
 
   // Đá đính
   const [calcStoneMode, setCalcStoneMode] = useState<'catalog' | 'manual'>('catalog');
@@ -137,6 +140,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     if (!isOpen || !selectedReq) return;
 
     setCompareRows([]);
+    setDisableAutoGoldMode(false);
     setCalcInspectionFee(selectedReq.inspectionFee != null ? String(selectedReq.inspectionFee) : '0');
     setPricingMode('calculator');
     setQuickOptionName('Báo giá nhanh');
@@ -235,6 +239,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               weightChi: m.weightChi,
             })),
           );
+          setDisableAutoGoldMode(true);
         }
       }
     }
@@ -275,14 +280,61 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     if (primaryOpt?.stones && primaryOpt.stones.length > 0) {
-      setCalcStoneRows(
-        primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => ({
-          id: `stone_${idx}_${Date.now()}`,
-          stoneType: (s.stone?.stoneType as 'MAIN' | 'SIDE' | '') || '',
+      // Dựng lại danh sách đá từ dữ liệu BE — giữ lại dbId/dbParentStoneId thật để map nhóm.
+      const loadedRows = primaryOpt.stones.map((s: QuoteOptionStone, idx: number) => {
+        const catalogMatch = stoneCatalog.find((c) => c.id === s.stoneId);
+        return {
+          localId: `stone_${idx}_${Date.now()}`,
+          dbId: s.id,
+          dbParentStoneId: s.parentStoneId ?? null,
+          stoneType: (s.stoneType || s.stone?.stoneType || catalogMatch?.stoneType || '') as 'MAIN' | 'SIDE' | '',
           stoneId: s.stoneId,
+          stoneName: s.stoneName || s.stone?.name || catalogMatch?.name,
           qty: s.quantity || 1,
-        })),
-      );
+        };
+      });
+      const loadedMainRows = loadedRows.filter((r) => r.stoneType === 'MAIN');
+      const loadedSideRows = loadedRows.filter((r) => r.stoneType === 'SIDE');
+      // Dòng nào cũng có dbId thật (id luôn tồn tại kể cả dữ liệu cũ) — không dùng để phân biệt
+      // được. Chỉ tin dbParentStoneId khi có ÍT NHẤT 1 đá tấm mang giá trị thật — option lưu SAU
+      // khi có cột parent_stone_id mới có, option lưu TRƯỚC đó (dù mới hay cũ) luôn toàn NULL.
+      const hasRealGroupingData = loadedSideRows.length > 0 && loadedSideRows.some((r) => r.dbParentStoneId);
+      const dbIdToLocalId = new Map(loadedRows.map((r) => [r.dbId, r.localId]));
+
+      let finalStoneRows: StoneRow[];
+      if (hasRealGroupingData) {
+        // Dữ liệu mới: map thẳng 1-1, SIDE nào có dbParentStoneId thật thì trỏ đúng local id của
+        // đá chủ đó; không có (orphan) thì giữ nguyên không parentId.
+        finalStoneRows = loadedRows.map((r) => ({
+          id: r.localId,
+          stoneType: r.stoneType,
+          stoneId: r.stoneId,
+          stoneName: r.stoneName,
+          qty: r.qty,
+          ...(r.stoneType === 'SIDE' && r.dbParentStoneId && dbIdToLocalId.has(r.dbParentStoneId)
+            ? { parentId: dbIdToLocalId.get(r.dbParentStoneId)! }
+            : {}),
+        }));
+      } else if (loadedMainRows.length > 0 && loadedSideRows.length > 0) {
+        // Dữ liệu CŨ (lưu trước khi có cột parent_stone_id) — fallback: gắn hết đá tấm cho mọi
+        // đá chủ như trước đây (không biết đá tấm nào thuộc đá chủ nào).
+        finalStoneRows = [
+          ...loadedMainRows.map((r) => ({ id: r.localId, stoneType: r.stoneType, stoneId: r.stoneId, stoneName: r.stoneName, qty: r.qty })),
+          ...loadedMainRows.flatMap((mainRow) =>
+            loadedSideRows.map((tpl, idx) => ({
+              id: `stone_side_${mainRow.localId}_${idx}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              stoneType: tpl.stoneType,
+              stoneId: tpl.stoneId,
+              stoneName: tpl.stoneName,
+              qty: tpl.qty,
+              parentId: mainRow.localId,
+            })),
+          ),
+        ];
+      } else {
+        finalStoneRows = loadedRows.map((r) => ({ id: r.localId, stoneType: r.stoneType, stoneId: r.stoneId, stoneName: r.stoneName, qty: r.qty }));
+      }
+      setCalcStoneRows(finalStoneRows);
       setCalcStoneMode('catalog');
     } else if (primaryOpt?.stoneCost != null && Number(primaryOpt.stoneCost) > 0) {
       setCalcManualStonePrice(String(primaryOpt.stoneCost));
@@ -295,7 +347,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
 
     setCalcError(null);
-  }, [isOpen, selectedReq, dbMaterials, defaultVatRate, setCalcMaterialRows, setCalcStoneRows, setCompareRows]);
+  }, [isOpen, selectedReq, dbMaterials, stoneCatalog, defaultVatRate, setCalcMaterialRows, setCalcStoneRows, setCompareRows]);
 
   // Đổi chất liệu/khối lượng/đá hoặc tiền công/VAT sau khi đã bấm "Tính Giá Ngay" — chỉ xóa lỗi cũ.
   // Kết quả tính đã được thêm thẳng vào "Các Phương Án Báo Giá" ngay khi tính xong (xem
@@ -308,27 +360,43 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   if (!isOpen) return null;
 
   // Gộp thẳng phương án mới tính được vào "Các Phương Án Báo Giá" (không có bước xem trước/bấm
-  // "Thêm" thủ công). Phương án trùng giá với phương án đã có bị bỏ qua (không có ý nghĩa so
-  // sánh thêm). Nếu danh sách chưa có phương án nào được chọn, phương án ĐẦU TIÊN không bị khóa
-  // (đúng chất liệu Sale yêu cầu) tự động được chọn làm giá chính; các phương án khác chất liệu
-  // (locked=true) vẫn được thêm vào cùng danh sách để hiện dạng "OPTION ĐÍNH KÈM — CHỈ THAM KHẢO".
-  const addOptionsToList = (newOpts: QuoteOption[]) => {
+  // "Thêm" thủ công). Tính lại cùng 1 chất liệu (materialId trùng) thì THAY giá cũ, không tách
+  // thành card riêng. Nếu danh sách chưa có phương án nào được chọn, phương án ĐẦU TIÊN không bị
+  // khóa tự động được chọn làm giá chính.
+  // skipDedup: báo giá nhanh (nhập tay) không có "tổ hợp" để gộp lại — mỗi lần bấm thêm là 1
+  // phương án riêng dù trùng chất liệu/đá với phương án trước, luôn thêm mới chứ không thay giá cũ.
+  const addOptionsToList = (newOpts: QuoteOption[], opts: { skipDedup?: boolean } = {}) => {
     setOptions((prev) => {
-      const seenPrices = new Set(prev.map((o) => Number(o.quotedPrice)));
-      const added: QuoteOption[] = [];
+      // Khóa gồm cả chất liệu lẫn tổ hợp đá chủ đính kèm — 1 chất liệu có thể ra nhiều phương án
+      // khác nhau theo từng tổ hợp đá chủ (stoneCombos), không được gộp các tổ hợp khác nhau lại.
+      const keyOf = (o: QuoteOption) => {
+        const matKey = o.materials?.[0]?.materialId || o.materialName || '';
+        const stoneKey = (o.stones || []).map((s) => s.stoneId).sort().join(',');
+        return `${matKey}|${stoneKey}`;
+      };
+      const next = [...prev];
       newOpts.forEach((opt) => {
         if (opt.quotedPrice == null) return;
-        const price = Number(opt.quotedPrice);
-        if (seenPrices.has(price)) return;
-        seenPrices.add(price);
-        added.push(opt);
+        // Mặc định tích chọn mọi phương án mới tính ra (trừ phương án bị khóa, VD hàng đính kèm
+        // của Sale) — Order chọn lọc bằng cách bỏ tích bớt, thay vì phải tự tích từng cái.
+        if (opts.skipDedup) {
+          next.push({ ...opt, isSelected: !opt.locked });
+          return;
+        }
+        const key = keyOf(opt);
+        const existingIdx = key ? next.findIndex((o) => keyOf(o) === key) : -1;
+        if (existingIdx >= 0) {
+          next[existingIdx] = { ...opt, isSelected: next[existingIdx].isSelected };
+        } else {
+          next.push({ ...opt, isSelected: !opt.locked });
+        }
       });
-      const hasSelected = prev.some((o) => o.isSelected);
+      const hasSelected = next.some((o) => o.isSelected);
       if (!hasSelected) {
-        const firstSelectable = added.find((o) => !o.locked);
+        const firstSelectable = next.find((o) => !o.locked);
         if (firstSelectable) firstSelectable.isSelected = true;
       }
-      return [...prev, ...added];
+      return next;
     });
   };
 
@@ -342,16 +410,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     ctx: {
       laborCost: number;
       vatVal: number;
-      stoneSelections?: { stoneId: string; quantity: number }[];
+      stoneSelections?: { stoneId: string; quantity: number; parentIndex?: number }[];
       stoneDesc: string;
       groupId: string;
       locked: boolean;
+      // Có từ 2 tổ hợp đá chủ trở lên — thêm tên đá vào optionName để phân biệt các phương án
+      // cùng chất liệu nhưng khác đá chủ.
+      stoneSuffix?: string;
     },
   ): QuoteOption | null =>
     batchResultToOption({
       optionName: ctx.locked
-        ? `${materialName} · ${weightChi} chỉ · Loại vàng khác (tham khảo)`
-        : `${materialName} · ${weightChi} chỉ`,
+        ? ctx.stoneSuffix
+          ? `${materialName} · ${weightChi} chỉ · Loại chất liệu khác · ${ctx.stoneSuffix}`
+          : `${materialName} · ${weightChi} chỉ · Loại chất liệu khác (tham khảo)`
+        : ctx.stoneSuffix
+          ? `${materialName} · ${weightChi} chỉ · ${ctx.stoneSuffix}`
+          : `${materialName} · ${weightChi} chỉ`,
       materialName,
       materialId,
       weightChi,
@@ -361,7 +436,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       groupId: ctx.groupId,
       stones: ctx.stoneSelections,
       stoneDescription: ctx.stoneDesc,
-      note: ctx.locked ? 'Loại vàng khác — chỉ tham khảo' : 'Tính từ máy tính giá',
+      note: ctx.locked ? 'Loại chất liệu khác — chỉ tham khảo' : 'Tính từ máy tính giá',
     });
 
   const handleRunCalculate = async () => {
@@ -373,14 +448,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       return;
     }
 
-    // Dòng "loại vàng khác" đã chọn chất liệu nhưng CHƯA nhập khối lượng — bắt buộc nhập. Không áp
-    // dụng ở chế độ tự liệt kê vàng (autoGoldMode): phần lớn dòng auto rỗng theo thiết kế — bỏ qua
+    // Dòng "loại chất liệu khác" đã chọn chất liệu nhưng CHƯA nhập khối lượng — bắt buộc nhập. Không áp
+    // dụng ở chế độ tự liệt kê chất liệu (autoGoldMode): phần lớn dòng auto rỗng theo thiết kế — bỏ qua
     // lúc tính chứ không phải lỗi nhập thiếu.
     if (
       !autoGoldMode &&
       compareRows.some((r) => r.materialId && !((parseFloat(r.weightChi) || 0) > 0))
     ) {
-      setCalcError('Nhập khối lượng (chỉ) cho phương án loại vàng khác');
+      setCalcError('Nhập khối lượng (chỉ) cho phương án loại chất liệu khác');
       return;
     }
 
@@ -395,55 +470,118 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const manualStoneCost =
         calcStoneMode === 'manual' ? parseFloat(calcManualStonePrice) || 0 : 0;
 
-      const stoneSelections =
-        calcStoneMode === 'catalog' && calcStoneRows.length > 0
-          ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
-          : undefined;
-      const stoneDesc =
-        calcStoneMode === 'manual'
-          ? calcManualStoneName
-          : calcStoneRows.map((r) => stoneName(r.stoneId)).join(', ');
+      // Đá CHỦ (MAIN) mỗi dòng là 1 trục so sánh riêng — giống chất liệu (khớp computeLibraryGroupKey
+      // ở BE cũng chỉ định danh sản phẩm theo đá MAIN, đá TẤM chỉ là chi tiết phụ). Đá TẤM (SIDE)
+      // đính kèm RIÊNG cho đúng đá chủ cha (parentId) — không còn dùng chung cho mọi đá chủ.
+      const mainStoneRows =
+        calcStoneMode === 'catalog' ? calcStoneRows.filter((r) => r.stoneId && r.stoneType === 'MAIN') : [];
+      const mainStoneRowIds = new Set(mainStoneRows.map((r) => r.id));
+      // Đá tấm không gắn đúng 1 đá chủ hợp lệ (chưa gắn, hoặc đá chủ cha chưa chọn sản phẩm) — tự
+      // thành 1 phương án riêng (chỉ có đá tấm, không đá chủ), KHÔNG cộng dồn vào các đá chủ khác.
+      const orphanSideSelections =
+        calcStoneMode === 'catalog'
+          ? calcStoneRows
+              .filter((r) => r.stoneId && r.stoneType === 'SIDE' && !(r.parentId && mainStoneRowIds.has(r.parentId)))
+              .map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+          : [];
+      const sideStonesOfMain = (mainRowId: string) =>
+        calcStoneRows
+          .filter((r) => r.stoneId && r.stoneType === 'SIDE' && r.parentId === mainRowId)
+          .map((r) => ({ stoneId: r.stoneId, quantity: r.qty, parentIndex: 0 }));
+      // Tên phương án chỉ hiện đá CHỦ (kèm lát cắt + size), không ghép tên đá tấm vào — trừ tổ hợp
+      // không có đá chủ (orphanSideSelections bên dưới), lúc đó phải ghi rõ là đá tấm gì.
+      const mainStoneLabel = (stoneId: string) => {
+        const s = stoneCatalog.find((c) => c.id === stoneId);
+        return s ? [s.name, s.cut, s.size].filter(Boolean).join(' - ') : stoneName(stoneId);
+      };
+      const stoneCombos: { stoneSelections?: { stoneId: string; quantity: number; parentIndex?: number }[]; stoneDesc: string }[] = [
+        ...mainStoneRows.map((mainRow) => ({
+          stoneSelections: [{ stoneId: mainRow.stoneId, quantity: mainRow.qty }, ...sideStonesOfMain(mainRow.id)],
+          stoneDesc: mainStoneLabel(mainRow.stoneId),
+        })),
+        ...(orphanSideSelections.length > 0
+          ? [
+              {
+                stoneSelections: orphanSideSelections,
+                stoneDesc: `Đá tấm: ${orphanSideSelections.map((s) => mainStoneLabel(s.stoneId)).join(', ')}`,
+              },
+            ]
+          : []),
+      ];
+      if (stoneCombos.length === 0) {
+        stoneCombos.push({
+          stoneSelections: undefined,
+          stoneDesc: calcStoneMode === 'manual' ? calcManualStoneName : '',
+        });
+      }
 
       // Các dòng "loại vàng khác" hợp lệ (đã chọn chất liệu + nhập khối lượng > 0).
       const compareValid = compareRows.filter(
         (r) => r.materialId && (parseFloat(r.weightChi) || 0) > 0,
       );
-      const compareItems = compareValid.map((r) => ({
-        materialNameOrKey: r.materialName,
-        weightChi: parseFloat(r.weightChi) || 0,
-        laborCost: l,
-        stoneCost: manualStoneCost || undefined,
-        stones: stoneSelections,
-        vatRate: vatVal,
-        // BE chỉ áp hệ số nhân cho chất liệu dùng công thức MULTIPLIER (Bạc); gửi luôn cũng an toàn.
-        silverMultiplier: isSilverMaterialId(r.materialId) ? calcSilverMultiplier : undefined,
-      }));
+      // (chất liệu so sánh) × (tổ hợp đá chủ) — giống mainItems, không còn tính riêng 1 lần với
+      // list đá phẳng chung nữa: mỗi đá chủ vẫn phải ra 1 phương án so sánh riêng cho từng chất liệu.
+      const compareItems: {
+        materialNameOrKey: string;
+        weightChi: number;
+        laborCost: number;
+        stoneCost?: number;
+        stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
+        vatRate: number;
+        silverMultiplier?: number;
+      }[] = [];
+      const compareItemMeta: { row: (typeof compareValid)[number]; combo: (typeof stoneCombos)[number] }[] = [];
+      compareValid.forEach((r) => {
+        stoneCombos.forEach((combo) => {
+          compareItems.push({
+            materialNameOrKey: r.materialName,
+            weightChi: parseFloat(r.weightChi) || 0,
+            laborCost: l,
+            stoneCost: manualStoneCost || undefined,
+            stones: combo.stoneSelections,
+            vatRate: vatVal,
+            // BE chỉ áp hệ số nhân cho chất liệu dùng công thức MULTIPLIER (Bạc); gửi luôn cũng an toàn.
+            silverMultiplier: isSilverMaterialId(r.materialId) ? calcSilverMultiplier : undefined,
+          });
+          compareItemMeta.push({ row: r, combo });
+        });
+      });
 
-      // Bấm "Tính Giá Ngay" lần 2 (chỉ thêm phương án so sánh, giá chính không đổi) — phương án
-      // chính bị addOptionsToList bỏ qua vì trùng giá. Phải gán các phương án so sánh MỚI vào ĐÚNG
-      // groupId của phương án chính đang có, nếu không chúng thành "mồ côi" và không hiện lên.
-      const resolveGroupId = (primaryPrice: number): string => {
+      // Bấm "Tính Giá Ngay" lại cho cùng 1 chất liệu (giá có thể đổi) — khớp theo materialId thay
+      // vì giá, để nhận đúng groupId cũ (addOptionsToList sẽ thay giá, không tách card mới).
+      const resolveGroupId = (materialId: string | undefined): string => {
         const existing = options.find(
-          (o) =>
-            !o.locked &&
-            o.quotedPrice != null &&
-            Number(o.quotedPrice) === Number(primaryPrice),
+          (o) => !o.locked && o.materials?.[0]?.materialId === materialId,
         );
         return existing?.groupId || `g_${Date.now()}`;
       };
 
-      
-
-      
-      const mainItems = validRows.map((r) => ({
-        materialNameOrKey: r.materialName,
-        weightChi: parseFloat(r.weightChi) || 0,
-        laborCost: l,
-        stoneCost: manualStoneCost || undefined,
-        stones: stoneSelections,
-        vatRate: vatVal,
-        silverMultiplier: isSilverMaterialId(r.materialId || r.id) ? calcSilverMultiplier : undefined,
-      }));
+      // Mỗi (chất liệu × tổ hợp đá) là 1 phương án độc lập — validRows.length === 1 &&
+      // stoneCombos.length === 1 thì ra đúng 1 item, y hệt hành vi cũ trước khi có đá chủ tách riêng.
+      const mainItems: {
+        materialNameOrKey: string;
+        weightChi: number;
+        laborCost: number;
+        stoneCost?: number;
+        stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
+        vatRate: number;
+        silverMultiplier?: number;
+      }[] = [];
+      const mainItemMeta: { row: (typeof validRows)[number]; combo: (typeof stoneCombos)[number] }[] = [];
+      validRows.forEach((r) => {
+        stoneCombos.forEach((combo) => {
+          mainItems.push({
+            materialNameOrKey: r.materialName,
+            weightChi: parseFloat(r.weightChi) || 0,
+            laborCost: l,
+            stoneCost: manualStoneCost || undefined,
+            stones: combo.stoneSelections,
+            vatRate: vatVal,
+            silverMultiplier: isSilverMaterialId(r.materialId || r.id) ? calcSilverMultiplier : undefined,
+          });
+          mainItemMeta.push({ row: r, combo });
+        });
+      });
 
       const results = await calculatePriceBatchApi({
         categoryId: selectedReq?.category?.id || undefined,
@@ -461,14 +599,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           setCalcError(resItem.error);
           return;
         }
-        const gid = resolveGroupId(resItem.quotedPrice ?? 0);
+        const { row, combo } = mainItemMeta[idx];
+        const gid = resolveGroupId(row.materialId || row.id);
         if (idx === 0) primaryGroupId = gid;
         const opt = mapOption(
           item.materialNameOrKey,
-          validRows[idx].materialId || validRows[idx].id,
+          row.materialId || row.id,
           item.weightChi,
           resItem,
-          { laborCost: l, vatVal, stoneSelections, stoneDesc, groupId: gid, locked: false }
+          {
+            laborCost: l,
+            vatVal,
+            stoneSelections: combo.stoneSelections,
+            stoneDesc: combo.stoneDesc,
+            groupId: gid,
+            locked: false,
+            stoneSuffix: stoneCombos.length > 1 ? combo.stoneDesc : undefined,
+          }
         );
         if (opt) newOpts.push(opt);
       });
@@ -477,15 +624,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         return;
       }
 
-      const compareOpts = compareValid.map((r, idx) => {
+      const compareOpts = compareItems.map((item, idx) => {
         const resItem = results[mainItems.length + idx];
-        return mapOption(r.materialName, r.materialId, parseFloat(r.weightChi) || 0, resItem, {
+        const { row, combo } = compareItemMeta[idx];
+        return mapOption(row.materialName, row.materialId, item.weightChi, resItem, {
            laborCost: l,
            vatVal,
-           stoneSelections,
-           stoneDesc,
+           stoneSelections: combo.stoneSelections,
+           stoneDesc: combo.stoneDesc,
            groupId: primaryGroupId,
-           locked: true
+           locked: true,
+           stoneSuffix: stoneCombos.length > 1 ? combo.stoneDesc : undefined,
         });
       }).filter((o): o is QuoteOption => !!o);
 
@@ -519,9 +668,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }));
     const materialNameDisplay = validMaterialRows.map((m) => m.materialName).join(', ');
 
+    // Báo giá nhanh gộp CẢ calcStoneRows (có thể nhiều nhóm đá chủ/đá tấm khác nhau) vào 1 option
+    // duy nhất — khác máy tính giá (mỗi đá chủ tách 1 option riêng) nên phải tự tính parentIndex
+    // theo VỊ TRÍ thật trong mảng đang gửi (không cố định 0 như bên máy tính giá).
+    const validStoneRows = calcStoneMode === 'catalog' ? calcStoneRows.filter((r) => r.stoneId) : [];
     const stoneSelections =
-      calcStoneMode === 'catalog' && calcStoneRows.length > 0
-        ? calcStoneRows.filter((r) => r.stoneId).map((r) => ({ stoneId: r.stoneId, quantity: r.qty }))
+      validStoneRows.length > 0
+        ? validStoneRows.map((r) => {
+            const parentIdx = r.parentId ? validStoneRows.findIndex((other) => other.id === r.parentId) : -1;
+            return {
+              stoneId: r.stoneId,
+              quantity: r.qty,
+              ...(parentIdx >= 0 ? { parentIndex: parentIdx } : {}),
+            };
+          })
         : undefined;
 
     addOptionsToList([
@@ -537,63 +697,41 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,
         groupId: `g_${Date.now()}`,
       },
-    ]);
+    ], { skipDedup: true });
     setQuickPrice('');
   };
 
   const handleSelectOption = (idx: number) => {
     setOptions((prev) => {
       const chosen = prev[idx];
-      if (chosen?.locked) return prev;
       // Order chọn 1 phương án Order TỰ TÍNH (không thuộc cụm 'sale') thay cho giá Sale đề xuất —
-      // giá Sale coi như bị thay thế hẳn, bỏ luôn khỏi danh sách (không gửi kèm lên BE nữa) thay vì
-      // giữ lại làm hàng đính kèm, tránh lưu dư 2 phương án cho cùng 1 yêu cầu khi Xác Nhận.
+      // giá Sale coi như bị thay thế hẳn, bỏ luôn khỏi danh sách (giữ nguyên hành vi cũ này).
       const base = chosen && chosen.groupId !== 'sale'
         ? prev.filter((o) => o.groupId !== 'sale')
         : prev;
-      return base.map((opt) => ({
-        ...opt,
-        isSelected: opt === chosen,
-      }));
+      return base.map((opt) => (opt === chosen ? { ...opt, isSelected: !opt.isSelected } : opt));
     });
   };
 
   const handleRemoveOption = (idx: number) => {
-    setOptions((prev) => {
-      const removed = prev[idx];
-      let next = prev.filter((_, i) => i !== idx);
-      // Xóa phương án CHÍNH (không locked) thì xóa luôn cả cụm phương án đính kèm lồng trong card
-      // của nó (cùng groupId) — các phương án đính kèm không có ý nghĩa gì khi đứng riêng.
-      if (removed && !removed.locked && removed.groupId) {
-        next = next.filter((o) => !(o.locked && o.groupId === removed.groupId));
-      }
-      // Phương án bị xóa từng là giá chính — chuyển giá chính sang phương án CHỌN ĐƯỢC đầu tiên
-      // còn lại (bỏ qua option đính kèm/locked, vì đó không phải 1 lựa chọn hợp lệ).
-      if (removed?.isSelected) {
-        const fallback = next.find((o) => !o.locked);
-        if (fallback) fallback.isSelected = true;
-      }
-      return next;
-    });
+    setOptions((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const selectedOpt = options.find((o) => o.isSelected) || options[0];
-    const hasValidPrice =
-      options.length > 0 &&
-      selectedOpt != null &&
-      typeof selectedOpt.quotedPrice === 'number' &&
-      Number(selectedOpt.quotedPrice) > 0;
-
-    if (!hasValidPrice || !selectedOpt) {
-      alert('Vui lòng tính và thêm ít nhất 1 phương án báo giá hợp lệ trước khi lưu!');
+    const selectedOpts = options.filter(
+      (o) => o.isSelected && typeof o.quotedPrice === 'number' && Number(o.quotedPrice) > 0,
+    );
+    if (selectedOpts.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 phương án báo giá để gửi!');
       return;
     }
 
-    const primaryPrice = selectedOpt.quotedPrice;
-    const primaryVat = selectedOpt.vat != null ? Number(selectedOpt.vat) : defaultVatRate;
+    // primaryPrice/primaryVat: tham số legacy cho onSubmit() — completeQuoteRequest ở BE
+    // nhận rồi dùng options[] là chính, nhưng vẫn cần truyền 1 giá trị hợp lệ.
+    const primaryPrice = selectedOpts[0].quotedPrice;
+    const primaryVat = selectedOpts[0].vat != null ? Number(selectedOpts[0].vat) : defaultVatRate;
 
     setSubmitting(true);
     try {
@@ -606,12 +744,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   };
 
-  const selectedOpt = options.find((o) => o.isSelected) || options[0];
-  const hasValidPrice =
-    options.length > 0 &&
-    selectedOpt != null &&
-    typeof selectedOpt.quotedPrice === 'number' &&
-    Number(selectedOpt.quotedPrice) > 0;
+  const selectedOpts = options.filter(
+    (o) => o.isSelected && typeof o.quotedPrice === 'number' && Number(o.quotedPrice) > 0,
+  );
+  const hasValidPrice = selectedOpts.length > 0;
 
   const isSilverPresent = calcMaterialRows.some((m) => isSilverMaterialId(m.materialId || m.id));
 
@@ -622,19 +758,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     .map((opt, idx) => ({ opt, idx }))
     .filter(({ opt }) => opt.quotedPrice != null);
 
-  // Phương án CHÍNH (không locked) hiện dạng card top-level; phương án đính kèm (locked) được
-  // lồng vào bên trong card của phương án chính CÙNG groupId, thay vì hiện dạng list rời bên dưới.
-  const primaryEntries = pricedOptions.filter(({ opt }) => !opt.locked);
-  const lockedByGroup = new Map<string, typeof pricedOptions>();
-  pricedOptions
-    .filter(({ opt }) => opt.locked)
-    .forEach((entry) => {
-      const gid = entry.opt.groupId;
-      const hasMatchingPrimary = !!gid && primaryEntries.some((p) => p.opt.groupId === gid);
-      const key = hasMatchingPrimary ? (gid as string) : `_ungrouped_${entry.idx}`;
-      if (!lockedByGroup.has(key)) lockedByGroup.set(key, []);
-      lockedByGroup.get(key)!.push(entry);
-    });
+  const allPricedSelected = pricedOptions.length > 0 && pricedOptions.every(({ opt }) => opt.isSelected);
+  const handleToggleSelectAll = () => {
+    const pricedIdxSet = new Set(pricedOptions.map(({ idx }) => idx));
+    const nextSelected = !allPricedSelected;
+    setOptions((prev) => prev.map((opt, i) => (pricedIdxSet.has(i) ? { ...opt, isSelected: nextSelected } : opt)));
+  };
 
   return (
     <div className={modalBackdropCls}>
@@ -671,22 +800,32 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <div className="flex items-center gap-[8px]">
                 <Layers size={18} color="#d97706" />
                 <h3 className="text-[18px] font-extrabold text-[#0f172a] m-0">
-                  Các Phương Án Báo Giá ({primaryEntries.length})
+                  Các Phương Án Báo Giá ({pricedOptions.length})
                 </h3>
               </div>
-              <span className="text-[14.5px] text-muted">
-                Chọn 1 phương án làm giá chính để chốt
-              </span>
+              <div className="flex items-center gap-[10px]">
+                <span className="text-[14.5px] text-muted">
+                  Chọn các phương án muốn gửi báo giá cho khách
+                </span>
+                {pricedOptions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    className="flex items-center gap-[4px] bg-surface border border-[#cbd5e1] rounded-[6px] py-[4px] px-[10px] text-[14px] font-extrabold text-[#0f172a] cursor-pointer"
+                  >
+                    {allPricedSelected ? 'Bỏ chọn hết' : 'Chọn hết'}
+                  </button>
+                )}
+              </div>
             </div>
 
-            {primaryEntries.length === 0 ? (
+            {pricedOptions.length === 0 ? (
               <div className="bg-[#f8fafc] p-[16px] rounded-[10px] text-center text-muted text-[16px]">
                 Chưa có phương án nào. Hãy dùng bảng máy tính bên dưới và bấm <strong>"Tính Giá Ngay"</strong> — phương án sẽ tự hiện lên đây.
               </div>
             ) : (
               <div className="flex flex-col gap-[8px]">
-                {primaryEntries.map(({ opt, idx }) => {
-                  const children = opt.groupId ? lockedByGroup.get(opt.groupId) || [] : [];
+                {pricedOptions.map(({ opt, idx }) => {
                   return (
                     <div
                       key={idx}
@@ -701,10 +840,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       >
                         <div className="flex items-center gap-[10px] min-w-0">
                           <input
-                            type="radio"
-                            name="selectedOptionRadio"
+                            type="checkbox"
                             checked={!!opt.isSelected}
                             onChange={() => handleSelectOption(idx)}
+                            onClick={(e) => e.stopPropagation()}
                             className="w-[16px] h-[16px] accent-[#16a34a] cursor-pointer"
                           />
                           <div className="min-w-0">
@@ -712,13 +851,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                               {opt.optionName || `Phương án ${idx + 1}`}
                               {opt.isSelected && (
                                 <span className="ml-[8px] bg-[#16a34a] text-surface text-[13px] font-extrabold py-[2px] px-[8px] rounded-[20px]">
-                                  ĐÃ CHỌN LÀM GIÁ CHÍNH
+                                  ĐÃ CHỌN
                                 </span>
                               )}
                             </div>
                             <div className="text-[15px] text-muted mt-[2px]">
-                              {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
-                              {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
+                              {/* Báo giá nhanh (Order gõ thẳng tổng tiền) không chạy công thức nên không có
+                                  totalMetalCost/metalRawCost — chất liệu/khối lượng gõ kèm chỉ là ghi chú tự
+                                  do, không đáng tin để hiện như thông số đã tính, nên ẩn luôn. */}
+                              {opt.totalMetalCost == null && opt.metalRawCost == null ? '' : (
+                                <>
+                                  {opt.materialName ? `Chất liệu: ${opt.materialName}` : ''}
+                                  {opt.weightChi ? ` · ${opt.weightChi} chỉ` : ''}
+                                </>
+                              )}
                               {opt.vat != null ? ` · VAT ${opt.vat}%` : ''}
                             </div>
                           </div>
@@ -745,43 +891,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           </button>
                         </div>
                       </div>
-
-                      {/* Phương án đính kèm (khác chất liệu Sale/tuổi vàng khác) — lồng trong card
-                          của phương án chính cùng cụm, chỉ để tham khảo, không có radio chọn. */}
-                      {children.length > 0 && (
-                        <div className="pt-0 pr-[14px] pb-[12px] pl-[40px] flex flex-col gap-[6px]">
-                          <span className="text-[13.5px] font-extrabold text-faint uppercase">
-                            Phương án đính kèm — chỉ tham khảo
-                          </span>
-                          {children.map(({ opt: childOpt, idx: childIdx }) => (
-                            <div
-                              key={childIdx}
-                              className="flex items-center justify-between gap-[8px] py-[6px] px-[10px] bg-surface border border-dashed border-[#cbd5e1] rounded-[8px]"
-                            >
-                              <span className="text-[15px] font-bold text-muted min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                                {childOpt.optionName || childOpt.materialName}
-                              </span>
-                              <div className="flex items-center gap-[8px] shrink-0">
-                                <div className="flex flex-col items-end">
-                                  <strong className="text-[16px] font-extrabold text-[#16a34a] tabular-nums">
-                                    {formatCurrency(childOpt.quotedPrice)}
-                                  </strong>
-                                  {renderPriceBreakdownLines(getPriceBreakdown(childOpt))}
-                                  {renderCostBreakdownLines(getCostBreakdown(childOpt))}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveOption(childIdx)}
-                                  title="Xóa phương án đính kèm này"
-                                  className="bg-transparent border-0 text-faint cursor-pointer flex items-center"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -952,13 +1061,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                           // dù <option> khớp giờ đã tồn tại (dropdown hiện trống dù value đúng).
                           key={dbMaterials.length}
                           value={row.materialId}
-                          disabled={!!selectedReq}
                           onChange={(e) => updateMaterialRow(row.id, { materialId: e.target.value })}
-                          title={selectedReq ? 'Không thể đổi chất liệu Sale đã yêu cầu' : undefined}
-                          className={clsx(
-                            'py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold',
-                            selectedReq ? 'bg-[#f1f5f9] text-muted cursor-not-allowed' : 'bg-surface cursor-pointer'
-                          )}
+                          className="py-[8px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[16px] font-bold bg-surface cursor-pointer"
                         >
                           {dbMaterials
                             // Từ 2 dòng chất liệu trở lên -> chỉ cho chọn cùng nhóm kim loại gốc với
@@ -1010,7 +1114,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-[8px]">
                     <label className={labelUppercaseCls}>
-                      Phương án loại vàng khác (tham khảo)
+                      Phương án chất liệu khác (tham khảo)
                     </label>
                     {!autoGoldMode && (
                       <button
@@ -1025,7 +1129,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
                   {compareRows.length === 0 ? (
                     <p className="text-[14.5px] text-faint m-0">
-                      Thêm loại vàng khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
+                      Thêm chất liệu khác để báo khách tham khảo — mỗi loại phải nhập khối lượng riêng.
                     </p>
                   ) : (
                     <div className="flex flex-col gap-[8px]">
@@ -1220,56 +1324,146 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       />
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-[6px]">
-                      {calcStoneRows.map((sRow) => (
-                        <div key={sRow.id} className="grid grid-cols-[90px_1fr_70px_28px] gap-[8px] items-center">
-                          <select
-                            value={sRow.stoneType}
-                            onChange={(e) => updateStoneRow(sRow.id, { stoneType: e.target.value as StoneRow['stoneType'], stoneId: '' })}
-                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px]"
-                          >
-                            <option value="">Loại đá</option>
-                            <option value="MAIN">Đá chủ</option>
-                            <option value="SIDE">Đá tấm</option>
-                          </select>
-                          <select
-                            value={sRow.stoneId}
-                            disabled={!sRow.stoneType}
-                            onChange={(e) => updateStoneRow(sRow.id, { stoneId: e.target.value })}
-                            className={clsx(
-                              'py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px]',
-                              sRow.stoneType ? 'bg-surface' : 'bg-[#f1f5f9]'
-                            )}
-                          >
-                            <option value="">-- Chọn sản phẩm --</option>
-                            {stoneCatalog.filter((s) => s.stoneType === sRow.stoneType).map((s) => (
-                              <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                    <div className="flex flex-col gap-[10px]">
+                      {/* Mỗi đá chủ tự ra 1 phương án báo giá riêng, đá tấm bên dưới CHỈ đính kèm
+                          cho đúng đá chủ đó (không dùng chung giữa các đá chủ). */}
+                      {calcStoneRows.filter((r) => r.stoneType === 'MAIN').map((mainRow) => (
+                        <div key={mainRow.id} className="border border-[#e2e8f0] rounded-[8px] p-[10px] bg-[#f8fafc]">
+                          <div className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                            <select
+                              value={mainRow.stoneId}
+                              onChange={(e) => updateStoneRow(mainRow.id, { stoneId: e.target.value })}
+                              className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface font-bold"
+                            >
+                              <option value="">-- Chọn đá chủ --</option>
+                              {mainRow.stoneId && !stoneCatalog.some((s) => s.id === mainRow.stoneId) && (
+                                <option value={mainRow.stoneId}>{mainRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                              )}
+                              {stoneCatalog.filter((s) => s.stoneType === 'MAIN').map((s) => (
+                                <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="number"
+                              min={1}
+                              value={mainRow.qty}
+                              onChange={(e) => updateStoneRow(mainRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                              placeholder="SL"
+                              className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeStoneRow(mainRow.id)}
+                              className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+
+                          {/* Đá tấm riêng của đá chủ này */}
+                          <div className="pl-[16px] mt-[8px] flex flex-col gap-[6px] border-l-[2px] border-[#e2e8f0]">
+                            {calcStoneRows.filter((r) => r.stoneType === 'SIDE' && r.parentId === mainRow.id).map((sideRow) => (
+                              <div key={sideRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                                <select
+                                  value={sideRow.stoneId}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { stoneId: e.target.value })}
+                                  className="py-[5px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] bg-surface"
+                                >
+                                  <option value="">-- Chọn đá tấm --</option>
+                                  {sideRow.stoneId && !stoneCatalog.some((s) => s.id === sideRow.stoneId) && (
+                                    <option value={sideRow.stoneId}>{sideRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                                  )}
+                                  {stoneCatalog.filter((s) => s.stoneType === 'SIDE').map((s) => (
+                                    <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={sideRow.qty}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                                  placeholder="SL"
+                                  className="py-[5px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[14.5px] text-right font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeStoneRow(sideRow.id)}
+                                  className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             ))}
-                          </select>
-                          <input
-                            type="number"
-                            min={1}
-                            value={sRow.qty}
-                            onChange={(e) => updateStoneRow(sRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-                            placeholder="SL"
-                            className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeStoneRow(sRow.id)}
-                            className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => addStoneRow('SIDE', mainRow.id)}
+                              className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[3px] px-[8px] text-[13.5px] font-bold text-primary cursor-pointer"
+                            >
+                              + Thêm đá tấm cho đá chủ này
+                            </button>
+                          </div>
                         </div>
                       ))}
+
                       <button
                         type="button"
-                        onClick={addStoneRow}
+                        onClick={() => addStoneRow('MAIN')}
                         className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
                       >
-                        + Thêm loại đá
+                        + Thêm option đá mới
                       </button>
+
+                      {/* Đá tấm chưa gắn đá chủ nào (chưa có đá chủ, hoặc dữ liệu cũ trước khi tách nhóm) */}
+                      {calcStoneRows.some((r) => r.stoneType === 'SIDE' && !r.parentId) && (
+                        <div>
+                          <span className="text-[13px] font-extrabold text-faint uppercase block mb-[6px]">
+                            Đá Tấm (chưa gắn đá chủ)
+                          </span>
+                          <div className="flex flex-col gap-[6px]">
+                            {calcStoneRows.filter((r) => r.stoneType === 'SIDE' && !r.parentId).map((sideRow) => (
+                              <div key={sideRow.id} className="grid grid-cols-[1fr_70px_28px] gap-[8px] items-center">
+                                <select
+                                  value={sideRow.stoneId}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { stoneId: e.target.value })}
+                                  className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] bg-surface"
+                                >
+                                  <option value="">-- Chọn sản phẩm --</option>
+                                  {sideRow.stoneId && !stoneCatalog.some((s) => s.id === sideRow.stoneId) && (
+                                    <option value={sideRow.stoneId}>{sideRow.stoneName || 'Đá đã ngừng bán'} (ngừng bán)</option>
+                                  )}
+                                  {stoneCatalog.filter((s) => s.stoneType === 'SIDE').map((s) => (
+                                    <option key={s.id} value={s.id}>{formatStoneDisplay(s, _currentRole)}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={sideRow.qty}
+                                  onChange={(e) => updateStoneRow(sideRow.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                                  placeholder="SL"
+                                  className="py-[6px] px-[8px] rounded-[6px] border border-[#cbd5e1] text-[15px] text-right font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeStoneRow(sideRow.id)}
+                                  className="bg-transparent border-0 text-[#ef4444] cursor-pointer"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {calcStoneRows.filter((r) => r.stoneType === 'MAIN').length === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => addStoneRow('SIDE')}
+                          className="self-start bg-transparent border border-dashed border-[#cbd5e1] rounded-[6px] py-[4px] px-[8px] text-[14.5px] font-bold text-primary cursor-pointer"
+                        >
+                          + Thêm đá tấm
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

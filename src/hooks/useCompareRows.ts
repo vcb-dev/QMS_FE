@@ -23,19 +23,24 @@ function isSingleGoldMaterialMode(
 // State + CRUD cho danh sách "phương án loại vàng khác" (so sánh tham khảo) — dùng
 // chung CalculatorPage + PricingModal. `materialRows` (mặc định []) chỉ cần khi muốn bật chế độ
 // tự liệt kê vàng ở trên — hook vẫn dùng được như CRUD thuần nếu không truyền vào.
+// `disableAutoGoldMode`: PricingModal bật cờ này khi đã nạp SẴN danh sách chất liệu tham khảo THẬT
+// từ đơn (Sale nhập lúc tạo đơn) — tránh chế độ tự liệt kê vàng ghi đè/khóa mất dữ liệu thật đó.
 export function useCompareRows(
   dbMaterials: CompareDbMaterial[],
   materialRows: { materialId: string }[] = [],
+  disableAutoGoldMode = false,
 ) {
   const [compareRows, setCompareRows] = useState<CompareRow[]>([]);
 
-  const autoGoldMode = isSingleGoldMaterialMode(materialRows, dbMaterials);
+  const autoGoldMode = !disableAutoGoldMode && isSingleGoldMaterialMode(materialRows, dbMaterials);
   const singleMaterialId = materialRows.length === 1 ? materialRows[0].materialId : null;
 
   // Tự động điền hết chất liệu Vàng khác (trừ chất liệu đang chọn), khối lượng mặc định rỗng —
   // dòng nào không nhập > 0 tự bị bỏ qua lúc tính/lưu (xem compareValid ở CalculatorPage/PricingModal).
-  // Rời chế độ này thì dọn sạch, trả lại danh sách trống để thêm tay như hành vi cũ.
+  // Rời chế độ này thì dọn sạch, trả lại danh sách trống để thêm tay như hành vi cũ. Khi bị khóa
+  // hẳn (disableAutoGoldMode) thì bỏ qua luôn, để caller tự quản lý compareRows (dữ liệu thật đã nạp).
   useEffect(() => {
+    if (disableAutoGoldMode) return;
     if (!autoGoldMode) {
       setCompareRows([]);
       return;
@@ -52,7 +57,7 @@ export function useCompareRows(
       })),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoGoldMode, singleMaterialId, dbMaterials]);
+  }, [autoGoldMode, singleMaterialId, dbMaterials, disableAutoGoldMode]);
 
   const addCompareRow = () =>
     setCompareRows((prev) => [

@@ -49,8 +49,10 @@ export function useMaterialStoneRows(
     setMaterialRows((prev) => (prev.length <= 1 ? prev : prev.filter((r) => r.id !== id)));
   };
 
-  const addStoneRow = () => {
-    setStoneRows((prev) => [...prev, { id: genRowId(), stoneType: '', stoneId: '', qty: 1 }]);
+  const addStoneRow = (stoneType: StoneRow['stoneType'] = '', parentId?: string): string => {
+    const id = genRowId();
+    setStoneRows((prev) => [...prev, { id, stoneType, stoneId: '', qty: 1, parentId }]);
+    return id;
   };
 
   const updateStoneRow = (id: string, patch: Partial<StoneRow>) => {
@@ -64,8 +66,9 @@ export function useMaterialStoneRows(
     );
   };
 
+  // Xóa 1 đá chủ (MAIN) thì xóa luôn các đá tấm đính kèm riêng của nó (parentId trỏ về id đó).
   const removeStoneRow = (id: string) => {
-    setStoneRows((prev) => prev.filter((r) => r.id !== id));
+    setStoneRows((prev) => prev.filter((r) => r.id !== id && r.parentId !== id));
   };
 
   // Tên đá tra theo catalog TẠI THỜI ĐIỂM ĐỌC (cho mô tả/nhãn). Đơn giá đá KHÔNG tính ở FE nữa —
