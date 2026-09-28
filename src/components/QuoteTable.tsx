@@ -814,9 +814,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               zoomScale > ZOOM_MIN ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default',
               isDragging ? 'transition-none' : 'transition-[width_0.05s_linear]',
             )}
-            // động — giữ inline
+            // động — giữ inline. Width ép cứng theo vw nhưng height chỉ h-auto (theo tỉ lệ ảnh gốc) —
+            // ảnh dọc (cao hơn rộng) ở width 70vw ra chiều cao thừa hẳn viewport, tràn xuống dưới. Thêm
+            // maxHeight để object-contain thu nhỏ lại theo tỉ lệ khi chiều cao vượt khung, giống cách
+            // ImageLightbox.tsx (component dùng chung) đã chặn bằng max-h-[80vh].
             style={{
               width: `${70 * zoomScale}vw`,
+              maxHeight: '85vh',
             }}
           />
         </div>,
