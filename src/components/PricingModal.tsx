@@ -778,11 +778,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     const primaryPrice = selectedOpts[0].quotedPrice;
     const primaryVat = selectedOpts[0].vat != null ? Number(selectedOpts[0].vat) : defaultVatRate;
 
-    setSubmitting(true);
-    try {
-      await onSubmit(primaryPrice, primaryVat, selectedOpts, { inspectionFee: parseFloat(calcInspectionFee) || 0 });  
-      onClose();
-    } catch (err: any) {
+    const payloadOpts = selectedOpts.map((opt, idx) => ({ ...opt, isSelected: idx === 0 }));                                                                                                        
+                                                                                                                                                                                                        
+    setSubmitting(true);                                                                                                                                                                            
+    try {                                                                                                                                                                                           
+      await onSubmit(primaryPrice, primaryVat, payloadOpts, { inspectionFee: parseFloat(calcInspectionFee) || 0 });                                                                                 
+      onClose();                                                                                                                                                                                    
+    } catch (err: any) {  
       alert(err.message || 'Lỗi khi lưu báo giá');
     } finally {
       setSubmitting(false);
