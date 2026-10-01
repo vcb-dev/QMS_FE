@@ -170,7 +170,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
             <Search size={15} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#334155]" />
             <input
               type="text"
-              placeholder="Tìm kiếm sản phẩm ..."
+              placeholder="Tìm tên, mã sản phẩm, mã yêu cầu..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-surface border border-[#cbd5e1] rounded-[8px] pt-[7px] pr-[12px] pb-[7px] pl-[36px] text-[15.5px] text-[#0f172a] outline-none box-border"
@@ -390,6 +390,11 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                   <h3 className="text-[16.5px] font-extrabold text-text m-0 truncate" title={item.productName}>
                     {item.productName}
                   </h3>
+                  {item.productCode && (
+                    <div className="text-[14px] text-muted truncate" title={item.productCode}>
+                      Mã SP: <span className="font-mono font-bold text-[#334155]">{item.productCode}</span>
+                    </div>
+                  )}
 
                   <div className="mt-[1px]">
                     <div className="text-[18px] font-black text-text">

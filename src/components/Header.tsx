@@ -8,6 +8,7 @@ import { fetchQuoteRequests } from '../services/api';
 import { StatusPill } from './StatusPill';
 import { STATUS_BADGE_META } from '../constants';
 import { formatCurrency } from '../utils/currency';
+import { getPrimaryOption } from '../utils/quoteOption';
 import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { UserAvatar } from './UserAvatar';
 import {
@@ -91,29 +92,24 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // "Sản phẩm" — mỗi phương án ĐÃ BÁO GIÁ (quotedPrice != null) của đơn QUOTED/CLOSED trong
-  // cùng kết quả search ở trên là 1 sản phẩm, giống cách LibraryPage dựng thẻ sản phẩm.
+  // "Sản phẩm" — mỗi đơn QUOTED/CLOSED đã có giá trong cùng kết quả search ở trên là 1 sản phẩm,
+  // giống cách LibraryPage dựng thẻ sản phẩm. Tên là tên sản phẩm Sale đã nhập; giá lấy theo
+  // phương án đại diện của đơn.
   const productResults = useMemo<HeaderSearchProduct[]>(() => {
     const items: HeaderSearchProduct[] = [];
     for (const r of searchResults) {
       if (r.status !== 'QUOTED' && r.status !== 'CLOSED') continue;
-      const catName = r.category?.name || '';
-      for (const o of r.options || []) {
-        if (o.quotedPrice == null) continue;
-        const matStr =
-          o.materials && o.materials.length > 0
-            ? o.materials.map((m) => m.materialName || m.material?.name).filter(Boolean).join(', ')
-            : o.materialName || '';
-        items.push({
-          key: `${r.id}:${o.id || matStr}`,
-          requestId: r.id,
-          productName: `${catName} ${matStr}`.trim() || r.productName || 'Sản phẩm chế tác',
-          price: Number(o.quotedPrice),
-          // Tách giá chất liệu / đá do BE tính sẵn (priceBreakdown) — FE chỉ đọc.
-          materialPrice: o.priceBreakdown ? o.priceBreakdown.material : null,
-          stonePrice: o.priceBreakdown ? o.priceBreakdown.stone : null,
-        });
-      }
+      const primary = getPrimaryOption(r);
+      if (!primary || primary.quotedPrice == null) continue;
+      items.push({
+        key: r.id,
+        requestId: r.id,
+        productName: r.productName,
+        price: Number(primary.quotedPrice),
+        // Tách giá chất liệu / đá do BE tính sẵn (priceBreakdown) — FE chỉ đọc.
+        materialPrice: primary.priceBreakdown ? primary.priceBreakdown.material : null,
+        stonePrice: primary.priceBreakdown ? primary.priceBreakdown.stone : null,
+      });
     }
     return items;
   }, [searchResults]);
@@ -181,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => { if (searchResults.length > 0) openDropdownAtCurrentPosition(); }}
-              placeholder="Tìm yêu cầu, sản phẩm, khách hàng..."
+              placeholder="Tìm yêu cầu, sản phẩm, mã sản phẩm, khách hàng..."
               className="w-full pt-[9px] pr-[12px] pb-[9px] pl-[34px] rounded-[8px] border border-[#cbd5e1] bg-[#f8fafc] text-[15.5px] text-[#0f172a] outline-none box-border"
             />
           </div>

@@ -406,7 +406,9 @@ export interface LibraryProduct {
   requestId: string;
   code: string;
   images?: QuoteRequestImage[];
+  // Tên + mã sản phẩm Sale đã nhập lúc tạo yêu cầu.
   productName: string;
+  productCode?: string | null;
   matStr: string;
   weightDisplay: string | null;
   stoneDisplay: string;

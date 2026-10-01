@@ -118,6 +118,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
             </div>
 
             <dl className="w-full mt-[18px] flex flex-col [&>div]:flex [&>div]:justify-between [&>div]:gap-[12px] [&>div]:py-[8px] [&>div]:border-t [&>div]:border-border [&>div:last-child]:border-b [&>div:last-child]:border-border [&_dt]:shrink-0 [&_dt]:pt-[1px] [&_dt]:text-[13px] [&_dt]:font-bold [&_dt]:tracking-[0.5px] [&_dt]:uppercase [&_dt]:text-faint [&_dd]:min-w-0 [&_dd]:text-[14.5px] [&_dd]:font-bold [&_dd]:text-[#0f172a] [&_dd]:text-right">
+              <div><dt>Mã sản phẩm</dt><dd>{item.productCode || '—'}</dd></div>
               <div><dt>Chất liệu</dt><dd>{item.matStr || '—'}</dd></div>
               <div><dt>Khối lượng</dt><dd>{item.weightDisplay || '—'}</dd></div>
               <div><dt>Đá</dt><dd>{item.stoneDisplay || 'Không đính đá'}</dd></div>
