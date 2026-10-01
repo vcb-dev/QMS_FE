@@ -170,7 +170,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Tìm kiếm mã, tên khách, sản phẩm..."
+              placeholder="Tìm kiếm mã, tên khách, sản phẩm, mã sản phẩm..."
               className="w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[12px] pb-[8px] pl-[34px] text-[15.5px] text-[#0f172a] outline-none box-border"
             />
           </div>

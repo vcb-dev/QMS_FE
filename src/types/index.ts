@@ -231,7 +231,9 @@ export interface QuoteRequest {
   id: string;
   code: string;
   status: QuoteStatus;
+  // Tên + mã sản phẩm do Sale nhập lúc tạo yêu cầu (BE lưu ở quote_requests.product_name/product_code).
   productName: string;
+  productCode?: string | null;
   department?: { id: string; name: string };
   desiredLeadTime?: string;
   desiredDate?: string;

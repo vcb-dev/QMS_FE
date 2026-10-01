@@ -564,6 +564,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
         <thead>
           <tr>
             <th>Tên Sản Phẩm</th>
+            <th>Mã Sản Phẩm</th>
             <th>Thời Gian Tạo</th>
             <th>Trạng Thái</th>
             <th>Ảnh</th>
@@ -664,6 +665,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     )}
                   </div>
                 </td>
+                <td className="font-mono text-[15px] text-[#1e293b]">{r.productCode || '---'}</td>
                 <td className="text-muted text-[14px]">
                   {r.createdAt
                     ? new Date(r.createdAt).toLocaleString('vi-VN', {
