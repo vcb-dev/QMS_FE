@@ -20,13 +20,8 @@ export const stripAppliedPct = (s: string) => (s || '').replace(/\s*\(Áp dụng
 export const cleanOptionLabel = (opt: { materialName?: string; optionName: string }) =>
   stripAppliedPct(opt.materialName || opt.optionName || '');
 
-// Giá hiển thị trên Quản Lý Sản Phẩm ưu tiên livePrice (tính theo giá kim loại/đá/tỷ lệ/VAT hôm
-// nay) — chỉ fallback về quotedPrice đã đóng băng khi BE không tính được (thiếu config).
-export const displayPrice = (opt: { quotedPrice: number; livePrice?: number | null }) =>
-  opt.livePrice != null ? Number(opt.livePrice) : Number(opt.quotedPrice) || 0;
-
-// Thẻ Thư Viện Sản Phẩm gộp nhiều option (khác tuổi vàng/khối lượng) — hiện khoảng giá min–max của
-// nhóm; bằng nhau (nhóm 1 option) thì 1 số; thiếu min/max thì rơi về giá đại diện.
+// Thẻ Thư Viện Sản Phẩm — hiện khoảng giá min–max các phương án đã báo của 1 yêu cầu; bằng nhau
+// (chỉ 1 giá) thì 1 số; thiếu min/max thì rơi về `fallback`.
 export const formatPriceRange = (
   min: number | null | undefined,
   max: number | null | undefined,
