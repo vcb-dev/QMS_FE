@@ -396,48 +396,32 @@ export interface LibraryPageProps {
   initialTimeRange?: TimeRange;
 }
 
-export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT' | 'MOST_QUOTED';
+export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT';
 export type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 
-// 1 phương án báo giá (QuoteOption) đã "duyệt" (đơn cha ở status QUOTED/CLOSED) hiển thị như 1 sản
-// phẩm riêng trên trang Quản Lý Sản Phẩm — khác với QuoteRequest (1 đơn có thể có nhiều phương án).
-export interface ProductOptionCard {
+// 1 yêu cầu báo giá đã QUOTED/CLOSED = 1 sản phẩm trên trang Thư Viện / Quản Lý Sản Phẩm (không gộp
+// các yêu cầu giống nhau). Chi tiết sản phẩm là "Lịch sử báo giá": các phương án đã báo của yêu cầu.
+export interface LibraryProduct {
   key: string;
-  // Khóa gộp nhóm — dùng để lazy-load lịch sử báo giá qua fetchLibraryProductHistory.
-  groupKey?: string;
   requestId: string;
   code: string;
-  categoryId?: string;
   images?: QuoteRequestImage[];
-  option: QuoteOption;
   productName: string;
   matStr: string;
   weightDisplay: string | null;
   stoneDisplay: string;
-  materialIds: string[];
-  requestCreatedAt?: string;
-  lastQuotedAt?: string;
-  // Số ĐƠN (request) distinct bị gộp chung vào nhóm này (cùng danh mục + kim loại gốc + tập đá) —
-  // 1 = chỉ 1 đơn tạo ra sản phẩm này.
-  duplicateCount?: number;
-  // Khoảng giá ĐÃ BÁO của nhóm (quoted, đóng băng) — min === max khi nhóm 1 giá.
+  saleName: string;
+  pricerName?: string | null;
+  // Ngày báo giá gần nhất của yêu cầu (fallback ngày tạo đơn).
+  quotedAt?: string;
+  // Khoảng giá ĐÃ BÁO của các phương án (đóng băng) — min === max khi chỉ 1 giá.
   priceMin?: number;
   priceMax?: number;
-  // Khoảng giá HÔM NAY (ước lượng ~) — quoted range × tỉ lệ biến động của option đại diện. null
-  // khi rep không tính được giá sống.
+  // Khoảng giá HÔM NAY (giá sống của các phương án) — null khi không phương án nào tính được.
   livePriceMin?: number | null;
   livePriceMax?: number | null;
-  priceMaterialMin?: number;
-  priceMaterialMax?: number;
-  priceStoneMin?: number;
-  priceStoneMax?: number;
-  livePriceMaterialMin?: number | null;
-  livePriceMaterialMax?: number | null;
-  livePriceStoneMin?: number | null;
-  livePriceStoneMax?: number | null;
-  // Lịch sử báo giá của nhóm — 1 phần tử / đơn, sắp mới → cũ. Modal chi tiết dùng để dựng cột trái
-  // (danh sách đơn) + cột phải (giá các phương án của đơn đang chọn).
-  history?: QuoteHistoryEntry[];
+  // Lịch sử báo giá: từng phương án đã báo, giá thấp → cao.
+  options: QuoteHistoryOption[];
 }
 
 export interface QuoteHistoryOption {
@@ -453,35 +437,13 @@ export interface QuoteHistoryOption {
   selectionStatus?: string;
 }
 
-export interface QuoteHistoryEntry {
-  requestId: string;
-  code: string;
-  quotedDate?: string | null;
-  quotedAt?: string;
-  weightDisplay: string | null;
-  saleName: string;
-  pricerName?: string | null;
-  // Khoảng giá ĐÃ BÁO của đơn này (BE tính sẵn).
-  priceMin?: number;
-  priceMax?: number;
-  // Ảnh của đơn này — modal chi tiết đổi ảnh nền theo đơn đang chọn (fallback ảnh nhóm nếu rỗng).
-  images?: QuoteRequestImage[];
-  options: QuoteHistoryOption[];
-}
-
 export interface LibraryProductsResponse {
-  data: ProductOptionCard[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
-}
-
-// Lịch sử báo giá 1 sản phẩm — lazy load + phân trang theo đơn khi mở modal chi tiết.
-export interface LibraryHistoryResponse {
-  data: QuoteHistoryEntry[];
+  data: LibraryProduct[];
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
 // Kết quả "Sản phẩm" trong dropdown search tổng ở Header — rút gọn từ các option đã có giá
-// (QUOTED/CLOSED) của các đơn khớp search, KHÔNG phải toàn bộ ProductOptionCard của Thư Viện.
+// (QUOTED/CLOSED) của các đơn khớp search, KHÔNG phải toàn bộ LibraryProduct của Thư Viện.
 export interface HeaderSearchProduct {
   key: string;
   requestId: string;
@@ -492,19 +454,8 @@ export interface HeaderSearchProduct {
 }
 
 export interface ProductSpecModalProps {
-  item: ProductOptionCard;
+  item: LibraryProduct;
   onClose: () => void;
-  // Bộ lọc ngoài đang áp ở trang Thư Viện — truyền vào để lịch sử báo giá (lazy load) khớp view.
-  filters?: {
-    search?: string;
-    categoryId?: string;
-    materialId?: string;
-    salePersonId?: string;
-    orderPersonId?: string;
-    timeRange?: string;
-    startDate?: string;
-    endDate?: string;
-  };
 }
 
 export interface LoginPageProps {

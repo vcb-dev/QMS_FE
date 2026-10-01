@@ -8,12 +8,12 @@ import {
   dateInputCls,
 } from '../styles/classNames';
 import { useSearchParams } from 'react-router-dom';
-import type { SortModeLibrary, LibraryPageProps, TimeRange, ProductOptionCard, StaffUser } from '../types';
+import type { SortModeLibrary, LibraryPageProps, TimeRange, LibraryProduct, StaffUser } from '../types';
 import { Search, SlidersHorizontal, RotateCcw, ChevronDown } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { ProductSpecModal } from '../components/ProductSpecModal';
-import { displayPrice, formatPriceRange } from '../utils/quoteOption';
+import { formatPriceRange } from '../utils/quoteOption';
 import { fetchLibraryProducts, getAllUsersApi } from '../services/api';
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
@@ -37,12 +37,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(UI_CONSTANTS.PRODUCT_LIBRARY.DEFAULT_PAGE_SIZE);
-  const [detailItem, setDetailItem] = useState<ProductOptionCard | null>(null);
+  const [detailItem, setDetailItem] = useState<LibraryProduct | null>(null);
 
   const [saleStaff, setSaleStaff] = useState<StaffUser[]>([]);
   const [orderStaff, setOrderStaff] = useState<StaffUser[]>([]);
 
-  const [products, setProducts] = useState<ProductOptionCard[]>([]);
+  const [products, setProducts] = useState<LibraryProduct[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -341,7 +341,6 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           <option value="PRICE_DESC">Giá cao nhất</option>
           <option value="PRICE_ASC">Giá thấp nhất</option>
           <option value="RECENT">Mới nhất</option>
-          <option value="MOST_QUOTED">Báo giá nhiều nhất</option>
         </select>
       </div>
 
@@ -376,7 +375,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                     }}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
-                  {(sortMode === 'PRICE_DESC' || sortMode === 'MOST_QUOTED') && (
+                  {sortMode === 'PRICE_DESC' && (
                     <span className="absolute top-[8px] left-[8px] bg-text text-surface text-[13px] font-extrabold py-[2px] px-[8px] rounded-[10px]">
                       #{(currentPage - 1) * pageSize + idx + 1}
                     </span>
@@ -388,54 +387,24 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
                 {/* Body Details */}
                 <div className="p-[14px] flex flex-col gap-[5px] flex-1">
-                  <div className="flex items-center gap-[6px]">
-                    <h3 className="text-[16.5px] font-extrabold text-text m-0 truncate flex-1" title={item.productName}>
-                      {item.productName}
-                    </h3>
-                    {item.duplicateCount && item.duplicateCount > 1 && (
-                      <span
-                        title={`Đã báo giá ${item.duplicateCount} lần cho mẫu này`}
-                        className="shrink-0 text-[13px] font-extrabold text-[#0369a1] bg-[#e0f2fe] py-[2px] px-[6px] rounded-[8px]"
-                      >
-                        ×{item.duplicateCount}
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="text-[16.5px] font-extrabold text-text m-0 truncate" title={item.productName}>
+                    {item.productName}
+                  </h3>
 
                   <div className="mt-[1px]">
                     <div className="text-[18px] font-black text-text">
-                      {formatPriceRange(item.priceMin, item.priceMax, displayPrice(item.option))}
+                      {formatPriceRange(item.priceMin, item.priceMax, 0)}
                     </div>
-                    {/* {item.priceMaterialMin != null && (
-                      <div className="text-[14px] font-semibold text-[#334155]">
-                        Giá chất liệu: {formatPriceRange(item.priceMaterialMin, item.priceMaterialMax, item.priceMaterialMin)}
-                      </div>
-                    )}
-                    {item.priceStoneMin != null && item.priceStoneMax != null && item.priceStoneMax > 0 && (
-                      <div className="text-[14px] font-semibold text-[#334155]">
-                        Giá đá: {formatPriceRange(item.priceStoneMin, item.priceStoneMax, item.priceStoneMin)}
-                      </div>
-                    )} */}
                     {item.livePriceMin != null && item.livePriceMax != null && (
                       <div className="text-[14.5px] font-bold text-[#0369a1] mt-[1px]">
                         Hôm nay ~ {formatPriceRange(item.livePriceMin, item.livePriceMax, item.livePriceMax)}
                       </div>
                     )}
-                    {/* {item.livePriceMaterialMin != null && (
-                      <div className="text-[14px] font-semibold text-[#334155]">
-                        Giá chất liệu: {formatPriceRange(item.livePriceMaterialMin, item.livePriceMaterialMax, item.livePriceMaterialMin)}
-                      </div>
-                    )}
-                    {item.livePriceStoneMin != null && item.livePriceStoneMax != null && item.livePriceStoneMax > 0 && (
-                      <div className="text-[14px] font-semibold text-[#334155]">
-                        Giá đá: {formatPriceRange(item.livePriceStoneMin, item.livePriceStoneMax, item.livePriceStoneMin)}
-                      </div>
-                    )} */}
                   </div>
 
                   <div className="text-[14.5px] text-[#475569] mt-[4px] flex flex-col gap-[3px] leading-[1.4]">
                     <div>
-                      <strong className="text-[#334155]">Chất liệu:</strong> {item.matStr}
+                      <strong className="text-[#334155]">Chất liệu:</strong> {item.matStr || '—'}
                     </div>
                     {item.weightDisplay && (
                       <div>
@@ -477,16 +446,6 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           key={detailItem.key}
           item={detailItem}
           onClose={() => setDetailItem(null)}
-          filters={{
-            search: debouncedSearch || undefined,
-            categoryId: selectedCat !== 'ALL' ? selectedCat : undefined,
-            materialId: selectedMat !== 'ALL' ? selectedMat : undefined,
-            salePersonId: selectedSale !== 'ALL' ? selectedSale : undefined,
-            orderPersonId: selectedOrder !== 'ALL' ? selectedOrder : undefined,
-            timeRange: timeRange !== 'ALL' ? timeRange : undefined,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined,
-          }}
         />
       )}
     </div>

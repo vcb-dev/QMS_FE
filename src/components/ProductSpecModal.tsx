@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
-import { X, History, Coins, Copy, Check, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
-import type { ProductSpecModalProps, QuoteHistoryEntry } from '../types';
+import { X, History, Copy, Check, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
+import type { ProductSpecModalProps } from '../types';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { getPriceBreakdown, getLivePriceBreakdown } from '../utils/priceBreakdown';
 import { ImageLightbox } from './ImageLightbox';
 import { formatPriceRange, formatOptionCopyLine } from '../utils/quoteOption';
-import { fetchLibraryProductHistory } from '../services/api';
 import { useModalA11y } from '../hooks/useModalA11y';
 import {
   modalBackdropCls,
@@ -22,9 +21,6 @@ import {
   specHistCardLineCls,
 } from '../styles/classNames';
 
-// Cột lịch sử tải từng lô nhỏ, cuộn tới đáy thì tự tải lô kế (infinite scroll) — không nút bấm.
-const HISTORY_PAGE_SIZE = 8;
-
 // Chỉ phương án khách CHỐT THẬT (CLOSED) mới gắn tag. SELECTED ("Sale đang nghiêng về") không gắn.
 const STATUS_TAG: Record<string, { label: string; className: string }> = {
   CLOSED: { label: 'Đã chốt', className: 'bg-[#dcfce7] text-[#15803d]' },
@@ -33,46 +29,20 @@ const STATUS_TAG: Record<string, { label: string; className: string }> = {
 const fmtDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString('vi-VN') : '—';
 
-export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose, filters }) => {
+export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose }) => {
   const [activeIdx, setActiveIdx] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   // Khi ImageLightbox (zoomOpen) đang mở thì để nó tự xử lý Esc — tắt hành vi Esc/khoá-cuộn của
   // modal này để Esc lần đầu chỉ đóng lightbox, không đóng luôn cả modal.
   const dialogRef = useModalA11y(onClose, !zoomOpen);
 
-  // Lịch sử báo giá — KHÔNG gửi kèm list nữa (nhóm có thể vài nghìn đơn). Lazy-load theo trang khi
-  // mở modal; nút "Tải thêm" tải trang tiếp theo. Truyền cùng bộ lọc ngoài để khớp view đang lọc.
-  const [history, setHistory] = useState<QuoteHistoryEntry[]>([]);
-  const [histPage, setHistPage] = useState(1);
-  const [histTotalPages, setHistTotalPages] = useState(1);
-  const [histLoading, setHistLoading] = useState(false);
-  const [selIdx, setSelIdx] = useState(0);
-  const selected = history[selIdx] ?? history[0];
-  // Ngày báo giá của đơn đang chọn — hiện 1 lần ở đầu cột "Giá phương án" (mọi phương án cùng ngày).
-  const quotedWhen =
-    selected?.quotedDate || selected?.quotedAt
-      ? fmtDate(selected?.quotedDate ?? selected?.quotedAt)
-      : '';
-
-  // Infinite scroll cột lịch sử. loadingRef chặn tải trùng (state chưa kịp cập nhật giữa 2 render).
-  const gridRef = useRef<HTMLDivElement>(null);
-  const histColRef = useRef<HTMLElement>(null);
-  const histSentinelRef = useRef<HTMLDivElement>(null);
-  const histLoadingRef = useRef(false);
-
-  // Ảnh nền modal = ảnh của ĐƠN đang chọn ở cột lịch sử; đơn cũ chưa có ảnh riêng thì fallback ảnh nhóm.
-  const images =
-    selected?.images && selected.images.length > 0
-      ? selected.images
-      : item.images && item.images.length > 0
-        ? item.images
-        : [];
+  const images = item.images ?? [];
   const mainImgUrl = images[activeIdx]?.imageUrl || UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE;
 
   // Copy giá "sống" (Hôm nay ~) của phương án — fallback về giá gốc nếu option chưa có livePrice.
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  useEffect(() => { setCopiedIdx(null); setCopiedAll(false); setActiveIdx(0); }, [selIdx]);
+  useEffect(() => { setCopiedIdx(null); setCopiedAll(false); setActiveIdx(0); }, [item.key]);
 
   const handleCopyOption = (idx: number, o: any) => {
     navigator.clipboard.writeText(formatOptionCopyLine(o, { useLive: true })).then(() => {
@@ -88,58 +58,6 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
     }).catch(() => {});
   };
 
-  useEffect(() => {
-    if (!item.groupKey) return;
-    let cancelled = false;
-    histLoadingRef.current = true;
-    setHistLoading(true);
-    fetchLibraryProductHistory({
-      groupKey: item.groupKey,
-      page: histPage,
-      limit: HISTORY_PAGE_SIZE,
-      ...(filters || {}),
-    })
-      .then((res) => {
-        if (cancelled) return;
-        setHistory((prev) =>
-          histPage === 1 ? res.data : [...prev, ...res.data],
-        );
-        setHistTotalPages(res.meta.totalPages);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (cancelled) return;
-        histLoadingRef.current = false;
-        setHistLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // filters cố ý KHÔNG vào deps — modal mở lại (key theo item) là fetch mới; filters chỉ đọc 1 lần.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.groupKey, histPage]);
-
-  // Cuộn tới gần đáy cột lịch sử → tải lô kế. Desktop cột tự cuộn (root = cột); mobile cả grid cuộn.
-  useEffect(() => {
-    if (histPage >= histTotalPages) return;
-    const sentinel = histSentinelRef.current;
-    if (!sentinel) return;
-    const mobile = window.matchMedia('(max-width: 860px)').matches;
-    const root = (mobile ? gridRef.current : histColRef.current) ?? null;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0].isIntersecting || histLoadingRef.current) return;
-        histLoadingRef.current = true;
-        setHistPage((p) => (p < histTotalPages ? p + 1 : p));
-      },
-      { root, rootMargin: '160px 0px' },
-    );
-    io.observe(sentinel);
-    return () => io.disconnect();
-    // history.length: sau khi nối thêm dữ liệu, dựng lại observer để bắt lại trạng thái giao nhau
-    // (IntersectionObserver không tự gọi lại nếu sentinel vẫn nằm trong khung nhìn).
-  }, [histPage, histTotalPages, history.length]);
-
   return createPortal(
     <>
     <div className={modalBackdropCls} onClick={onClose}>
@@ -151,7 +69,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
         tabIndex={-1}
         className={clsx(
           modalCardCls,
-          'w-[min(1000px,96vw)] max-w-[min(1000px,96vw)] h-auto max-h-[92vh] overflow-hidden flex flex-col',
+          'w-[min(900px,96vw)] max-w-[min(900px,96vw)] h-auto max-h-[92vh] overflow-hidden flex flex-col',
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -165,10 +83,9 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
         </div>
 
         <div
-          className="grid [grid-template-columns:minmax(240px,3fr)_minmax(0,3.5fr)_minmax(0,3.5fr)] [grid-template-rows:minmax(0,1fr)] flex-1 min-h-0 overflow-hidden max-[860px]:!flex max-[860px]:!flex-col max-[860px]:!overflow-y-auto"
-          ref={gridRef}
+          className="grid [grid-template-columns:minmax(240px,3fr)_minmax(0,5fr)] [grid-template-rows:minmax(0,1fr)] flex-1 min-h-0 overflow-hidden max-[860px]:!flex max-[860px]:!flex-col max-[860px]:!overflow-y-auto"
         >
-          {/* Cột 1 — hình ảnh sản phẩm của đơn đang chọn */}
+          {/* Cột 1 — hình ảnh + thông số sản phẩm */}
           <section className={clsx(specColCls, 'items-center bg-[#fafafa] max-[860px]:order-1')}>
             <div className={specEyebrowCls}>
               <span className={specEyebrowLabelCls}><ImageIcon size={13} /> Hình ảnh</span>
@@ -200,86 +117,45 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
               )}
             </div>
 
-            {/* Thông số gộp của nhóm sản phẩm — lấp khoảng trống dưới ảnh, cân với cột phải */}
             <dl className="w-full mt-[18px] flex flex-col [&>div]:flex [&>div]:justify-between [&>div]:gap-[12px] [&>div]:py-[8px] [&>div]:border-t [&>div]:border-border [&>div:last-child]:border-b [&>div:last-child]:border-border [&_dt]:shrink-0 [&_dt]:pt-[1px] [&_dt]:text-[13px] [&_dt]:font-bold [&_dt]:tracking-[0.5px] [&_dt]:uppercase [&_dt]:text-faint [&_dd]:min-w-0 [&_dd]:text-[14.5px] [&_dd]:font-bold [&_dd]:text-[#0f172a] [&_dd]:text-right">
               <div><dt>Chất liệu</dt><dd>{item.matStr || '—'}</dd></div>
               <div><dt>Khối lượng</dt><dd>{item.weightDisplay || '—'}</dd></div>
               <div><dt>Đá</dt><dd>{item.stoneDisplay || 'Không đính đá'}</dd></div>
-              <div><dt>Số đơn đã báo</dt><dd>{item.duplicateCount ?? (history.length || '—')}</dd></div>
               <div><dt>Khoảng giá đã báo</dt><dd>{formatPriceRange(item.priceMin, item.priceMax, 0)}</dd></div>
             </dl>
           </section>
 
-          {/* Cột 2 — lịch sử báo giá (mới → cũ); chọn 1 đơn để đổi ảnh + bảng giá */}
-          <section className={clsx(specColCls, 'max-[860px]:order-3')} ref={histColRef}>
-            <div className={specEyebrowCls}>
-              <span className={specEyebrowLabelCls}><History size={13} /> Lịch sử báo giá</span>
-            </div>
-            {history.length === 0 ? (
-              <div className={specEmptyCls}>{histLoading ? 'Đang tải lịch sử…' : 'Chưa có lịch sử báo giá'}</div>
-            ) : (
-              <div className="flex flex-col gap-[8px]">
-                {history.map((h, idx) => (
-                  <button
-                    key={h.requestId}
-                    type="button"
-                    className="flex flex-col gap-[3px] py-[12px] px-[13px] font-[inherit] text-left bg-white border border-border border-l-[3px] border-l-transparent rounded-[10px] cursor-pointer transition-[border-color,background] duration-[120ms] hover:border-[#94a3b8] aria-selected:bg-[#f1f5f9] aria-selected:border-[#0f172a] aria-selected:border-l-[#0f172a]"
-                    aria-selected={idx === selIdx}
-                    onClick={() => setSelIdx(idx)}
-                  >
-                    <div className="flex items-baseline justify-between gap-[8px] mb-[1px]">
-                      <span className="text-[13.5px] font-bold text-muted [font-variant-numeric:tabular-nums] tracking-[0.2px]">{h.code}</span>
-                      <span className="shrink-0 text-[15px] font-extrabold text-[#0f172a] [font-variant-numeric:tabular-nums] text-right">
-                        {fmtDate(h.quotedDate ?? h.quotedAt)}
-                        {h.weightDisplay ? ` · ${h.weightDisplay}` : ''}
-                      </span>
-                    </div>
-                    <div className={specHistCardLineCls}>Sale <strong>{h.saleName || '—'}</strong></div>
-                    <div className={specHistCardLineCls}>Báo giá <strong>{h.pricerName || '—'}</strong></div>
-                    <div className={specHistCardLineCls} title={item.stoneDisplay || 'Không đính đá'}>
-                      Đá <strong>{item.stoneDisplay || 'Không đính đá'}</strong>
-                    </div>
-                    <div className="mt-[5px] pt-[6px] border-t border-dashed border-border text-[14.5px] text-muted [&_strong]:text-[#0f172a] [&_strong]:font-extrabold">
-                      Đã báo <strong>{formatPriceRange(h.priceMin, h.priceMax, h.options[0]?.price ?? 0)}</strong>
-                    </div>
-                  </button>
-                ))}
-                {histPage < histTotalPages && (
-                  <div
-                    ref={histSentinelRef}
-                    className="flex items-center justify-center min-h-[34px] mt-[2px] text-[13.5px] font-bold tracking-[0.5px] uppercase text-faint"
-                  >
-                    {histLoading ? 'Đang tải thêm…' : ''}
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          {/* Cột 3 — bảng giá theo phương án chất liệu của đơn đang chọn */}
+          {/* Cột 2 — lịch sử báo giá: giá từng phương án lúc báo và hôm nay */}
           <section className={clsx(specColCls, 'max-[860px]:order-2')}>
             <div className={specEyebrowCls}>
-              <span className={specEyebrowLabelCls}><Coins size={13} /> Giá phương án</span>
-              {selected && selected.options.length > 1 && (
+              <span className={specEyebrowLabelCls}><History size={13} /> Lịch sử báo giá</span>
+              {item.options.length > 1 && (
                 <button
                   type="button"
                   className="flex items-center gap-[5px] shrink-0 py-[4px] px-[9px] text-[13px] font-bold tracking-[0.3px] text-muted bg-white border border-border rounded-[7px] cursor-pointer data-[copied]:text-[#15803d] data-[copied]:bg-[#dcfce7] data-[copied]:border-[#bbf7d0]"
                   data-copied={copiedAll || undefined}
-                  onClick={() => handleCopyAll(selected.options)}
+                  onClick={() => handleCopyAll(item.options)}
                   title="Copy giá hôm nay của tất cả phương án"
                 >
                   {copiedAll ? <Check size={12} /> : <Copy size={12} />} {copiedAll ? 'Đã copy' : 'Copy hết'}
                 </button>
               )}
             </div>
-            {selected && selected.options.length > 0 ? (
+
+            <div className="flex flex-col gap-[3px] pb-[12px] mb-[4px] border-b border-border">
+              <div className="flex items-baseline justify-between gap-[8px]">
+                <span className="text-[13.5px] font-bold text-muted [font-variant-numeric:tabular-nums] tracking-[0.2px]">{item.code}</span>
+                <span className="shrink-0 text-[15px] font-extrabold text-[#0f172a] [font-variant-numeric:tabular-nums]">
+                  Báo giá ngày {fmtDate(item.quotedAt)}
+                </span>
+              </div>
+              <div className={specHistCardLineCls}>Sale <strong>{item.saleName || '—'}</strong></div>
+              <div className={specHistCardLineCls}>Báo giá <strong>{item.pricerName || '—'}</strong></div>
+            </div>
+
+            {item.options.length > 0 ? (
               <div className="flex flex-col">
-                {quotedWhen && (
-                  <div className="text-[13px] font-extrabold uppercase tracking-[0.4px] text-faint mb-[10px]">
-                    Báo giá ngày {quotedWhen}
-                  </div>
-                )}
-                {selected.options.map((o, idx) => {
+                {item.options.map((o, idx) => {
                   const oTag = o.selectionStatus ? STATUS_TAG[o.selectionStatus] : undefined;
                   const dp = o.livePriceDeltaPct ?? 0;
                   const deltaCls = dp > 0 ? 'text-[#15803d]' : dp < 0 ? 'text-[#b91c1c]' : 'text-muted';
@@ -359,7 +235,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                 })}
               </div>
             ) : (
-              <div className={specEmptyCls}>Không có phương án</div>
+              <div className={specEmptyCls}>Chưa có lịch sử báo giá</div>
             )}
           </section>
         </div>
