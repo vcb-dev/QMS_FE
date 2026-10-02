@@ -5,6 +5,7 @@ export const EXPORT_FIELDS: { key: string; label: string }[] = [
   { key: 'status', label: 'Trạng thái' },
   { key: 'category', label: 'Danh mục' },
   { key: 'productName', label: 'Sản phẩm' },
+  { key: 'productCode', label: 'Mã sản phẩm' },
   { key: 'material', label: 'Chất liệu' },
   { key: 'customerName', label: 'Khách hàng' },
   { key: 'customerPhone', label: 'SĐT khách hàng' },

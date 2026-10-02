@@ -78,6 +78,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
   const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
 
   // Operational Fields
+  const [productName, setProductName] = useState('');
+  const [productCode, setProductCode] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
@@ -253,6 +255,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setIsNewCustomerMode(false);
       setSelectedCustomerId(editingReq.customer?.id || '');
       setSelectedDepartmentId((editingReq as any).department?.id || (editingReq as any).departmentId || '');
+      setProductName(editingReq.productName || '');
+      setProductCode(editingReq.productCode || '');
       setSelectedCategoryId(editingReq.category?.id || (categories[0]?.id || ''));
       setNewCategoryName('');
       const matIds = editingReq.materials ? editingReq.materials.map((m) => m.id) : [];
@@ -275,6 +279,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setNewCustomerWard('');
       setNewCategoryName('');
       setSelectedDepartmentId('');
+      setProductName('');
+      setProductCode('');
 
       if (calculatorData) {
         if (calculatorData.categoryId) {
@@ -523,6 +529,11 @@ export const CreateModal: React.FC<CreateModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productName.trim()) {
+      alert('Vui lòng nhập tên sản phẩm!');
+      return;
+    }
+
     if (selectedMaterialIds.length === 0 || !customerMeasurements.trim()) {
       alert('Vui lòng chọn chất liệu và số đo/kích thước!');
       return;
@@ -578,6 +589,8 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       await onSubmit({
         customerId: finalCustomerId,
         departmentId: selectedDepartmentId,
+        productName: productName.trim(),
+        productCode: productCode.trim(),
         categoryId: selectedCategoryId === 'OTHER' ? (categories[0]?.id || '') : selectedCategoryId,
         newCategoryName: selectedCategoryId === 'OTHER' ? newCategoryName.trim() : undefined,
         materialIds: selectedMaterialIds,
@@ -704,6 +717,32 @@ export const CreateModal: React.FC<CreateModalProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Tên + mã sản phẩm — tên bắt buộc, mã không bắt buộc */}
+              <div className="grid grid-cols-[2fr_1fr] gap-[12px]">
+                <div className={formGroupCls}>
+                  <label className={formLabelCls}>Tên sản phẩm <span className={formReqCls}>*</span></label>
+                  <input
+                    type="text"
+                    className={formControlCls}
+                    placeholder="VD: Nhẫn đôi kim cương..."
+                    value={productName}
+                    maxLength={300}
+                    onChange={(e) => setProductName(e.target.value)}
+                  />
+                </div>
+                <div className={formGroupCls}>
+                  <label className={formLabelCls}>Mã sản phẩm</label>
+                  <input
+                    type="text"
+                    className={formControlCls}
+                    placeholder="Không bắt buộc"
+                    value={productCode}
+                    maxLength={50}
+                    onChange={(e) => setProductCode(e.target.value)}
+                  />
+                </div>
               </div>
 
               {/* Danh Mục Sản Phẩm - DB Loaded */}

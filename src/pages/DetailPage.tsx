@@ -437,9 +437,16 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
           {/* Product Overview Card & Gallery */}
           <div className={cardCls}>
-            <h2 className="text-[21px] font-black text-text mb-[16px]">
-              {selectedReq.productName || 'Sản phẩm mẫu'}
-            </h2>
+            <div className="mb-[16px]">
+              <h2 className="text-[21px] font-black text-text m-0">
+                {selectedReq.productName || 'Sản phẩm mẫu'}
+              </h2>
+              {selectedReq.productCode && (
+                <div className="text-[15px] text-muted mt-[4px]">
+                  Mã sản phẩm: <strong className="font-mono text-text">{selectedReq.productCode}</strong>
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-[260px_1fr] gap-[20px]">
               {/* Media Preview & Thumbnails (video trước, rồi ảnh) */}
