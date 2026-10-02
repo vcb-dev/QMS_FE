@@ -198,10 +198,10 @@ export function useQuoteRequests(
       // countsSigRef cập nhật SAU khi response về (dưới) — nếu cập nhật ở đây rồi request bị 1 request
       // mới hơn vượt mặt, lần sau sẽ tưởng đã có counts cho bộ lọc này mà thật ra chưa.
       // Trang không đọc requests[]: chỉ cần counts -> kéo 1 dòng + lite, khỏi hydrate cả trang.
-      const effectiveLimit = !listDataEnabled ? 1 : currentFilter === 'LIBRARY' ? 8 : pageSize;
+      const effectiveLimit = !listDataEnabled ? 1 : pageSize;
 
       const quoteRes = await fetchQuoteRequests({
-        page: currentFilter === 'LIBRARY' || !listDataEnabled ? 1 : currentPage,
+        page: !listDataEnabled ? 1 : currentPage,
         limit: effectiveLimit,
         status: targetStatus,
         search: searchTerm,
@@ -217,7 +217,6 @@ export function useQuoteRequests(
         includeCounts,
         includeLocked,
         lite: !listDataEnabled ? true : undefined,
-        withLivePrice: currentFilter === 'LIBRARY',
       });
 
       // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)

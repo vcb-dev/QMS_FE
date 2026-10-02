@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, LibraryHistoryResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
@@ -277,7 +277,7 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   return apiCall(api.post('/auth/reset-password', payload), 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; withLivePrice?: boolean; requesterId?: string; assigneeId?: string; departmentId?: string }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; requesterId?: string; assigneeId?: string; departmentId?: string }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -296,7 +296,6 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.endDate) params.endDate = filter.endDate;
   if (filter?.lite) params.lite = true;
   if (filter?.includeLocked) params.includeLocked = true;
-  if (filter?.withLivePrice) params.withLivePrice = true;
 
   return apiCall(dedupedGet('/quote-requests', params), 'Không thể tải danh sách báo giá');
 }
@@ -912,24 +911,6 @@ export async function fetchLibraryProducts(params: {
   limit?: number;
 }): Promise<LibraryProductsResponse> {
   return apiCall(dedupedGet('/quote-requests/library-products', params), 'Không thể lấy danh sách sản phẩm');
-}
-
-// Lịch sử báo giá 1 sản phẩm Thư Viện — lazy load khi mở modal chi tiết, phân trang theo đơn.
-// Truyền cùng bộ lọc ngoài để lịch sử khớp view đang lọc.
-export async function fetchLibraryProductHistory(params: {
-  groupKey: string;
-  page?: number;
-  limit?: number;
-  search?: string;
-  categoryId?: string;
-  materialId?: string;
-  salePersonId?: string;
-  orderPersonId?: string;
-  timeRange?: string;
-  startDate?: string;
-  endDate?: string;
-}): Promise<LibraryHistoryResponse> {
-  return apiCall(dedupedGet('/quote-requests/library-history', params), 'Không thể lấy lịch sử báo giá sản phẩm');
 }
 
 export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { categoryId?: string; materialId?: string; ownerId?: string; timeRange?: string; startDate?: string; endDate?: string; fields?: string[] }) {
