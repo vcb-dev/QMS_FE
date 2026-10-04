@@ -490,7 +490,11 @@ export function useQuoteRequests(
     },
   ) => {
     if (!pricingReqId) return;
-    const targetReq = requests.find((r) => r.id === pricingReqId);
+    // Dùng `pricingReq` (cùng nguồn với PricingModal: bản chi tiết fetch riêng theo id, fallback về
+    // requests[]) chứ KHÔNG tra thẳng requests[] — list bị lọc theo tab/phân trang nên đơn vừa báo
+    // giá xong (đã sang QUOTED) có thể không còn trong đó -> targetReq undefined -> gửi nhầm action
+    // QUOTE (BE đòi PROCESSING -> 409) và mất luôn version (bỏ qua optimistic lock).
+    const targetReq = pricingReq;
     const version = targetReq?.version;
     // Đơn đã có giá (QUOTED/CLOSED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
     // completeQuoteRequest (xóa hết & tạo lại toàn bộ options, thêm/bớt/sửa tự do), chỉ khác action
