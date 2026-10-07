@@ -173,3 +173,11 @@ export const cardHeadingCls =
 export const staffThCls =
   'py-[8px] px-[10px] text-[13.5px] font-extrabold text-[#334155] uppercase';
 export const emptyTextCls = 'text-center text-faint text-[15.5px] py-[24px] px-0';
+// ---- Modal Hồ Sơ Cá Nhân ----
+export const profileSectionCls = 'bg-[#f8fafc] border border-border rounded-[10px] p-[14px] flex flex-col gap-[12px]';
+export const profileSectionTitleCls = 'm-0 text-[16px] font-extrabold text-[#0f172a] flex items-center gap-[8px]';
+export const profileInfoRowCls = 'flex justify-between gap-[12px]';
+
+// Ô chọn gọn trong dòng bảng tài khoản (vai trò, team)
+export const staffRowSelectCls =
+  'py-[5px] px-[8px] rounded-[6px] border border-border bg-surface text-[#334155] text-[14.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-60';

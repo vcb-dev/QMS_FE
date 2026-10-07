@@ -43,9 +43,10 @@ interface AppShellProps {
   currentUser: User;
   currentRole: Role;
   handleLogout: () => Promise<void>;
+  onUserUpdate: (user: User) => void;
 }
 
-function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
+function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppShellProps) {
   const [isExportOpen, setIsExportOpen] = useState(false);
 
   const navigate = useNavigate();
@@ -62,10 +63,10 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
   const masterDataEnabled = onRequestsList || location.pathname.startsWith('/library');
 
   const {
-    requests, categories, materials, departments, saleUsers, pricerUsers, selectedId, setSelectedId,
+    requests, categories, materials, departments, teams, saleUsers, pricerUsers, selectedId, setSelectedId,
     selectedReq, pricingReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
-    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, departmentFilter, setDepartmentFilter,
+    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, departmentFilter, setDepartmentFilter, teamFilter, setTeamFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     includeLocked, setIncludeLocked,
@@ -192,6 +193,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
           currentRole={currentRole}
           onOpenCreateModal={handleOpenCreate}
           onLogout={handleLogout}
+          onUserUpdate={onUserUpdate}
           onSelectReq={handleOpenDetail}
           onSearchRequests={handleSearchRequestsFromHeader}
         />
@@ -219,6 +221,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 saleFilter={saleFilter} setSaleFilter={setSaleFilter}
                 pricerFilter={pricerFilter} setPricerFilter={setPricerFilter}
                 departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter}
+                teamFilter={teamFilter} setTeamFilter={setTeamFilter} teams={teams}
                 ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
                 timeRangeFilter={timeRangeFilter} setTimeRangeFilter={setTimeRangeFilter}
                 startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
@@ -358,7 +361,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
 
 // ─── App Root: Điều hướng chính với Route /login độc lập ─────────────────
 export function App() {
-  const { currentUser, currentRole, authLoading, handleLoginSuccess, handleLogout } = useAuth();
+  const { currentUser, currentRole, authLoading, handleLoginSuccess, handleLogout, updateCurrentUser } = useAuth();
 
   // Chờ khôi phục phiên từ cookie (getProfileApi) trước khi quyết định điều hướng —
   // nếu không, login Lark (chỉ set cookie rồi redirect) sẽ bị đá về /login ngay.
@@ -380,6 +383,7 @@ export function App() {
               currentUser={currentUser}
               currentRole={currentRole}
               handleLogout={handleLogout}
+              onUserUpdate={updateCurrentUser}
             />
           ) : <Navigate to="/login" replace />
         }

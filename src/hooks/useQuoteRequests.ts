@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts, CalculatorHandoff, QuoteOption } from '../types';
+import type { Material, ProductCategory, QuoteRequest, Role, User, StatusCounts, CalculatorHandoff, QuoteOption, Team } from '../types';
 import {
   fetchQuoteRequests,
   fetchQuoteRequestById,
   fetchMasterData,
   getAllUsersApi,
   fetchDepartments,
+  fetchTeams,
   createQuoteRequest,
   updateQuoteRequest,
   deleteQuoteRequest,
@@ -18,6 +19,7 @@ import {
   resubmitQuoteRequest,
   markQuoteClosed,
 } from '../services/api';
+import { TEAM_FILTER_ALL } from '../constants/team';
 
 // `listDataEnabled=false` (khi đang ở trang KHÔNG đọc `requests[]` — Thư viện/Máy tính giá/Nhân
 // viên/Khách hàng/Cấu hình giá): vẫn fetch để lấy `counts` nhưng kéo bản NHẸ (limit 1 + lite)
@@ -39,6 +41,7 @@ export function useQuoteRequests(
   const [saleFilter, setSaleFilter] = useState<string>('ALL');
   const [pricerFilter, setPricerFilter] = useState<string>('ALL');
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
+  const [teamFilter, setTeamFilter] = useState<string>(TEAM_FILTER_ALL);
   // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả. Dùng lại giá trị này mỗi khi
   // reset bộ lọc (đổi tab / "Xóa bộ lọc") — reset về 'ALL' cứng sẽ âm thầm bỏ phạm vi mặc định
   // của SALE trong khi dropdown vẫn hiện "Chỉ yêu cầu của tôi".
@@ -70,6 +73,7 @@ export function useQuoteRequests(
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [saleUsers, setSaleUsers] = useState<User[]>([]);
   const [pricerUsers, setPricerUsers] = useState<User[]>([]);
 
@@ -116,8 +120,8 @@ export function useQuoteRequests(
   }, [toastMessage]);
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
-  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
-  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
+  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
+  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
   // Chữ ký bộ lọc ảnh hưởng tới counts sidebar (nằm trong countsWhere của BE — đã strip status).
   // Khác lần trước mới xin BE tính lại counts; phân trang / đổi tab trạng thái giữ nguyên chữ ký.
@@ -133,10 +137,11 @@ export function useQuoteRequests(
   // 1. Load Master Data ONCE on user login
   const loadMasterDataOnce = async () => {
     try {
-      const [masterRes, usersRes, deptsRes] = await Promise.all([
+      const [masterRes, usersRes, deptsRes, teamsRes] = await Promise.all([
         fetchMasterData(),
         getAllUsersApi().catch(() => []),
-        fetchDepartments().catch(() => [])
+        fetchDepartments().catch(() => []),
+        fetchTeams().catch(() => [])
       ]);
       setCategories(masterRes.categories || []);
       setMaterials(masterRes.materials || []);
@@ -147,6 +152,9 @@ export function useQuoteRequests(
       if (Array.isArray(deptsRes)) {
         setDepartments(deptsRes);
       }
+      if (Array.isArray(teamsRes)) {
+        setTeams(teamsRes);
+      }
     } catch (err) {
       console.error('Error loading master data:', err);
     }
@@ -154,7 +162,7 @@ export function useQuoteRequests(
 
   // 2. Load Quote Requests dùng ref để đọc state mới nhất
   const loadData = async (showLoading = true, forceCounts = false) => {
-    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
+    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
     if (!currentUser) return;
 
     // `counts` chỉ trang Danh sách + Tổng quan SALE dùng (đều listDataEnabled=true). Trang khác
@@ -189,7 +197,7 @@ export function useQuoteRequests(
       // đổi khi phân trang hay đổi tab trạng thái. Xin BE tính lại khi chữ ký lọc đổi, lần đầu,
       // hoặc socket refresh (forceCounts — trạng thái đơn vừa đổi). Đỡ 2 query mỗi lần phân trang.
       const countsSig = JSON.stringify([
-        searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerId,
+        searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, teamFilter, ownerId,
         timeRangeFilter, startDateFilter, endDateFilter, includeLocked,
       ]);
       const includeCounts =
@@ -210,6 +218,7 @@ export function useQuoteRequests(
         requesterId: saleFilter !== 'ALL' ? saleFilter : undefined,
         assigneeId: pricerFilter !== 'ALL' ? pricerFilter : undefined,
         departmentId: departmentFilter !== 'ALL' ? departmentFilter : undefined,
+        teamId: teamFilter !== TEAM_FILTER_ALL ? teamFilter : undefined,
         ownerId: ownerId,
         timeRange: timeRangeFilter !== 'ALL' ? timeRangeFilter : undefined,
         startDate: startDateFilter || undefined,
@@ -308,6 +317,7 @@ export function useQuoteRequests(
     saleFilter,
     pricerFilter,
     departmentFilter,
+    teamFilter,
     ownerFilter,
     timeRangeFilter,
     startDateFilter,
@@ -344,6 +354,7 @@ export function useQuoteRequests(
     saleFilter,
     pricerFilter,
     departmentFilter,
+    teamFilter,
     ownerFilter,
   ]);
 
@@ -357,6 +368,7 @@ export function useQuoteRequests(
     setSaleFilter('ALL');
     setPricerFilter('ALL');
     setDepartmentFilter('ALL');
+    setTeamFilter(TEAM_FILTER_ALL);
     setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
     setStartDateFilter('');
@@ -373,6 +385,7 @@ export function useQuoteRequests(
     setSaleFilter('ALL');
     setPricerFilter('ALL');
     setDepartmentFilter('ALL');
+    setTeamFilter(TEAM_FILTER_ALL);
     setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
     setStartDateFilter('');
@@ -611,6 +624,7 @@ export function useQuoteRequests(
     categories,
     materials,
     departments,
+    teams,
     saleUsers,
     pricerUsers,
     selectedId,
@@ -633,6 +647,8 @@ export function useQuoteRequests(
     setPricerFilter,
     departmentFilter,
     setDepartmentFilter,
+    teamFilter,
+    setTeamFilter,
     ownerFilter,
     setOwnerFilter,
     timeRangeFilter,

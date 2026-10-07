@@ -13,6 +13,13 @@ export interface StatusCounts {
   closed: number;
 }
 
+// Team của người dùng — khác Department (phòng ban chọn theo từng đơn). `_count` chỉ có ở bản phân trang.
+export interface Team {
+  id: string;
+  name: string;
+  _count?: { users: number };
+}
+
 export interface User {
   id: string;
   name: string;
@@ -23,6 +30,8 @@ export interface User {
     id: string;
     name: string;
   };
+  team?: { id: string; name: string } | null;
+  createdAt?: string;
 }
 
 export interface BaseMetal {
@@ -507,6 +516,9 @@ export interface RequestsPageProps {
   departmentFilter?: string;
   setDepartmentFilter?: (v: string) => void;
   departments?: { id: string; name: string }[];
+  teamFilter?: string;
+  setTeamFilter?: (v: string) => void;
+  teams?: Team[];
   saleUsers?: User[];
   pricerUsers?: User[];
   ownerFilter: string;
@@ -555,6 +567,7 @@ export interface StaffUser {
   isApproved: boolean;
   isActive: boolean;
   department?: { id: string; name: string } | null;
+  team?: { id: string; name: string } | null;
   createdAt: string;
 }
 

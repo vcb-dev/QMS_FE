@@ -32,6 +32,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   departmentFilter,
   setDepartmentFilter,
   departments,
+  teamFilter,
+  setTeamFilter,
+  teams,
   saleUsers,
   pricerUsers,
   ownerFilter,
@@ -167,6 +170,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         departmentFilter={departmentFilter}
         onDepartmentFilterChange={(v) => { setDepartmentFilter?.(v); setCurrentPage(1); }}
         departments={departments}
+        teamFilter={teamFilter}
+        onTeamFilterChange={(v) => { setTeamFilter?.(v); setCurrentPage(1); }}
+        teams={teams}
         saleUsers={saleUsers}
         pricerUsers={pricerUsers}
         ownerFilter={ownerFilter}
