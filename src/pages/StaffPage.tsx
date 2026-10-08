@@ -72,7 +72,7 @@ export const StaffPage: React.FC = () => {
   const [salePage, setSalePage] = useState(1);
   const [salePageSize, setSalePageSize] = useState(10);
   const [pricerSearch, setPricerSearch] = useState('');
-  const [pricerSortField, setPricerSortField] = useState<'name' | 'totalHandled' | 'medianQuoteMs'>('name');
+  const [pricerSortField, setPricerSortField] = useState<'name' | 'assignedCount' | 'quotedCount' | 'medianQuoteMs'>('name');
   const [pricerSortDir, setPricerSortDir] = useState<'asc' | 'desc'>('asc');
   const [pricerPage, setPricerPage] = useState(1);
   const [pricerPageSize, setPricerPageSize] = useState(10);
@@ -623,7 +623,7 @@ export const StaffPage: React.FC = () => {
           <h2 className={cardHeadingCls}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
           </h2>
-          <span className="text-[14px] text-muted">Thời gian trung bình báo giá của từng Order</span>
+          <span className="text-[14px] text-muted">Số yêu cầu được giao, số yêu cầu báo giá và thời gian trung bình báo giá của từng Order</span>
 
           {(performance !== null || pricerSearch) && (
             <div className="relative mt-[12px] w-[220px]">
@@ -658,13 +658,25 @@ export const StaffPage: React.FC = () => {
                     <th className={clsx(staffThCls, 'text-right')}>
                       <button
                         type="button"
-                        onClick={() => togglePricerSort('totalHandled')}
+                        onClick={() => togglePricerSort('assignedCount')}
                         className={clsx(
                           'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
-                          pricerSortField === 'totalHandled' ? 'text-primary' : 'text-muted'
+                          pricerSortField === 'assignedCount' ? 'text-primary' : 'text-muted'
                         )}
                       >
-                        Đã xử lý <ArrowUpDown size={11} />
+                        Số yêu cầu được giao <ArrowUpDown size={11} />
+                      </button>
+                    </th>
+                    <th className={clsx(staffThCls, 'text-right')}>
+                      <button
+                        type="button"
+                        onClick={() => togglePricerSort('quotedCount')}
+                        className={clsx(
+                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                          pricerSortField === 'quotedCount' ? 'text-primary' : 'text-muted'
+                        )}
+                      >
+                        Số yêu cầu báo giá <ArrowUpDown size={11} />
                       </button>
                     </th>
                     <th className={clsx(staffThCls, 'text-right')}>
@@ -685,7 +697,8 @@ export const StaffPage: React.FC = () => {
                   {pagedPricerStats.map((p) => (
                     <tr key={p.id} className="border-b border-[#f8fafc]">
                       <td className="p-[10px] font-bold text-[#0f172a]">{p.name}</td>
-                      <td className="p-[10px] text-right text-[#334155]">{p.totalHandled}</td>
+                      <td className="p-[10px] text-right text-[#334155]">{p.assignedCount}</td>
+                      <td className="p-[10px] text-right text-[#334155]">{p.quotedCount}</td>
                       <td className="p-[10px] text-right text-[#0f766e] font-bold">
                         {p.medianQuoteMs !== null ? formatDuration(0, p.medianQuoteMs) : '---'}
                       </td>

@@ -577,7 +577,7 @@ export interface StaffPerformanceResponse {
     total: number;
   };
   pricerStats: {
-    items: { id: string; name: string; totalHandled: number; medianQuoteMs: number | null }[];
+    items: { id: string; name: string; assignedCount: number; quotedCount: number; medianQuoteMs: number | null }[];
     total: number;
   };
 }

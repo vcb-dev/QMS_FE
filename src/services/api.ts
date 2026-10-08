@@ -236,7 +236,7 @@ export type StaffPerformanceFilter = StaffTimeFilter & {
   salePage?: number;
   salePageSize?: number;
   pricerSearch?: string;
-  pricerSortField?: 'name' | 'totalHandled' | 'medianQuoteMs';
+  pricerSortField?: 'name' | 'assignedCount' | 'quotedCount' | 'medianQuoteMs';
   pricerSortDir?: 'asc' | 'desc';
   pricerPage?: number;
   pricerPageSize?: number;
