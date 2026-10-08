@@ -889,6 +889,20 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 </div>
               </div>
 
+              {/* Order được hệ thống tự giao lúc tạo đơn — khác chuyên viên báo giá ở trên (người thực
+                  sự tiếp nhận). Đơn cũ không có thì ẩn cả khối. */}
+              {selectedReq.assignedOrder && (
+                <>
+                  <div className="h-[1px] bg-[#f1f5f9]" />
+                  <div>
+                    <span className="text-[14px] text-[#334155] font-bold uppercase">NGƯỜI ĐƯỢC GIAO</span>
+                    <div className="font-extrabold text-[#334155] mt-[2px]">
+                      {selectedReq.assignedOrder.name}
+                    </div>
+                  </div>
+                </>
+              )}
+
               {(timeToAccept !== null || timeToQuote !== null || timeToReturn !== null || timeToReject !== null) && (
                 <>
                   <div className="h-[1px] bg-[#f1f5f9]" />

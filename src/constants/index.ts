@@ -2,6 +2,10 @@ export const STORAGE_KEYS = {
   USER: 'vcb_qms_user',
 } as const;
 
+// Giá trị "Phạm vi" của danh sách yêu cầu (ownerFilter) ngoài 'ALL' / 'MY_REQ': đơn được hệ thống tự
+// giao cho chính Order đang đăng nhập (assignedOrderId). Chỉ role ORDER có lựa chọn này, và là mặc định.
+export const OWNER_FILTER_ASSIGNED_TO_ME = 'ASSIGNED_TO_ME';
+
 export const UI_CONSTANTS = {
   FALLBACK_PRODUCT_IMAGE: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36', // TODO: thay bằng ảnh local trong public/
   DEFAULT_PRICER_EMAIL: import.meta.env.VITE_DEFAULT_PRICER_EMAIL || '',
@@ -24,6 +28,12 @@ export const UI_CONSTANTS = {
     MAX_VIDEO_SIZE_MB: 100,
     // Số khách hàng tối đa hiển thị trong dropdown chọn khách (danh sách mặc định lẫn kết quả tìm)
     CUSTOMER_DROPDOWN_LIMIT: 10,
+  },
+
+  QUOTE_TABLE: {
+    // Số đo khách nhập tự do, có khi cả đoạn văn — dài hơn ngưỡng này thì cột chỉ hiện 1 dòng cắt
+    // "...", bấm để xổ hết (xem MeasurementsCell).
+    MEASUREMENTS_PREVIEW_CHARS: 20,
   },
 };
 

@@ -40,6 +40,31 @@ type QuoteTableProps = Pick<
   onOpenChat: (id: string) => void;
 };
 
+// Số đo khách ghi tự do (có khi cả đoạn văn) — nếu để nguyên thì 1 dòng dài làm cả cột phình ngang.
+// Mặc định cắt 1 dòng; rê chuột xem đầy đủ qua chú thích (title), bấm để xổ hết xuống dưới, bấm lần
+// nữa để thu gọn. Khai ở module-scope (không lồng trong QuoteTable) để state "đã xổ" không bị reset
+// mỗi lần bảng render lại.
+const MeasurementsCell: React.FC<{ value?: string | null }> = ({ value }) => {
+  const [expanded, setExpanded] = useState(false);
+  const text = value?.trim();
+
+  if (!text) return <>---</>;
+  if (text.length <= UI_CONSTANTS.QUOTE_TABLE.MEASUREMENTS_PREVIEW_CHARS) return <>{text}</>;
+
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+      className={clsx(
+        'cursor-pointer',
+        expanded ? 'max-w-[280px] whitespace-normal break-words leading-[1.5]' : 'max-w-[160px] truncate',
+      )}
+      title={expanded ? 'Bấm để thu gọn' : `${text}\n\n(Bấm để xem đầy đủ)`}
+    >
+      {text}
+    </div>
+  );
+};
+
 export const QuoteTable: React.FC<QuoteTableProps> = ({
   requests,
   selectedId,
@@ -576,7 +601,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th>Bộ Phận</th>
             <th>Nhân Viên Sale</th>
             <th>Mã Hỏi Giá</th>
-            <th>Người Báo Giá</th>
+            <th>Người Báo Giá / Được Giao</th>
             <th>
               <span className="inline-flex items-center gap-[4px]">
                 Mốc Xử Lý
@@ -702,7 +727,9 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 <td>
                   <MaterialsCell materials={materialsList} />
                 </td>
-                <td className="text-[15px] font-semibold text-[#334155]">{r.customerMeasurements || '---'}</td>
+                <td className="text-[15px] font-semibold text-[#334155]">
+                  <MeasurementsCell value={r.customerMeasurements} />
+                </td>
                 <td className="text-[#4338ca] font-bold text-center">
                   {currentRole === 'SALE'
                     ? (r.vat == null ? '---' : r.vat === 0 ? 'Không VAT' : 'Có VAT')
@@ -763,7 +790,19 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 <td>
                   <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
                 </td>
-                <td><strong className="text-[#334155]">{r.assignee?.name || 'Chưa phân công'}</strong></td>
+                <td>
+                  {/* Dòng 1 = người thực sự tiếp nhận/báo giá (assignee); dòng 2 = Order được hệ
+                      thống tự giao lúc tạo đơn. Đơn đã có người được giao mà chưa ai tiếp nhận thì
+                      không ghi "Chưa phân công" nữa (sẽ mâu thuẫn với dòng 2). */}
+                  <strong className="text-[#334155]">
+                    {r.assignee?.name || (r.assignedOrder ? 'Chưa tiếp nhận' : 'Chưa phân công')}
+                  </strong>
+                  {r.assignedOrder && (
+                    <div className="text-[13px] font-medium text-muted leading-[1.5]">
+                      Được giao: {r.assignedOrder.name}
+                    </div>
+                  )}
+                </td>
                 <td>{renderProcessingTimeCell(r)}</td>
                 <td className="text-[14px] text-[#475569] font-semibold">
                   {r.closeRatePct !== undefined && r.closeRatePct !== null ? `${r.closeRatePct}%` : '---'}

@@ -5,6 +5,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import { useAuth } from './auth/AuthGate';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
 import type { Role, User } from './types';
+import { OWNER_FILTER_ASSIGNED_TO_ME } from './constants';
 
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -66,7 +67,7 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
     requests, categories, materials, departments, teams, saleUsers, pricerUsers, selectedId, setSelectedId,
     selectedReq, pricingReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
-    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, departmentFilter, setDepartmentFilter, teamFilter, setTeamFilter,
+    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, assignedOrderFilter, setAssignedOrderFilter, departmentFilter, setDepartmentFilter, teamFilter, setTeamFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     includeLocked, setIncludeLocked,
@@ -220,6 +221,7 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
                 materialFilter={materialFilter} setMaterialFilter={setMaterialFilter}
                 saleFilter={saleFilter} setSaleFilter={setSaleFilter}
                 pricerFilter={pricerFilter} setPricerFilter={setPricerFilter}
+                assignedOrderFilter={assignedOrderFilter} setAssignedOrderFilter={setAssignedOrderFilter}
                 departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter}
                 teamFilter={teamFilter} setTeamFilter={setTeamFilter} teams={teams}
                 ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
@@ -232,7 +234,9 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
                 totalRecords={totalRecords} totalPages={totalPages}
                 scopeFilter={ownerFilter}
                 setScopeFilter={(sc) => {
-                  setOwnerFilter(sc === 'MY_REQ' ? 'MY_REQ' : 'ALL');
+                  setOwnerFilter(sc === 'MY_REQ' || sc === OWNER_FILTER_ASSIGNED_TO_ME ? sc : 'ALL');
+                  // Chọn "Đơn được giao cho tôi" thì bỏ ô "Người được giao" đích danh — 2 điều kiện cùng lúc mâu thuẫn nhau.
+                  if (sc === OWNER_FILTER_ASSIGNED_TO_ME) setAssignedOrderFilter('ALL');
                   setCurrentPage(1);
                 }}
                 onSelectReq={handleOpenDetail} onEdit={handleOpenEdit}

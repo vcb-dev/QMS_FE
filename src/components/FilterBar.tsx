@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
 import type { Material, ProductCategory, StatusCounts, Team, User } from '../types';
 import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
-import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
+import { OWNER_FILTER_ASSIGNED_TO_ME, STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 import { TEAM_ALL_LABEL, TEAM_FILTER_ALL, TEAM_FILTER_NONE, TEAM_NONE_LABEL } from '../constants/team';
 import {
   fbBtnCls,
@@ -23,6 +23,8 @@ interface FilterBarProps {
   counts: StatusCounts;
   scopeFilter?: string;
   onScopeFilterChange?: (scope: string) => void;
+  // Chỉ role ORDER: thêm lựa chọn phạm vi "Đơn được giao cho tôi".
+  showAssignedScope?: boolean;
   searchTerm: string;
   onSearchChange: (value: string) => void;
   statusSubFilter: string;
@@ -45,6 +47,8 @@ interface FilterBarProps {
   onSaleFilterChange?: (userId: string) => void;
   pricerFilter?: string;
   onPricerFilterChange?: (userId: string) => void;
+  assignedOrderFilter?: string;
+  onAssignedOrderFilterChange?: (userId: string) => void;
   departmentFilter?: string;
   onDepartmentFilterChange?: (deptId: string) => void;
   departments?: { id: string; name: string }[];
@@ -66,6 +70,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   counts,
   scopeFilter = 'ALL',
   onScopeFilterChange,
+  showAssignedScope = false,
   searchTerm,
   onSearchChange,
   statusSubFilter,
@@ -86,6 +91,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onSaleFilterChange,
   pricerFilter = 'ALL',
   onPricerFilterChange,
+  assignedOrderFilter = 'ALL',
+  onAssignedOrderFilterChange,
   departmentFilter = 'ALL',
   onDepartmentFilterChange,
   departments = [],
@@ -119,6 +126,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     (materialFilter !== 'ALL' ? 1 : 0) +
     (saleFilter !== 'ALL' ? 1 : 0) +
     (pricerFilter !== 'ALL' ? 1 : 0) +
+    (assignedOrderFilter !== 'ALL' ? 1 : 0) +
     (departmentFilter !== 'ALL' ? 1 : 0) +
     (teamFilter !== TEAM_FILTER_ALL ? 1 : 0) +
     (timeRangeFilter !== 'ALL' ? 1 : 0) +
@@ -212,6 +220,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     >
                       <option value="ALL">Tất cả yêu cầu báo giá</option>
                       <option value="MY_REQ">Chỉ yêu cầu của tôi</option>
+                      {showAssignedScope && (
+                        <option value={OWNER_FILTER_ASSIGNED_TO_ME}>Đơn được giao cho tôi</option>
+                      )}
                     </select>
                     <ChevronDown size={14} className={selectArrowCls} />
                   </div>
@@ -303,6 +314,24 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       className={selectCls}
                     >
                       <option value="ALL">Tất cả Người báo giá</option>
+                      {pricerUsers.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className={selectArrowCls} />
+                  </div>
+                </div>
+
+                {/* Người được giao (Order được hệ thống tự chia đơn lúc tạo, khác người báo giá) */}
+                <div>
+                  <label className={popoverLabelCls}>Người được giao</label>
+                  <div className="relative">
+                    <select
+                      value={assignedOrderFilter}
+                      onChange={(e) => onAssignedOrderFilterChange?.(e.target.value)}
+                      className={selectCls}
+                    >
+                      <option value="ALL">Tất cả Người được giao</option>
                       {pricerUsers.map((u) => (
                         <option key={u.id} value={u.id}>{u.name}</option>
                       ))}
