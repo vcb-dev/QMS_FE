@@ -29,6 +29,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   setSaleFilter,
   pricerFilter,
   setPricerFilter,
+  assignedOrderFilter,
+  setAssignedOrderFilter,
   departmentFilter,
   setDepartmentFilter,
   departments,
@@ -164,6 +166,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         onSaleFilterChange={(v) => { setSaleFilter?.(v); setCurrentPage(1); }}
         pricerFilter={pricerFilter}
         onPricerFilterChange={(v) => { setPricerFilter?.(v); setCurrentPage(1); }}
+        assignedOrderFilter={assignedOrderFilter}
+        onAssignedOrderFilterChange={(v) => { setAssignedOrderFilter?.(v); setCurrentPage(1); }}
         departmentFilter={departmentFilter}
         onDepartmentFilterChange={(v) => { setDepartmentFilter?.(v); setCurrentPage(1); }}
         departments={departments}

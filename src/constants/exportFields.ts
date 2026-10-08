@@ -12,6 +12,7 @@ export const EXPORT_FIELDS: { key: string; label: string }[] = [
   { key: 'requester', label: 'Người yêu cầu' },
   { key: 'requesterDept', label: 'Phòng ban yêu cầu' },
   { key: 'assignee', label: 'Người báo giá' },
+  { key: 'assignedOrder', label: 'Người được giao' },
   { key: 'quotedPrice', label: 'Giá báo' },
   { key: 'materialPrice', label: 'Giá chất liệu' },
   { key: 'stonePrice', label: 'Giá đá' },

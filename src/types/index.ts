@@ -508,6 +508,8 @@ export interface RequestsPageProps {
   setSaleFilter?: (v: string) => void;
   pricerFilter?: string;
   setPricerFilter?: (v: string) => void;
+  assignedOrderFilter?: string;
+  setAssignedOrderFilter?: (v: string) => void;
   departmentFilter?: string;
   setDepartmentFilter?: (v: string) => void;
   departments?: { id: string; name: string }[];

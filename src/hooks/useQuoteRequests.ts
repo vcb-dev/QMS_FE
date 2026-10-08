@@ -38,6 +38,7 @@ export function useQuoteRequests(
   const [materialFilter, setMaterialFilter] = useState<string>('ALL');
   const [saleFilter, setSaleFilter] = useState<string>('ALL');
   const [pricerFilter, setPricerFilter] = useState<string>('ALL');
+  const [assignedOrderFilter, setAssignedOrderFilter] = useState<string>('ALL');
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
   // SALE mặc định chỉ xem yêu cầu của mình, role khác xem tất cả. Dùng lại giá trị này mỗi khi
   // reset bộ lọc (đổi tab / "Xóa bộ lọc") — reset về 'ALL' cứng sẽ âm thầm bỏ phạm vi mặc định
@@ -116,8 +117,8 @@ export function useQuoteRequests(
   }, [toastMessage]);
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
-  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
-  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
+  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
+  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
   // Chữ ký bộ lọc ảnh hưởng tới counts sidebar (nằm trong countsWhere của BE — đã strip status).
   // Khác lần trước mới xin BE tính lại counts; phân trang / đổi tab trạng thái giữ nguyên chữ ký.
@@ -154,7 +155,7 @@ export function useQuoteRequests(
 
   // 2. Load Quote Requests dùng ref để đọc state mới nhất
   const loadData = async (showLoading = true, forceCounts = false) => {
-    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
+    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
     if (!currentUser) return;
 
     // `counts` chỉ trang Danh sách + Tổng quan SALE dùng (đều listDataEnabled=true). Trang khác
@@ -189,7 +190,7 @@ export function useQuoteRequests(
       // đổi khi phân trang hay đổi tab trạng thái. Xin BE tính lại khi chữ ký lọc đổi, lần đầu,
       // hoặc socket refresh (forceCounts — trạng thái đơn vừa đổi). Đỡ 2 query mỗi lần phân trang.
       const countsSig = JSON.stringify([
-        searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, departmentFilter, ownerId,
+        searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, ownerId,
         timeRangeFilter, startDateFilter, endDateFilter, includeLocked,
       ]);
       const includeCounts =
@@ -209,6 +210,7 @@ export function useQuoteRequests(
         materialId: materialFilter !== 'ALL' ? materialFilter : undefined,
         requesterId: saleFilter !== 'ALL' ? saleFilter : undefined,
         assigneeId: pricerFilter !== 'ALL' ? pricerFilter : undefined,
+        assignedOrderId: assignedOrderFilter !== 'ALL' ? assignedOrderFilter : undefined,
         departmentId: departmentFilter !== 'ALL' ? departmentFilter : undefined,
         ownerId: ownerId,
         timeRange: timeRangeFilter !== 'ALL' ? timeRangeFilter : undefined,
@@ -307,6 +309,7 @@ export function useQuoteRequests(
     materialFilter,
     saleFilter,
     pricerFilter,
+    assignedOrderFilter,
     departmentFilter,
     ownerFilter,
     timeRangeFilter,
@@ -343,6 +346,7 @@ export function useQuoteRequests(
     materialFilter,
     saleFilter,
     pricerFilter,
+    assignedOrderFilter,
     departmentFilter,
     ownerFilter,
   ]);
@@ -356,6 +360,7 @@ export function useQuoteRequests(
     setMaterialFilter('ALL');
     setSaleFilter('ALL');
     setPricerFilter('ALL');
+    setAssignedOrderFilter('ALL');
     setDepartmentFilter('ALL');
     setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
@@ -372,6 +377,7 @@ export function useQuoteRequests(
     setMaterialFilter('ALL');
     setSaleFilter('ALL');
     setPricerFilter('ALL');
+    setAssignedOrderFilter('ALL');
     setDepartmentFilter('ALL');
     setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
@@ -627,6 +633,8 @@ export function useQuoteRequests(
     setSaleFilter,
     pricerFilter,
     setPricerFilter,
+    assignedOrderFilter,
+    setAssignedOrderFilter,
     departmentFilter,
     setDepartmentFilter,
     ownerFilter,

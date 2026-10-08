@@ -65,7 +65,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
     requests, categories, materials, departments, saleUsers, pricerUsers, selectedId, setSelectedId,
     selectedReq, pricingReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
-    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, departmentFilter, setDepartmentFilter,
+    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, assignedOrderFilter, setAssignedOrderFilter, departmentFilter, setDepartmentFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     includeLocked, setIncludeLocked,
@@ -218,6 +218,7 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 materialFilter={materialFilter} setMaterialFilter={setMaterialFilter}
                 saleFilter={saleFilter} setSaleFilter={setSaleFilter}
                 pricerFilter={pricerFilter} setPricerFilter={setPricerFilter}
+                assignedOrderFilter={assignedOrderFilter} setAssignedOrderFilter={setAssignedOrderFilter}
                 departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter}
                 ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
                 timeRangeFilter={timeRangeFilter} setTimeRangeFilter={setTimeRangeFilter}
