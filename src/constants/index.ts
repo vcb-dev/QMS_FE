@@ -25,6 +25,12 @@ export const UI_CONSTANTS = {
     // Số khách hàng tối đa hiển thị trong dropdown chọn khách (danh sách mặc định lẫn kết quả tìm)
     CUSTOMER_DROPDOWN_LIMIT: 10,
   },
+
+  QUOTE_TABLE: {
+    // Số đo khách nhập tự do, có khi cả đoạn văn — dài hơn ngưỡng này thì cột chỉ hiện 1 dòng cắt
+    // "...", bấm để xổ hết (xem MeasurementsCell).
+    MEASUREMENTS_PREVIEW_CHARS: 20,
+  },
 };
 
 export const PRICING_DEFAULTS = {

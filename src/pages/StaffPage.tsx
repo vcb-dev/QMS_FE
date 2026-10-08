@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { Users, UserCheck, UserX, Clock, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw, Search, ArrowUpDown } from 'lucide-react';
+import { Users, UserCheck, UserX, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw, Search, ArrowUpDown } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
 import type { StaffUser, UserStatsResponse, StaffPerformanceResponse, Role } from '../types';
@@ -72,7 +72,7 @@ export const StaffPage: React.FC = () => {
   const [salePage, setSalePage] = useState(1);
   const [salePageSize, setSalePageSize] = useState(10);
   const [pricerSearch, setPricerSearch] = useState('');
-  const [pricerSortField, setPricerSortField] = useState<'name' | 'totalHandled' | 'medianQuoteMs' | 'medianProcessMs'>('name');
+  const [pricerSortField, setPricerSortField] = useState<'name' | 'totalHandled' | 'medianQuoteMs'>('name');
   const [pricerSortDir, setPricerSortDir] = useState<'asc' | 'desc'>('asc');
   const [pricerPage, setPricerPage] = useState(1);
   const [pricerPageSize, setPricerPageSize] = useState(10);
@@ -623,7 +623,7 @@ export const StaffPage: React.FC = () => {
           <h2 className={cardHeadingCls}>
             <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
           </h2>
-          <span className="text-[14px] text-muted">Thời gian trung vị báo giá & xử lý của từng Order</span>
+          <span className="text-[14px] text-muted">Thời gian trung bình báo giá của từng Order</span>
 
           {(performance !== null || pricerSearch) && (
             <div className="relative mt-[12px] w-[220px]">
@@ -676,19 +676,7 @@ export const StaffPage: React.FC = () => {
                           pricerSortField === 'medianQuoteMs' ? 'text-primary' : 'text-muted'
                         )}
                       >
-                        Trung vị báo giá <ArrowUpDown size={11} />
-                      </button>
-                    </th>
-                    <th className={clsx(staffThCls, 'text-right')}>
-                      <button
-                        type="button"
-                        onClick={() => togglePricerSort('medianProcessMs')}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
-                          pricerSortField === 'medianProcessMs' ? 'text-primary' : 'text-muted'
-                        )}
-                      >
-                        Trung vị xử lý <ArrowUpDown size={11} />
+                        Thời gian trung bình <ArrowUpDown size={11} />
                       </button>
                     </th>
                   </tr>
@@ -700,12 +688,6 @@ export const StaffPage: React.FC = () => {
                       <td className="p-[10px] text-right text-[#334155]">{p.totalHandled}</td>
                       <td className="p-[10px] text-right text-[#0f766e] font-bold">
                         {p.medianQuoteMs !== null ? formatDuration(0, p.medianQuoteMs) : '---'}
-                      </td>
-                      <td className="p-[10px] text-right text-[#334155] font-bold">
-                        <span className="inline-flex items-center gap-[4px]">
-                          <Clock size={12} color="#94a3b8" />
-                          {p.medianProcessMs !== null ? formatDuration(0, p.medianProcessMs) : '---'}
-                        </span>
                       </td>
                     </tr>
                   ))}

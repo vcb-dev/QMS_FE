@@ -264,6 +264,10 @@ export interface QuoteRequest {
   categoryId?: string;
   requesterId?: string;
   assigneeId?: string;
+  // Order được hệ thống tự giao lúc Sale tạo đơn (chia đều theo ngày) — khác assignee là người
+  // thực sự tiếp nhận/báo giá. null với đơn cũ.
+  assignedOrderId?: string | null;
+  assignedOrder?: Pick<User, 'id' | 'name' | 'email'> | null;
   customer?: Customer;
   material?: Material;
   materials?: Material[];
@@ -571,7 +575,7 @@ export interface StaffPerformanceResponse {
     total: number;
   };
   pricerStats: {
-    items: { id: string; name: string; totalHandled: number; medianQuoteMs: number | null; medianProcessMs: number | null }[];
+    items: { id: string; name: string; totalHandled: number; medianQuoteMs: number | null }[];
     total: number;
   };
 }
