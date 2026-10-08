@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
 import type { Material, ProductCategory, StatusCounts, User } from '../types';
 import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
-import { STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
+import { OWNER_FILTER_ASSIGNED_TO_ME, STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 import {
   fbBtnCls,
   selectArrowCls,
@@ -22,6 +22,8 @@ interface FilterBarProps {
   counts: StatusCounts;
   scopeFilter?: string;
   onScopeFilterChange?: (scope: string) => void;
+  // Chỉ role ORDER: thêm lựa chọn phạm vi "Đơn được giao cho tôi".
+  showAssignedScope?: boolean;
   searchTerm: string;
   onSearchChange: (value: string) => void;
   statusSubFilter: string;
@@ -64,6 +66,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   counts,
   scopeFilter = 'ALL',
   onScopeFilterChange,
+  showAssignedScope = false,
   searchTerm,
   onSearchChange,
   statusSubFilter,
@@ -209,6 +212,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     >
                       <option value="ALL">Tất cả yêu cầu báo giá</option>
                       <option value="MY_REQ">Chỉ yêu cầu của tôi</option>
+                      {showAssignedScope && (
+                        <option value={OWNER_FILTER_ASSIGNED_TO_ME}>Đơn được giao cho tôi</option>
+                      )}
                     </select>
                     <ChevronDown size={14} className={selectArrowCls} />
                   </div>

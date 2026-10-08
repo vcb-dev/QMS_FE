@@ -8,6 +8,7 @@ import { Download, PlusCircle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { fetchChatUnreadCounts } from '../services/api';
 import { CHAT_EVENTS } from '../constants/chatEvents';
+import { OWNER_FILTER_ASSIGNED_TO_ME } from '../constants';
 
 export const RequestsPage: React.FC<RequestsPageProps> = ({
   requests,
@@ -154,6 +155,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         counts={counts}
         scopeFilter={scopeFilter}
         onScopeFilterChange={handleScopeChange}
+        showAssignedScope={currentRole === 'ORDER'}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setCurrentPage(1); }}
         statusSubFilter={statusSubFilter}
@@ -167,7 +169,12 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         pricerFilter={pricerFilter}
         onPricerFilterChange={(v) => { setPricerFilter?.(v); setCurrentPage(1); }}
         assignedOrderFilter={assignedOrderFilter}
-        onAssignedOrderFilterChange={(v) => { setAssignedOrderFilter?.(v); setCurrentPage(1); }}
+        onAssignedOrderFilterChange={(v) => {
+          setAssignedOrderFilter?.(v);
+          // Chọn đích danh 1 Order thì bỏ phạm vi "Đơn được giao cho tôi" — 2 điều kiện cùng lúc mâu thuẫn nhau.
+          if (v !== 'ALL' && scopeFilter === OWNER_FILTER_ASSIGNED_TO_ME) setScopeFilter('ALL');
+          setCurrentPage(1);
+        }}
         departmentFilter={departmentFilter}
         onDepartmentFilterChange={(v) => { setDepartmentFilter?.(v); setCurrentPage(1); }}
         departments={departments}

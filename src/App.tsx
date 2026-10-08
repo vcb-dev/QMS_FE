@@ -5,6 +5,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import { useAuth } from './auth/AuthGate';
 import { useQuoteRequests } from './hooks/useQuoteRequests';
 import type { Role, User } from './types';
+import { OWNER_FILTER_ASSIGNED_TO_ME } from './constants';
 
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -230,7 +231,9 @@ function AppShell({ currentUser, currentRole, handleLogout }: AppShellProps) {
                 totalRecords={totalRecords} totalPages={totalPages}
                 scopeFilter={ownerFilter}
                 setScopeFilter={(sc) => {
-                  setOwnerFilter(sc === 'MY_REQ' ? 'MY_REQ' : 'ALL');
+                  setOwnerFilter(sc === 'MY_REQ' || sc === OWNER_FILTER_ASSIGNED_TO_ME ? sc : 'ALL');
+                  // Chọn "Đơn được giao cho tôi" thì bỏ ô "Người được giao" đích danh — 2 điều kiện cùng lúc mâu thuẫn nhau.
+                  if (sc === OWNER_FILTER_ASSIGNED_TO_ME) setAssignedOrderFilter('ALL');
                   setCurrentPage(1);
                 }}
                 onSelectReq={handleOpenDetail} onEdit={handleOpenEdit}

@@ -2,6 +2,10 @@ export const STORAGE_KEYS = {
   USER: 'vcb_qms_user',
 } as const;
 
+// Giá trị "Phạm vi" của danh sách yêu cầu (ownerFilter) ngoài 'ALL' / 'MY_REQ': đơn được hệ thống tự
+// giao cho chính Order đang đăng nhập (assignedOrderId). Chỉ role ORDER có lựa chọn này, và là mặc định.
+export const OWNER_FILTER_ASSIGNED_TO_ME = 'ASSIGNED_TO_ME';
+
 export const UI_CONSTANTS = {
   FALLBACK_PRODUCT_IMAGE: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36', // TODO: thay bằng ảnh local trong public/
   DEFAULT_PRICER_EMAIL: import.meta.env.VITE_DEFAULT_PRICER_EMAIL || '',
