@@ -754,7 +754,12 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     {displayDeptName}
                   </span>
                 </td>
-                <td><strong className="text-[#334155]">{displaySaleName}</strong></td>
+                <td>
+                  <strong className="text-[#334155]">{displaySaleName}</strong>
+                  {r.requester?.team?.name && (
+                    <div className="text-[13px] font-semibold text-muted">{r.requester.team.name}</div>
+                  )}
+                </td>
                 <td>
                   <strong className="font-mono text-[15px] text-[#1e293b]">{r.code || r.id}</strong>
                 </td>

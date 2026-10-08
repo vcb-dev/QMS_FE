@@ -28,8 +28,10 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   className,
   style,
 }) => {
-  const [failed, setFailed] = useState(false);
-  const showImg = !!src && !failed;
+  // Nhớ URL đã lỗi (không phải cờ chung) để đổi sang ảnh khác — VD vừa tải ảnh đại diện mới — thì
+  // tự thử lại thay vì kẹt ở chữ cái đầu tên.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const showImg = !!src && failedSrc !== src;
 
   return (
     <div
@@ -48,7 +50,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
           src={src as string}
           alt={name}
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => setFailedSrc(src as string)}
           className="w-full h-full object-cover"
         />
       ) : (
