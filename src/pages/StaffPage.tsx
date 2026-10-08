@@ -1,20 +1,24 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Users, UserCheck, UserX, TrendingUp, Check, X, ShieldCheck, Lock, Unlock, Activity, Calendar, RotateCcw, Search, ArrowUpDown } from 'lucide-react';
 import { clsx } from 'clsx';
-import { getAllUsersApi, approveUserApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
-import type { StaffUser, UserStatsResponse, StaffPerformanceResponse, Role } from '../types';
+import { fetchTeams, getAllUsersApi, approveUserApi, setUserTeamApi, rejectUserApi, setUserActiveApi, getAuditStatsApi, getUserStatsApi, getStaffPerformanceApi } from '../services/api';
+import type { StaffUser, UserStatsResponse, StaffPerformanceResponse, Role, Team } from '../types';
 import { Pagination } from '../components/Pagination';
 import { formatDuration } from '../utils/currency';
 import { ACTION_LABEL, ROLE_LABEL} from '../constants/staffLabels';
+import { TEAM_ALL_LABEL, TEAM_FILTER_ALL, TEAM_FILTER_NONE, TEAM_NONE_LABEL } from '../constants/team';
+import { matchesTeamFilter } from '../utils/teamFilter';
 import { StatCard } from '../components/StatCard';
 import { UserAvatar } from '../components/UserAvatar';
 import { DepartmentManagement } from '../components/DepartmentManagement';
+import { TeamManagement } from '../components/TeamManagement';
 import {
   dateInputPy6Cls,
   cardContainerCls,
   cardHeadingCls,
   staffThCls,
   emptyTextCls,
+  staffRowSelectCls,
 } from '../styles/classNames';
 
 type ActionStat = { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] };
@@ -63,6 +67,18 @@ export const StaffPage: React.FC = () => {
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
   // Role admin chọn khi duyệt từng tài khoản chờ (mặc định giữ role hiện tại — Lark tạo ra là SALE)
   const [approveRole, setApproveRole] = useState<Record<string, Role>>({});
+  // Danh sách team (nguồn cho ô chọn team ở 2 bảng tài khoản và bộ lọc) — TeamManagement gọi lại
+  // loadTeams sau mỗi lần tạo/sửa/xóa để các ô chọn luôn khớp.
+  const [teams, setTeams] = useState<Team[]>([]);
+  // Team admin chọn khi duyệt từng tài khoản chờ ('' = chưa có team)
+  const [approveTeam, setApproveTeam] = useState<Record<string, string>>({});
+  // Bộ lọc team — áp cho tab đang hoạt động và 2 bảng hiệu suất (không áp cho tab chờ duyệt vì
+  // tài khoản chờ duyệt chưa có team).
+  const [teamFilter, setTeamFilter] = useState(TEAM_FILTER_ALL);
+  // Tăng sau khi đổi team/duyệt kèm team/sửa-xóa team để bảng hiệu suất (lọc theo team ở BE) nạp lại —
+  // nếu không, người vừa chuyển team vẫn nằm ở bảng của team cũ cho tới khi đổi bộ lọc khác.
+  const [performanceRefreshKey, setPerformanceRefreshKey] = useState(0);
+  const refreshPerformance = () => setPerformanceRefreshKey((k) => k + 1);
 
   // Tìm kiếm/sắp xếp/phân trang cho 2 bảng hiệu suất (Sale / Order) — BE tự lọc/sort/cắt trang
   // theo các state này (xem effect nạp performance bên dưới), FE chỉ giữ state UI.
@@ -107,6 +123,31 @@ export const StaffPage: React.FC = () => {
   useEffect(() => {
     setAccountPage(1);
   }, [accountTab]);
+
+  const loadTeams = useCallback(async () => {
+    try {
+      const list = await fetchTeams();
+      setTeams(list);
+      // Team vừa đổi tên/bị xóa ở TeamManagement: đồng bộ lại team hiển thị trên từng tài khoản
+      // (BE đã đặt team_id = null cho thành viên của team bị xóa) và bỏ bộ lọc trỏ vào team đã mất.
+      setUsers((prev) => prev.map((u) => {
+        if (!u.team) return u;
+        const current = list.find((t) => t.id === u.team!.id);
+        if (!current) return { ...u, team: null };
+        return current.name === u.team.name ? u : { ...u, team: { id: current.id, name: current.name } };
+      }));
+      setTeamFilter((prev) => (
+        prev === TEAM_FILTER_ALL || prev === TEAM_FILTER_NONE || list.some((t) => t.id === prev) ? prev : TEAM_FILTER_ALL
+      ));
+    } catch (err) {
+      // Fetch phụ — giữ danh sách cũ, không làm vỡ trang
+      console.error('Không thể tải danh sách team:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTeams();
+  }, [loadTeams]);
 
   useEffect(() => {
     const filter = { timeRange, startDate, endDate };
@@ -156,6 +197,7 @@ export const StaffPage: React.FC = () => {
         pricerSortDir,
         pricerPage,
         pricerPageSize,
+        teamId: teamFilter,
       })
         .then((perf) => {
           if (myRequestId !== performanceRequestIdRef.current) return;
@@ -178,6 +220,8 @@ export const StaffPage: React.FC = () => {
     pricerSortDir,
     pricerPage,
     pricerPageSize,
+    teamFilter,
+    performanceRefreshKey,
   ]);
 
   const applyPreset = (value: string) => {
@@ -192,20 +236,28 @@ export const StaffPage: React.FC = () => {
   };
 
   const pendingUsers = users.filter((u) => !u.isApproved && u.role !== 'ADMIN');
-  const activeListUsers = users.filter((u) => u.isApproved && u.role !== 'ADMIN').sort((a, b) => a.name.localeCompare(b.name));
+  const activeListUsers = users
+    .filter((u) => u.isApproved && u.role !== 'ADMIN' && matchesTeamFilter(u, teamFilter))
+    .sort((a, b) => a.name.localeCompare(b.name));
   // Tài khoản đã khóa (isActive=false) không còn thao tác — ẩn khỏi các bảng thống kê/hoạt động bên dưới
   const lockedUserIds = new Set(users.filter((u) => !u.isActive).map((u) => u.id));
 
   const currentAccountList = accountTab === 'PENDING' ? pendingUsers : activeListUsers;
   const accountTotalPages = Math.max(1, Math.ceil(currentAccountList.length / accountPageSize));
-  const pagedAccountList = currentAccountList.slice((accountPage - 1) * accountPageSize, accountPage * accountPageSize);
+  // Kẹp trang hiện tại: đổi team/duyệt/xóa làm dòng cuối của trang cuối biến mất thì lùi về trang cuối
+  // thay vì hiện bảng rỗng ở "trang 2/1".
+  const safeAccountPage = Math.min(accountPage, accountTotalPages);
+  const pagedAccountList = currentAccountList.slice((safeAccountPage - 1) * accountPageSize, safeAccountPage * accountPageSize);
+  // Team đã chọn cho tài khoản chờ duyệt, bỏ qua nếu team đó vừa bị xóa khỏi danh sách
+  const getApproveTeamId = (id: string) => (teams.some((t) => t.id === approveTeam[id]) ? approveTeam[id] : '');
 
   const handleApprove = async (id: string) => {
     setActionLoadingId(id);
     const role = approveRole[id];
     try {
-      const updated = await approveUserApi(id, role);
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isApproved: true, role: updated.role } : u)));
+      const updated = await approveUserApi(id, role, getApproveTeamId(id) || null);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isApproved: true, role: updated.role, team: updated.team ?? null } : u)));
+      refreshPerformance();
     } catch (err: any) {
       alert(err.message || 'Không thể phê duyệt tài khoản');
     } finally {
@@ -221,6 +273,25 @@ export const StaffPage: React.FC = () => {
       setUsers((prev) => prev.filter((u) => u.id !== id));
     } catch (err: any) {
       alert(err.message || 'Không thể từ chối tài khoản');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Sau khi tạo/sửa/xóa team: nạp lại danh sách (đồng bộ team trên từng tài khoản) và hiệu suất
+  const handleTeamsChanged = async () => {
+    await loadTeams();
+    refreshPerformance();
+  };
+
+  const handleChangeTeam = async (id: string, teamId: string | null) => {
+    setActionLoadingId(id);
+    try {
+      const updated = await setUserTeamApi(id, teamId);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, team: updated.team ?? null } : u)));
+      refreshPerformance();
+    } catch (err: any) {
+      alert('Không thể đổi team: ' + err.message);
     } finally {
       setActionLoadingId(null);
     }
@@ -322,6 +393,33 @@ export const StaffPage: React.FC = () => {
         {loading && <span className="text-[14.5px] text-faint font-semibold">Đang tải…</span>}
       </div>
 
+      {/* Bộ lọc team — áp cho tab tài khoản đang hoạt động và 2 bảng hiệu suất. Lọc tài khoản làm ở
+          FE (StaffPage tải toàn bộ danh sách), hiệu suất lọc ở BE qua teamId. */}
+      <div className="bg-surface border border-border rounded-[12px] py-[10px] px-[14px] flex items-center gap-[12px] flex-wrap">
+        <span className="text-[14px] font-extrabold text-muted uppercase tracking-[0.4px] inline-flex items-center gap-[6px]">
+          <Users size={13} /> Team
+        </span>
+        <select
+          value={teamFilter}
+          onChange={(e) => {
+            setTeamFilter(e.target.value);
+            setAccountPage(1);
+            setSalePage(1);
+            setPricerPage(1);
+          }}
+          className={clsx(staffRowSelectCls, 'min-w-[180px]')}
+        >
+          <option value={TEAM_FILTER_ALL}>{TEAM_ALL_LABEL}</option>
+          <option value={TEAM_FILTER_NONE}>{TEAM_NONE_LABEL}</option>
+          {teams.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+        <span className="text-[14px] text-faint">
+          Áp dụng cho tab tài khoản đang hoạt động và hai bảng hiệu suất; tab chờ duyệt không lọc.
+        </span>
+      </div>
+
       {/* 2.1 Thống kê người dùng */}
       <div className="grid grid-cols-4 gap-[16px]">
         <StatCard icon={<Users size={14} />} label="Tổng người dùng" value={totalUsers} />
@@ -378,6 +476,7 @@ export const StaffPage: React.FC = () => {
                   <th className={staffThCls}>Tên</th>
                   <th className={staffThCls}>Email</th>
                   <th className={staffThCls}>Vai trò</th>
+                  <th className={staffThCls}>Team</th>
                   <th className={staffThCls}>Thời gian tạo</th>
                   <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
                 </tr>
@@ -397,10 +496,23 @@ export const StaffPage: React.FC = () => {
                         value={approveRole[u.id] || u.role}
                         disabled={actionLoadingId === u.id}
                         onChange={(e) => setApproveRole((prev) => ({ ...prev, [u.id]: e.target.value as Role }))}
-                        className="py-[5px] px-[8px] rounded-[6px] border border-border bg-surface text-[#334155] text-[14.5px] font-semibold cursor-pointer"
+                        className={staffRowSelectCls}
                       >
                         {(['SALE', 'ORDER'] as Role[]).map((r) => (
                           <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-[10px] text-[#334155]">
+                      <select
+                        value={getApproveTeamId(u.id)}
+                        disabled={actionLoadingId === u.id}
+                        onChange={(e) => setApproveTeam((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                        className={staffRowSelectCls}
+                      >
+                        <option value="">{TEAM_NONE_LABEL}</option>
+                        {teams.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
                       </select>
                     </td>
@@ -450,6 +562,7 @@ export const StaffPage: React.FC = () => {
                   <th className={staffThCls}>Tên</th>
                   <th className={staffThCls}>Email</th>
                   <th className={staffThCls}>Vai trò</th>
+                  <th className={staffThCls}>Team</th>
                   <th className={staffThCls}>Trạng thái</th>
                   <th className={staffThCls}>Thời gian tạo</th>
                   <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
@@ -466,6 +579,22 @@ export const StaffPage: React.FC = () => {
                     </td>
                     <td className="p-[10px] text-muted">{u.email}</td>
                     <td className="p-[10px] text-[#334155]">{ROLE_LABEL[u.role] || u.role}</td>
+                    <td className="p-[10px] text-[#334155]">
+                      <select
+                        value={u.team?.id ?? ''}
+                        disabled={actionLoadingId === u.id}
+                        onChange={(e) => handleChangeTeam(u.id, e.target.value || null)}
+                        className={staffRowSelectCls}
+                      >
+                        <option value="">{TEAM_NONE_LABEL}</option>
+                        {u.team && !teams.some((t) => t.id === u.team!.id) && (
+                          <option value={u.team.id}>{u.team.name}</option>
+                        )}
+                        {teams.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="p-[10px]">
                       <span className={clsx(
                         'inline-flex items-center gap-[4px] py-[3px] px-[8px] rounded-[20px] text-[14px] font-bold border',
@@ -497,13 +626,15 @@ export const StaffPage: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="text-center text-faint text-[15.5px] py-[20px] px-0">Chưa có tài khoản nào được duyệt</div>
+          <div className="text-center text-faint text-[15.5px] py-[20px] px-0">
+            {teamFilter !== TEAM_FILTER_ALL ? 'Không có tài khoản nào thuộc bộ lọc team này' : 'Chưa có tài khoản nào được duyệt'}
+          </div>
         ))}
 
         {currentAccountList.length > 0 && (
           <div className="mt-[14px]">
             <Pagination
-              currentPage={accountPage}
+              currentPage={safeAccountPage}
               totalPages={accountTotalPages}
               totalItems={currentAccountList.length}
               pageSize={accountPageSize}
@@ -515,6 +646,8 @@ export const StaffPage: React.FC = () => {
       </div>
 
       <DepartmentManagement />
+
+      <TeamManagement onChange={handleTeamsChanged} />
 
       {/* 2.2 Hiệu suất Sale & Order */}
       <div className="grid grid-cols-2 gap-[16px]">

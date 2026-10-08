@@ -17,6 +17,8 @@ export const ACTION_LABEL: Record<string, string> = {
   QUICK_SUBMIT_QUOTE: 'Gửi báo giá nhanh',
   APPROVE_USER: 'Duyệt tài khoản',
   REJECT_USER: 'Từ chối tài khoản',
+  SET_USER_TEAM: 'Đổi team người dùng',
+  CHANGE_PASSWORD: 'Đổi mật khẩu',
   LOCK_USER: 'Khóa tài khoản',
   UNLOCK_USER: 'Mở khóa tài khoản',
   CREATE_CUSTOMER: 'Tạo khách hàng',

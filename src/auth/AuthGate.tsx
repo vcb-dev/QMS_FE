@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Role, User } from '../types';
-import { getStoredUser, getProfileApi, logoutApi, setSessionExpiredHandler } from '../services/api';
+import { getStoredUser, getProfileApi, logoutApi, saveStoredUser, setSessionExpiredHandler } from '../services/api';
 
 interface AuthState {
   currentUser: User | null;
@@ -8,6 +8,8 @@ interface AuthState {
   authLoading: boolean;
   handleLoginSuccess: (user: User) => void;
   handleLogout: () => Promise<void>;
+  // Cập nhật user đang đăng nhập (VD đổi ảnh đại diện): đổi state để Header hiện ngay + ghi lại storage
+  updateCurrentUser: (user: User) => void;
   setCurrentRole: (role: Role) => void;
 }
 
@@ -50,5 +52,10 @@ export function useAuth(): AuthState {
     setCurrentUser(null);
   };
 
-  return { currentUser, currentRole, authLoading, handleLoginSuccess, handleLogout, setCurrentRole };
+  const updateCurrentUser = (user: User) => {
+    setCurrentUser(user);
+    saveStoredUser(user);
+  };
+
+  return { currentUser, currentRole, authLoading, handleLoginSuccess, handleLogout, updateCurrentUser, setCurrentRole };
 }

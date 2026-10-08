@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
-import type { Material, ProductCategory, StatusCounts, User } from '../types';
+import type { Material, ProductCategory, StatusCounts, Team, User } from '../types';
 import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { OWNER_FILTER_ASSIGNED_TO_ME, STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
+import { TEAM_ALL_LABEL, TEAM_FILTER_ALL, TEAM_FILTER_NONE, TEAM_NONE_LABEL } from '../constants/team';
 import {
   fbBtnCls,
   selectArrowCls,
@@ -51,6 +52,9 @@ interface FilterBarProps {
   departmentFilter?: string;
   onDepartmentFilterChange?: (deptId: string) => void;
   departments?: { id: string; name: string }[];
+  teamFilter?: string;
+  onTeamFilterChange?: (teamId: string) => void;
+  teams?: Team[];
   saleUsers?: User[];
   pricerUsers?: User[];
   onResetFilters: () => void;
@@ -92,6 +96,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   departmentFilter = 'ALL',
   onDepartmentFilterChange,
   departments = [],
+  teamFilter = TEAM_FILTER_ALL,
+  onTeamFilterChange,
+  teams = [],
   saleUsers = [],
   pricerUsers = [],
   onResetFilters,
@@ -121,6 +128,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     (pricerFilter !== 'ALL' ? 1 : 0) +
     (assignedOrderFilter !== 'ALL' ? 1 : 0) +
     (departmentFilter !== 'ALL' ? 1 : 0) +
+    (teamFilter !== TEAM_FILTER_ALL ? 1 : 0) +
     (timeRangeFilter !== 'ALL' ? 1 : 0) +
     (startDateFilter ? 1 : 0) +
     (endDateFilter ? 1 : 0) +
@@ -344,6 +352,25 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       <option value="ALL">Tất cả Phòng ban</option>
                       {departments.map((d) => (
                         <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className={selectArrowCls} />
+                  </div>
+                </div>
+
+                {/* Team (theo team của Sale tạo đơn) */}
+                <div>
+                  <label className={popoverLabelCls}>Team</label>
+                  <div className="relative">
+                    <select
+                      value={teamFilter}
+                      onChange={(e) => onTeamFilterChange?.(e.target.value)}
+                      className={selectCls}
+                    >
+                      <option value={TEAM_FILTER_ALL}>{TEAM_ALL_LABEL}</option>
+                      <option value={TEAM_FILTER_NONE}>{TEAM_NONE_LABEL}</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
                     </select>
                     <ChevronDown size={14} className={selectArrowCls} />

@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { lazy, Suspense, useState, useRef, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import type { Role, User, QuoteRequest, HeaderSearchProduct } from '../types';
-import { LogOut, User as UserIcon, ShieldCheck, X, Search, ChevronRight } from 'lucide-react';
+import { LogOut, User as UserIcon, ShieldCheck, Search, ChevronRight } from 'lucide-react';
 import { fetchQuoteRequests } from '../services/api';
 import { StatusPill } from './StatusPill';
 import { STATUS_BADGE_META } from '../constants';
@@ -11,16 +11,9 @@ import { formatCurrency } from '../utils/currency';
 import { getPrimaryOption } from '../utils/quoteOption';
 import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { UserAvatar } from './UserAvatar';
-import {
-  modalBackdropCls,
-  modalCardCls,
-  modalHeaderCls,
-  modalBodyCls,
-  modalFooterCls,
-  modalCloseIconBtnCls,
-  btnInspPrimaryCls,
-  dropdownItemHoverCls,
-} from '../styles/classNames';
+import { dropdownItemHoverCls } from '../styles/classNames';
+
+const ProfileModal = lazy(() => import('./ProfileModal').then((m) => ({ default: m.ProfileModal })));
 
 const SEARCH_SECTION_LIMIT = 5;
 
@@ -29,6 +22,7 @@ interface HeaderProps {
   currentRole: Role;
   onOpenCreateModal: () => void;
   onLogout: () => void;
+  onUserUpdate: (user: User) => void;
   onSelectReq: (id: string) => void;
   onSearchRequests: (query: string) => void;
 }
@@ -37,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   currentRole,
   onLogout,
+  onUserUpdate,
   onSelectReq,
   onSearchRequests,
 }) => {
@@ -343,51 +338,17 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* User Profile Modal */}
+      {/* User Profile Modal — lazy-load, chỉ mount khi mở */}
       {showProfileModal && (
-        <div className={modalBackdropCls} onClick={() => setShowProfileModal(false)}>
-          <div className={clsx(modalCardCls, '!max-w-[400px]')} onClick={(e) => e.stopPropagation()}>
-            <div className={modalHeaderCls}>
-              <h3 className="m-0 text-[19px] font-extrabold flex items-center gap-[8px]">
-                <UserIcon size={18} color="#2563eb" /> Thông Tin Tài Khoản
-              </h3>
-              <button className={modalCloseIconBtnCls} onClick={() => setShowProfileModal(false)}><X size={18} /></button>
-            </div>
-            <div className={clsx(modalBodyCls, 'flex flex-col !gap-[12px] text-[16px]')}>
-              <div className="text-center py-[14px] px-0">
-                <UserAvatar
-                  src={user.avatar}
-                  name={user.name}
-                  size={56}
-                  background="linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)"
-                  className="mx-auto mb-[8px]"
-                />
-                <strong className="text-[19px] text-[#0f172a]">{user.name}</strong>
-                <p className="mt-[2px] mr-0 mb-0 ml-0 text-muted text-[15px]">{user.email}</p>
-              </div>
-
-              <div className="bg-[#f8fafc] border border-border rounded-[10px] p-[12px] flex flex-col gap-[8px]">
-                <div className="flex justify-between">
-                  <span className="text-muted">Mã tài khoản:</span>
-                  <span className="font-bold font-mono">{user.id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Vai trò (Role):</span>
-                  <span className="font-extrabold text-[#0f172a]">{user.role}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Phòng ban:</span>
-                  <span className="font-bold">{user.department?.name || '---'}</span>
-                </div>
-              </div>
-            </div>
-            <div className={modalFooterCls}>
-              <button className={clsx(btnInspPrimaryCls, '!w-auto !py-[8px] !px-[20px]')} onClick={() => setShowProfileModal(false)}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <ProfileModal
+            isOpen={showProfileModal}
+            onClose={() => setShowProfileModal(false)}
+            user={user}
+            onUserUpdate={onUserUpdate}
+            onLogout={onLogout}
+          />
+        </Suspense>
       )}
     </header>
   );

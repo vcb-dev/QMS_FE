@@ -1,6 +1,7 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, StaffUser, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, StaffUser, Team, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
 import { STORAGE_KEYS } from '../constants';
+import { TEAM_FILTER_ALL } from '../constants/team';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
@@ -137,6 +138,13 @@ export function getStoredUser(): User | null {
   }
 }
 
+// Ghi lại user vào đúng kho đang giữ nó (sessionStorage khi đăng nhập không "nhớ tôi", ngược lại
+// localStorage) — dùng khi hồ sơ đổi (VD ảnh đại diện) để F5 không quay về bản cũ.
+export function saveStoredUser(user: User): void {
+  const store = sessionStorage.getItem(STORAGE_KEYS.USER) ? sessionStorage : localStorage;
+  store.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+}
+
 export function clearSession() {
   sessionStorage.removeItem(STORAGE_KEYS.USER);
   localStorage.removeItem(STORAGE_KEYS.USER);
@@ -174,6 +182,33 @@ export async function getProfileApi(): Promise<User | null> {
     clearSession();
     return null;
   }
+}
+
+// Tải hồ sơ cho modal Hồ Sơ Cá Nhân. Khác getProfileApi (bootstrap phiên): lỗi được ném ra cho nơi
+// gọi hiển thị, KHÔNG clearSession() và KHÔNG ghi storage — mở modal gặp lỗi mạng thoáng qua không
+// được làm mất phiên đã lưu.
+export async function fetchProfileApi(): Promise<User> {
+  return apiCall(dedupedGet('/auth/profile'), 'Không thể tải thông tin tài khoản');
+}
+
+export async function updateNameApi(name: string): Promise<{ name: string }> {
+  return apiCall(api.patch('/auth/profile/name', { name }), 'Không thể đổi tên');
+}
+
+export async function uploadAvatarApi(file: File): Promise<{ avatar: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiCall(
+    api.post('/auth/profile/avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' }, ...NO_TIMEOUT }),
+    'Không thể cập nhật ảnh đại diện',
+  );
+}
+
+export async function changePasswordApi(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  return apiCall(
+    api.patch('/auth/profile/password', { currentPassword, newPassword }),
+    'Không thể đổi mật khẩu',
+  );
 }
 
 export async function loginApi(email: string, password: string, remember: boolean = true): Promise<{ user: User }> {
@@ -240,6 +275,7 @@ export type StaffPerformanceFilter = StaffTimeFilter & {
   pricerSortDir?: 'asc' | 'desc';
   pricerPage?: number;
   pricerPageSize?: number;
+  teamId?: string;
 };
 
 export async function getStaffPerformanceApi(filter?: StaffPerformanceFilter): Promise<StaffPerformanceResponse> {
@@ -254,11 +290,18 @@ export async function getStaffPerformanceApi(filter?: StaffPerformanceFilter): P
   if (filter?.pricerSortDir) params.pricerSortDir = filter.pricerSortDir;
   if (filter?.pricerPage) params.pricerPage = filter.pricerPage;
   if (filter?.pricerPageSize) params.pricerPageSize = filter.pricerPageSize;
-  return apiCall(dedupedGet('/quote-requests/staff-performance', params), 'Không thể lấy hiệu suất nhân viên');
+  if (filter?.teamId && filter.teamId !== TEAM_FILTER_ALL) params.teamId = filter.teamId;
+  // Cố ý KHÔNG dedupedGet: StaffPage nạp lại ngay sau khi đổi team/duyệt kèm team, nếu gộp vào request
+  // cùng tham số còn đang bay thì nhận về số liệu trước khi đổi. Effect đã debounce nên không bắn thừa.
+  return apiCall(api.get('/quote-requests/staff-performance', { params }), 'Không thể lấy hiệu suất nhân viên');
 }
 
-export async function approveUserApi(userId: string, role?: string): Promise<User> {
-  return apiCall(api.patch(`/users/${userId}/approve`, { role }), 'Không thể phê duyệt tài khoản');
+export async function approveUserApi(userId: string, role?: string, teamId?: string | null): Promise<User> {
+  return apiCall(api.patch(`/users/${userId}/approve`, { role, teamId }), 'Không thể phê duyệt tài khoản');
+}
+
+export async function setUserTeamApi(userId: string, teamId: string | null): Promise<StaffUser> {
+  return apiCall(api.patch(`/users/${userId}/team`, { teamId }), 'Không thể đổi team của người dùng');
 }
 
 export async function setUserActiveApi(userId: string, isActive: boolean): Promise<User> {
@@ -277,7 +320,7 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   return apiCall(api.post('/auth/reset-password', payload), 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; requesterId?: string; assigneeId?: string; assignedOrderId?: string; departmentId?: string }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; requesterId?: string; assigneeId?: string; assignedOrderId?: string; departmentId?: string; teamId?: string }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -289,6 +332,7 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.assigneeId) params.assigneeId = filter.assigneeId;
   if (filter?.assignedOrderId) params.assignedOrderId = filter.assignedOrderId;
   if (filter?.departmentId && filter.departmentId !== 'ALL') params.departmentId = filter.departmentId;
+  if (filter?.teamId && filter.teamId !== TEAM_FILTER_ALL) params.teamId = filter.teamId;
   if (filter?.page) params.page = filter.page;
   if (filter?.limit) params.limit = filter.limit;
   if (filter?.includeCounts) params.includeCounts = true;
@@ -1080,3 +1124,27 @@ export async function fetchDepartments() {
   return apiCall(dedupedGet('/departments'), 'Không thể tải danh sách phòng ban');
 }
 export async function fetchDepartmentsPaginated(page: number, limit: number, search?: string) { return apiCall(api.get('/departments', { params: { page, limit, search } }), 'Lỗi tải danh sách bộ phận'); } export async function createDepartment(name: string) { return apiCall(api.post('/departments', { name }), 'Lỗi tạo bộ phận'); } export async function updateDepartment(id: string, name: string) { return apiCall(api.patch('/departments/' + id, { name }), 'Lỗi cập nhật bộ phận'); } export async function deleteDepartment(id: string) { return apiCall(api.delete('/departments/' + id), 'Lỗi xóa bộ phận'); }
+
+export async function fetchTeams(): Promise<Team[]> {
+  return apiCall(dedupedGet('/teams'), 'Không thể tải danh sách team');
+}
+
+export async function fetchTeamsPaginated(
+  page: number,
+  limit: number,
+  search?: string,
+): Promise<{ data: Team[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+  return apiCall(api.get('/teams', { params: { page, limit, search } }), 'Không thể tải danh sách team');
+}
+
+export async function createTeam(name: string): Promise<Team> {
+  return apiCall(api.post('/teams', { name }), 'Không thể tạo team');
+}
+
+export async function updateTeam(id: string, name: string): Promise<Team> {
+  return apiCall(api.patch(`/teams/${id}`, { name }), 'Không thể cập nhật team');
+}
+
+export async function deleteTeam(id: string): Promise<Team> {
+  return apiCall(api.delete(`/teams/${id}`), 'Không thể xóa team');
+}
