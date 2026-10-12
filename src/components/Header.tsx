@@ -87,13 +87,13 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // "Sản phẩm" — mỗi đơn QUOTED/CLOSED đã có giá trong cùng kết quả search ở trên là 1 sản phẩm,
+  // "Sản phẩm" — mỗi đơn QUOTED đã có giá trong cùng kết quả search ở trên là 1 sản phẩm,
   // giống cách LibraryPage dựng thẻ sản phẩm. Tên là tên sản phẩm Sale đã nhập; giá lấy theo
   // phương án đại diện của đơn.
   const productResults = useMemo<HeaderSearchProduct[]>(() => {
     const items: HeaderSearchProduct[] = [];
     for (const r of searchResults) {
-      if (r.status !== 'QUOTED' && r.status !== 'CLOSED') continue;
+      if (r.status !== 'QUOTED') continue;
       const primary = getPrimaryOption(r);
       if (!primary || primary.quotedPrice == null) continue;
       items.push({

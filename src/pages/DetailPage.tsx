@@ -272,7 +272,6 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     QUOTED: 'ĐÃ BÁO GIÁ',
     REJECTED: 'BỊ TỪ CHỐI',
     NEED_MORE_INFO: 'CẦN BỔ SUNG',
-    CLOSED: 'ĐÃ CHỐT ĐƠN',
   };
 
   const getStatusBadge = (status: string) => (
@@ -373,18 +372,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
         {/* Sửa giá đã báo — mở lại PricingModal (tự nạp sẵn phương án đang là giá chính) để tính
             lại, chỉ ghi đè đúng phương án đó, không đụng trạng thái đơn (xem editQuotedPrice BE). */}
         {(currentRole === 'ADMIN' || currentRole === 'ORDER') &&
-          (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED') && (
+          selectedReq.status === 'QUOTED' && (
             <button
               type="button"
-              onClick={() => {
-                if (
-                  selectedReq.status === 'CLOSED' &&
-                  !window.confirm('Khách đã chốt giá này rồi. Sửa sẽ thay đổi giá đã thống nhất với khách — tiếp tục?')
-                ) {
-                  return;
-                }
-                onPricing(selectedReq.id);
-              }}
+              onClick={() => onPricing(selectedReq.id)}
               className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[9px] px-[18px] text-[16px] font-extrabold text-[#334155] cursor-pointer shadow-sm"
             >
               Sửa giá đã báo
@@ -420,7 +411,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           )}
 
           {/* Cảnh báo giá chưa được xác nhận cho Sale */}
-          {selectedReq && (selectedReq.status !== 'QUOTED' && selectedReq.status !== 'CLOSED') && priceVal > 0 && currentRole === 'SALE' && (
+          {selectedReq && selectedReq.status !== 'QUOTED' && priceVal > 0 && currentRole === 'SALE' && (
             <div className="bg-[#fff7ed] border-[1.5px] border-[#fed7aa] rounded-[12px] py-[16px] px-[20px] flex items-center gap-[14px] shadow-[0_2px_6px_rgba(234,88,12,0.08)]">
               <AlertTriangle size={24} color="#ea580c" className="shrink-0" />
               <div>
@@ -635,10 +626,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             </div>
           </div>
 
-          {/* Multiple Quote Options — chỉ hiện sau khi đã báo giá chính thức (qua khỏi YÊU CẦU MỚI),
-              đã chốt với khách (CLOSED) thì thôi, chỉ còn giá cuối. Ẩn ở PENDING vì lúc đó "option"
-              (nếu có) chỉ là giá Sale tự ước tính lúc tạo yêu cầu qua Calculator, chưa ai duyệt. */}
-          {selectedReq.status !== 'CLOSED' && selectedReq.status !== 'PENDING' && pricedOptions.length > 0 && (
+          {/* Multiple Quote Options — chỉ hiện sau khi đã báo giá chính thức (qua khỏi YÊU CẦU MỚI).
+              Ẩn ở PENDING vì lúc đó "option" (nếu có) chỉ là giá Sale tự ước tính lúc tạo yêu cầu
+              qua Calculator, chưa ai duyệt. */}
+          {selectedReq.status !== 'PENDING' && pricedOptions.length > 0 && (
             <div className={cardCls}>
               <div className="flex items-center justify-between mb-[16px]">
                 <h3 className="text-[19px] font-extrabold text-text m-0 flex items-center gap-[8px]">
@@ -664,7 +655,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                     key={opt.id || idx}
                     opt={opt}
                     idx={idx}
-                    isFinalStatus={selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'}
+                    isFinalStatus={selectedReq.status === 'QUOTED'}
                     copied={copiedOptIdx === idx}
                     onCopy={() => handleCopyOptionPrice(idx, opt)}
                     isSelected={opt.id ? opt.id === (selectedOptionId || finalOption?.id) : false}
@@ -711,7 +702,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 className={clsx(
                   'text-[29px] font-black mt-[4px]',
                   displayedPriceVal > 0
-                    ? (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'
+                    ? (selectedReq.status === 'QUOTED'
                         ? 'text-[#16a34a] not-italic opacity-100'
                         : 'text-[#334155] italic opacity-75')
                     : 'text-[#d97706] not-italic opacity-100',
@@ -730,7 +721,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 </div>
               )}
 
-              {/* Chi tiết cấu thành giá — chỉ ORDER/ADMIN xem, vẫn hiện kể cả khi đã CLOSED (Sale chỉ thấy tổng).
+              {/* Chi tiết cấu thành giá — chỉ ORDER/ADMIN xem, Sale chỉ thấy tổng.
                   Chưa có giá chốt thì chưa có gì đáng tin để hiện — ẩn hết, chỉ để lại "Chưa có giá chốt". */}
               {displayedPriceVal > 0 && (currentRole === 'ORDER' || currentRole === 'ADMIN') && displayedOption &&
                (displayedOption.weightChi != null || displayedOption.totalMetalCost != null || displayedOption.laborCost != null || displayedOption.stonePrice != null || displayedOption.stoneCost != null || displayedOption.vat != null) && (

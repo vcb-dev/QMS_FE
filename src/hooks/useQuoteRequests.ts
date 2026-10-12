@@ -191,7 +191,6 @@ export function useQuoteRequests(
       else if (currentFilter === 'NEED_MORE_INFO') targetStatus = 'NEED_MORE_INFO';
       else if (currentFilter === 'QUOTED') targetStatus = 'QUOTED';
       else if (currentFilter === 'REJECTED') targetStatus = 'REJECTED';
-      else if (currentFilter === 'CLOSED') targetStatus = 'CLOSED';
       else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter as import('../types').QuoteStatus;
 
       const ownerId = (currentFilter === 'MY_REQ' || ownerFilter === 'MY_REQ') ? currentUser.id : undefined;
@@ -527,10 +526,10 @@ export function useQuoteRequests(
     // QUOTE (BE đòi PROCESSING -> 409) và mất luôn version (bỏ qua optimistic lock).
     const targetReq = pricingReq;
     const version = targetReq?.version;
-    // Đơn đã có giá (QUOTED/CLOSED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
+    // Đơn đã có giá (QUOTED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
     // completeQuoteRequest (xóa hết & tạo lại toàn bộ options, thêm/bớt/sửa tự do), chỉ khác action
     // gửi lên (BE tự giữ nguyên status/assigneeId, không đẩy PROCESSING->QUOTED lần 2).
-    const isEditingQuotedPrice = targetReq?.status === 'QUOTED' || targetReq?.status === 'CLOSED';
+    const isEditingQuotedPrice = targetReq?.status === 'QUOTED';
     const fallbackOptions = options?.length
       ? options
       : [{ optionName: 'Phương án', quotedPrice, vat }];

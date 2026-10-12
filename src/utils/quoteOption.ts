@@ -68,14 +68,13 @@ export const getOptionSummary = (opt: QuoteOption): string => {
     .join(' · ');
 };
 
-// Phương án "đại diện" của 1 yêu cầu khi cần đúng 1 option: ưu tiên CLOSED (khách
-// chốt), rồi SELECTED (giá chính), rồi option có giá mới nhất, rồi option đầu.
+// Phương án "đại diện" của 1 yêu cầu khi cần đúng 1 option: ưu tiên SELECTED (giá chính),
+// rồi option có giá mới nhất, rồi option đầu.
 // Khớp pickPrimaryOption phía BE (option-mapper.util.ts).
 export const getPrimaryOption = (req: { options?: QuoteOption[] | null }): QuoteOption | null => {
   const options = req.options ?? [];
   if (options.length === 0) return null;
   return (
-    options.find((o) => o.selectionStatus === 'CLOSED') ??
     options.find((o) => o.selectionStatus === 'SELECTED') ??
     [...options].filter((o) => o.quotedPrice != null).pop() ??
     options[0] ??

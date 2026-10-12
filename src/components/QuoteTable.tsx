@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, Award, HelpCircle, X, MessageCircle } from 'lucide-react';
+import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, HelpCircle, X, MessageCircle } from 'lucide-react';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -193,7 +193,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     QUOTED:        { ...STATUS_BADGE_META.QUOTED,         icon: <CheckCircle size={13} /> },
     REJECTED:      { ...STATUS_BADGE_META.REJECTED,       icon: <XCircle size={13} /> },
     NEED_MORE_INFO:{ ...STATUS_BADGE_META.NEED_MORE_INFO, icon: <RotateCcw size={13} /> },
-    CLOSED:        { ...STATUS_BADGE_META.CLOSED,         icon: <Award size={13} /> },
   };
 
   const StatusDropdown: React.FC<{
@@ -407,12 +406,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
               <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
             </span>
           );
-        case 'CLOSED':
-          return (
-            <span className={clsx(statusPillCls, 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]')}>
-              <Award size={13} color="#6d28d9" /> Đã chốt
-            </span>
-          );
         default:
           return <span className={clsx(statusPillCls, statusPillNewCls)}>{r.status}</span>;
       }
@@ -506,30 +499,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       return (
         <span className={clsx(statusPillCls, statusPillDoneCls)} title="Trạng thái hoàn tất">
           <CheckCircle size={13} color="#15803d" /> Đã báo giá
-        </span>
-      );
-    }
-
-    if (r.status === 'CLOSED') {
-      if (canEditQuotedPrice) {
-        return (
-          <StatusDropdown
-            current="CLOSED"
-            options={[
-              { value: 'CLOSED', ...STATUS_META.CLOSED, label: 'Đã chốt' },
-              { value: 'EDIT_PRICE', label: 'Sửa giá đã báo', icon: <Edit size={13} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
-            ]}
-            onChange={(val) => {
-              if (val !== 'EDIT_PRICE') return;
-              if (!window.confirm('Khách đã chốt giá này rồi. Sửa sẽ thay đổi giá đã thống nhất với khách — tiếp tục?')) return;
-              onPricing(r.id);
-            }}
-          />
-        );
-      }
-      return (
-        <span className={clsx(statusPillCls, 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]')} title="Khách đã chốt mua">
-          <Award size={13} color="#6d28d9" /> Đã chốt
         </span>
       );
     }
@@ -734,7 +703,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     </div>
                   </td>
                 ) : priceVal > 0 ? (
-                  (r.status === 'QUOTED' || r.status === 'CLOSED') ? (
+                  r.status === 'QUOTED' ? (
                     <td className="text-[#0f766e] rounded-[6px] py-[6px] px-[8px] font-extrabold text-[16px]">
                       <div className="flex flex-col">
                         {formattedPrice}
