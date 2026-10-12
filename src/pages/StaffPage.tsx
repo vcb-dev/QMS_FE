@@ -19,6 +19,8 @@ import {
   staffThCls,
   emptyTextCls,
   staffRowSelectCls,
+  pcpTabCls,
+  pcpTabActiveCls,
 } from '../styles/classNames';
 
 type ActionStat = { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] };
@@ -32,6 +34,40 @@ const TIME_PRESETS: { value: string; label: string }[] = [
   { value: 'LAST_MONTH', label: 'Tháng trước' },
   { value: 'THIS_YEAR', label: 'Năm nay' },
 ];
+
+// Các tab của trang — cùng kiểu tab gạch chân với trang Cấu hình giá (PricingConfigPage).
+type StaffTab = 'ACCOUNTS' | 'ORG' | 'PERFORMANCE' | 'ACTIVITY';
+const STAFF_TABS: { key: StaffTab; label: string }[] = [
+  { key: 'ACCOUNTS', label: 'Tài khoản' },
+  { key: 'ORG', label: 'Phòng ban & Team' },
+  { key: 'PERFORMANCE', label: 'Hiệu suất' },
+  { key: 'ACTIVITY', label: 'Hoạt động' },
+];
+
+const SEARCH_INPUT_CLS =
+  'w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] pl-[30px] pr-[10px] text-[14px] text-[#0f172a] outline-none box-border';
+const FILTER_LABEL_CLS =
+  'text-[14px] font-extrabold text-muted uppercase tracking-[0.4px] inline-flex items-center gap-[6px]';
+// Giá trị "Tùy chọn khoảng ngày" của ô chọn thời gian — không phải preset BE hiểu, chỉ để FE hiện 2 ô ngày
+const CUSTOM_RANGE = 'CUSTOM';
+
+const FilterSearchInput: React.FC<{ value: string; onChange: (v: string) => void; placeholder: string }> = ({ value, onChange, placeholder }) => (
+  <div className="relative w-[240px]">
+    <Search size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={SEARCH_INPUT_CLS}
+    />
+  </div>
+);
+
+// So khớp không phân biệt hoa/thường và dấu tiếng Việt ("nguyen" khớp "Nguyễn"). Chữ "đ" không
+// tách được bằng NFD nên đổi riêng.
+const normalizeSearchText = (s: string): string =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 
 // BE đếm riêng theo từng action code (VD CALCULATE_PRICE / CALCULATE_MULTI_MATERIAL_PRICE) —
 // gộp lại theo nhãn hiển thị (ACTION_LABEL) để 2 action cùng tên tiếng Việt không tách 2 dòng.
@@ -63,6 +99,13 @@ export const StaffPage: React.FC = () => {
   const [accountTab, setAccountTab] = useState<'PENDING' | 'ACTIVE'>('PENDING');
   const [accountPage, setAccountPage] = useState(1);
   const [accountPageSize, setAccountPageSize] = useState(10);
+  const [activeTab, setActiveTab] = useState<StaffTab>('ACCOUNTS');
+  // Tìm kiếm/lọc tài khoản làm ở FE (StaffPage tải toàn bộ danh sách rồi lọc tại chỗ)
+  const [accountSearch, setAccountSearch] = useState('');
+  const [accountRoleFilter, setAccountRoleFilter] = useState<'ALL' | 'SALE' | 'ORDER'>('ALL');
+  const [accountStatusFilter, setAccountStatusFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED'>('ALL');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityRoleFilter, setActivityRoleFilter] = useState('ALL');
   const [actionStats, setActionStats] = useState<Record<string, { action: string; count: number; byActor: { actorId: string | null; actorName: string; count: number }[] }[]>>({});
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
   // Role admin chọn khi duyệt từng tài khoản chờ (mặc định giữ role hiện tại — Lark tạo ra là SALE)
@@ -115,6 +158,8 @@ export const StaffPage: React.FC = () => {
   const [timeRange, setTimeRange] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  // Chọn "Tùy chọn khoảng ngày" nhưng chưa nhập ngày nào: vẫn phải hiện 2 ô ngày (startDate/endDate còn rỗng)
+  const [showCustomRange, setShowCustomRange] = useState(false);
   const [loading, setLoading] = useState(true);
   const isFiltered = timeRange !== 'ALL' || Boolean(startDate) || Boolean(endDate);
   // Đếm request để bỏ qua response trả về trễ (race condition khi đổi mốc thời gian liên tục)
@@ -233,14 +278,92 @@ export const StaffPage: React.FC = () => {
     setTimeRange('ALL');
     setStartDate('');
     setEndDate('');
+    setShowCustomRange(false);
+  };
+  const timeSelectValue = showCustomRange || startDate || endDate ? CUSTOM_RANGE : timeRange;
+  const handleTimeSelect = (value: string) => {
+    if (value === CUSTOM_RANGE) {
+      // Chưa có ngày nào nên bỏ preset đang chọn (về 'ALL'), chờ người dùng nhập khoảng ngày
+      setShowCustomRange(true);
+      setTimeRange('ALL');
+    } else {
+      setShowCustomRange(false);
+      applyPreset(value);
+    }
   };
 
-  const pendingUsers = users.filter((u) => !u.isApproved && u.role !== 'ADMIN');
+  const accountQuery = normalizeSearchText(accountSearch);
+  const matchesAccountFilters = (u: StaffUser) =>
+    (!accountQuery || normalizeSearchText(u.name).includes(accountQuery) || normalizeSearchText(u.email).includes(accountQuery))
+    && (accountRoleFilter === 'ALL' || u.role === accountRoleFilter);
+  // Bộ lọc trạng thái (hoạt động/đã khóa) chỉ có nghĩa với mục "đang hoạt động" — tài khoản chờ duyệt chưa có trạng thái này
+  const hasAccountFilter =
+    Boolean(accountQuery) || accountRoleFilter !== 'ALL' || (accountTab === 'ACTIVE' && accountStatusFilter !== 'ALL');
+  const resetAccountFilters = () => {
+    setAccountSearch('');
+    setAccountRoleFilter('ALL');
+    setAccountStatusFilter('ALL');
+    setAccountPage(1);
+  };
+
+  // allPendingUsers (chưa lọc) dùng cho số đếm trên tab — số đếm không đổi theo ô tìm kiếm
+  const allPendingUsers = users.filter((u) => !u.isApproved && u.role !== 'ADMIN');
+  const pendingUsers = allPendingUsers.filter(matchesAccountFilters);
   const activeListUsers = users
-    .filter((u) => u.isApproved && u.role !== 'ADMIN' && matchesTeamFilter(u, teamFilter))
+    .filter((u) => (
+      u.isApproved
+      && u.role !== 'ADMIN'
+      && matchesTeamFilter(u, teamFilter)
+      && matchesAccountFilters(u)
+      && (accountStatusFilter === 'ALL' || (accountStatusFilter === 'ACTIVE') === u.isActive)
+    ))
     .sort((a, b) => a.name.localeCompare(b.name));
   // Tài khoản đã khóa (isActive=false) không còn thao tác — ẩn khỏi các bảng thống kê/hoạt động bên dưới
   const lockedUserIds = new Set(users.filter((u) => !u.isActive).map((u) => u.id));
+
+  // Thẻ lọc chung hiện ở mọi tab trừ "Phòng ban & Team" (không có số liệu theo thời gian, hai khối
+  // đó tự có ô tìm kiếm riêng). Ô lọc team chỉ có nghĩa với danh sách tài khoản đang hoạt động và 2 bảng hiệu suất.
+  const showFilterCard = activeTab !== 'ORG';
+  const showTeamFilter = activeTab === 'PERFORMANCE' || (activeTab === 'ACCOUNTS' && accountTab === 'ACTIVE');
+
+  // Tab "Hoạt động": mỗi role 1 cột. Tìm theo tên hành động hoặc tên người thực hiện (bỏ qua tài khoản đã khóa).
+  const activityQuery = normalizeSearchText(activitySearch);
+  const visibleActors = (a: ActionStat) => a.byActor.filter((actor) => !actor.actorId || !lockedUserIds.has(actor.actorId));
+  const activityColumns = Object.entries(actionStats)
+    .filter(([role]) => activityRoleFilter === 'ALL' || role === activityRoleFilter)
+    .map(([role, rawActions]) => ({
+      role,
+      actions: mergeActionsByLabel(rawActions).filter((a) => (
+        !activityQuery
+        || normalizeSearchText(ACTION_LABEL[a.action] || a.action).includes(activityQuery)
+        || visibleActors(a).some((actor) => normalizeSearchText(actor.actorName).includes(activityQuery))
+      )),
+    }))
+    .filter(({ actions }) => !activityQuery || actions.length > 0);
+
+  // Nút "Xóa lọc" của thẻ lọc chung: chỉ xét các ô đang hiện ở tab hiện tại, và chỉ xóa đúng những ô đó
+  const hasTabFilter =
+    isFiltered
+    || (showTeamFilter && teamFilter !== TEAM_FILTER_ALL)
+    || (activeTab === 'ACCOUNTS' && hasAccountFilter)
+    || (activeTab === 'PERFORMANCE' && Boolean(saleSearch || pricerSearch))
+    || (activeTab === 'ACTIVITY' && Boolean(activitySearch || activityRoleFilter !== 'ALL'));
+  const resetTabFilters = () => {
+    resetTimeFilter();
+    if (showTeamFilter) setTeamFilter(TEAM_FILTER_ALL);
+    if (activeTab === 'ACCOUNTS') resetAccountFilters();
+    if (activeTab === 'PERFORMANCE') {
+      setSaleSearch('');
+      setPricerSearch('');
+    }
+    if (activeTab === 'ACTIVITY') {
+      setActivitySearch('');
+      setActivityRoleFilter('ALL');
+    }
+    setAccountPage(1);
+    setSalePage(1);
+    setPricerPage(1);
+  };
 
   const currentAccountList = accountTab === 'PENDING' ? pendingUsers : activeListUsers;
   const accountTotalPages = Math.max(1, Math.ceil(currentAccountList.length / accountPageSize));
@@ -326,573 +449,633 @@ export const StaffPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-[22px]">
-      <div>
-        <h1 className="text-[27px] font-black text-[#0f172a] m-0 tracking-[-0.3px] flex items-center gap-[10px]">
+    <div className="bg-surface border border-[#e5e7eb] rounded-[16px]">
+      <div className="pt-[22px] px-[22px] pb-0">
+        <h1 className="text-[27px] font-black text-[#0f172a] m-0 mb-[4px] tracking-[-0.3px] flex items-center gap-[10px]">
           <Users size={22} /> Quản Lý Nhân Viên
         </h1>
-        <p className="text-[16px] text-muted m-0 mt-[4px]">
-          Thống kê người dùng và hiệu suất người báo giá
-        </p>
-      </div>
+        <p className="text-[16px] text-muted m-0">Thống kê người dùng và hiệu suất người báo giá</p>
 
-      {/* Bộ lọc thời gian — áp cho toàn trang. BE lọc theo user.createdAt / quoteRequest.createdAt /
-          auditLog.createdAt và tính hết số liệu; FE chỉ hiển thị kết quả. */}
-      <div className="bg-surface border border-border rounded-[12px] py-[10px] px-[14px] flex items-center gap-[12px] flex-wrap">
-        <span className="text-[14px] font-extrabold text-muted uppercase tracking-[0.4px] inline-flex items-center gap-[6px]">
-          <Calendar size={13} /> Khoảng thời gian
-        </span>
-
-        <div className="flex gap-[6px] flex-wrap">
-          {TIME_PRESETS.map((p) => {
-            const active = !startDate && !endDate && timeRange === p.value;
-            return (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => applyPreset(p.value)}
-                className={clsx(
-                  'py-[6px] px-[12px] rounded-[6px] text-[14.5px] font-bold cursor-pointer border',
-                  active ? 'bg-[#0f172a] text-surface border-[#0f172a]' : 'bg-[#f1f5f9] text-muted border-transparent',
-                )}
-              >
-                {p.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-[6px]">
-          <input
-            type="date"
-            value={startDate}
-            max={endDate || undefined}
-            onChange={(e) => { setStartDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
-            className={dateInputPy6Cls}
-          />
-          <span className="text-faint text-[15px]">—</span>
-          <input
-            type="date"
-            value={endDate}
-            min={startDate || undefined}
-            onChange={(e) => { setEndDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
-            className={dateInputPy6Cls}
-          />
-        </div>
-
-        {isFiltered && (
-          <button
-            type="button"
-            onClick={resetTimeFilter}
-            className="inline-flex items-center gap-[4px] py-[6px] px-[12px] rounded-[6px] bg-surface border border-border text-[#475569] text-[14.5px] font-bold cursor-pointer"
-          >
-            <RotateCcw size={12} /> Xóa lọc
-          </button>
-        )}
-
-        {loading && <span className="text-[14.5px] text-faint font-semibold">Đang tải…</span>}
-      </div>
-
-      {/* Bộ lọc team — áp cho tab tài khoản đang hoạt động và 2 bảng hiệu suất. Lọc tài khoản làm ở
-          FE (StaffPage tải toàn bộ danh sách), hiệu suất lọc ở BE qua teamId. */}
-      <div className="bg-surface border border-border rounded-[12px] py-[10px] px-[14px] flex items-center gap-[12px] flex-wrap">
-        <span className="text-[14px] font-extrabold text-muted uppercase tracking-[0.4px] inline-flex items-center gap-[6px]">
-          <Users size={13} /> Team
-        </span>
-        <select
-          value={teamFilter}
-          onChange={(e) => {
-            setTeamFilter(e.target.value);
-            setAccountPage(1);
-            setSalePage(1);
-            setPricerPage(1);
-          }}
-          className={clsx(staffRowSelectCls, 'min-w-[180px]')}
-        >
-          <option value={TEAM_FILTER_ALL}>{TEAM_ALL_LABEL}</option>
-          <option value={TEAM_FILTER_NONE}>{TEAM_NONE_LABEL}</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
+        <div className="flex gap-[22px] mt-[18px] border-b border-[#e5e7eb]">
+          {STAFF_TABS.map(({ key, label }) => (
+            <button key={key} type="button" className={clsx(pcpTabCls, activeTab === key && pcpTabActiveCls)} onClick={() => setActiveTab(key)}>
+              {label}{key === 'ACCOUNTS' && allPendingUsers.length > 0 && ` (${allPendingUsers.length})`}
+            </button>
           ))}
-        </select>
-        <span className="text-[14px] text-faint">
-          Áp dụng cho tab tài khoản đang hoạt động và hai bảng hiệu suất; tab chờ duyệt không lọc.
-        </span>
+        </div>
       </div>
 
-      {/* 2.1 Thống kê người dùng */}
-      <div className="grid grid-cols-4 gap-[16px]">
-        <StatCard icon={<Users size={14} />} label="Tổng người dùng" value={totalUsers} />
-        <div className="bg-surface border border-border rounded-[14px] py-[18px] px-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-          <div className="text-[14px] font-extrabold text-muted uppercase">Sale / Order</div>
-          <div className="text-[21px] font-black text-[#0f172a] mt-[8px]">
-            {byRole.SALE} <span className="text-[#cbd5e1] font-bold">/</span> {byRole.ORDER}
-          </div>
-        </div>
-        <StatCard icon={<UserCheck size={14} />} label="Đã duyệt" value={totalUsers - pendingCount} tone="success" />
-        <StatCard
-          icon={<UserX size={14} />}
-          label="Chờ duyệt"
-          value={pendingCount}
-          tone={pendingCount > 0 ? 'warning' : 'default'}
-        />
-      </div>
+      <div className="p-[22px] flex flex-col gap-[22px]">
 
-      {/* Quản lý tài khoản — 2 tab: chờ duyệt / đang hoạt động */}
-      <div className={cardContainerCls}>
-        <h2 className={cardHeadingCls}>
-          <ShieldCheck size={16} color="#2563eb" /> Quản lý tài khoản
-        </h2>
-        <span className="text-[14px] text-muted">Duyệt tài khoản mới hoặc khóa/mở khóa tài khoản đang hoạt động</span>
-
-        <div className="flex gap-[8px] mt-[14px] border-b border-[#f1f5f9] pb-[12px]">
-          <button
-            type="button"
-            onClick={() => setAccountTab('PENDING')}
-            className={clsx(
-              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[15.5px] font-bold cursor-pointer border',
-              accountTab === 'PENDING' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
-            )}
-          >
-            Tài khoản chờ duyệt {pendingUsers.length > 0 && `(${pendingUsers.length})`}
-          </button>
-          <button
-            type="button"
-            onClick={() => setAccountTab('ACTIVE')}
-            className={clsx(
-              'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[15.5px] font-bold cursor-pointer border',
-              accountTab === 'ACTIVE' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
-            )}
-          >
-            Tài khoản đang hoạt động ({activeListUsers.length})
-          </button>
-        </div>
-
-        {accountTab === 'PENDING' && (pendingUsers.length > 0 ? (
-          <div className="overflow-x-auto mt-[14px]">
-            <table className="w-full border-collapse text-[15.5px]">
-              <thead>
-                <tr className="border-b border-[#f1f5f9] text-left">
-                  <th className={staffThCls}>Tên</th>
-                  <th className={staffThCls}>Email</th>
-                  <th className={staffThCls}>Vai trò</th>
-                  <th className={staffThCls}>Team</th>
-                  <th className={staffThCls}>Thời gian tạo</th>
-                  <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedAccountList.map((u) => (
-                  <tr key={u.id} className="border-b border-[#f8fafc]">
-                    <td className="p-[10px] font-bold text-[#0f172a]">
-                      <span className="inline-flex items-center gap-[8px]">
-                        <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
-                        {u.name}
-                      </span>
-                    </td>
-                    <td className="p-[10px] text-muted">{u.email}</td>
-                    <td className="p-[10px] text-[#334155]">
-                      <select
-                        value={approveRole[u.id] || u.role}
-                        disabled={actionLoadingId === u.id}
-                        onChange={(e) => setApproveRole((prev) => ({ ...prev, [u.id]: e.target.value as Role }))}
-                        className={staffRowSelectCls}
-                      >
-                        {(['SALE', 'ORDER'] as Role[]).map((r) => (
-                          <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-[10px] text-[#334155]">
-                      <select
-                        value={getApproveTeamId(u.id)}
-                        disabled={actionLoadingId === u.id}
-                        onChange={(e) => setApproveTeam((prev) => ({ ...prev, [u.id]: e.target.value }))}
-                        className={staffRowSelectCls}
-                      >
-                        <option value="">{TEAM_NONE_LABEL}</option>
-                        {teams.map((t) => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-[10px] text-muted">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
-                    </td>
-                    <td className="p-[10px] text-right">
-                      <div className="inline-flex gap-[6px]">
-                        <button
-                          type="button"
-                          disabled={actionLoadingId === u.id}
-                          onClick={() => handleApprove(u.id)}
-                          className={clsx(
-                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border-0 bg-[#16a34a] text-surface text-[14.5px] font-bold',
-                            actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
-                          )}
-                        >
-                          <Check size={12} /> Duyệt
-                        </button>
-                        <button
-                          type="button"
-                          disabled={actionLoadingId === u.id}
-                          onClick={() => handleReject(u.id)}
-                          className={clsx(
-                            'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border border-[#fecdd3] bg-[#fff1f2] text-[#be123c] text-[14.5px] font-bold',
-                            actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
-                          )}
-                        >
-                          <X size={12} /> Từ chối
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+        {/* Thanh lọc chung của tab — gộp thời gian, team, tìm kiếm, vai trò, trạng thái vào 1 thẻ; mỗi tab
+            chỉ hiện những ô nó dùng. Thời gian BE lọc theo user/quoteRequest/auditLog.createdAt và tính hết số
+            liệu; team lọc ở FE cho danh sách tài khoản, ở BE (teamId) cho hiệu suất; tìm kiếm tài khoản/hoạt
+            động làm ở FE (StaffPage tải toàn bộ danh sách), tìm Sale/Order do BE xử lý. */}
+        {showFilterCard && (
+          <div className="bg-surface border border-border rounded-[12px] py-[10px] px-[14px] flex items-center gap-x-[16px] gap-y-[10px] flex-wrap">
+            <div className="flex items-center gap-[8px] flex-wrap">
+              <span className={FILTER_LABEL_CLS}>
+                <Calendar size={13} /> Thời gian
+              </span>
+              <select
+                value={timeSelectValue}
+                onChange={(e) => handleTimeSelect(e.target.value)}
+                className={clsx(staffRowSelectCls, 'min-w-[160px]')}
+              >
+                {TIME_PRESETS.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className={emptyTextCls}>Không có tài khoản nào chờ duyệt</div>
-        ))}
+                <option value={CUSTOM_RANGE}>Tùy chọn khoảng ngày</option>
+              </select>
+              {timeSelectValue === CUSTOM_RANGE && (
+                <div className="flex items-center gap-[6px]">
+                  <input
+                    type="date"
+                    value={startDate}
+                    max={endDate || undefined}
+                    onChange={(e) => { setStartDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
+                    className={dateInputPy6Cls}
+                  />
+                  <span className="text-faint text-[15px]">—</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate || undefined}
+                    onChange={(e) => { setEndDate(e.target.value); if (e.target.value) setTimeRange('ALL'); }}
+                    className={dateInputPy6Cls}
+                  />
+                </div>
+              )}
+            </div>
 
-        {accountTab === 'ACTIVE' && (activeListUsers.length > 0 ? (
-          <div className="overflow-x-auto mt-[14px]">
-            <table className="w-full border-collapse text-[15.5px]">
-              <thead>
-                <tr className="border-b border-[#f1f5f9] text-left">
-                  <th className={staffThCls}>Tên</th>
-                  <th className={staffThCls}>Email</th>
-                  <th className={staffThCls}>Vai trò</th>
-                  <th className={staffThCls}>Team</th>
-                  <th className={staffThCls}>Trạng thái</th>
-                  <th className={staffThCls}>Thời gian tạo</th>
-                  <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedAccountList.map((u) => (
-                  <tr key={u.id} className="border-b border-[#f8fafc]">
-                    <td className="p-[10px] font-bold text-[#0f172a]">
-                      <span className="inline-flex items-center gap-[8px]">
-                        <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
-                        {u.name}
-                      </span>
-                    </td>
-                    <td className="p-[10px] text-muted">{u.email}</td>
-                    <td className="p-[10px] text-[#334155]">{ROLE_LABEL[u.role] || u.role}</td>
-                    <td className="p-[10px] text-[#334155]">
-                      <select
-                        value={u.team?.id ?? ''}
-                        disabled={actionLoadingId === u.id}
-                        onChange={(e) => handleChangeTeam(u.id, e.target.value || null)}
-                        className={staffRowSelectCls}
-                      >
-                        <option value="">{TEAM_NONE_LABEL}</option>
-                        {u.team && !teams.some((t) => t.id === u.team!.id) && (
-                          <option value={u.team.id}>{u.team.name}</option>
-                        )}
-                        {teams.map((t) => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-[10px]">
-                      <span className={clsx(
-                        'inline-flex items-center gap-[4px] py-[3px] px-[8px] rounded-[20px] text-[14px] font-bold border',
-                        u.isActive ? 'bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]' : 'bg-[#fff1f2] text-[#be123c] border-[#fecdd3]',
-                      )}>
-                        {u.isActive ? 'Đang hoạt động' : 'Đã khóa'}
-                      </span>
-                    </td>
-                    <td className="p-[10px] text-muted">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
-                    </td>
-                    <td className="p-[10px] text-right">
-                      <button
-                        type="button"
-                        disabled={actionLoadingId === u.id}
-                        onClick={() => handleToggleActive(u.id, u.isActive)}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] text-surface text-[14.5px] font-bold',
-                          u.isActive ? 'border-0 bg-[#e11d48] text-surface' : 'border-0 bg-[#16a34a] text-surface',
-                          actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
-                        )}
-                      >
-                        {u.isActive ? <><Lock size={12} /> Khóa</> : <><Unlock size={12} /> Mở khóa</>}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center text-faint text-[15.5px] py-[20px] px-0">
-            {teamFilter !== TEAM_FILTER_ALL ? 'Không có tài khoản nào thuộc bộ lọc team này' : 'Chưa có tài khoản nào được duyệt'}
-          </div>
-        ))}
+            {showTeamFilter && (
+              <div className="flex items-center gap-[8px]">
+                <span className={FILTER_LABEL_CLS}>
+                  <Users size={13} /> Team
+                </span>
+                <select
+                  value={teamFilter}
+                  onChange={(e) => {
+                    setTeamFilter(e.target.value);
+                    setAccountPage(1);
+                    setSalePage(1);
+                    setPricerPage(1);
+                  }}
+                  className={clsx(staffRowSelectCls, 'min-w-[160px]')}
+                >
+                  <option value={TEAM_FILTER_ALL}>{TEAM_ALL_LABEL}</option>
+                  <option value={TEAM_FILTER_NONE}>{TEAM_NONE_LABEL}</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-        {currentAccountList.length > 0 && (
-          <div className="mt-[14px]">
-            <Pagination
-              currentPage={safeAccountPage}
-              totalPages={accountTotalPages}
-              totalItems={currentAccountList.length}
-              pageSize={accountPageSize}
-              onPageChange={setAccountPage}
-              onPageSizeChange={(size) => { setAccountPageSize(size); setAccountPage(1); }}
-            />
+            {activeTab === 'ACCOUNTS' && (
+              <>
+                <FilterSearchInput
+                  value={accountSearch}
+                  onChange={(v) => { setAccountSearch(v); setAccountPage(1); }}
+                  placeholder="Tìm theo tên hoặc email..."
+                />
+                <select
+                  value={accountRoleFilter}
+                  onChange={(e) => { setAccountRoleFilter(e.target.value as 'ALL' | 'SALE' | 'ORDER'); setAccountPage(1); }}
+                  className={staffRowSelectCls}
+                >
+                  <option value="ALL">Tất cả vai trò</option>
+                  <option value="SALE">{ROLE_LABEL.SALE || 'SALE'}</option>
+                  <option value="ORDER">{ROLE_LABEL.ORDER || 'ORDER'}</option>
+                </select>
+                {/* Trạng thái chỉ có nghĩa với mục đang hoạt động — tài khoản chờ duyệt chưa có trạng thái này */}
+                {accountTab === 'ACTIVE' && (
+                  <select
+                    value={accountStatusFilter}
+                    onChange={(e) => { setAccountStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'LOCKED'); setAccountPage(1); }}
+                    className={staffRowSelectCls}
+                  >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="ACTIVE">Đang hoạt động</option>
+                    <option value="LOCKED">Đã khóa</option>
+                  </select>
+                )}
+              </>
+            )}
+
+            {activeTab === 'PERFORMANCE' && (
+              <>
+                <FilterSearchInput
+                  value={saleSearch}
+                  onChange={(v) => { setSaleSearch(v); setSalePage(1); }}
+                  placeholder="Tìm theo tên Sale..."
+                />
+                <FilterSearchInput
+                  value={pricerSearch}
+                  onChange={(v) => { setPricerSearch(v); setPricerPage(1); }}
+                  placeholder="Tìm theo tên Order..."
+                />
+              </>
+            )}
+
+            {/* Đang tìm thì hiện hết kết quả khớp, không cắt top 6 — nếu không hành động ngoài top 6 sẽ không bao giờ tìm thấy. */}
+            {activeTab === 'ACTIVITY' && (
+              <>
+                <FilterSearchInput
+                  value={activitySearch}
+                  onChange={setActivitySearch}
+                  placeholder="Tìm hành động hoặc người thực hiện..."
+                />
+                <select
+                  value={activityRoleFilter}
+                  onChange={(e) => setActivityRoleFilter(e.target.value)}
+                  className={staffRowSelectCls}
+                >
+                  <option value="ALL">Tất cả role</option>
+                  {Object.keys(actionStats).map((role) => (
+                    <option key={role} value={role}>{ROLE_LABEL[role] || role}</option>
+                  ))}
+                </select>
+              </>
+            )}
+
+            <div className="ml-auto flex items-center gap-[10px]">
+              {loading && <span className="text-[14.5px] text-faint font-semibold">Đang tải…</span>}
+              {hasTabFilter && (
+                <button
+                  type="button"
+                  onClick={resetTabFilters}
+                  className="inline-flex items-center gap-[4px] py-[6px] px-[12px] rounded-[6px] bg-surface border border-border text-[#475569] text-[14.5px] font-bold cursor-pointer"
+                >
+                  <RotateCcw size={12} /> Xóa lọc
+                </button>
+              )}
+            </div>
           </div>
         )}
-      </div>
 
-      <DepartmentManagement />
-
-      <TeamManagement onChange={handleTeamsChanged} />
-
-      {/* 2.2 Hiệu suất Sale & Order */}
-      <div className="grid grid-cols-2 gap-[16px]">
-        <div className={cardContainerCls}>
-          <h2 className={cardHeadingCls}>
-            <TrendingUp size={16} color="#2563eb" /> Hiệu suất Sale
-          </h2>
-          <span className="text-[14px] text-muted">Số yêu cầu đã tạo của từng Sale</span>
-
-          {(performance !== null || saleSearch) && (
-            <div className="relative mt-[12px] w-[220px]">
-              <Search size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
-              <input
-                type="text"
-                value={saleSearch}
-                onChange={(e) => { setSaleSearch(e.target.value); setSalePage(1); }}
-                placeholder="Tìm theo tên Sale..."
-                className="w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] pl-[30px] pr-[10px] text-[14px] text-[#0f172a] outline-none box-border"
-              />
-            </div>
-          )}
-
-          {pagedSaleStats.length > 0 ? (
-            <div className="overflow-x-auto mt-[10px]">
-              <table className="w-full border-collapse text-[15.5px]">
-                <thead>
-                  <tr className="border-b border-[#f1f5f9] text-left">
-                    <th className={staffThCls}>
-                      <button
-                        type="button"
-                        onClick={() => toggleSaleSort('name')}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase',
-                          saleSortField === 'name' ? 'text-primary' : 'text-muted'
-                        )}
-                      >
-                        Sale <ArrowUpDown size={11} />
-                      </button>
-                    </th>
-                    <th className={clsx(staffThCls, 'text-right')}>
-                      <button
-                        type="button"
-                        onClick={() => toggleSaleSort('total')}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
-                          saleSortField === 'total' ? 'text-primary' : 'text-muted'
-                        )}
-                      >
-                        Đã tạo <ArrowUpDown size={11} />
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedSaleStats.map((s) => (
-                    <tr key={s.id} className="border-b border-[#f8fafc]">
-                      <td className="p-[10px] font-bold text-[#0f172a]">{s.name}</td>
-                      <td className="p-[10px] text-right text-[#334155]">{s.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <Pagination
-                currentPage={salePage}
-                totalPages={saleTotalPages}
-                totalItems={performance?.saleStats?.total || 0}
-                pageSize={salePageSize}
-                onPageChange={setSalePage}
-                onPageSizeChange={(size) => { setSalePageSize(size); setSalePage(1); }}
-              />
-            </div>
-          ) : (
-            <div className={emptyTextCls}>
-              {saleSearch ? 'Không tìm thấy Sale nào khớp' : 'Chưa có Sale nào trong hệ thống'}
-            </div>
-          )}
-        </div>
-
-        <div className={cardContainerCls}>
-          <h2 className={cardHeadingCls}>
-            <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
-          </h2>
-          <span className="text-[14px] text-muted">Số yêu cầu được giao, số yêu cầu báo giá và thời gian trung bình báo giá của từng Order</span>
-
-          {(performance !== null || pricerSearch) && (
-            <div className="relative mt-[12px] w-[220px]">
-              <Search size={13} className="absolute left-[10px] top-1/2 -translate-y-1/2 text-faint" />
-              <input
-                type="text"
-                value={pricerSearch}
-                onChange={(e) => { setPricerSearch(e.target.value); setPricerPage(1); }}
-                placeholder="Tìm theo tên Order..."
-                className="w-full bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[6px] pl-[30px] pr-[10px] text-[14px] text-[#0f172a] outline-none box-border"
-              />
-            </div>
-          )}
-
-          {pagedPricerStats.length > 0 ? (
-            <div className="overflow-x-auto mt-[10px]">
-              <table className="w-full border-collapse text-[15.5px]">
-                <thead>
-                  <tr className="border-b border-[#f1f5f9] text-left">
-                    <th className={staffThCls}>
-                      <button
-                        type="button"
-                        onClick={() => togglePricerSort('name')}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase',
-                          pricerSortField === 'name' ? 'text-primary' : 'text-muted'
-                        )}
-                      >
-                        Order <ArrowUpDown size={11} />
-                      </button>
-                    </th>
-                    <th className={clsx(staffThCls, 'text-right')}>
-                      <button
-                        type="button"
-                        onClick={() => togglePricerSort('assignedCount')}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
-                          pricerSortField === 'assignedCount' ? 'text-primary' : 'text-muted'
-                        )}
-                      >
-                        Số yêu cầu được giao <ArrowUpDown size={11} />
-                      </button>
-                    </th>
-                    <th className={clsx(staffThCls, 'text-right')}>
-                      <button
-                        type="button"
-                        onClick={() => togglePricerSort('quotedCount')}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
-                          pricerSortField === 'quotedCount' ? 'text-primary' : 'text-muted'
-                        )}
-                      >
-                        Số yêu cầu báo giá <ArrowUpDown size={11} />
-                      </button>
-                    </th>
-                    <th className={clsx(staffThCls, 'text-right')}>
-                      <button
-                        type="button"
-                        onClick={() => togglePricerSort('medianQuoteMs')}
-                        className={clsx(
-                          'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
-                          pricerSortField === 'medianQuoteMs' ? 'text-primary' : 'text-muted'
-                        )}
-                      >
-                        Thời gian trung bình <ArrowUpDown size={11} />
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedPricerStats.map((p) => (
-                    <tr key={p.id} className="border-b border-[#f8fafc]">
-                      <td className="p-[10px] font-bold text-[#0f172a]">{p.name}</td>
-                      <td className="p-[10px] text-right text-[#334155]">{p.assignedCount}</td>
-                      <td className="p-[10px] text-right text-[#334155]">{p.quotedCount}</td>
-                      <td className="p-[10px] text-right text-[#0f766e] font-bold">
-                        {p.medianQuoteMs !== null ? formatDuration(0, p.medianQuoteMs) : '---'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <Pagination
-                currentPage={pricerPage}
-                totalPages={pricerTotalPages}
-                totalItems={performance?.pricerStats?.total || 0}
-                pageSize={pricerPageSize}
-                onPageChange={setPricerPage}
-                onPageSizeChange={(size) => { setPricerPageSize(size); setPricerPage(1); }}
-              />
-            </div>
-          ) : (
-            <div className={emptyTextCls}>
-              {pricerSearch ? 'Không tìm thấy Order nào khớp' : 'Chưa có Order nào trong hệ thống'}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 2.3 + 2.4 gộp — Top hành động theo role (Audit Log) */}
-      <div className={cardContainerCls}>
-        <h2 className={cardHeadingCls}>
-          <Activity size={16} color="#2563eb" /> Top hành động theo role
-        </h2>
-      
-        {Object.keys(actionStats).length > 0 ? (
-          <div
-            className="grid gap-[20px] mt-[14px]"
-            // động — giữ inline
-            style={{ gridTemplateColumns: `repeat(${Object.keys(actionStats).length}, 1fr)` }}
-          >
-            {Object.entries(actionStats).map(([role, rawActions]) => {
-              const actions = mergeActionsByLabel(rawActions);
-              const maxCount = actions[0]?.count || 1;
-              return (
-                <div key={role}>
-                  <div className="text-[14px] font-extrabold text-muted uppercase mb-[10px]">
-                    {ROLE_LABEL[role] || role}
-                  </div>
-                  <div className="flex flex-col gap-[8px]">
-                    {actions.slice(0, 6).map((a) => {
-                      const key = `${role}:${a.action}`;
-                      const isOpen = expandedAction === key;
-                      return (
-                        <div key={a.action}>
-                          <div
-                            onClick={() => setExpandedAction(isOpen ? null : key)}
-                            className="flex justify-between text-[14.5px] text-[#334155] mb-[3px] cursor-pointer"
-                          >
-                            <span className="font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{ACTION_LABEL[a.action] || a.action}</span>
-                            <span className="font-black text-[#0f172a] shrink-0 ml-[8px]">{a.count}</span>
-                          </div>
-                          <div
-                            onClick={() => setExpandedAction(isOpen ? null : key)}
-                            className="bg-[#f1f5f9] rounded-[6px] h-[6px] overflow-hidden cursor-pointer"
-                          >
-                            <div
-                              className={clsx('h-full rounded-[6px]', isOpen ? 'bg-[#0f172a]' : 'bg-primary')}
-                              // động — giữ inline
-                              style={{ width: `${(a.count / maxCount) * 100}%` }}
-                            />
-                          </div>
-                          {isOpen && (
-                            <div className="mt-[6px] py-[8px] px-[10px] bg-[#f8fafc] border border-[#f1f5f9] rounded-[8px] flex flex-col gap-[4px]">
-                              {a.byActor.filter((actor) => !actor.actorId || !lockedUserIds.has(actor.actorId)).map((actor) => (
-                                <div key={actor.actorId || actor.actorName} className="flex justify-between text-[14px]">
-                                  <span className="text-[#334155] font-semibold">{actor.actorName}</span>
-                                  <span className="text-muted font-bold">{actor.count} lần</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+        {activeTab === 'ACCOUNTS' && (
+          <>
+            {/* 2.1 Thống kê người dùng */}
+            <div className="grid grid-cols-4 gap-[16px]">
+              <StatCard icon={<Users size={14} />} label="Tổng người dùng" value={totalUsers} />
+              <div className="bg-surface border border-border rounded-[14px] py-[18px] px-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+                <div className="text-[14px] font-extrabold text-muted uppercase">Sale / Order</div>
+                <div className="text-[21px] font-black text-[#0f172a] mt-[8px]">
+                  {byRole.SALE} <span className="text-[#cbd5e1] font-bold">/</span> {byRole.ORDER}
                 </div>
-              );
-            })}
+              </div>
+              <StatCard icon={<UserCheck size={14} />} label="Đã duyệt" value={totalUsers - pendingCount} tone="success" />
+              <StatCard
+                icon={<UserX size={14} />}
+                label="Chờ duyệt"
+                value={pendingCount}
+                tone={pendingCount > 0 ? 'warning' : 'default'}
+              />
+            </div>
+
+            {/* Quản lý tài khoản — 2 tab: chờ duyệt / đang hoạt động */}
+            <div className={cardContainerCls}>
+              <h2 className={cardHeadingCls}>
+                <ShieldCheck size={16} color="#2563eb" /> Quản lý tài khoản
+              </h2>
+              <span className="text-[14px] text-muted">Duyệt tài khoản mới hoặc khóa/mở khóa tài khoản đang hoạt động</span>
+
+              <div className="flex gap-[8px] mt-[14px] border-b border-[#f1f5f9] pb-[12px]">
+                <button
+                  type="button"
+                  onClick={() => setAccountTab('PENDING')}
+                  className={clsx(
+                    'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[15.5px] font-bold cursor-pointer border',
+                    accountTab === 'PENDING' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
+                  )}
+                >
+                  Tài khoản chờ duyệt {allPendingUsers.length > 0 && `(${allPendingUsers.length})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountTab('ACTIVE')}
+                  className={clsx(
+                    'inline-flex items-center gap-[6px] py-[7px] px-[14px] rounded-[8px] text-[15.5px] font-bold cursor-pointer border',
+                    accountTab === 'ACTIVE' ? 'bg-surface text-[#0f172a] border-[#0f172a]' : 'bg-[#f1f5f9] text-[#475569] border-transparent',
+                  )}
+                >
+                  Tài khoản đang hoạt động ({activeListUsers.length})
+                </button>
+              </div>
+
+              {accountTab === 'PENDING' && (pendingUsers.length > 0 ? (
+                <div className="overflow-x-auto mt-[14px]">
+                  <table className="w-full border-collapse text-[15.5px]">
+                    <thead>
+                      <tr className="border-b border-[#f1f5f9] text-left">
+                        <th className={staffThCls}>Tên</th>
+                        <th className={staffThCls}>Email</th>
+                        <th className={staffThCls}>Vai trò</th>
+                        <th className={staffThCls}>Team</th>
+                        <th className={staffThCls}>Thời gian tạo</th>
+                        <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedAccountList.map((u) => (
+                        <tr key={u.id} className="border-b border-[#f8fafc]">
+                          <td className="p-[10px] font-bold text-[#0f172a]">
+                            <span className="inline-flex items-center gap-[8px]">
+                              <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
+                              {u.name}
+                            </span>
+                          </td>
+                          <td className="p-[10px] text-muted">{u.email}</td>
+                          <td className="p-[10px] text-[#334155]">
+                            <select
+                              value={approveRole[u.id] || u.role}
+                              disabled={actionLoadingId === u.id}
+                              onChange={(e) => setApproveRole((prev) => ({ ...prev, [u.id]: e.target.value as Role }))}
+                              className={staffRowSelectCls}
+                            >
+                              {(['SALE', 'ORDER'] as Role[]).map((r) => (
+                                <option key={r} value={r}>{ROLE_LABEL[r] || r}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-[10px] text-[#334155]">
+                            <select
+                              value={getApproveTeamId(u.id)}
+                              disabled={actionLoadingId === u.id}
+                              onChange={(e) => setApproveTeam((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                              className={staffRowSelectCls}
+                            >
+                              <option value="">{TEAM_NONE_LABEL}</option>
+                              {teams.map((t) => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-[10px] text-muted">
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
+                          </td>
+                          <td className="p-[10px] text-right">
+                            <div className="inline-flex gap-[6px]">
+                              <button
+                                type="button"
+                                disabled={actionLoadingId === u.id}
+                                onClick={() => handleApprove(u.id)}
+                                className={clsx(
+                                  'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border-0 bg-[#16a34a] text-surface text-[14.5px] font-bold',
+                                  actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
+                                )}
+                              >
+                                <Check size={12} /> Duyệt
+                              </button>
+                              <button
+                                type="button"
+                                disabled={actionLoadingId === u.id}
+                                onClick={() => handleReject(u.id)}
+                                className={clsx(
+                                  'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] border border-[#fecdd3] bg-[#fff1f2] text-[#be123c] text-[14.5px] font-bold',
+                                  actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
+                                )}
+                              >
+                                <X size={12} /> Từ chối
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className={emptyTextCls}>
+                  {hasAccountFilter ? 'Không có tài khoản chờ duyệt nào khớp bộ lọc' : 'Không có tài khoản nào chờ duyệt'}
+                </div>
+              ))}
+
+              {accountTab === 'ACTIVE' && (activeListUsers.length > 0 ? (
+                <div className="overflow-x-auto mt-[14px]">
+                  <table className="w-full border-collapse text-[15.5px]">
+                    <thead>
+                      <tr className="border-b border-[#f1f5f9] text-left">
+                        <th className={staffThCls}>Tên</th>
+                        <th className={staffThCls}>Email</th>
+                        <th className={staffThCls}>Vai trò</th>
+                        <th className={staffThCls}>Team</th>
+                        <th className={staffThCls}>Trạng thái</th>
+                        <th className={staffThCls}>Thời gian tạo</th>
+                        <th className={clsx(staffThCls, 'text-right')}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedAccountList.map((u) => (
+                        <tr key={u.id} className="border-b border-[#f8fafc]">
+                          <td className="p-[10px] font-bold text-[#0f172a]">
+                            <span className="inline-flex items-center gap-[8px]">
+                              <UserAvatar src={u.avatar} name={u.name} size={26} background="#475569" />
+                              {u.name}
+                            </span>
+                          </td>
+                          <td className="p-[10px] text-muted">{u.email}</td>
+                          <td className="p-[10px] text-[#334155]">{ROLE_LABEL[u.role] || u.role}</td>
+                          <td className="p-[10px] text-[#334155]">
+                            <select
+                              value={u.team?.id ?? ''}
+                              disabled={actionLoadingId === u.id}
+                              onChange={(e) => handleChangeTeam(u.id, e.target.value || null)}
+                              className={staffRowSelectCls}
+                            >
+                              <option value="">{TEAM_NONE_LABEL}</option>
+                              {u.team && !teams.some((t) => t.id === u.team!.id) && (
+                                <option value={u.team.id}>{u.team.name}</option>
+                              )}
+                              {teams.map((t) => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-[10px]">
+                            <span className={clsx(
+                              'inline-flex items-center gap-[4px] py-[3px] px-[8px] rounded-[20px] text-[14px] font-bold border',
+                              u.isActive ? 'bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]' : 'bg-[#fff1f2] text-[#be123c] border-[#fecdd3]',
+                            )}>
+                              {u.isActive ? 'Đang hoạt động' : 'Đã khóa'}
+                            </span>
+                          </td>
+                          <td className="p-[10px] text-muted">
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '---'}
+                          </td>
+                          <td className="p-[10px] text-right">
+                            <button
+                              type="button"
+                              disabled={actionLoadingId === u.id}
+                              onClick={() => handleToggleActive(u.id, u.isActive)}
+                              className={clsx(
+                                'inline-flex items-center gap-[4px] py-[5px] px-[10px] rounded-[6px] text-surface text-[14.5px] font-bold',
+                                u.isActive ? 'border-0 bg-[#e11d48] text-surface' : 'border-0 bg-[#16a34a] text-surface',
+                                actionLoadingId === u.id ? 'cursor-default opacity-60' : 'cursor-pointer',
+                              )}
+                            >
+                              {u.isActive ? <><Lock size={12} /> Khóa</> : <><Unlock size={12} /> Mở khóa</>}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center text-faint text-[15.5px] py-[20px] px-0">
+                  {hasAccountFilter || teamFilter !== TEAM_FILTER_ALL ? 'Không có tài khoản nào khớp bộ lọc' : 'Chưa có tài khoản nào được duyệt'}
+                </div>
+              ))}
+
+              {currentAccountList.length > 0 && (
+                <div className="mt-[14px]">
+                  <Pagination
+                    currentPage={safeAccountPage}
+                    totalPages={accountTotalPages}
+                    totalItems={currentAccountList.length}
+                    pageSize={accountPageSize}
+                    onPageChange={setAccountPage}
+                    onPageSizeChange={(size) => { setAccountPageSize(size); setAccountPage(1); }}
+                  />
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'ORG' && (
+          <>
+            <DepartmentManagement />
+
+            <TeamManagement onChange={handleTeamsChanged} />
+          </>
+        )}
+
+        {/* 2.2 Hiệu suất Sale & Order */}
+        {activeTab === 'PERFORMANCE' && (
+          <div className="grid grid-cols-2 gap-[16px]">
+            <div className={cardContainerCls}>
+              <h2 className={cardHeadingCls}>
+                <TrendingUp size={16} color="#2563eb" /> Hiệu suất Sale
+              </h2>
+              <span className="text-[14px] text-muted">Số yêu cầu đã tạo của từng Sale</span>
+
+              {pagedSaleStats.length > 0 ? (
+                <div className="overflow-x-auto mt-[10px]">
+                  <table className="w-full border-collapse text-[15.5px]">
+                    <thead>
+                      <tr className="border-b border-[#f1f5f9] text-left">
+                        <th className={staffThCls}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSaleSort('name')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase',
+                              saleSortField === 'name' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Sale <ArrowUpDown size={11} />
+                          </button>
+                        </th>
+                        <th className={clsx(staffThCls, 'text-right')}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSaleSort('total')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                              saleSortField === 'total' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Đã tạo <ArrowUpDown size={11} />
+                          </button>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedSaleStats.map((s) => (
+                        <tr key={s.id} className="border-b border-[#f8fafc]">
+                          <td className="p-[10px] font-bold text-[#0f172a]">{s.name}</td>
+                          <td className="p-[10px] text-right text-[#334155]">{s.total}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <Pagination
+                    currentPage={salePage}
+                    totalPages={saleTotalPages}
+                    totalItems={performance?.saleStats?.total || 0}
+                    pageSize={salePageSize}
+                    onPageChange={setSalePage}
+                    onPageSizeChange={(size) => { setSalePageSize(size); setSalePage(1); }}
+                  />
+                </div>
+              ) : (
+                <div className={emptyTextCls}>
+                  {saleSearch ? 'Không tìm thấy Sale nào khớp' : 'Chưa có Sale nào trong hệ thống'}
+                </div>
+              )}
+            </div>
+
+            <div className={cardContainerCls}>
+              <h2 className={cardHeadingCls}>
+                <TrendingUp size={16} color="#2563eb" /> Hiệu suất người báo giá
+              </h2>
+              <span className="text-[14px] text-muted">Số yêu cầu được giao, số yêu cầu báo giá và thời gian trung bình báo giá của từng Order</span>
+
+              {pagedPricerStats.length > 0 ? (
+                <div className="overflow-x-auto mt-[10px]">
+                  <table className="w-full border-collapse text-[15.5px]">
+                    <thead>
+                      <tr className="border-b border-[#f1f5f9] text-left">
+                        <th className={staffThCls}>
+                          <button
+                            type="button"
+                            onClick={() => togglePricerSort('name')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase',
+                              pricerSortField === 'name' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Order <ArrowUpDown size={11} />
+                          </button>
+                        </th>
+                        <th className={clsx(staffThCls, 'text-right')}>
+                          <button
+                            type="button"
+                            onClick={() => togglePricerSort('assignedCount')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                              pricerSortField === 'assignedCount' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Số yêu cầu được giao <ArrowUpDown size={11} />
+                          </button>
+                        </th>
+                        <th className={clsx(staffThCls, 'text-right')}>
+                          <button
+                            type="button"
+                            onClick={() => togglePricerSort('quotedCount')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                              pricerSortField === 'quotedCount' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Số yêu cầu báo giá <ArrowUpDown size={11} />
+                          </button>
+                        </th>
+                        <th className={clsx(staffThCls, 'text-right')}>
+                          <button
+                            type="button"
+                            onClick={() => togglePricerSort('medianQuoteMs')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                              pricerSortField === 'medianQuoteMs' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Thời gian trung bình <ArrowUpDown size={11} />
+                          </button>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedPricerStats.map((p) => (
+                        <tr key={p.id} className="border-b border-[#f8fafc]">
+                          <td className="p-[10px] font-bold text-[#0f172a]">{p.name}</td>
+                          <td className="p-[10px] text-right text-[#334155]">{p.assignedCount}</td>
+                          <td className="p-[10px] text-right text-[#334155]">{p.quotedCount}</td>
+                          <td className="p-[10px] text-right text-[#0f766e] font-bold">
+                            {p.medianQuoteMs !== null ? formatDuration(0, p.medianQuoteMs) : '---'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <Pagination
+                    currentPage={pricerPage}
+                    totalPages={pricerTotalPages}
+                    totalItems={performance?.pricerStats?.total || 0}
+                    pageSize={pricerPageSize}
+                    onPageChange={setPricerPage}
+                    onPageSizeChange={(size) => { setPricerPageSize(size); setPricerPage(1); }}
+                  />
+                </div>
+              ) : (
+                <div className={emptyTextCls}>
+                  {pricerSearch ? 'Không tìm thấy Order nào khớp' : 'Chưa có Order nào trong hệ thống'}
+                </div>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className={emptyTextCls}>Chưa có dữ liệu hành động nào được ghi nhận</div>
+        )}
+
+        {/* 2.3 + 2.4 gộp — Top hành động theo role (Audit Log) */}
+        {activeTab === 'ACTIVITY' && (
+          <div className={cardContainerCls}>
+            <h2 className={cardHeadingCls}>
+              <Activity size={16} color="#2563eb" /> Top hành động theo role
+            </h2>
+            {activityColumns.length > 0 ? (
+              <div
+                className="grid gap-[20px] mt-[14px]"
+                // động — giữ inline
+                style={{ gridTemplateColumns: `repeat(${activityColumns.length}, 1fr)` }}
+              >
+                {activityColumns.map(({ role, actions }) => {
+                  const maxCount = actions[0]?.count || 1;
+                  return (
+                    <div key={role}>
+                      <div className="text-[14px] font-extrabold text-muted uppercase mb-[10px]">
+                        {ROLE_LABEL[role] || role}
+                      </div>
+                      <div className="flex flex-col gap-[8px]">
+                        {(activityQuery ? actions : actions.slice(0, 6)).map((a) => {
+                          const key = `${role}:${a.action}`;
+                          const isOpen = expandedAction === key;
+                          return (
+                            <div key={a.action}>
+                              <div
+                                onClick={() => setExpandedAction(isOpen ? null : key)}
+                                className="flex justify-between text-[14.5px] text-[#334155] mb-[3px] cursor-pointer"
+                              >
+                                <span className="font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{ACTION_LABEL[a.action] || a.action}</span>
+                                <span className="font-black text-[#0f172a] shrink-0 ml-[8px]">{a.count}</span>
+                              </div>
+                              <div
+                                onClick={() => setExpandedAction(isOpen ? null : key)}
+                                className="bg-[#f1f5f9] rounded-[6px] h-[6px] overflow-hidden cursor-pointer"
+                              >
+                                <div
+                                  className={clsx('h-full rounded-[6px]', isOpen ? 'bg-[#0f172a]' : 'bg-primary')}
+                                  // động — giữ inline
+                                  style={{ width: `${(a.count / maxCount) * 100}%` }}
+                                />
+                              </div>
+                              {isOpen && (
+                                <div className="mt-[6px] py-[8px] px-[10px] bg-[#f8fafc] border border-[#f1f5f9] rounded-[8px] flex flex-col gap-[4px]">
+                                  {visibleActors(a).map((actor) => (
+                                    <div key={actor.actorId || actor.actorName} className="flex justify-between text-[14px]">
+                                      <span className="text-[#334155] font-semibold">{actor.actorName}</span>
+                                      <span className="text-muted font-bold">{actor.count} lần</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={emptyTextCls}>
+                {Object.keys(actionStats).length > 0 ? 'Không tìm thấy hành động nào khớp' : 'Chưa có dữ liệu hành động nào được ghi nhận'}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
