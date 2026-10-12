@@ -158,6 +158,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         scopeFilter={scopeFilter}
         onScopeFilterChange={handleScopeChange}
         showAssignedScope={currentRole === 'ORDER'}
+        showCancelledTab={currentRole === 'ADMIN'}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setCurrentPage(1); }}
         statusSubFilter={statusSubFilter}

@@ -397,8 +397,8 @@ export interface DetailPageProps {
   onQuoteNow: (id: string, version: number) => void;
   onPricing: (id: string) => void;
   // Chỉ ADMIN: hủy yêu cầu / khôi phục yêu cầu đã hủy (DetailPage tự hỏi xác nhận trước khi gọi).
-  onCancel: (id: string) => void;
-  onRestore: (id: string) => void;
+  onCancel: (id: string) => void | Promise<void>;
+  onRestore: (id: string) => void | Promise<void>;
 }
 
 

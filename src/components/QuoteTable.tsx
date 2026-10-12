@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, HelpCircle, X, MessageCircle } from 'lucide-react';
+import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, HelpCircle, X, MessageCircle, Ban } from 'lucide-react';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -193,6 +193,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     QUOTED:        { ...STATUS_BADGE_META.QUOTED,         icon: <CheckCircle size={13} /> },
     REJECTED:      { ...STATUS_BADGE_META.REJECTED,       icon: <XCircle size={13} /> },
     NEED_MORE_INFO:{ ...STATUS_BADGE_META.NEED_MORE_INFO, icon: <RotateCcw size={13} /> },
+    CANCELLED:     { ...STATUS_BADGE_META.CANCELLED,      icon: <Ban size={13} /> },
   };
 
   const StatusDropdown: React.FC<{
@@ -511,6 +512,15 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       );
     }
 
+    // Chỉ ADMIN nhận được đơn ở trạng thái này (tab "Đã hủy"); khôi phục thao tác ở trang chi tiết.
+    if (r.status === 'CANCELLED') {
+      return (
+        <span className={clsx(statusPillCls, 'bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]')} title="Đã hủy — chỉ Admin thấy">
+          <Ban size={13} color="#475569" /> Đã hủy
+        </span>
+      );
+    }
+
     return <span className={clsx(statusPillCls, statusPillNewCls)}>{r.status}</span>;
   };
 
@@ -579,6 +589,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           {requests.map((r) => {
             const isSelected = r.id === selectedId || r.code === selectedId;
             const isRejected = r.status === 'REJECTED';
+            const isCancelled = r.status === 'CANCELLED';
             const isMyReq =
               currentRole === 'ORDER'
                 ? r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email
@@ -618,6 +629,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 className={clsx(
                   isSelected && '!bg-[#eff6ff]',
                   isRejected && '!bg-[#fff1f2] hover:!bg-[#ffe4e6] [&_td]:!border-[#fecdd3]',
+                  isCancelled && '!bg-[#f8fafc] opacity-70',
                 )}
                 onClick={() => onSelect(r.id)}
               >

@@ -74,6 +74,9 @@ export const STATUS_BADGE_META: Record<string, { label: string; color: string; b
   CANCELLED: { label: 'Đã hủy', color: '#475569', bg: '#f1f5f9', border: '#cbd5e1' },
 };
 
+// Trạng thái ADMIN được phép hủy (khớp CANCELLABLE_QUOTE_STATUSES ở BE). REJECTED/CANCELLED là trạng thái cuối.
+export const CANCELLABLE_STATUSES: readonly string[] = ['PENDING', 'PROCESSING', 'NEED_MORE_INFO', 'QUOTED'];
+
 // Ô lọc "Đã hủy" của ADMIN trong FilterBar (đếm riêng bằng counts.cancelled, không nằm trong tổng).
 export const CANCELLED_TAB = { value: 'CANCELLED', label: 'Đã hủy', color: '#64748b' } as const;
 // Nhãn hiển thị cho dropdown xem-thử-giao-diện-theo-role của Admin (Header.tsx)
