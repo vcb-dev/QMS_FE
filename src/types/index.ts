@@ -372,12 +372,12 @@ export interface DashboardPageProps {
 export interface DashboardTimelineBucket {
   key: string; label: string;
   pending: number; processing: number; needMoreInfo: number;
-  quoted: number; rejected: number; closed: number; total: number;
+  quoted: number; rejected: number; total: number;
 }
 
 export interface DashboardChartsResponse {
   timeline: DashboardTimelineBucket[];
-  saleStats: { id: string; name: string; total: number; closed: number }[];
+  saleStats: { id: string; name: string; total: number }[];
   categoryDistribution: { name: string; value: number }[];
   materialDistribution: { name: string; value: number }[];
   priceRangeDistribution: { label: string; value: number }[];

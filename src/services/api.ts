@@ -356,7 +356,7 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
   if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
 
   const data = await apiCall(dedupedGet('/quote-requests/stats', params), 'Không thể tải số liệu tổng hợp');
-  return data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
+  return data as { total: number; quotedRevenue: number; counts: any };
 }
 
 export async function fetchDashboardCharts(filter?: { timeRange?: string; startDate?: string; endDate?: string; ownerId?: string }): Promise<DashboardChartsResponse> {
