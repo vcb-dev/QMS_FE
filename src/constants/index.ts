@@ -69,7 +69,13 @@ export const STATUS_BADGE_META: Record<string, { label: string; color: string; b
   NEED_MORE_INFO: { label: 'Cần bổ sung', color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
   QUOTED: { label: 'Đã báo giá', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
   REJECTED: { label: 'Từ chối', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+  // Chỉ ADMIN thấy đơn đã hủy. CỐ Ý không có trong STATUS_CHART_META / STATUS_COUNT_KEYS: biểu đồ,
+  // Dashboard và ô lọc xuất Excel không được hiển thị đơn hủy.
+  CANCELLED: { label: 'Đã hủy', color: '#475569', bg: '#f1f5f9', border: '#cbd5e1' },
 };
+
+// Ô lọc "Đã hủy" của ADMIN trong FilterBar (đếm riêng bằng counts.cancelled, không nằm trong tổng).
+export const CANCELLED_TAB = { value: 'CANCELLED', label: 'Đã hủy', color: '#64748b' } as const;
 // Nhãn hiển thị cho dropdown xem-thử-giao-diện-theo-role của Admin (Header.tsx)
 export const ROLE_SWITCH_LABEL: Record<'SALE' | 'ORDER' | 'ADMIN', string> = {
   SALE: 'Sale',

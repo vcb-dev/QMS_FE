@@ -80,6 +80,7 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
     handleQuoteNow,
     handlePricingSubmit,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
+    handleCancelRequest, handleRestoreRequest,
     refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole, listDataEnabled, masterDataEnabled);
 
@@ -247,6 +248,8 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
                 socket={globalSocket}
                 onQuoteNow={handleQuoteNow}
                 onPricing={(id) => setPricingReqId(id)}
+                onCancel={handleCancelRequest}
+                onRestore={handleRestoreRequest}
               />
             } />
 

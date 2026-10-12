@@ -1,6 +1,7 @@
 export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
-export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO';
+// CANCELLED ("Đã hủy") chỉ ADMIN nhận được từ BE; Sale/Order không bao giờ thấy đơn ở trạng thái này.
+export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CANCELLED';
 
 export interface StatusCounts {
   total: number;
@@ -10,6 +11,8 @@ export interface StatusCounts {
   needMoreInfo: number;
   quoted: number;
   rejected: number;
+  // Chỉ ADMIN có số khác 0 (tab "Đã hủy"); không cộng vào `total`.
+  cancelled?: number;
 }
 
 // Team của người dùng — khác Department (phòng ban chọn theo từng đơn). `_count` chỉ có ở bản phân trang.
@@ -255,6 +258,9 @@ export interface QuoteRequest {
   returnReason?: string;
   acceptedAt?: string;
   returnedAt?: string;
+  // Chỉ có khi ADMIN xem đơn đã hủy: mốc hủy + trạng thái ngay trước khi hủy (để hiện banner/khôi phục).
+  cancelledAt?: string | null;
+  cancelledFromStatus?: QuoteStatus | null;
   options?: QuoteOption[];
   // Khối lượng ở cấp yêu cầu — chỉ có ở dữ liệu cũ / một số response thô; UI ưu tiên đọc
   // weightChi của phương án, đây chỉ là fallback hiển thị badge.
@@ -390,6 +396,9 @@ export interface DetailPageProps {
   // modal nhập giá ngay; PROCESSING (đã tiếp nhận) -> mở thẳng modal nhập giá.
   onQuoteNow: (id: string, version: number) => void;
   onPricing: (id: string) => void;
+  // Chỉ ADMIN: hủy yêu cầu / khôi phục yêu cầu đã hủy (DetailPage tự hỏi xác nhận trước khi gọi).
+  onCancel: (id: string) => void;
+  onRestore: (id: string) => void;
 }
 
 

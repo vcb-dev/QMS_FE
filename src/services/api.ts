@@ -518,7 +518,7 @@ export async function updateQuoteRequest(id: string, payload: any) {
 }
 
 export async function changeQuoteStatus(id: string, payload: {
-  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'EDIT_PRICE';
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'EDIT_PRICE' | 'CANCEL' | 'RESTORE';
   version?: number;
   quotedPrice?: number;
   vat?: number;
@@ -725,6 +725,15 @@ export async function returnQuoteRequest(
 
 export async function resubmitQuoteRequest(id: string) {
   return changeQuoteStatus(id, { action: 'RESUBMIT' });
+}
+
+// Chỉ ADMIN: hủy yêu cầu (đơn biến mất với Sale/Order) và khôi phục về trạng thái trước khi hủy.
+export async function cancelQuoteRequest(id: string) {
+  return changeQuoteStatus(id, { action: 'CANCEL' });
+}
+
+export async function restoreQuoteRequest(id: string) {
+  return changeQuoteStatus(id, { action: 'RESTORE' });
 }
 
 export async function fetchVnGoldPrice() {
