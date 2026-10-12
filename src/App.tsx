@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { connectRealtimeSocket } from './services/realtimeSocket';
 import { REALTIME_EVENTS } from './constants/realtimeEvents';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
@@ -23,7 +23,6 @@ const CreateModal = lazy(() => import('./components/CreateModal').then((m) => ({
 const PricingModal = lazy(() => import('./components/PricingModal').then((m) => ({ default: m.PricingModal })));
 const RejectModal = lazy(() => import('./components/RejectModal').then((m) => ({ default: m.RejectModal })));
 const ReturnModal = lazy(() => import('./components/ReturnModal').then((m) => ({ default: m.ReturnModal })));
-const MarkClosedModal = lazy(() => import('./components/MarkClosedModal').then((m) => ({ default: m.MarkClosedModal })));
 const ExportModal = lazy(() => import('./components/ExportModal').then((m) => ({ default: m.ExportModal })));
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -75,26 +74,14 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
     loading, loadingMessage,
     listLoading, toastMessage, setToastMessage, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
-    returnReqId, setReturnReqId, closeOptionReqId, setCloseOptionReqId,
+    returnReqId, setReturnReqId,
     handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handleQuoteNow,
     handlePricingSubmit,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
-    handleMarkClosedClick, handleCloseOptionSubmit,
     refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole, listDataEnabled, masterDataEnabled);
-
-  // Chỉ tính lại khi requests hoặc id popup đang mở thay đổi — tránh find()+filter() mỗi lần
-  // AppShell render (VD gõ tìm kiếm, đổi trang) dù 2 popup này thường đang đóng.
-  const closeOptionTarget = useMemo(
-    () => requests.find((r) => r.id === closeOptionReqId),
-    [requests, closeOptionReqId],
-  );
-  const closeOptionPricedOptions = useMemo(
-    () => (closeOptionTarget?.options || []).filter((o) => o.quotedPrice != null),
-    [closeOptionTarget],
-  );
 
   // Socket /realtime — 1 kết nối duy nhất suốt phiên đăng nhập (dùng chung cho cả Realtime trạng thái & Chat)
   const [globalSocket, setGlobalSocket] = useState<any>(null);
@@ -247,7 +234,6 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
                 onReturn={(id) => setReturnReqId(id)}
                 onResubmit={handleResubmitDirect}
                 onDelete={handleDeleteRequest}
-                onMarkClosed={handleMarkClosedClick}
                 onOpenCreate={handleOpenCreate}
                 onOpenExport={currentRole === 'SALE' ? undefined : () => setIsExportOpen(true)}
                 onResetFilters={() => { handleResetFilters(); }}
@@ -326,16 +312,6 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
         {returnReqId !== null && (
           <ReturnModal isOpen onClose={() => setReturnReqId(null)}
             onSubmit={handleReturnSubmit} />
-        )}
-
-        {closeOptionReqId !== null && (
-          <MarkClosedModal
-            isOpen
-            reqCode={closeOptionTarget?.code}
-            options={closeOptionPricedOptions}
-            onClose={() => setCloseOptionReqId(null)}
-            onSubmit={handleCloseOptionSubmit}
-          />
         )}
 
         {isExportOpen && currentRole !== 'SALE' && (

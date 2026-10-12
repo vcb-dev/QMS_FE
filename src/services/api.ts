@@ -518,7 +518,7 @@ export async function updateQuoteRequest(id: string, payload: any) {
 }
 
 export async function changeQuoteStatus(id: string, payload: {
-  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'MARK_CLOSED' | 'EDIT_PRICE';
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'EDIT_PRICE';
   version?: number;
   quotedPrice?: number;
   vat?: number;
@@ -725,10 +725,6 @@ export async function returnQuoteRequest(
 
 export async function resubmitQuoteRequest(id: string) {
   return changeQuoteStatus(id, { action: 'RESUBMIT' });
-}
-
-export async function markQuoteClosed(id: string, optionId?: string) {
-  return changeQuoteStatus(id, { action: 'MARK_CLOSED', optionId });
 }
 
 export async function fetchVnGoldPrice() {

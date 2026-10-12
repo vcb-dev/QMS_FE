@@ -30,7 +30,6 @@ type QuoteTableProps = Pick<
   | 'onPricing'
   | 'onReject'
   | 'onResubmit'
-  | 'onMarkClosed'
 > & {
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -78,7 +77,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onReject,
   onReturn,
   onResubmit,
-  onMarkClosed,
   unreadCounts,
   onOpenChat,
 }) => {
@@ -373,20 +371,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             onChange={(val) => {
               if (val === 'EDIT') onEdit(r);
               else if (val === 'RESUBMIT' && onResubmit) onResubmit(r.id);
-            }}
-          />
-        );
-      }
-
-      if (isMyReq && r.status === 'QUOTED' && onMarkClosed) {
-        return (
-          <StatusDropdown
-            current="QUOTED"
-            options={[
-              { value: 'CLOSED', ...STATUS_META.CLOSED, label: 'Đánh Dấu Đã Chốt' },
-            ]}
-            onChange={(val) => {
-              if (val === 'CLOSED') onMarkClosed(r.id);
             }}
           />
         );
