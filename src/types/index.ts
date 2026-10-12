@@ -92,23 +92,19 @@ export interface Customer {
 export interface CustomerStatRow {
   customer: Customer;
   totalOrders: number;
-  totalClosed: number;
-  closedValue: number;
   lastOrder: string | null;
 }
 
 export interface CustomerStatsResponse {
   data: CustomerStatRow[];
   meta: { total: number; page: number; limit: number; totalPages: number };
-  totalClosedValueAll: number;
 }
 
 export interface CustomerMonthComparisonResponse {
-  current: { customerCount: number; closedValue: number };
-  previous: { customerCount: number; closedValue: number };
+  current: { customerCount: number };
+  previous: { customerCount: number };
   // null = tháng trước bằng 0, không có mốc để tính % tăng/giảm
   customerCountDeltaPct: number | null;
-  closedValueDeltaPct: number | null;
 }
 
 export interface QuoteRequestImage {
@@ -352,7 +348,7 @@ export type CalcResult = {
   breakdown?: { materialId: string; materialName: string; weightChi: number; cost: number }[];
 };
 
-export type SortMode = 'RECENT' | 'TOP_SPEND' | 'MOST_ORDERS';
+export type SortMode = 'RECENT' | 'MOST_ORDERS';
 
 export interface DashboardPageProps {
   requests: QuoteRequest[];
