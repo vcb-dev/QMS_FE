@@ -266,7 +266,7 @@ export async function getUserStatsApi(filter?: StaffTimeFilter): Promise<UserSta
 
 export type StaffPerformanceFilter = StaffTimeFilter & {
   saleSearch?: string;
-  saleSortField?: 'name' | 'total' | 'closed' | 'closeRate';
+  saleSortField?: 'name' | 'total';
   saleSortDir?: 'asc' | 'desc';
   salePage?: number;
   salePageSize?: number;

@@ -585,7 +585,7 @@ export interface UserStatsResponse {
 
 export interface StaffPerformanceResponse {
   saleStats: {
-    items: { id: string; name: string; total: number; closed: number; closeRate: number }[];
+    items: { id: string; name: string; total: number }[];
     total: number;
   };
   pricerStats: {
