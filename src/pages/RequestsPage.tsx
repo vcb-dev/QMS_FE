@@ -66,6 +66,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onReject,
   onReturn,
   onResubmit,
+  onCancel,
+  onRestore,
+
   onOpenCreate,
   onOpenExport,
   onResetFilters,
@@ -244,6 +247,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onReject={onReject}
           onReturn={onReturn}
           onResubmit={onResubmit}
+          onCancel={onCancel}
+          onRestore={onRestore}
           unreadCounts={unreadCounts}
           onOpenChat={handleOpenChat}
         />

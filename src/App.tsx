@@ -234,6 +234,8 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
                 onReject={(id) => setRejectReqId(id)}
                 onReturn={(id) => setReturnReqId(id)}
                 onResubmit={handleResubmitDirect}
+                onCancel={handleCancelRequest}
+                onRestore={handleRestoreRequest}
                 onDelete={handleDeleteRequest}
                 onOpenCreate={handleOpenCreate}
                 onOpenExport={currentRole === 'SALE' ? undefined : () => setIsExportOpen(true)}

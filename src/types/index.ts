@@ -565,6 +565,10 @@ export interface RequestsPageProps {
   onOpenExport?: () => void;
   onResetFilters: () => void;
   selectedId?: string | null;
+    // Chỉ ADMIN được hủy/khôi phục — không truyền (hoặc role khác) thì QuoteTable không hiện option.
+  onCancel?: (id: string) => void | Promise<void>;
+  onRestore?: (id: string) => void | Promise<void>;
+
 }
 
 export interface StaffUser {
