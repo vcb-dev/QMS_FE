@@ -73,7 +73,6 @@ export function useQuoteRequests(
     needMoreInfo: 0,
     quoted: 0,
     rejected: 0,
-    closed: 0,
   });
 
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
@@ -264,7 +263,6 @@ export function useQuoteRequests(
         const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
         const quoted = items.filter((r) => r.status === 'QUOTED').length;
         const rejected = items.filter((r) => r.status === 'REJECTED').length;
-        const closed = items.filter((r) => r.status === 'CLOSED').length;
         setCounts({
           total: meta.total || items.length,
           myReq: items.filter((r) => r.requester?.id === currentUser.id || r.assignee?.id === currentUser.id).length,
@@ -273,7 +271,6 @@ export function useQuoteRequests(
           needMoreInfo,
           quoted,
           rejected,
-          closed,
         });
       }
 

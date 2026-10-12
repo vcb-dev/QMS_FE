@@ -1,6 +1,6 @@
 export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
-export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CLOSED';
+export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO';
 
 export interface StatusCounts {
   total: number;
@@ -10,7 +10,6 @@ export interface StatusCounts {
   needMoreInfo: number;
   quoted: number;
   rejected: number;
-  closed: number;
 }
 
 // Team của người dùng — khác Department (phòng ban chọn theo từng đơn). `_count` chỉ có ở bản phân trang.
@@ -179,8 +178,8 @@ export interface QuoteOption {
   quotedDate?: string;
   isSelected?: boolean;
   // Trạng thái được chọn lưu ở BE (QuoteOption.selectionStatus) — SELECTED = đang dùng báo giá chính,
-  // CLOSED = khách đã chốt đúng phương án này, NONE = không có gì đặc biệt (mặc định).
-  selectionStatus?: 'NONE' | 'SELECTED' | 'CLOSED';
+  // SELECTED = phương án chính đang dùng để báo giá, NONE = không có gì đặc biệt (mặc định).
+  selectionStatus?: 'NONE' | 'SELECTED';
   // true = Order không được chọn làm giá chính (PricingModal) — option Sale gửi kèm nhưng KHÁC
   // chất liệu Sale thực sự yêu cầu (vd phương án so sánh tuổi vàng tự sinh lúc Sale tạo đơn). Vẫn
   // hiển thị để tham khảo, chỉ khóa hành động chọn/thêm.
@@ -408,7 +407,7 @@ export interface LibraryPageProps {
 export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT';
 export type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 
-// 1 yêu cầu báo giá đã QUOTED/CLOSED = 1 sản phẩm trên trang Thư Viện / Quản Lý Sản Phẩm (không gộp
+// 1 yêu cầu báo giá đã QUOTED = 1 sản phẩm trên trang Thư Viện / Quản Lý Sản Phẩm (không gộp
 // các yêu cầu giống nhau). Chi tiết sản phẩm là "Lịch sử báo giá": các phương án đã báo của yêu cầu.
 export interface LibraryProduct {
   key: string;
@@ -454,7 +453,7 @@ export interface LibraryProductsResponse {
 }
 
 // Kết quả "Sản phẩm" trong dropdown search tổng ở Header — rút gọn từ các option đã có giá
-// (QUOTED/CLOSED) của các đơn khớp search, KHÔNG phải toàn bộ LibraryProduct của Thư Viện.
+// (QUOTED) của các đơn khớp search, KHÔNG phải toàn bộ LibraryProduct của Thư Viện.
 export interface HeaderSearchProduct {
   key: string;
   requestId: string;

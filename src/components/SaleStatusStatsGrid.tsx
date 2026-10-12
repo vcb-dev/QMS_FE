@@ -7,7 +7,7 @@ import type { StatusCounts } from '../types';
 
 type Period = 'WEEK' | 'MONTH';
 
-const EMPTY_COUNTS: StatusCounts = { total: 0, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0, closed: 0 };
+const EMPTY_COUNTS: StatusCounts = { total: 0, pending: 0, processing: 0, needMoreInfo: 0, quoted: 0, rejected: 0 };
 
 const STATUS_ITEMS: { key: keyof StatusCounts; value: string; label: string; color: string }[] = STATUS_CHART_META
   .map((s) => ({ key: STATUS_COUNT_KEYS[s.value] as keyof StatusCounts, value: s.value, label: s.label, color: s.color }));

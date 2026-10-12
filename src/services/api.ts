@@ -683,9 +683,9 @@ export async function completeQuoteRequest(
   return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version, inspectionFee: extras?.inspectionFee });
 }
 
-// Sửa giá đã báo cho đơn ĐANG QUOTED/CLOSED — GIỐNG HỆT completeQuoteRequest (gửi cả mảng, BE xóa
+// Sửa giá đã báo cho đơn ĐANG QUOTED — GIỐNG HỆT completeQuoteRequest (gửi cả mảng, BE xóa
 // hết & tạo lại toàn bộ phương án, thêm/bớt/sửa tự do), chỉ khác action. BE tự giữ nguyên
-// status/assigneeId (CLOSED sửa giá thì vẫn CLOSED, không đổi người báo giá).
+// status/assigneeId (đơn vẫn QUOTED, không đổi người báo giá).
 export async function editQuotedPrice(
   id: string,
   options: QuoteOptionDraft[],
