@@ -207,7 +207,11 @@ export const StaffPage: React.FC = () => {
         if (myRequestId !== requestIdRef.current) return;
         setUsers(userList || []);
         setUserStats(stats);
-        setActionStats(auditStats || {});
+        // Tab "Hoạt động" không theo dõi Admin — bỏ luôn khỏi dữ liệu để cột, ô chọn role và thông báo
+        // "chưa có dữ liệu" cùng nhất quán.
+        setActionStats(
+          Object.fromEntries(Object.entries(auditStats || {}).filter(([role]) => role !== 'ADMIN')) as typeof actionStats,
+        );
         setError(null);
       })
       .catch((err) => {
@@ -845,12 +849,13 @@ export const StaffPage: React.FC = () => {
           </>
         )}
 
+        {/* Bộ phận & Team ít dữ liệu — xếp cạnh nhau 2 cột thay vì mỗi cái chiếm hết chiều ngang */}
         {activeTab === 'ORG' && (
-          <>
+          <div className="grid grid-cols-2 gap-[16px]">
             <DepartmentManagement />
 
             <TeamManagement onChange={handleTeamsChanged} />
-          </>
+          </div>
         )}
 
         {/* 2.2 Hiệu suất Sale & Order */}
