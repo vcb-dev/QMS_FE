@@ -11,7 +11,7 @@ import { StatusPill } from '../components/StatusPill';
 import { ChartTooltip } from '../components/ChartTooltip';
 import { DistributionPieCard } from '../components/DistributionPieCard';
 import { clsx } from 'clsx';
-import { cardCls } from '../styles/classNames';
+import { cardCls, dateInputPy6Cls } from '../styles/classNames';
 import { fetchQuoteRequests, fetchQuoteRequestStats, fetchDashboardCharts } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -20,6 +20,40 @@ import { SaleStatusStatsGrid } from '../components/SaleStatusStatsGrid';
 // Bảng màu cho biểu đồ phân bố (danh mục/chất liệu) — hằng số tĩnh, đặt ở scope file để
 // không bị cấp phát lại mỗi lần component render (tránh cảnh báo thiếu dependency ở useMemo).
 const CATEGORY_COLORS = ['#2563eb', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6', '#0ea5e9', '#ec4899', '#84cc16'];
+
+// Giá trị "Tùy chọn khoảng ngày" của ô chọn thời gian — không phải preset BE hiểu, chỉ để FE hiện 2 ô ngày
+// và gửi startDate/endDate thay cho timeRange.
+const CUSTOM_RANGE = 'CUSTOM';
+// Khoảng tùy chọn dài tới mức này BE vẽ mỗi ngày 1 cột, dài hơn thì gộp theo tháng (khớp
+// CUSTOM_RANGE_MAX_DAILY_DAYS ở qms_be/src/utils/dashboard-stats.util.ts) — FE chỉ cần để ghi đúng tiêu đề biểu đồ.
+const CUSTOM_RANGE_MAX_DAILY_DAYS = 62;
+const DAY_MS = 86_400_000;
+
+// Giá trị ô <input type="date"> là 'YYYY-MM-DD' — đổi sang Date lúc 00:00 giờ máy người dùng.
+const parseDateInput = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+const toDateInputValue = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const formatDateInput = (s: string) => s.split('-').reverse().join('/');
+// Số ngày gồm cả ngày đầu và ngày cuối
+const countDays = (start: string, end: string) =>
+  Math.round((parseDateInput(end).getTime() - parseDateInput(start).getTime()) / DAY_MS) + 1;
+// Cả 2 ô đã nhập và không đảo ngược. Chặn năm < 2000 vì gõ tay từng chữ số của năm sinh ra giá trị trung gian
+// (VD "0002-10-01") — không được gọi API với khoảng như vậy.
+const isValidCustomRange = (start: string, end: string) =>
+  Boolean(start) && Boolean(end) && start <= end && start >= '2000-01-01';
+
+// Query lọc thời gian gửi cho BE: preset -> timeRange; khoảng tùy chọn -> startDate/endDate là mốc đầu/cuối ngày
+// giờ máy người dùng (ISO), BE ưu tiên startDate hơn timeRange.
+const buildPeriodQuery = (range: string, start: string, end: string) =>
+  range === CUSTOM_RANGE
+    ? {
+        startDate: new Date(`${start}T00:00:00`).toISOString(),
+        endDate: new Date(`${end}T23:59:59`).toISOString(),
+      }
+    : { timeRange: range };
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   requests: initialRequests,
@@ -40,6 +74,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const onOpenLibrary = () => navigate('/library');
 
   const [timeRange, setTimeRange] = React.useState<string>('THIS_MONTH');
+  // Khoảng ngày của "Tùy chọn khoảng ngày" ('YYYY-MM-DD'); chỉ có tác dụng khi timeRange === CUSTOM_RANGE.
+  const [customStartDate, setCustomStartDate] = React.useState<string>('');
+  const [customEndDate, setCustomEndDate] = React.useState<string>('');
   const [chartStatusFilter, setChartStatusFilter] = React.useState<string>('ALL');
   const [counts, setCounts] = React.useState(initialCounts);
   const [apiRequests, setApiRequests] = React.useState<QuoteRequest[]>(initialRequests);
@@ -53,10 +90,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const timeRangeRequestIdRef = React.useRef(0);
 
   // Kỳ trước để so sánh % — TODAY→hôm qua, THIS_WEEK→tuần trước, THIS_MONTH→tháng trước,
-  // LAST_MONTH→tháng trước nữa, THIS_YEAR→năm trước. ALL không có kỳ trước để so sánh.
-  const getPreviousPeriodQuery = (range: string): { timeRange?: string; startDate?: string; endDate?: string } | null => {
+  // LAST_MONTH→tháng trước nữa, THIS_YEAR→năm trước, khoảng tùy chọn→khoảng cùng số ngày kết thúc ngay
+  // trước ngày bắt đầu. ALL không có kỳ trước để so sánh.
+  const getPreviousPeriodQuery = (
+    range: string,
+    customStart: string,
+    customEnd: string,
+  ): { timeRange?: string; startDate?: string; endDate?: string } | null => {
     const now = new Date();
     switch (range) {
+      case CUSTOM_RANGE: {
+        const days = countDays(customStart, customEnd);
+        const s = parseDateInput(customStart);
+        return {
+          startDate: new Date(s.getFullYear(), s.getMonth(), s.getDate() - days, 0, 0, 0).toISOString(),
+          endDate: new Date(s.getFullYear(), s.getMonth(), s.getDate() - 1, 23, 59, 59).toISOString(),
+        };
+      }
       case 'TODAY': {
         const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
         return {
@@ -84,18 +134,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   // Fetch real counts & request items from backend API when timeRange changes
-  const handleTimeRangeChange = async (newRange: string) => {
+  const handleTimeRangeChange = async (
+    newRange: string,
+    rangeStart: string = customStartDate,
+    rangeEnd: string = customEndDate,
+  ) => {
+    // Khoảng tùy chọn chưa đủ/không hợp lệ thì giữ nguyên số liệu đang hiển thị, không gọi API.
+    if (newRange === CUSTOM_RANGE && !isValidCustomRange(rangeStart, rangeEnd)) return;
     const myRequestId = ++timeRangeRequestIdRef.current;
     setTimeRange(newRange);
     setLoadingStats(true);
+    const periodQuery = buildPeriodQuery(newRange, rangeStart, rangeEnd);
     try {
       if (currentRole === 'ADMIN') {
         // Admin chỉ xem card KPI + biểu đồ tổng hợp — không render bảng "Yêu cầu gần đây" /
         // "Sản phẩm nổi bật". Lấy số đã cộng sẵn ở BE (/stats), khỏi kéo cả danh sách đơn về.
-        const prevQuery = getPreviousPeriodQuery(newRange);
+        const prevQuery = getPreviousPeriodQuery(newRange, rangeStart, rangeEnd);
         const [curRes, chartsRes] = await Promise.all([
-          fetchQuoteRequestStats({ timeRange: newRange }),
-          fetchDashboardCharts({ timeRange: newRange }),
+          fetchQuoteRequestStats(periodQuery),
+          fetchDashboardCharts(periodQuery),
         ]);
         // Bỏ qua nếu đã có request mới hơn được gửi sau request này (kết quả trả về trễ/không theo thứ tự)
         if (myRequestId !== timeRangeRequestIdRef.current) return;
@@ -131,13 +188,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       // ORDER: chỉ cần 5 dòng cho bảng "Yêu cầu gần đây" + counts cho Sidebar.
       const [res, chartsRes] = await Promise.all([
         fetchQuoteRequests({
-          timeRange: newRange,
+          ...periodQuery,
           ownerId: ownerIdParam,
           includeCounts: true,
           limit: 20,
           lite: true,
         }),
-        fetchDashboardCharts({ timeRange: newRange, ownerId: ownerIdParam }),
+        fetchDashboardCharts({ ...periodQuery, ownerId: ownerIdParam }),
       ]);
       if (myRequestId !== timeRangeRequestIdRef.current) return;
       if (res.meta?.counts) {
@@ -178,6 +235,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     handleTimeRangeChange(timeRange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerFilter]);
+
+  const handleTimeSelect = (value: string) => {
+    if (value !== CUSTOM_RANGE) {
+      handleTimeRangeChange(value);
+      return;
+    }
+    // Lần đầu chọn: điền sẵn từ đầu tháng đến hôm nay để có số liệu ngay. Việc tải do effect bên dưới lo.
+    const today = new Date();
+    if (!customStartDate) setCustomStartDate(toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1)));
+    if (!customEndDate) setCustomEndDate(toDateInputValue(today));
+    setTimeRange(CUSTOM_RANGE);
+  };
+
+  // Khoảng tùy chọn: tải lại mỗi khi đổi ngày. Chờ 400ms sau lần chỉnh cuối (gõ tay từng chữ số tạo nhiều giá
+  // trị trung gian); handleTimeRangeChange tự bỏ qua khi cặp ngày chưa hợp lệ.
+  React.useEffect(() => {
+    if (currentRole === 'SALE' || timeRange !== CUSTOM_RANGE) return;
+    const timer = setTimeout(() => handleTimeRangeChange(CUSTOM_RANGE, customStartDate, customEndDate), 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRange, customStartDate, customEndDate]);
 
   // SALE không tự fetch — App.tsx load requests/counts bất đồng bộ nên phải đồng bộ lại
   // mỗi khi props initialRequests/initialCounts đổi (login xong mới có data thật, hoặc đổi
@@ -265,6 +343,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     });
   }, [charts, chartStatusFilter]);
 
+  // Độ mịn cột của biểu đồ theo khoảng tùy chọn (khớp bucketCustomRange ở BE): 1 ngày -> khung giờ,
+  // tới CUSTOM_RANGE_MAX_DAILY_DAYS ngày -> theo ngày, dài hơn -> theo tháng.
+  const customDays = isValidCustomRange(customStartDate, customEndDate) ? countDays(customStartDate, customEndDate) : 0;
+  const isMonthlyTimeline =
+    timeRange === 'THIS_YEAR' || timeRange === 'ALL' || (timeRange === CUSTOM_RANGE && customDays > CUSTOM_RANGE_MAX_DAILY_DAYS);
+  // Nhãn trục X: THIS_MONTH/LAST_MONTH bỏ cách 2; khoảng tùy chọn nhiều cột thì thưa ra để nhãn không đè nhau.
+  const timelineXAxisInterval =
+    timeRange === 'THIS_MONTH' || timeRange === 'LAST_MONTH'
+      ? 2
+      : timeRange === CUSTOM_RANGE && timelineChartData.length > 14
+        ? Math.ceil(timelineChartData.length / 10) - 1
+        : 0;
+
   // % thay đổi so với kỳ trước — null nếu không có kỳ trước hoặc kỳ trước = 0 và kỳ này cũng = 0
   const pctChange = (curr: number, prev: number | undefined): number | 'NEW' | null => {
     if (prev === undefined) return null;
@@ -332,6 +423,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             {timeRange === 'LAST_MONTH' && 'Hoạt động trong tháng trước'}
             {timeRange === 'THIS_YEAR' && 'Hoạt động trong năm nay'}
             {timeRange === 'ALL' && 'Tất cả hoạt động báo giá'}
+            {timeRange === CUSTOM_RANGE &&
+              (isValidCustomRange(customStartDate, customEndDate)
+                ? `Hoạt động từ ${formatDateInput(customStartDate)} đến ${formatDateInput(customEndDate)}`
+                : 'Chọn ngày bắt đầu và ngày kết thúc')}
           </p>
         </div>
 
@@ -355,7 +450,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <Calendar size={14} className="absolute left-[12px] text-[#64748b] pointer-events-none" />
               <select
                 value={timeRange}
-                onChange={(e) => handleTimeRangeChange(e.target.value)}
+                onChange={(e) => handleTimeSelect(e.target.value)}
                 className="bg-surface border border-[#cbd5e1] rounded-[8px] pt-[8px] pr-[14px] pb-[8px] pl-[32px] text-[15.5px] font-bold text-[#334155] cursor-pointer outline-none [appearance:auto] shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
               >
                 <option value="THIS_MONTH">Tháng này</option>
@@ -364,7 +459,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <option value="LAST_MONTH">Tháng trước</option>
                 <option value="THIS_YEAR">Năm nay</option>
                 <option value="ALL">Tất cả thời gian</option>
+                <option value={CUSTOM_RANGE}>Tùy chọn khoảng ngày</option>
               </select>
+            </div>
+          )}
+
+          {currentRole !== 'SALE' && timeRange === CUSTOM_RANGE && (
+            <div className="flex items-center gap-[6px]">
+              <input
+                type="date"
+                value={customStartDate}
+                max={customEndDate || undefined}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className={dateInputPy6Cls}
+              />
+              <span className="text-faint text-[15px]">—</span>
+              <input
+                type="date"
+                value={customEndDate}
+                min={customStartDate || undefined}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className={dateInputPy6Cls}
+              />
             </div>
           )}
         </div>
@@ -550,9 +666,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <div className="flex items-center justify-between mb-[12px]">
                 <div>
                   <h2 className="text-[17px] font-extrabold text-[#0f172a] m-0">
-                    {timeRange === 'THIS_YEAR' || timeRange === 'ALL' ? 'So sánh số lượng hàng tháng' : 'So sánh số lượng hàng ngày'}
+                    {isMonthlyTimeline ? 'So sánh số lượng hàng tháng' : 'So sánh số lượng hàng ngày'}
                   </h2>
                   <span className="text-[14px] text-[#334155]">
+                    {timeRange === CUSTOM_RANGE &&
+                      (customDays === 1
+                        ? 'Theo khung giờ trong ngày'
+                        : isMonthlyTimeline
+                          ? 'Theo các tháng trong khoảng đã chọn'
+                          : 'Theo ngày trong khoảng đã chọn')}
                     {timeRange === 'TODAY' && 'Theo khung giờ trong ngày'}
                     {timeRange === 'THIS_WEEK' && 'Theo các ngày trong tuần'}
                     {timeRange === 'THIS_MONTH' && 'Theo ngày trong tháng này'}
@@ -585,7 +707,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
                     axisLine={false}
                     tickLine={false}
-                    interval={timeRange === 'THIS_MONTH' || timeRange === 'LAST_MONTH' ? 2 : 0}
+                    interval={timelineXAxisInterval}
                   />
                   <YAxis
                     allowDecimals={false}
