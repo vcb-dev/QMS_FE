@@ -17,6 +17,7 @@ import {
   XCircle,
   Loader2,
   Check,
+  HelpCircle,
 } from 'lucide-react';
 import type {
   LarkWebhook,
@@ -61,6 +62,153 @@ import {
 } from '../styles/classNames';
 
 const HOOK_PREFIX = 'https://open.larksuite.com/open-apis/bot/v2/hook/';
+
+// Hướng dẫn lấy URL nhóm (Webhook URL) của Custom Bot trong Lark — hiện trong khung nổi của dấu ?
+// (WebhookHelp) ở tiêu đề cột và nhãn ô trong form.
+const WEBHOOK_GUIDE_URL =
+  'https://open.larksuite.com/document/client-docs/bot-v3/add-custom-bot';
+const WEBHOOK_GUIDE_STEPS = [
+  'Mở nhóm Lark muốn nhận thông báo.',
+  'Bấm nút ⋯ (More) ở góc phải trên → Cài đặt (Settings).',
+  'Chọn Bot (Bots) → Thêm bot (Add Bot) → Bot tùy chỉnh (Custom Bot) → Thêm (Add).',
+  'Đặt tên và mô tả cho bot rồi bấm Thêm. Lark sẽ hiện Webhook URL.',
+  `Sao chép Webhook URL (dạng ${HOOK_PREFIX}…) và dán vào ô URL Nhóm. Nếu lỡ đóng, vào Cài đặt → Bot, bấm vào bot vừa tạo để xem lại.`,
+  'Nếu bot bật bảo mật "Xác thực chữ ký" (Signature verification), sao chép Secret và dán vào ô Signing secret.',
+];
+const HELP_POPOVER_WIDTH = 360;
+
+// Dấu ? mở khung hướng dẫn lấy URL nhóm: rê chuột để xem nhanh, bấm để ghim lại (cần ghim để bấm được
+// link bên trong). Khung vẽ qua portal + position fixed vì tiêu đề cột và form nằm trong vùng overflow,
+// khung absolute sẽ bị cắt. Nút là <span role="button"> chứ không phải <button> vì nằm trong <label>:
+// bấm chữ của label sẽ bị kích hoạt luôn phần tử labelable đầu tiên bên trong.
+const WebhookHelp: React.FC = () => {
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight?: number }>({
+    left: 0,
+  });
+  const visible = hover || pinned;
+
+  const place = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const left = Math.max(12, Math.min(rect.left, window.innerWidth - HELP_POPOVER_WIDTH - 12));
+    // Mở về phía có nhiều chỗ hơn (mặc định xuống dưới); khung cao hơn chỗ trống thì giới hạn chiều cao
+    // và cho cuộn bên trong, không để tràn khỏi màn hình. Trừ 6px đệm sát dấu ? và 12px lề màn hình.
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    const openUp = spaceBelow < 360 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(160, (openUp ? spaceAbove : spaceBelow) - 6);
+    setPos(
+      openUp
+        ? { bottom: window.innerHeight - rect.top, left, maxHeight }
+        : { top: rect.bottom, left, maxHeight },
+    );
+  };
+  const togglePinned = () => {
+    place();
+    setPinned((p) => !p);
+  };
+
+  useEffect(() => {
+    if (!visible) return;
+    const close = () => {
+      setHover(false);
+      setPinned(false);
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      close();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    // Cuộn trang/form làm dấu ? dịch chỗ nên đóng khung; riêng cuộn BÊN TRONG khung (khi nội dung dài hơn
+    // chỗ trống) thì giữ nguyên.
+    const onScroll = (e: Event) => {
+      if (popoverRef.current?.contains(e.target as Node)) return;
+      close();
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [visible]);
+
+  return (
+    <>
+      <span
+        ref={triggerRef}
+        role="button"
+        tabIndex={0}
+        aria-label="Hướng dẫn lấy URL nhóm"
+        aria-expanded={visible}
+        className="inline-flex cursor-help text-faint"
+        onMouseEnter={() => {
+          place();
+          setHover(true);
+        }}
+        onMouseLeave={() => setHover(false)}
+        onClick={togglePinned}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            togglePinned();
+          }
+        }}
+      >
+        <HelpCircle size={13} />
+      </span>
+      {visible &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="fixed z-[1200]"
+            // động — vị trí tính từ dấu ?
+            style={{ top: pos.top, bottom: pos.bottom, left: pos.left, width: HELP_POPOVER_WIDTH }}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+          >
+            {/* đệm 6px sát dấu ? để rê chuột từ dấu ? sang khung không bị đóng giữa chừng */}
+            <div className={pos.bottom != null ? 'pb-[6px]' : 'pt-[6px]'}>
+              <div
+                className="bg-surface border border-[#e5e7eb] rounded-[10px] shadow-[0_8px_24px_-4px_rgba(0,0,0,0.18)] py-[12px] px-[14px] text-[14.5px] text-[#334155] leading-[1.55] font-normal normal-case tracking-normal text-left overflow-y-auto"
+                // động — chiều cao tối đa theo chỗ trống trên màn hình
+                style={{ maxHeight: pos.maxHeight }}
+              >
+                <div className="font-extrabold text-[#0f172a] mb-[6px]">
+                  Cách lấy URL nhóm (Webhook URL) từ Lark
+                </div>
+                <ol className="m-0 pl-[20px] list-decimal flex flex-col gap-[3px]">
+                  {WEBHOOK_GUIDE_STEPS.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ol>
+                <a
+                  href={WEBHOOK_GUIDE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block mt-[8px] font-semibold text-[#2563eb]"
+                >
+                  Xem hướng dẫn chính thức của Lark
+                </a>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+};
 
 interface FormState {
   chatName: string;
@@ -195,7 +343,7 @@ export const NotificationConfigPage: React.FC = () => {
         setStats(res.stats);
         setError(null);
       })
-      .catch((e) => setError(e.message || 'Không thể tải danh sách webhook'))
+      .catch((e) => setError(e.message || 'Không thể tải danh sách nhóm nhận thông báo'))
       .finally(() => setLoading(false));
   }, [query]);
 
@@ -377,7 +525,7 @@ export const NotificationConfigPage: React.FC = () => {
   };
 
   const statCards = [
-    { num: String(stats.total), label: 'Tổng số webhook' },
+    { num: String(stats.total), label: 'Tổng số nhóm nhận thông báo' },
     { num: String(stats.enabled), label: 'Đang bật' },
     {
       num: `${stats.actionsCovered} / ${catalog.length}`,
@@ -401,7 +549,7 @@ export const NotificationConfigPage: React.FC = () => {
               </p>
             </div>
             <button type="button" className={btnPrimaryCls} onClick={openAdd}>
-              <Plus size={14} /> Thêm webhook
+              <Plus size={14} /> Thêm nhóm nhận thông báo
             </button>
           </div>
         </div>
@@ -437,7 +585,7 @@ export const NotificationConfigPage: React.FC = () => {
           {/* list */}
           <div>
             <h3 className="text-[16.5px] font-extrabold text-[#0f172a] mb-[10px]">
-              Danh sách webhook
+              Danh sách nhóm nhận thông báo
             </h3>
 
             <div className="flex items-center gap-[8px] mb-[10px] flex-wrap">
@@ -519,7 +667,10 @@ export const NotificationConfigPage: React.FC = () => {
                         Nhóm Lark
                       </th>
                       <th className={clsx(thCls, 'py-[10px] px-[16px]')}>
-                        Webhook URL
+                        <span className="inline-flex items-center gap-[5px]">
+                          URL Nhóm
+                          <WebhookHelp />
+                        </span>
                       </th>
                       <th className={clsx(thCls, 'py-[10px] px-[16px]')}>
                         Nhận thông báo cho
@@ -559,12 +710,12 @@ export const NotificationConfigPage: React.FC = () => {
                           />
                           <div className="text-[#0f172a] font-bold text-[16.5px]">
                             {stats.total === 0
-                              ? 'Chưa có webhook nào'
-                              : 'Không tìm thấy webhook phù hợp'}
+                              ? 'Chưa có nhóm nào'
+                              : 'Không tìm thấy nhóm phù hợp'}
                           </div>
                           {stats.total === 0 && (
                             <div className="text-[15.5px] mt-[2px]">
-                              Thêm webhook đầu tiên để bắt đầu nhận thông báo
+                              Thêm nhóm đầu tiên để bắt đầu nhận thông báo
                               trên Lark.
                             </div>
                           )}
@@ -634,8 +785,8 @@ export const NotificationConfigPage: React.FC = () => {
                               disabled={busyRow === w.id}
                               title={
                                 w.isEnabled
-                                  ? 'Bấm để tắt webhook'
-                                  : 'Bấm để bật webhook'
+                                  ? 'Bấm để tắt thông báo nhóm'
+                                  : 'Bấm để bật thông báo nhóm'
                               }
                               className={clsx(
                                 'bg-transparent border-0 p-0 cursor-pointer',
@@ -712,7 +863,7 @@ export const NotificationConfigPage: React.FC = () => {
             >
               <div className={clsx(modalHeaderCls, 'shrink-0')}>
                 <h2 className="text-[19px] font-extrabold text-[#0f172a] m-0">
-                  {editing ? 'Chỉnh sửa webhook' : 'Thêm webhook'}
+                  {editing ? 'Chỉnh sửa nhóm nhận thông báo' : 'Thêm nhóm nhận thông báo'}
                 </h2>
                 <button
                   type="button"
@@ -764,10 +915,13 @@ export const NotificationConfigPage: React.FC = () => {
 
                 <div className={formGroupCls}>
                   <label className={clsx(formLabelCls, 'flex items-baseline gap-[8px]')}>
-                    Webhook URL
+                    <span className="inline-flex items-center gap-[5px]">
+                      URL Nhóm
+                      <WebhookHelp />
+                    </span>
                     {urlWarn && !formErr.url && (
                       <span className="font-normal text-[14px] text-[#334155]">
-                        không giống link webhook Lark
+                        không giống link nhóm Lark
                       </span>
                     )}
                   </label>
@@ -941,7 +1095,7 @@ export const NotificationConfigPage: React.FC = () => {
                   disabled={saving}
                 >
                   {saving ? <Loader2 size={13} className="animate-[spin_0.8s_linear_infinite]" /> : null}{' '}
-                  Lưu webhook
+                  Lưu nhóm nhận thông báo
                 </button>
               </div>
             </div>
@@ -962,7 +1116,7 @@ export const NotificationConfigPage: React.FC = () => {
             >
               <div className={modalHeaderCls}>
                 <h2 className="text-[18px] font-extrabold text-[#0f172a] m-0">
-                  Xóa webhook này?
+                  Xóa nhóm nhận thông báo này?
                 </h2>
                 <button
                   type="button"
@@ -974,7 +1128,7 @@ export const NotificationConfigPage: React.FC = () => {
               </div>
               <div className={modalBodyCls}>
                 <p className="m-0 text-[15.5px] text-[#334155] leading-[1.55]">
-                  Webhook của "{deleteTarget.chatName}" và mọi đăng ký hành động
+                  Nhóm nhận thông báo của "{deleteTarget.chatName}" và mọi đăng ký hành động
                   của nhóm này sẽ bị xóa. Hành động này không thể hoàn tác.
                 </p>
               </div>
