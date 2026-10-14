@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, HelpCircle, X, MessageCircle } from 'lucide-react';
+import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, HelpCircle, X, MessageCircle, Ban } from 'lucide-react';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -30,6 +30,8 @@ type QuoteTableProps = Pick<
   | 'onPricing'
   | 'onReject'
   | 'onResubmit'
+  | 'onCancel'
+  | 'onRestore'
 > & {
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -77,6 +79,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onReject,
   onReturn,
   onResubmit,
+  onCancel,
+  onRestore,
   unreadCounts,
   onOpenChat,
 }) => {
@@ -193,6 +197,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     QUOTED:        { ...STATUS_BADGE_META.QUOTED,         icon: <CheckCircle size={13} /> },
     REJECTED:      { ...STATUS_BADGE_META.REJECTED,       icon: <XCircle size={13} /> },
     NEED_MORE_INFO:{ ...STATUS_BADGE_META.NEED_MORE_INFO, icon: <RotateCcw size={13} /> },
+    CANCELLED:     { ...STATUS_BADGE_META.CANCELLED,      icon: <Ban size={13} /> },
   };
 
   const StatusDropdown: React.FC<{
@@ -342,6 +347,22 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   };
 
   const renderStatusCell = (r: QuoteRequest, isMyReq: boolean) => {
+    const canCancel = currentRole === 'ADMIN' && !!onCancel;
+    const canRestore = currentRole === 'ADMIN' && !!onRestore;
+    const cancelOptions: StatusOption[] = canCancel
+  ? [{ value: 'CANCEL', label: 'Hủy yêu cầu', icon: <Ban size={13} />, color: '#be123c', bg: '#fff1f2', border: '#fecdd3' }]
+  : [];
+const restoreOption: StatusOption =
+  { value: 'RESTORE', label: 'Khôi phục', icon: <RotateCcw size={13} />, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' };
+// Giống DetailPage: confirm trước khi gọi. Giá trị khác CANCEL/RESTORE thì bỏ qua.
+const handleCancelRestore = (r: QuoteRequest, val: string) => {
+  if (val === 'CANCEL' && window.confirm(`Hủy yêu cầu ${r.code}?\n\nĐơn sẽ ẩn với Sale/Order, chỉ Admin còn thấy (tab "Đã hủy") và có thể khôi phục.`)) {
+    onCancel?.(r.id);
+  } else if (val === 'RESTORE' && window.confirm(`Khôi phục yêu cầu ${r.code}?`)) {
+    onRestore?.(r.id);
+  }
+};
+
     if (currentRole === 'SALE') {
       if (isMyReq && r.status === 'PENDING') {
         return (
@@ -420,12 +441,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             { value: 'PENDING',       ...STATUS_META.PENDING,    label: 'Yêu cầu mới' },
             { value: 'PROCESSING',    ...STATUS_META.PROCESSING, label: 'Tiếp nhận (Đang xử lý)' },
             { value: 'QUOTE_NOW',     ...STATUS_META.QUOTED,     label: 'Báo giá luôn' },
+            ...cancelOptions,
           ]}
           onChange={(val) => {
             if (val === 'PROCESSING') onAccept(r.id, r.version);
             // Báo giá luôn: tiếp nhận + khóa đơn rồi mở modal nhập giá. Nếu người khác vừa tiếp
             // nhận trước, bước tiếp nhận sẽ báo lỗi và modal không mở (xử lý ở onQuoteNow).
             else if (val === 'QUOTE_NOW') onQuoteNow(r.id, r.version);
+            handleCancelRestore(r, val);
           }}
         />
       );
@@ -460,17 +483,28 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             { value: 'QUOTED',        ...STATUS_META.QUOTED,        label: 'Chốt giá (Đã báo giá)' },
             { value: 'NEED_MORE_INFO',...STATUS_META.NEED_MORE_INFO, label: 'Trả lại Sale (Cần bổ sung)' },
             { value: 'REJECTED',      ...STATUS_META.REJECTED,      label: 'Từ chối hẳn' },
+            ...cancelOptions,
           ]}
           onChange={(val) => {
             if (val === 'QUOTED') onPricing(r.id);
             else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
             else if (val === 'REJECTED') onReject(r.id);
+            handleCancelRestore(r, val);
           }}
         />
       );
     }
 
     if (r.status === 'NEED_MORE_INFO') {
+       if (canCancel) {                                   // ← chèn từ đây
+        return (
+          <StatusDropdown
+          current="NEED_MORE_INFO"
+          options={[{ value: 'NEED_MORE_INFO', ...STATUS_META.NEED_MORE_INFO, label: 'Cần bổ sung' }, ...cancelOptions]}
+         onChange={(val) => handleCancelRestore(r, val)}
+        />
+      );
+      } 
       return (
         <span className={clsx(statusPillCls, 'bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]')}>
           <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
@@ -489,9 +523,11 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             options={[
               { value: 'QUOTED', ...STATUS_META.QUOTED, label: 'Đã báo giá' },
               { value: 'EDIT_PRICE', label: 'Sửa giá đã báo', icon: <Edit size={13} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+              ...cancelOptions
             ]}
             onChange={(val) => {
               if (val === 'EDIT_PRICE') onPricing(r.id);
+              handleCancelRestore(r, val);
             }}
           />
         );
@@ -507,6 +543,24 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       return (
         <span className={clsx(statusPillCls, statusPillRejectCls)} title="Trạng thái từ chối">
           <XCircle size={13} color="#be123c" /> Từ chối hẳn
+        </span>
+      );
+    }
+
+    // Chỉ ADMIN nhận được đơn ở trạng thái này (tab "Đã hủy"); khôi phục thao tác ở trang chi tiết.
+    if (r.status === 'CANCELLED') {
+      if (canRestore) {                                  // ← chèn từ đây
+       return (
+       <StatusDropdown
+        current="CANCELLED"
+        options={[{ value: 'CANCELLED', ...STATUS_META.CANCELLED, label: 'Đã hủy' }, restoreOption]}
+        onChange={(val) => handleCancelRestore(r, val)}
+      />
+        );
+      } 
+      return (
+        <span className={clsx(statusPillCls, 'bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]')} title="Đã hủy — chỉ Admin thấy">
+          <Ban size={13} color="#475569" /> Đã hủy
         </span>
       );
     }
@@ -579,6 +633,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
           {requests.map((r) => {
             const isSelected = r.id === selectedId || r.code === selectedId;
             const isRejected = r.status === 'REJECTED';
+            const isCancelled = r.status === 'CANCELLED';
             const isMyReq =
               currentRole === 'ORDER'
                 ? r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email
@@ -618,6 +673,7 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 className={clsx(
                   isSelected && '!bg-[#eff6ff]',
                   isRejected && '!bg-[#fff1f2] hover:!bg-[#ffe4e6] [&_td]:!border-[#fecdd3]',
+                  isCancelled && '!bg-[#f8fafc] opacity-70',
                 )}
                 onClick={() => onSelect(r.id)}
               >

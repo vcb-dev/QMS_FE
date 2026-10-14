@@ -3,6 +3,7 @@ import type { QuoteRequest, DetailPageProps, QuoteOption, QuoteOptionMaterial } 
 import {
   ArrowLeft,
   XCircle,
+  Ban,
   RotateCcw,
   Building2,
   Calendar,
@@ -28,7 +29,7 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
-import { UI_CONSTANTS } from '../constants';
+import { CANCELLABLE_STATUSES, STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { renderTextWithLinks } from '../utils/linkify';
@@ -72,6 +73,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   socket,
   onQuoteNow,
   onPricing,
+  onCancel,
+  onRestore,
 }) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -163,7 +166,11 @@ export const DetailPage: React.FC<DetailPageProps> = ({
         if (id) {
           fetchQuoteRequestById(id)
             .then((fresh) => setLoadedReq(fresh))
-            .catch(() => {});
+            .catch((err) => {
+              // 404 = đơn vừa bị ADMIN hủy (BE trả 404 y hệt đơn không tồn tại cho Sale/Order): bỏ bản
+              // đang giữ để màn hình chuyển sang "Không tìm thấy yêu cầu báo giá", không treo dữ liệu cũ.
+              if (err?.status === 404) setLoadedReq(null);
+            });
         }
       }
     };
@@ -272,6 +279,26 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     QUOTED: 'ĐÃ BÁO GIÁ',
     REJECTED: 'BỊ TỪ CHỐI',
     NEED_MORE_INFO: 'CẦN BỔ SUNG',
+    CANCELLED: 'ĐÃ HỦY',
+  };
+
+  // Tải lại chính đơn đang xem sau khi hủy/khôi phục — không phụ thuộc socket có đang kết nối hay không.
+  const refetchSelf = () => {
+    if (id) fetchQuoteRequestById(id).then((fresh) => setLoadedReq(fresh)).catch(() => {});
+  };
+
+  const handleCancelClick = async () => {
+    if (!window.confirm('Hủy yêu cầu này?\n\nĐơn sẽ biến mất với Sale/Order (chỉ Admin còn thấy ở ô "Đã hủy"). Bạn có thể khôi phục lại sau.')) return;
+    await onCancel(selectedReq.id);
+    refetchSelf();
+  };
+
+  const handleRestoreClick = async () => {
+    const previous = selectedReq.cancelledFromStatus ? STATUS_BADGE_META[selectedReq.cancelledFromStatus]?.label : null;
+    const target = previous ? `trạng thái "${previous}"` : 'trạng thái trước khi hủy';
+    if (!window.confirm(`Khôi phục yêu cầu này về ${target}?\n\nĐơn sẽ hiện lại với Sale/Order.`)) return;
+    await onRestore(selectedReq.id);
+    refetchSelf();
   };
 
   const getStatusBadge = (status: string) => (
@@ -344,6 +371,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
         </div>
 
+        <div className="flex items-center gap-[10px]">
         {/* Trang chi tiết chủ yếu để xem — các thao tác đổi trạng thái khác (tiếp nhận/từ chối/
             trả lại/sửa/xóa/đánh dấu chốt) vẫn ở bảng danh sách. Riêng "Báo giá" (ORDER/ADMIN) có
             thêm ở đây để báo giá thẳng từ trang chi tiết, không phải quay lại danh sách. */}
@@ -381,12 +409,49 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               Sửa giá đã báo
             </button>
           )}
+        {/* Hủy / khôi phục — CHỈ ADMIN (BE cũng chặn role khác). Hủy = đơn biến mất với Sale/Order,
+            hồ sơ vẫn giữ; khôi phục đưa đơn về đúng trạng thái trước khi hủy. */}
+        {currentRole === 'ADMIN' && CANCELLABLE_STATUSES.includes(selectedReq.status) && (
+          <button
+            type="button"
+            onClick={handleCancelClick}
+            className="bg-[#fff1f2] border border-[#fecdd3] rounded-[10px] py-[9px] px-[18px] text-[16px] font-extrabold text-[#be123c] cursor-pointer shadow-sm inline-flex items-center gap-[6px]"
+          >
+            <Ban size={16} /> Hủy yêu cầu
+          </button>
+        )}
+        {currentRole === 'ADMIN' && selectedReq.status === 'CANCELLED' && (
+          <button
+            type="button"
+            onClick={handleRestoreClick}
+            className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[9px] px-[18px] text-[16px] font-extrabold text-[#334155] cursor-pointer shadow-sm inline-flex items-center gap-[6px]"
+          >
+            <RotateCcw size={16} /> Khôi phục
+          </button>
+        )}
+        </div>
       </div>
 
       {/* Main 2-Column Content Grid */}
       <div className="grid grid-cols-[2fr_1fr] gap-[24px] items-start">
         {/* Left Column (2/3 width) */}
         <div className="flex flex-col gap-[20px]">
+          {/* Đơn đã hủy — chỉ ADMIN mở được trang này */}
+          {selectedReq.status === 'CANCELLED' && (
+            <div className="bg-[#f1f5f9] border border-[#cbd5e1] rounded-[12px] py-[16px] px-[20px]">
+              <div className="text-[16px] font-extrabold text-[#475569] flex items-center gap-[8px]">
+                <Ban size={18} /> YÊU CẦU ĐÃ BỊ HỦY
+              </div>
+              <p className="text-[16px] text-[#334155] mt-[6px] mr-0 mb-0 ml-0 leading-[1.5]">
+                {selectedReq.cancelledAt ? `Hủy lúc ${new Date(selectedReq.cancelledAt).toLocaleString('vi-VN')}. ` : ''}
+                {selectedReq.cancelledFromStatus
+                  ? `Trạng thái trước khi hủy: ${STATUS_BADGE_META[selectedReq.cancelledFromStatus]?.label ?? selectedReq.cancelledFromStatus}. `
+                  : ''}
+                Sale/Order không thấy đơn này; bấm "Khôi phục" để đưa đơn trở lại.
+              </p>
+            </div>
+          )}
+
           {/* Reject or Return Reasons Warning Alert */}
           {(selectedReq.status === 'REJECTED' ) && selectedReq.rejectReason && (
             <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-[12px] py-[16px] px-[20px]">

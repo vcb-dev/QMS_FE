@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
 import type { Material, ProductCategory, StatusCounts, Team, User } from '../types';
 import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
-import { OWNER_FILTER_ASSIGNED_TO_ME, STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
+import { CANCELLED_TAB, OWNER_FILTER_ASSIGNED_TO_ME, STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 import { TEAM_ALL_LABEL, TEAM_FILTER_ALL, TEAM_FILTER_NONE, TEAM_NONE_LABEL } from '../constants/team';
 import {
   fbBtnCls,
@@ -25,6 +25,8 @@ interface FilterBarProps {
   onScopeFilterChange?: (scope: string) => void;
   // Chỉ role ORDER: thêm lựa chọn phạm vi "Đơn được giao cho tôi".
   showAssignedScope?: boolean;
+  // Chỉ ADMIN: thêm ô lọc "Đã hủy" (đếm riêng, không nằm trong "Tất cả"). Sale/Order không có ô này.
+  showCancelledTab?: boolean;
   searchTerm: string;
   onSearchChange: (value: string) => void;
   statusSubFilter: string;
@@ -71,6 +73,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   scopeFilter = 'ALL',
   onScopeFilterChange,
   showAssignedScope = false,
+  showCancelledTab = false,
   searchTerm,
   onSearchChange,
   statusSubFilter,
@@ -174,6 +177,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </button>
           );
         })}
+
+        {showCancelledTab && (
+          <button
+            type="button"
+            onClick={() => onStatusSubFilterChange(CANCELLED_TAB.value)}
+            className={clsx(fbSquareBaseCls, statusSubFilter === CANCELLED_TAB.value && fbSquareActiveCls)}
+          >
+            <div className="text-[13.5px] font-bold text-muted uppercase tracking-[0.3px] mb-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
+              {CANCELLED_TAB.label}
+            </div>
+            <div className="text-[18px] font-black text-[#0f172a]">
+              {counts.cancelled ?? 0}
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Search (trái) + nút Bộ lọc gom hết dropdown/date, Xóa lọc ở góc phải */}

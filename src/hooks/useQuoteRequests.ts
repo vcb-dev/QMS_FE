@@ -17,6 +17,8 @@ import {
   rejectQuoteRequest,
   returnQuoteRequest,
   resubmitQuoteRequest,
+  cancelQuoteRequest,
+  restoreQuoteRequest,
 } from '../services/api';
 import { TEAM_FILTER_ALL } from '../constants/team';
 import { OWNER_FILTER_ASSIGNED_TO_ME } from '../constants';
@@ -73,6 +75,7 @@ export function useQuoteRequests(
     needMoreInfo: 0,
     quoted: 0,
     rejected: 0,
+    cancelled: 0,
   });
 
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
@@ -120,6 +123,12 @@ export function useQuoteRequests(
     const t = setTimeout(() => setToastMessage(null), 3500);
     return () => clearTimeout(t);
   }, [toastMessage]);
+
+  // Tab "Đã hủy" chỉ ADMIN có. ADMIN đang xem thử giao diện Sale/Order (chỉ là cờ FE — API vẫn là ADMIN)
+  // mà còn đứng ở tab đó thì trả về "Tất cả", kẻo danh sách của vai trò xem thử lộ đơn hủy.
+  useEffect(() => {
+    if (currentRole !== 'ADMIN' && statusSubFilter === 'CANCELLED') setStatusSubFilter('ALL');
+  }, [currentRole, statusSubFilter]);
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
   const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
@@ -271,6 +280,7 @@ export function useQuoteRequests(
           needMoreInfo,
           quoted,
           rejected,
+          cancelled: 0,
         });
       }
 
@@ -573,6 +583,20 @@ export function useQuoteRequests(
     });
   };
 
+  // Chỉ ADMIN (nút nằm ở DetailPage, BE cũng chặn role khác). Đơn hủy vẫn mở được với ADMIN nên
+  // runAction giữ selectedId như các action khác.
+  const handleCancelRequest = async (id: string) => {
+    await runAction('Đang hủy yêu cầu...', 'Không thể hủy yêu cầu', () => cancelQuoteRequest(id), {
+      onSuccess: () => setToastMessage('Đã hủy yêu cầu. Đơn không còn hiển thị với Sale/Order.'),
+    });
+  };
+
+  const handleRestoreRequest = async (id: string) => {
+    await runAction('Đang khôi phục yêu cầu...', 'Không thể khôi phục yêu cầu', () => restoreQuoteRequest(id), {
+      onSuccess: () => setToastMessage('Đã khôi phục yêu cầu.'),
+    });
+  };
+
   const handleResubmitDirect = async (id: string) => {
     const target = requests.find((r) => r.id === id);
     if (!target) return;
@@ -687,6 +711,8 @@ export function useQuoteRequests(
     handleRejectSubmit,
     handleReturnSubmit,
     handleResubmitDirect,
+    handleCancelRequest,
+    handleRestoreRequest,
     // Socket STATUS_CHANGED: trạng thái 1 đơn vừa đổi -> counts sidebar cũng đổi, ép lấy lại counts.
     refreshQuietly: () => loadData(false, true),
     refreshList: () => loadData(true),

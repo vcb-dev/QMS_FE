@@ -14,6 +14,8 @@ export const ACTION_LABEL: Record<string, string> = {
   CREATE_QUOTE: 'Tạo yêu cầu',
   UPDATE_QUOTE: 'Sửa yêu cầu',
   DELETE_QUOTE: 'Xóa yêu cầu',
+  CANCEL_QUOTE: 'Hủy yêu cầu',
+  RESTORE_QUOTE: 'Khôi phục yêu cầu',
   QUICK_SUBMIT_QUOTE: 'Gửi báo giá nhanh',
   APPROVE_USER: 'Duyệt tài khoản',
   REJECT_USER: 'Từ chối tài khoản',

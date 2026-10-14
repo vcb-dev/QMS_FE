@@ -66,6 +66,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   onReject,
   onReturn,
   onResubmit,
+  onCancel,
+  onRestore,
+
   onOpenCreate,
   onOpenExport,
   onResetFilters,
@@ -158,6 +161,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         scopeFilter={scopeFilter}
         onScopeFilterChange={handleScopeChange}
         showAssignedScope={currentRole === 'ORDER'}
+        showCancelledTab={currentRole === 'ADMIN'}
         searchTerm={searchTerm}
         onSearchChange={(v) => { setSearchTerm(v); setCurrentPage(1); }}
         statusSubFilter={statusSubFilter}
@@ -243,6 +247,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           onReject={onReject}
           onReturn={onReturn}
           onResubmit={onResubmit}
+          onCancel={onCancel}
+          onRestore={onRestore}
           unreadCounts={unreadCounts}
           onOpenChat={handleOpenChat}
         />
