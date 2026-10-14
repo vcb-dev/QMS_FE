@@ -56,9 +56,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // VAT lấy theo danh mục sản phẩm của yêu cầu đang báo giá (ProductCategory.vatRate),
   // fallback về PRICING_DEFAULTS nếu danh mục chưa cấu hình
   const defaultVatRate = selectedReq?.category?.vatRate ?? PRICING_DEFAULTS.VAT_PCT;
-  // Đơn ĐÃ có giá (QUOTED/CLOSED) mở lại modal này là để SỬA giá, không phải báo giá lần đầu —
+  // Đơn ĐÃ có giá (QUOTED) mở lại modal này là để SỬA giá, không phải báo giá lần đầu —
   // chỉ đổi label nút, luồng gửi thật đã tự rẽ nhánh ở handlePricingSubmit (useQuoteRequests.ts).
-  const isEditMode = selectedReq?.status === 'QUOTED' || selectedReq?.status === 'CLOSED';
+  const isEditMode = selectedReq?.status === 'QUOTED';
 
   // 1. Danh sách các phương án báo giá hiện tại
   const [options, setOptions] = useState<QuoteOption[]>([]);
@@ -155,8 +155,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     // liệu này — xem khối load calcMaterialRows/compareRows ngay dưới), ra option thật thì mới hiện.
     const realOptions = (selectedReq.options || []).filter((opt) => opt.quotedPrice != null);
     if (realOptions.length > 0) {
-      // Phương án Sale THẬT SỰ chọn — ưu tiên CLOSED/SELECTED; nếu đơn cũ/dữ liệu thiếu cờ này
-      // (không option nào SELECTED/CLOSED) thì fallback về option ĐẦU TIÊN thay vì khóa hết —
+      // Phương án Sale THẬT SỰ chọn — ưu tiên SELECTED; nếu đơn cũ/dữ liệu thiếu cờ này
+      // (không option nào SELECTED) thì fallback về option ĐẦU TIÊN thay vì khóa hết —
       // khóa hết sẽ khiến Order không còn cách nào chọn giá chính để báo giá cho đơn đó.
       const salePrimaryOption = getPrimaryOption({ options: realOptions });
       setOptions(

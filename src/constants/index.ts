@@ -51,7 +51,6 @@ export const STATUS_COUNT_KEYS: Record<string, string> = {
   NEED_MORE_INFO: 'needMoreInfo',
   QUOTED: 'quoted',
   REJECTED: 'rejected',
-  CLOSED: 'closed',
 };
 
 // Màu/label dùng cho biểu đồ, ô lọc trạng thái (FilterBar, SaleStatusStatsGrid, DashboardPage).
@@ -60,7 +59,6 @@ export const STATUS_CHART_META: { value: string; label: string; color: string }[
   { value: 'PROCESSING', label: 'Đang xử lý', color: '#f59e0b' },
   { value: 'NEED_MORE_INFO', label: 'Cần bổ sung', color: '#f97316' },
   { value: 'QUOTED', label: 'Hoàn thành', color: '#22c55e' },
-  { value: 'CLOSED', label: 'Đã chốt', color: '#8b5cf6' },
   { value: 'REJECTED', label: 'Từ chối', color: '#ef4444' },
 ];
 
@@ -71,7 +69,6 @@ export const STATUS_BADGE_META: Record<string, { label: string; color: string; b
   NEED_MORE_INFO: { label: 'Cần bổ sung', color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
   QUOTED: { label: 'Đã báo giá', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
   REJECTED: { label: 'Từ chối', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
-  CLOSED: { label: 'Đã chốt', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
 };
 // Nhãn hiển thị cho dropdown xem-thử-giao-diện-theo-role của Admin (Header.tsx)
 export const ROLE_SWITCH_LABEL: Record<'SALE' | 'ORDER' | 'ADMIN', string> = {

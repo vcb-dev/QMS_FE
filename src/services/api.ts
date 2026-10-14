@@ -266,7 +266,7 @@ export async function getUserStatsApi(filter?: StaffTimeFilter): Promise<UserSta
 
 export type StaffPerformanceFilter = StaffTimeFilter & {
   saleSearch?: string;
-  saleSortField?: 'name' | 'total' | 'closed' | 'closeRate';
+  saleSortField?: 'name' | 'total';
   saleSortDir?: 'asc' | 'desc';
   salePage?: number;
   salePageSize?: number;
@@ -356,7 +356,7 @@ export async function fetchQuoteRequestStats(filter?: { timeRange?: string; star
   if (filter?.ownerId && filter.ownerId !== 'ALL') params.ownerId = filter.ownerId;
 
   const data = await apiCall(dedupedGet('/quote-requests/stats', params), 'Không thể tải số liệu tổng hợp');
-  return data as { total: number; closeRate: number; closedRevenue: number; quotedRevenue: number; counts: any };
+  return data as { total: number; quotedRevenue: number; counts: any };
 }
 
 export async function fetchDashboardCharts(filter?: { timeRange?: string; startDate?: string; endDate?: string; ownerId?: string }): Promise<DashboardChartsResponse> {
@@ -518,7 +518,7 @@ export async function updateQuoteRequest(id: string, payload: any) {
 }
 
 export async function changeQuoteStatus(id: string, payload: {
-  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'MARK_CLOSED' | 'EDIT_PRICE';
+  action: 'ACCEPT' | 'QUOTE' | 'REJECT' | 'RETURN' | 'RESUBMIT' | 'SELECT_OPTION' | 'QUICK_QUOTE' | 'QUICK_APPROVE' | 'QUICK_REJECT' | 'EDIT_PRICE';
   version?: number;
   quotedPrice?: number;
   vat?: number;
@@ -683,9 +683,9 @@ export async function completeQuoteRequest(
   return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version, inspectionFee: extras?.inspectionFee });
 }
 
-// Sửa giá đã báo cho đơn ĐANG QUOTED/CLOSED — GIỐNG HỆT completeQuoteRequest (gửi cả mảng, BE xóa
+// Sửa giá đã báo cho đơn ĐANG QUOTED — GIỐNG HỆT completeQuoteRequest (gửi cả mảng, BE xóa
 // hết & tạo lại toàn bộ phương án, thêm/bớt/sửa tự do), chỉ khác action. BE tự giữ nguyên
-// status/assigneeId (CLOSED sửa giá thì vẫn CLOSED, không đổi người báo giá).
+// status/assigneeId (đơn vẫn QUOTED, không đổi người báo giá).
 export async function editQuotedPrice(
   id: string,
   options: QuoteOptionDraft[],
@@ -725,10 +725,6 @@ export async function returnQuoteRequest(
 
 export async function resubmitQuoteRequest(id: string) {
   return changeQuoteStatus(id, { action: 'RESUBMIT' });
-}
-
-export async function markQuoteClosed(id: string, optionId?: string) {
-  return changeQuoteStatus(id, { action: 'MARK_CLOSED', optionId });
 }
 
 export async function fetchVnGoldPrice() {

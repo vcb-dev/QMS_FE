@@ -17,7 +17,6 @@ import {
   rejectQuoteRequest,
   returnQuoteRequest,
   resubmitQuoteRequest,
-  markQuoteClosed,
 } from '../services/api';
 import { TEAM_FILTER_ALL } from '../constants/team';
 import { OWNER_FILTER_ASSIGNED_TO_ME } from '../constants';
@@ -74,7 +73,6 @@ export function useQuoteRequests(
     needMoreInfo: 0,
     quoted: 0,
     rejected: 0,
-    closed: 0,
   });
 
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
@@ -104,10 +102,6 @@ export function useQuoteRequests(
   const [pricingReqDetail, setPricingReqDetail] = useState<QuoteRequest | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [returnReqId, setReturnReqId] = useState<string | null>(null);
-  // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
-  // (chỉ mở popup khi có >1 phương án đã báo giá — 1 phương án thì chốt thẳng, không cần hỏi).
-  const [closeOptionReqId, setCloseOptionReqId] = useState<string | null>(null);
-
   // `loading`: chỉ dùng cho các thao tác ghi dữ liệu (blocking overlay che toàn màn hình)
   // `listLoading`: dùng cho việc load/refresh danh sách khi chuyển tab, đổi bộ lọc (thanh tiến trình mỏng, không chặn UI)
   const [loading, setLoading] = useState<boolean>(false);
@@ -196,7 +190,6 @@ export function useQuoteRequests(
       else if (currentFilter === 'NEED_MORE_INFO') targetStatus = 'NEED_MORE_INFO';
       else if (currentFilter === 'QUOTED') targetStatus = 'QUOTED';
       else if (currentFilter === 'REJECTED') targetStatus = 'REJECTED';
-      else if (currentFilter === 'CLOSED') targetStatus = 'CLOSED';
       else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter as import('../types').QuoteStatus;
 
       const ownerId = (currentFilter === 'MY_REQ' || ownerFilter === 'MY_REQ') ? currentUser.id : undefined;
@@ -270,7 +263,6 @@ export function useQuoteRequests(
         const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
         const quoted = items.filter((r) => r.status === 'QUOTED').length;
         const rejected = items.filter((r) => r.status === 'REJECTED').length;
-        const closed = items.filter((r) => r.status === 'CLOSED').length;
         setCounts({
           total: meta.total || items.length,
           myReq: items.filter((r) => r.requester?.id === currentUser.id || r.assignee?.id === currentUser.id).length,
@@ -279,7 +271,6 @@ export function useQuoteRequests(
           needMoreInfo,
           quoted,
           rejected,
-          closed,
         });
       }
 
@@ -532,10 +523,10 @@ export function useQuoteRequests(
     // QUOTE (BE đòi PROCESSING -> 409) và mất luôn version (bỏ qua optimistic lock).
     const targetReq = pricingReq;
     const version = targetReq?.version;
-    // Đơn đã có giá (QUOTED/CLOSED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
+    // Đơn đã có giá (QUOTED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
     // completeQuoteRequest (xóa hết & tạo lại toàn bộ options, thêm/bớt/sửa tự do), chỉ khác action
     // gửi lên (BE tự giữ nguyên status/assigneeId, không đẩy PROCESSING->QUOTED lần 2).
-    const isEditingQuotedPrice = targetReq?.status === 'QUOTED' || targetReq?.status === 'CLOSED';
+    const isEditingQuotedPrice = targetReq?.status === 'QUOTED';
     const fallbackOptions = options?.length
       ? options
       : [{ optionName: 'Phương án', quotedPrice, vat }];
@@ -586,29 +577,6 @@ export function useQuoteRequests(
     const target = requests.find((r) => r.id === id);
     if (!target) return;
     await runAction('Đang gửi lại yêu cầu...', 'Lỗi gửi lại yêu cầu', () => resubmitQuoteRequest(id));
-  };
-
-  const handleMarkClosed = async (id: string, optionId?: string) => {
-    await runAction('Đang đánh dấu Đã chốt...', 'Lỗi đánh dấu Đã chốt', () => markQuoteClosed(id, optionId));
-  };
-
-  // Bấm "Đánh Dấu Đã Chốt" từ danh sách — nếu yêu cầu có nhiều hơn 1 phương án đã báo giá,
-  // mở popup cho Sale chọn đúng phương án khách chốt thay vì để BE tự suy ra; chỉ 1 phương án
-  // thì chốt thẳng luôn, không cần hỏi lại.
-  const handleMarkClosedClick = (id: string) => {
-    const target = requests.find((r) => r.id === id);
-    const pricedOptionsCount = (target?.options || []).filter((o) => o.quotedPrice != null).length;
-    if (pricedOptionsCount > 1) {
-      setCloseOptionReqId(id);
-    } else {
-      handleMarkClosed(id);
-    }
-  };
-
-  const handleCloseOptionSubmit = async (optionId: string) => {
-    if (!closeOptionReqId) return;
-    await handleMarkClosed(closeOptionReqId, optionId);
-    setCloseOptionReqId(null);
   };
 
   const selectedReq =
@@ -706,8 +674,6 @@ export function useQuoteRequests(
     setRejectReqId,
     returnReqId,
     setReturnReqId,
-    closeOptionReqId,
-    setCloseOptionReqId,
     handleTabChange,
     handleResetFilters,
     handleOpenCreate,
@@ -721,9 +687,6 @@ export function useQuoteRequests(
     handleRejectSubmit,
     handleReturnSubmit,
     handleResubmitDirect,
-    handleMarkClosed,
-    handleMarkClosedClick,
-    handleCloseOptionSubmit,
     // Socket STATUS_CHANGED: trạng thái 1 đơn vừa đổi -> counts sidebar cũng đổi, ép lấy lại counts.
     refreshQuietly: () => loadData(false, true),
     refreshList: () => loadData(true),
