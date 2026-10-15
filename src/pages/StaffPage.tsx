@@ -376,7 +376,12 @@ export const StaffPage: React.FC = () => {
   const safeAccountPage = Math.min(accountPage, accountTotalPages);
   const pagedAccountList = currentAccountList.slice((safeAccountPage - 1) * accountPageSize, safeAccountPage * accountPageSize);
   // Team đã chọn cho tài khoản chờ duyệt, bỏ qua nếu team đó vừa bị xóa khỏi danh sách
-  const getApproveTeamId = (id: string) => (teams.some((t) => t.id === approveTeam[id]) ? approveTeam[id] : '');
+  // Admin chưa đụng vào ô thì lấy team người đó đã chọn lúc đăng ký — nếu mặc định rỗng, bấm "Duyệt"
+  // sẽ gửi teamId null và xóa mất team đã chọn. Admin chủ động chọn "Chưa có team" ('') vẫn được tôn trọng.
+  const getApproveTeamId = (id: string) => {
+    const chosen = approveTeam[id] ?? users.find((u) => u.id === id)?.team?.id ?? '';
+    return teams.some((t) => t.id === chosen) ? chosen : '';
+  };
 
   const handleApprove = async (id: string) => {
     setActionLoadingId(id);

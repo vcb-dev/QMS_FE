@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import type { LoginPageProps, AuthMode } from '../types';
-import { loginApi, registerApi, forgotPasswordApi, resetPasswordApi, redirectToLarkLogin } from '../services/api';
+import type { LoginPageProps, AuthMode, Team } from '../types';
+import { loginApi, registerApi, fetchRegisterTeams, forgotPasswordApi, resetPasswordApi, redirectToLarkLogin } from '../services/api';
 import {
   Lock, Mail, UserPlus, KeyRound, ArrowLeft, ArrowRight, CheckCircle2,
-  User as UserIcon, Briefcase, Eye, EyeOff,
+  User as UserIcon, Briefcase, Users, Eye, EyeOff,
 } from 'lucide-react';
 import { COMPANY_LOGO_URL, BACKGROUND_IMAGE_URL } from '../constants';
+import { TEAM_NONE_LABEL } from '../constants/team';
 import { clsx } from 'clsx';
 import {
   backLinkCls,
@@ -45,6 +46,10 @@ const LabeledIconField: React.FC<{
   </div>
 );
 
+// Giá trị của mục "Chưa có team" trong ô chọn — khác '' (= chưa chọn gì) để form bắt người đăng ký
+// phải chọn một mục, kể cả khi họ không thuộc team nào.
+const TEAM_CHOICE_NONE = '__none__';
+
 export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSuccess }) => {
   const navigate = useNavigate();
 
@@ -58,6 +63,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
   const [name, setName] = useState('');
   // Tự đăng ký chỉ chọn được SALE/ORDER — ADMIN không tự cấp được, phải nhờ 1 ADMIN khác cấp tay.
   const [role, setRole] = useState<'SALE' | 'ORDER'>('SALE');
+  // Team: '' = chưa chọn, TEAM_CHOICE_NONE = "Chưa có team", còn lại là id team. Danh sách rỗng
+  // (chưa có team nào, hoặc không tải được) thì ẩn ô này và vẫn đăng ký được — Admin gán khi duyệt.
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoaded, setTeamsLoaded] = useState(false);
+  const [teamChoice, setTeamChoice] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -86,6 +96,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [search]);
+
+  // Chỉ nạp danh sách team khi người dùng mở form đăng ký. Tải lỗi thì giữ teamsLoaded = false để
+  // lần mở form sau thử lại; teamsLoaded về false (khi BE báo team đã bị xóa) cũng kích hoạt nạp lại.
+  React.useEffect(() => {
+    if (mode !== 'register' || teamsLoaded) return;
+    let cancelled = false;
+    fetchRegisterTeams()
+      .then((list) => {
+        if (cancelled) return;
+        setTeams(list);
+        setTeamsLoaded(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, teamsLoaded]);
 
   if (currentUser) {
     return <Navigate to="/" replace />;
@@ -132,16 +159,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
       setErrorMsg('Mật khẩu phải từ 6 ký tự trở lên');
       return;
     }
+    if (teams.length > 0 && !teamChoice) {
+      setErrorMsg(`Vui lòng chọn team (hoặc chọn "${TEAM_NONE_LABEL}")`);
+      return;
+    }
 
     setLoading(true);
     clearMessages();
 
     try {
-      const data = await registerApi({ name, email, password, role });
+      const teamId = teamChoice && teamChoice !== TEAM_CHOICE_NONE ? teamChoice : undefined;
+      const data = await registerApi({ name, email, password, role, teamId });
       setSuccessMsg(data.message || 'Đăng ký thành công! Tài khoản của bạn đang CHỜ ADMIN PHÊ DUYỆT.');
       setTimeout(() => goToMode('login'), 3500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Đăng ký thất bại. Vui lòng thử lại');
+      // Team vừa bị Admin xóa giữa lúc mở form và lúc gửi: bỏ lựa chọn cũ và nạp lại danh sách.
+      if (err.status === 404) {
+        setTeamChoice('');
+        setTeamsLoaded(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -382,6 +419,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ currentUser, onLoginSucces
                   </select>
                 </div>
               </div>
+
+              {teams.length > 0 && (
+                <div className="flex flex-col gap-[6px]">
+                  <label className={fieldLabelCls}>Team</label>
+                  <div className="relative flex items-center">
+                    <Users size={16} className={fieldIconCls} />
+                    <select value={teamChoice} onChange={(e) => setTeamChoice(e.target.value)} className={clsx(fieldInputCls, 'cursor-pointer')}>
+                      <option value="" disabled>— Chọn team —</option>
+                      <option value={TEAM_CHOICE_NONE}>{TEAM_NONE_LABEL}</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               <button type="submit" disabled={loading} className={clsx(goldButtonCls, 'mt-[4px]')}>
                 <UserPlus size={18} />
