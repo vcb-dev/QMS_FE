@@ -237,8 +237,13 @@ export function redirectToLarkLogin() {
   window.location.href = new URL(`${API_BASE}/auth/lark`, window.location.origin).toString();
 }
 
-export async function registerApi(payload: { name: string; email: string; password: string; role?: string }): Promise<{ user: User; message: string }> {
+export async function registerApi(payload: { name: string; email: string; password: string; role?: string; teamId?: string }): Promise<{ user: User; message: string }> {
   return apiCall(api.post('/auth/register', payload), 'Đăng ký không thành công. Vui lòng kiểm tra lại');
+}
+
+// Danh sách team cho ô chọn ở form đăng ký — GET /teams đòi đăng nhập nên dùng route công khai riêng.
+export async function fetchRegisterTeams(): Promise<Team[]> {
+  return apiCall(dedupedGet('/auth/teams'), 'Không thể tải danh sách team');
 }
 
 // Bộ lọc thời gian dùng chung cho các endpoint thống kê trang Nhân Viên — BE quy đổi & tính hết,
