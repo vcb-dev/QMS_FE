@@ -743,6 +743,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,
         groupId: `g_${Date.now()}`,
         materialRows: calcMaterialRows,
+        requestOptions: selectedReq?.options,
         stoneRows: calcStoneRows,
         stoneMode: calcStoneMode,
         manualStoneName: calcManualStoneName,
