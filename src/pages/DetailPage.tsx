@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchQuoteRequestById, fetchChatMessages } from '../services/api';
-import { CANCELLABLE_STATUSES, STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
+import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { renderTextWithLinks } from '../utils/linkify';
@@ -37,6 +37,8 @@ import { getPrimaryOption, formatOptionCopyLine } from '../utils/quoteOption';
 import { ChatPopup } from '../components/ChatPopup';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { StatusPill } from '../components/StatusPill';
+import { StatusDropdown } from '../components/StatusDropdown';
+import { getStatusDropdown, type StatusActionHandlers } from '../utils/statusActions';
 import { NotFoundPage } from './NotFoundPage';
 import { SpecBadge } from '../components/SpecBadge';
 import { SpecRow } from '../components/SpecRow';
@@ -71,8 +73,16 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   currentRole,
   currentUser,
   socket,
+  refreshKey = 0,
+  onEdit,
+  onAccept,
   onQuoteNow,
   onPricing,
+  onReject,
+  onReturn,
+  onResubmit,
+  onMarkClosed,
+  onUnmarkClosed,
   onCancel,
   onRestore,
 }) => {
@@ -83,11 +93,17 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   const [loadedReq, setLoadedReq] = useState<QuoteRequest | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!initialSelectedReq);
 
-  // Đảm bảo record được chọn luôn khớp chính xác với ID trên đường dẫn URL khi F5/reload
+  // Đảm bảo record được chọn luôn khớp chính xác với ID trên đường dẫn URL khi F5/reload. Cả bản từ danh
+  // sách lẫn bản tự tải đều khớp thì lấy bản MỚI HƠN (updatedAt) — trước đây luôn ưu tiên bản danh sách nên
+  // sau khi đổi trạng thái mà danh sách chưa/không còn chứa đơn thì trang vẫn hiện trạng thái cũ.
+  const matchesUrl = (r: QuoteRequest | null | undefined): r is QuoteRequest => !!r && (r.id === id || r.code === id);
+  const fromList = matchesUrl(initialSelectedReq) ? initialSelectedReq : null;
+  const fromLoad = matchesUrl(loadedReq) ? loadedReq : null;
+  const stamp = (r: QuoteRequest) => new Date(r.updatedAt || 0).getTime() || 0;
   const selectedReq =
-    (initialSelectedReq && (initialSelectedReq.id === id || initialSelectedReq.code === id))
-      ? initialSelectedReq
-      : (loadedReq || (id ? null : initialSelectedReq));
+    fromList && fromLoad
+      ? (stamp(fromLoad) > stamp(fromList) ? fromLoad : fromList)
+      : (fromList || loadedReq || (id ? null : initialSelectedReq));
 
   useEffect(() => {
     if (!id) return;
@@ -234,6 +250,23 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     }).catch(() => {});
   };
 
+  // Tải lại chính đơn đang xem sau khi hủy/khôi phục — không phụ thuộc socket có đang kết nối hay không.
+  const refetchSelf = () => {
+    if (id) fetchQuoteRequestById(id).then((fresh) => setLoadedReq(fresh)).catch(() => {});
+  };
+
+  // Action ghi dữ liệu nào ở App xong (kể cả qua modal: báo giá, từ chối, trả lại, chốt…) cũng tải lại đơn này.
+  // PHẢI đứng trước các `return` sớm bên dưới (đang tải / không tìm thấy): hook đặt sau chúng làm số hook
+  // lệch giữa các lần render — sau khi chốt, danh sách tải lại làm isLoading bật true và trang crash
+  // "Rendered fewer hooks than expected".
+  const lastRefreshKey = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey === lastRefreshKey.current) return;
+    lastRefreshKey.current = refreshKey;
+    refetchSelf();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
+
   if (isLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center p-8 text-slate-500">
@@ -266,11 +299,27 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
   const finalOption = getPrimaryOption(selectedReq);
 
+  // Đơn đã chốt từ ≥ 2 phương án: mỗi phương án chốt là 1 sản phẩm trên cùng yêu cầu (Thư viện cũng hiện
+  // mỗi sản phẩm 1 thẻ). Giá chốt của cả đơn (selectedReq.quotedPrice) khi đó là TỔNG các sản phẩm.
+  const closedOptions =
+    selectedReq.status === 'CLOSED' ? pricedOptions.filter((o) => o.selectionStatus === 'CLOSED') : [];
+  const isMultiClosed = closedOptions.length >= 2;
+  // Danh sách hiển thị ở thẻ phương án: đơn chốt nhiều phương án chỉ liệt kê các sản phẩm đã chốt.
+  const listedOptions = isMultiClosed ? closedOptions : pricedOptions;
+  const selectedProduct = isMultiClosed && selectedOptionId ? closedOptions.find((o) => o.id === selectedOptionId) : undefined;
+  // Chưa bấm chọn sản phẩm nào -> bảng kê hiện TỔNG của cả đơn (chưa có bảng kê chi tiết vì thuộc từng sản phẩm).
+  const showingClosedTotal = isMultiClosed && !selectedProduct;
+
   // Phương án đang hiển thị ở bảng kê giá bên phải — theo lựa chọn của người dùng nếu có bấm chọn,
   // không thì mặc định về phương án chính như trước.
-  const displayedOption =
-    (selectedOptionId && pricedOptions.find((o) => o.id === selectedOptionId)) || finalOption;
-  const displayedPriceVal = displayedOption?.quotedPrice ? Number(displayedOption.quotedPrice) : 0;
+  const displayedOption = showingClosedTotal
+    ? null
+    : (selectedOptionId && pricedOptions.find((o) => o.id === selectedOptionId)) || finalOption;
+  const displayedPriceVal = showingClosedTotal
+    ? Number(selectedReq.quotedPrice) || 0
+    : displayedOption?.quotedPrice ? Number(displayedOption.quotedPrice) : 0;
+  // Phương án cho thông số sản phẩm ở cột trái (chất liệu/khối lượng/đá): sản phẩm đang xem nếu đã chọn.
+  const specOption = selectedProduct || finalOption;
 
 
   const STATUS_BADGE_LABELS: Record<string, string> = {
@@ -279,12 +328,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     QUOTED: 'ĐÃ BÁO GIÁ',
     REJECTED: 'BỊ TỪ CHỐI',
     NEED_MORE_INFO: 'CẦN BỔ SUNG',
+    CLOSED: 'ĐÃ CHỐT ĐƠN',
     CANCELLED: 'ĐÃ HỦY',
-  };
-
-  // Tải lại chính đơn đang xem sau khi hủy/khôi phục — không phụ thuộc socket có đang kết nối hay không.
-  const refetchSelf = () => {
-    if (id) fetchQuoteRequestById(id).then((fresh) => setLoadedReq(fresh)).catch(() => {});
   };
 
   const handleCancelClick = async () => {
@@ -311,6 +356,25 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     />
   );
 
+  // Dropdown trạng thái — cùng quy tắc với bảng danh sách (utils/statusActions). Thao tác chờ được (tiếp nhận,
+  // báo giá luôn, gửi lại, chốt thẳng, hủy, khôi phục) xong thì tải lại đơn đang xem, không phụ thuộc socket;
+  // thao tác mở modal (báo giá, từ chối, trả lại, chọn phương án chốt, sửa) cập nhật qua danh sách + socket.
+  const refetchAfter = (action: void | Promise<void>) => { void Promise.resolve(action).then(refetchSelf); };
+  const statusHandlers: StatusActionHandlers = {
+    onEdit,
+    onAccept: (rid, version) => refetchAfter(onAccept(rid, version)),
+    onQuoteNow: (rid, version) => refetchAfter(onQuoteNow(rid, version)),
+    onPricing,
+    onReject,
+    onReturn,
+    onResubmit: (rid, req) => refetchAfter(onResubmit(rid, req)),
+    onMarkClosed: (rid, req) => refetchAfter(onMarkClosed(rid, req)),
+    onUnmarkClosed: (rid) => refetchAfter(onUnmarkClosed(rid)),
+    onCancel: () => { void handleCancelClick(); },
+    onRestore: () => { void handleRestoreClick(); },
+  };
+  const statusDropdown = getStatusDropdown(selectedReq, { role: currentRole, user: currentUser }, statusHandlers);
+
   const timeToAccept = selectedReq.createdAt && selectedReq.acceptedAt
     ? formatDuration(new Date(selectedReq.createdAt).getTime(), new Date(selectedReq.acceptedAt).getTime())
     : null;
@@ -327,7 +391,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   // "Báo giá nhanh" (Order gõ thẳng tổng tiền, không qua công thức) không có costBreakdown vì BE
   // không tính formula cho option này (xem computeCostBreakdown ở option-mapper.util.ts) — chất
   // liệu/khối lượng gõ kèm chỉ là ghi chú tự do, không đáng tin làm thông số sản phẩm hiển thị.
-  const isQuickPriceOption = !!finalOption && !finalOption.costBreakdown;
+  const isQuickPriceOption = !!specOption && !specOption.costBreakdown;
 
   // Đọc chất liệu từ phương án đang hiển thị (finalOption) — không lấy field cấp request
   // (selectedReq.materials/material chỉ là bản tóm tắt của phương án đại diện, có thể trống nếu
@@ -335,10 +399,10 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   // khi thiếu data thật — đổi thành nhãn rõ ràng là chưa có dữ liệu. Báo giá nhanh thì bỏ qua chất
   // liệu của option, chỉ giữ chất liệu Sale đã gửi lúc tạo đơn (selectedReq.materials/material).
   const materialsList =
-    !isQuickPriceOption && finalOption?.materials && finalOption.materials.length > 0
-      ? finalOption.materials.map((m) => m.materialName || m.material?.name).filter((n): n is string => !!n)
-      : !isQuickPriceOption && finalOption?.materialName
-        ? [finalOption.materialName]
+    !isQuickPriceOption && specOption?.materials && specOption.materials.length > 0
+      ? specOption.materials.map((m) => m.materialName || m.material?.name).filter((n): n is string => !!n)
+      : !isQuickPriceOption && specOption?.materialName
+        ? [specOption.materialName]
         : selectedReq.materials && selectedReq.materials.length > 0
           ? selectedReq.materials.map((m) => m.name)
           : selectedReq.material
@@ -363,72 +427,12 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               <h1 className="text-[25px] font-black text-text m-0">
                 {selectedReq.code || `#RQ-${selectedReq.id}`}
               </h1>
-              {getStatusBadge(selectedReq.status)}
+              {statusDropdown ? <StatusDropdown {...statusDropdown} size="lg" /> : getStatusBadge(selectedReq.status)}
             </div>
             <p className="text-[16px] text-muted mt-[4px] mr-0 mb-0 ml-0">
               Tạo lúc {selectedReq.createdAt ? new Date(selectedReq.createdAt).toLocaleString('vi-VN') : '---'}
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-[10px]">
-        {/* Trang chi tiết chủ yếu để xem — các thao tác đổi trạng thái khác (tiếp nhận/từ chối/
-            trả lại/sửa/xóa/đánh dấu chốt) vẫn ở bảng danh sách. Riêng "Báo giá" (ORDER/ADMIN) có
-            thêm ở đây để báo giá thẳng từ trang chi tiết, không phải quay lại danh sách. */}
-        {(currentRole === 'ORDER' || currentRole === 'ADMIN') &&
-          selectedReq.status === 'PENDING' && (
-            <button
-              type="button"
-              onClick={() => onQuoteNow(selectedReq.id, selectedReq.version)}
-              className="bg-[#16a34a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
-            >
-              Báo giá luôn
-            </button>
-          )}
-        {/* BE cho phép bất kỳ Order nào báo giá vào request PROCESSING của Order khác
-            (fix/quote-any-order-can-quote) — bỏ điều kiện check assigneeId. */}
-        {(currentRole === 'ADMIN' || currentRole === 'ORDER') &&
-          selectedReq.status === 'PROCESSING' && (
-            <button
-              type="button"
-              onClick={() => onPricing(selectedReq.id)}
-              className="bg-[#16a34a] text-surface border-0 rounded-[10px] py-[9px] px-[18px] text-[13px] font-extrabold cursor-pointer shadow-sm"
-            >
-              Báo giá
-            </button>
-          )}
-        {/* Sửa giá đã báo — mở lại PricingModal (tự nạp sẵn phương án đang là giá chính) để tính
-            lại, chỉ ghi đè đúng phương án đó, không đụng trạng thái đơn (xem editQuotedPrice BE). */}
-        {(currentRole === 'ADMIN' || currentRole === 'ORDER') &&
-          selectedReq.status === 'QUOTED' && (
-            <button
-              type="button"
-              onClick={() => onPricing(selectedReq.id)}
-              className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[9px] px-[18px] text-[16px] font-extrabold text-[#334155] cursor-pointer shadow-sm"
-            >
-              Sửa giá đã báo
-            </button>
-          )}
-        {/* Hủy / khôi phục — CHỈ ADMIN (BE cũng chặn role khác). Hủy = đơn biến mất với Sale/Order,
-            hồ sơ vẫn giữ; khôi phục đưa đơn về đúng trạng thái trước khi hủy. */}
-        {currentRole === 'ADMIN' && CANCELLABLE_STATUSES.includes(selectedReq.status) && (
-          <button
-            type="button"
-            onClick={handleCancelClick}
-            className="bg-[#fff1f2] border border-[#fecdd3] rounded-[10px] py-[9px] px-[18px] text-[16px] font-extrabold text-[#be123c] cursor-pointer shadow-sm inline-flex items-center gap-[6px]"
-          >
-            <Ban size={16} /> Hủy yêu cầu
-          </button>
-        )}
-        {currentRole === 'ADMIN' && selectedReq.status === 'CANCELLED' && (
-          <button
-            type="button"
-            onClick={handleRestoreClick}
-            className="bg-surface border border-[#cbd5e1] rounded-[10px] py-[9px] px-[18px] text-[16px] font-extrabold text-[#334155] cursor-pointer shadow-sm inline-flex items-center gap-[6px]"
-          >
-            <RotateCcw size={16} /> Khôi phục
-          </button>
-        )}
         </div>
       </div>
 
@@ -476,7 +480,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           )}
 
           {/* Cảnh báo giá chưa được xác nhận cho Sale */}
-          {selectedReq && selectedReq.status !== 'QUOTED' && priceVal > 0 && currentRole === 'SALE' && (
+          {selectedReq && (selectedReq.status !== 'QUOTED' && selectedReq.status !== 'CLOSED') && priceVal > 0 && currentRole === 'SALE' && (
             <div className="bg-[#fff7ed] border-[1.5px] border-[#fed7aa] rounded-[12px] py-[16px] px-[20px] flex items-center gap-[14px] shadow-[0_2px_6px_rgba(234,88,12,0.08)]">
               <AlertTriangle size={24} color="#ea580c" className="shrink-0" />
               <div>
@@ -608,7 +612,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               <div className="flex flex-col gap-[14px]">
                 {/* Product Spec Badges (6 Badges Grid) */}
                 {(() => {
-                  const activeOpt = finalOption || selectedReq.options?.[0];
+                  const activeOpt = specOption || selectedReq.options?.[0];
 
                   const weightVal = activeOpt?.weightChi ?? selectedReq.weightChi;
                   const weightDisplay = weightVal != null && Number(weightVal) > 0 ? `${weightVal} chỉ` : 'Theo yêu cầu';
@@ -692,18 +696,20 @@ export const DetailPage: React.FC<DetailPageProps> = ({
           </div>
 
           {/* Multiple Quote Options — chỉ hiện sau khi đã báo giá chính thức (qua khỏi YÊU CẦU MỚI).
-              Ẩn ở PENDING vì lúc đó "option" (nếu có) chỉ là giá Sale tự ước tính lúc tạo yêu cầu
-              qua Calculator, chưa ai duyệt. */}
-          {selectedReq.status !== 'PENDING' && pricedOptions.length > 0 && (
+              Đã chốt với khách (CLOSED) thì thôi, chỉ còn giá cuối — TRỪ khi khách chốt ≥ 2 phương án: khi
+              đó liệt kê các sản phẩm đã chốt. Ẩn ở PENDING vì lúc đó "option" (nếu có) chỉ là giá Sale
+              tự ước tính lúc tạo yêu cầu qua Calculator, chưa ai duyệt. */}
+          {(selectedReq.status !== 'CLOSED' || isMultiClosed) && selectedReq.status !== 'PENDING' && listedOptions.length > 0 && (
             <div className={cardCls}>
               <div className="flex items-center justify-between mb-[16px]">
                 <h3 className="text-[19px] font-extrabold text-text m-0 flex items-center gap-[8px]">
-                  <Layers size={18} color="#d97706" /> Các Phương Án Báo Giá ({pricedOptions.length})
+                  <Layers size={18} color="#d97706" />{' '}
+                  {isMultiClosed ? `Sản Phẩm Đã Chốt (${listedOptions.length})` : `Các Phương Án Báo Giá (${listedOptions.length})`}
                 </h3>
-                {pricedOptions.length > 1 && (
+                {listedOptions.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => handleCopyAllOptions(pricedOptions)}
+                    onClick={() => handleCopyAllOptions(listedOptions)}
                     className={clsx(
                       'flex items-center gap-[6px] py-[6px] px-[12px] rounded-[8px] border border-[#cbd5e1] text-[15px] font-bold cursor-pointer',
                       copiedAllOpt ? 'bg-[#dcfce7] text-[#16a34a]' : 'bg-surface text-[#334155]',
@@ -715,19 +721,25 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               </div>
 
               <div className="flex flex-col gap-[8px]">
-                {pricedOptions.map((opt, idx) => (
+                {listedOptions.map((opt, idx) => (
                   <OptionCard
                     key={opt.id || idx}
                     opt={opt}
                     idx={idx}
-                    isFinalStatus={selectedReq.status === 'QUOTED'}
+                    isFinalStatus={selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'}
                     copied={copiedOptIdx === idx}
                     onCopy={() => handleCopyOptionPrice(idx, opt)}
-                    isSelected={opt.id ? opt.id === (selectedOptionId || finalOption?.id) : false}
+                    isSelected={opt.id ? opt.id === (isMultiClosed ? selectedOptionId : selectedOptionId || finalOption?.id) : false}
                     onSelect={() => opt.id && setSelectedOptionId(opt.id)}
                   />
                 ))}
               </div>
+              {isMultiClosed && (
+                <div className="flex items-center justify-between mt-[14px] pt-[12px] border-t border-dashed border-border">
+                  <span className="text-[15.5px] font-extrabold text-[#334155]">Tổng giá chốt ({listedOptions.length} sản phẩm)</span>
+                  <strong className="text-[19px] font-black text-[#16a34a]">{formatCurrency(Number(selectedReq.quotedPrice) || 0)}</strong>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -751,15 +763,19 @@ export const DetailPage: React.FC<DetailPageProps> = ({
             <div className="bg-surface rounded-[12px] p-[16px] border border-[#e5e7eb] mt-[4px]">
               <div className="flex items-center justify-between">
                 <span className="text-[13.5px] font-extrabold text-[#334155] tracking-[0.5px] uppercase block">
-                  {selectedOptionId && selectedOptionId !== finalOption?.id ? 'GIÁ PHƯƠNG ÁN ĐANG XEM' : 'TỔNG BÁO GIÁ CHỐT'}
+                  {showingClosedTotal
+                    ? `TỔNG GIÁ CHỐT (${closedOptions.length} SẢN PHẨM)`
+                    : selectedProduct
+                      ? 'GIÁ SẢN PHẨM ĐANG XEM'
+                      : selectedOptionId && selectedOptionId !== finalOption?.id ? 'GIÁ PHƯƠNG ÁN ĐANG XEM' : 'TỔNG BÁO GIÁ CHỐT'}
                 </span>
-                {selectedOptionId && selectedOptionId !== finalOption?.id && (
+                {(selectedProduct || (selectedOptionId && selectedOptionId !== finalOption?.id)) && (
                   <button
                     type="button"
                     onClick={() => setSelectedOptionId(null)}
                     className="text-[13px] font-bold text-[#2563eb] cursor-pointer bg-transparent border-0 p-0"
                   >
-                    Về phương án chính
+                    {isMultiClosed ? 'Xem tổng' : 'Về phương án chính'}
                   </button>
                 )}
               </div>
@@ -767,7 +783,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 className={clsx(
                   'text-[29px] font-black mt-[4px]',
                   displayedPriceVal > 0
-                    ? (selectedReq.status === 'QUOTED'
+                    ? (selectedReq.status === 'QUOTED' || selectedReq.status === 'CLOSED'
                         ? 'text-[#16a34a] not-italic opacity-100'
                         : 'text-[#334155] italic opacity-75')
                     : 'text-[#d97706] not-italic opacity-100',
@@ -775,6 +791,9 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               >
                 {displayedPriceVal > 0 ? formatCurrency(displayedPriceVal) : 'Chưa có giá chốt'}
               </div>
+              {showingClosedTotal && (
+                <div className="mt-[8px] text-[14px] text-muted">Bấm một sản phẩm ở bên trái để xem giá và bảng kê riêng của sản phẩm đó.</div>
+              )}
               {displayedPriceVal > 0 && renderPriceBreakdownLines(
                 getPriceBreakdown({ priceBreakdown: displayedOption?.priceBreakdown }),
               )}
@@ -786,7 +805,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                 </div>
               )}
 
-              {/* Chi tiết cấu thành giá — chỉ ORDER/ADMIN xem, Sale chỉ thấy tổng.
+              {/* Chi tiết cấu thành giá — chỉ ORDER/ADMIN xem, vẫn hiện kể cả khi đã CLOSED (Sale chỉ thấy tổng).
                   Chưa có giá chốt thì chưa có gì đáng tin để hiện — ẩn hết, chỉ để lại "Chưa có giá chốt". */}
               {displayedPriceVal > 0 && (currentRole === 'ORDER' || currentRole === 'ADMIN') && displayedOption &&
                (displayedOption.weightChi != null || displayedOption.totalMetalCost != null || displayedOption.laborCost != null || displayedOption.stonePrice != null || displayedOption.stoneCost != null || displayedOption.vat != null) && (

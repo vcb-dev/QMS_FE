@@ -23,6 +23,7 @@ const CreateModal = lazy(() => import('./components/CreateModal').then((m) => ({
 const PricingModal = lazy(() => import('./components/PricingModal').then((m) => ({ default: m.PricingModal })));
 const RejectModal = lazy(() => import('./components/RejectModal').then((m) => ({ default: m.RejectModal })));
 const ReturnModal = lazy(() => import('./components/ReturnModal').then((m) => ({ default: m.ReturnModal })));
+const MarkClosedModal = lazy(() => import('./components/MarkClosedModal').then((m) => ({ default: m.MarkClosedModal })));
 const ExportModal = lazy(() => import('./components/ExportModal').then((m) => ({ default: m.ExportModal })));
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -74,13 +75,14 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
     loading, loadingMessage,
     listLoading, toastMessage, setToastMessage, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
-    returnReqId, setReturnReqId,
+    returnReqId, setReturnReqId, closeOptionReq, setCloseOptionReq, actionTick,
     handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handleQuoteNow,
     handlePricingSubmit,
     handleRejectSubmit, handleReturnSubmit, handleResubmitDirect,
     handleCancelRequest, handleRestoreRequest,
+    handleMarkClosedClick, handleUnmarkClosed, handleCloseOptionSubmit,
     refreshQuietly,
   } = useQuoteRequests(currentUser, currentRole, listDataEnabled, masterDataEnabled);
 
@@ -237,6 +239,8 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
                 onCancel={handleCancelRequest}
                 onRestore={handleRestoreRequest}
                 onDelete={handleDeleteRequest}
+                onMarkClosed={handleMarkClosedClick}
+                onUnmarkClosed={handleUnmarkClosed}
                 onOpenCreate={handleOpenCreate}
                 onOpenExport={currentRole === 'SALE' ? undefined : () => setIsExportOpen(true)}
                 onResetFilters={() => { handleResetFilters(); }}
@@ -248,8 +252,16 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
               <DetailPage
                 selectedReq={selectedReq} currentRole={currentRole} currentUser={currentUser!}
                 socket={globalSocket}
+                refreshKey={actionTick}
+                onEdit={handleOpenEdit}
+                onAccept={handleAccept}
                 onQuoteNow={handleQuoteNow}
                 onPricing={(id) => setPricingReqId(id)}
+                onReject={(id) => setRejectReqId(id)}
+                onReturn={(id) => setReturnReqId(id)}
+                onResubmit={handleResubmitDirect}
+                onMarkClosed={handleMarkClosedClick}
+                onUnmarkClosed={handleUnmarkClosed}
                 onCancel={handleCancelRequest}
                 onRestore={handleRestoreRequest}
               />
@@ -317,6 +329,16 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
         {returnReqId !== null && (
           <ReturnModal isOpen onClose={() => setReturnReqId(null)}
             onSubmit={handleReturnSubmit} />
+        )}
+
+        {closeOptionReq !== null && (
+          <MarkClosedModal
+            isOpen
+            reqCode={closeOptionReq.code}
+            options={(closeOptionReq.options || []).filter((o) => o.quotedPrice != null)}
+            onClose={() => setCloseOptionReq(null)}
+            onSubmit={handleCloseOptionSubmit}
+          />
         )}
 
         {isExportOpen && currentRole !== 'SALE' && (

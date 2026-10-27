@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { Edit, CheckCircle, XCircle, FilePlus, Clock, RotateCcw, ChevronDown, HelpCircle, X, MessageCircle, Ban } from 'lucide-react';
+import { CheckCircle, XCircle, FilePlus, Clock, RotateCcw, Award, HelpCircle, X, MessageCircle, Ban } from 'lucide-react';
 import { formatCurrency, formatDuration } from '../utils/currency';
-import { STATUS_BADGE_META, UI_CONSTANTS } from '../constants';
+import { UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { getPrimaryOption } from '../utils/quoteOption';
+import { StatusDropdown } from './StatusDropdown';
+import { getStatusDropdown, type StatusActionHandlers } from '../utils/statusActions';
 import {
   statusPillCls,
   statusPillNewCls,
@@ -30,6 +32,8 @@ type QuoteTableProps = Pick<
   | 'onPricing'
   | 'onReject'
   | 'onResubmit'
+  | 'onMarkClosed'
+  | 'onUnmarkClosed'
   | 'onCancel'
   | 'onRestore'
 > & {
@@ -81,6 +85,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
   onResubmit,
   onCancel,
   onRestore,
+  onMarkClosed,
+  onUnmarkClosed,
   unreadCounts,
   onOpenChat,
 }) => {
@@ -181,132 +187,6 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     );
   };
 
-  // ── Custom Status Dropdown (shows icon on trigger) ──
-  type StatusOption = {
-    value: string;
-    label: string;
-    icon: React.ReactNode;
-    color: string;
-    bg: string;
-    border: string;
-  };
-
-  const STATUS_META: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
-    PENDING:       { ...STATUS_BADGE_META.PENDING,        icon: <FilePlus size={13} /> },
-    PROCESSING:    { ...STATUS_BADGE_META.PROCESSING,     icon: <Clock size={13} /> },
-    QUOTED:        { ...STATUS_BADGE_META.QUOTED,         icon: <CheckCircle size={13} /> },
-    REJECTED:      { ...STATUS_BADGE_META.REJECTED,       icon: <XCircle size={13} /> },
-    NEED_MORE_INFO:{ ...STATUS_BADGE_META.NEED_MORE_INFO, icon: <RotateCcw size={13} /> },
-    CANCELLED:     { ...STATUS_BADGE_META.CANCELLED,      icon: <Ban size={13} /> },
-  };
-
-  const StatusDropdown: React.FC<{
-    current: string;
-    options: StatusOption[];
-    onChange: (val: string) => void;
-  }> = ({ current, options, onChange }) => {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-    const meta = STATUS_META[current] || { label: current, icon: null, color: '#334155', bg: '#f8fafc', border: '#e2e8f0' };
-
-    const updateMenuPosition = () => {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (rect) setMenuPosition({ top: rect.bottom + 4, left: rect.left });
-    };
-
-    useEffect(() => {
-      if (!open) return;
-      const handler = (e: MouseEvent) => {
-        const target = e.target as Node;
-        if (!ref.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
-      };
-      document.addEventListener('mousedown', handler);
-      window.addEventListener('resize', updateMenuPosition);
-      document.addEventListener('scroll', updateMenuPosition, true);
-      return () => {
-        document.removeEventListener('mousedown', handler);
-        window.removeEventListener('resize', updateMenuPosition);
-        document.removeEventListener('scroll', updateMenuPosition, true);
-      };
-    }, [open]);
-
-    return (
-      <div ref={ref} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
-        {/* Trigger */}
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => {
-            if (!open) updateMenuPosition();
-            setOpen(!open);
-          }}
-          className="inline-flex items-center justify-center gap-[4px] min-w-[118px] py-[4px] px-[10px] rounded-[20px] text-[14.5px] font-bold cursor-pointer whitespace-nowrap shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[all_0.12s]"
-          // động — giữ inline
-          style={{
-            border: `1px solid ${meta.border}`,
-            background: meta.bg,
-            color: meta.color,
-          }}
-        >
-          <span
-            className="flex items-center"
-            // động — giữ inline
-            style={{ color: meta.color }}
-          >
-            {meta.icon}
-          </span>
-          {meta.label}
-          <ChevronDown
-            size={11}
-            className={clsx('ml-[1px] opacity-70 transition-[transform_0.15s]', open && 'rotate-180')}
-          />
-        </button>
-
-        {/* Dropdown Panel */}
-        {open && createPortal(
-          <div
-            ref={menuRef}
-            className="fixed z-[9999] bg-surface border border-border rounded-[10px] shadow-[0_8px_24px_-4px_rgba(0,0,0,0.12)] p-[4px] min-w-[180px]"
-            // động — giữ inline
-            style={{
-              top: menuPosition.top,
-              left: menuPosition.left,
-            }}
-          >
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => { onChange(opt.value); setOpen(false); }}
-                className={clsx(
-                  'flex items-center gap-[8px] w-full py-[7px] px-[10px] border-0 rounded-[7px] text-[15.5px] cursor-pointer text-left',
-                  opt.value === current ? 'font-bold' : 'font-medium',
-                )}
-                // động — giữ inline
-                style={{
-                  background: opt.value === current ? opt.bg : 'transparent',
-                  color: opt.color,
-                }}
-              >
-                <span
-                  // động — giữ inline
-                  style={{ color: opt.color }}
-                >
-                  {opt.icon}
-                </span>
-                {opt.label}
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
-      </div>
-    );
-  };
-
   // Chất liệu nhiều hơn 1: chỉ hiện cái đầu + "...", bấm vào xổ dọc xuống dưới (không tràn ngang)
   const MaterialsCell: React.FC<{ materials: string[] }> = ({ materials }) => {
     const [expanded, setExpanded] = useState(false);
@@ -346,226 +226,77 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     );
   };
 
-  const renderStatusCell = (r: QuoteRequest, isMyReq: boolean) => {
-    const canCancel = currentRole === 'ADMIN' && !!onCancel;
-    const canRestore = currentRole === 'ADMIN' && !!onRestore;
-    const cancelOptions: StatusOption[] = canCancel
-  ? [{ value: 'CANCEL', label: 'Hủy yêu cầu', icon: <Ban size={13} />, color: '#be123c', bg: '#fff1f2', border: '#fecdd3' }]
-  : [];
-const restoreOption: StatusOption =
-  { value: 'RESTORE', label: 'Khôi phục', icon: <RotateCcw size={13} />, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' };
-// Giống DetailPage: confirm trước khi gọi. Giá trị khác CANCEL/RESTORE thì bỏ qua.
-const handleCancelRestore = (r: QuoteRequest, val: string) => {
-  if (val === 'CANCEL' && window.confirm(`Hủy yêu cầu ${r.code}?\n\nĐơn sẽ ẩn với Sale/Order, chỉ Admin còn thấy (tab "Đã hủy") và có thể khôi phục.`)) {
-    onCancel?.(r.id);
-  } else if (val === 'RESTORE' && window.confirm(`Khôi phục yêu cầu ${r.code}?`)) {
-    onRestore?.(r.id);
-  }
-};
+  // Hủy/khôi phục: hỏi xác nhận rồi mới gọi (DetailPage có câu hỏi riêng, kèm tải lại đơn).
+  const statusHandlers: StatusActionHandlers = {
+    onEdit,
+    onAccept,
+    onQuoteNow,
+    onPricing,
+    onReject,
+    onReturn,
+    onResubmit,
+    onMarkClosed,
+    onUnmarkClosed,
+    onCancel: onCancel && ((req) => {
+      if (window.confirm(`Hủy yêu cầu ${req.code}?\n\nĐơn sẽ ẩn với Sale/Order, chỉ Admin còn thấy (tab "Đã hủy") và có thể khôi phục.`)) onCancel(req.id);
+    }),
+    onRestore: onRestore && ((req) => {
+      if (window.confirm(`Khôi phục yêu cầu ${req.code}?`)) onRestore(req.id);
+    }),
+  };
 
-    if (currentRole === 'SALE') {
-      if (isMyReq && r.status === 'PENDING') {
+  // Có thao tác -> dropdown (quy tắc theo role/trạng thái ở utils/statusActions); không có -> pill tĩnh.
+  const renderStatusCell = (r: QuoteRequest) => {
+    const dropdown = getStatusDropdown(r, { role: currentRole, user: currentUser }, statusHandlers);
+    if (dropdown) return <StatusDropdown {...dropdown} />;
+
+    switch (r.status) {
+      case 'PENDING':
         return (
-          <StatusDropdown
-            current="PENDING"
-            options={[
-              { value: 'EDIT', label: 'Sửa yêu cầu', icon: <Edit size={13} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
-            ]}
-            onChange={(val) => {
-              if (val === 'EDIT') onEdit(r);
-            }}
-          />
+          <span className={clsx(statusPillCls, statusPillNewCls)}>
+            <FilePlus size={13} color="#1d4ed8" /> Yêu cầu mới
+          </span>
         );
-      }
-
-      if (isMyReq && r.status === 'NEED_MORE_INFO') {
+      case 'PROCESSING':
         return (
-          <StatusDropdown
-            current="NEED_MORE_INFO"
-            options={[
-              { value: 'EDIT', label: 'Sửa / Bổ sung', icon: <Edit size={13} />, color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
-              ...(onResubmit
-                ? [{ value: 'RESUBMIT', label: 'Gửi lại (không sửa gì)', icon: <RotateCcw size={13} />, color: '#b45309', bg: '#fffbeb', border: '#fde68a' }]
-                : []),
-            ]}
-            onChange={(val) => {
-              if (val === 'EDIT') onEdit(r);
-              else if (val === 'RESUBMIT' && onResubmit) onResubmit(r.id);
-            }}
-          />
+          <span className={clsx(statusPillCls, statusPillProcessCls)}>
+            <Clock size={13} color="#b45309" /> Đang xử lý
+          </span>
         );
-      }
-
-      switch (r.status) {
-        case 'PENDING':
-          return (
-            <span className={clsx(statusPillCls, statusPillNewCls)}>
-              <FilePlus size={13} color="#1d4ed8" /> Yêu cầu mới
-            </span>
-          );
-        case 'PROCESSING':
-          return (
-            <span className={clsx(statusPillCls, statusPillProcessCls)}>
-              <Clock size={13} color="#b45309" /> Đang xử lý
-            </span>
-          );
-        case 'QUOTED':
-          return (
-            <span className={clsx(statusPillCls, statusPillDoneCls)}>
-              <CheckCircle size={13} color="#15803d" /> Đã báo giá
-            </span>
-          );
-        case 'REJECTED':
-          return (
-            <span className={clsx(statusPillCls, statusPillRejectCls)}>
-              <XCircle size={13} color="#be123c" /> Từ chối
-            </span>
-          );
-        case 'NEED_MORE_INFO':
-          return (
-            <span className={clsx(statusPillCls, 'bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]')}>
-              <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
-            </span>
-          );
-        default:
-          return <span className={clsx(statusPillCls, statusPillNewCls)}>{r.status}</span>;
-      }
-    }
-
-    // ORDER / ADMIN Role: Custom Icon Dropdown
-    if (r.status === 'PENDING') {
-      return (
-        <StatusDropdown
-          current="PENDING"
-          options={[
-            { value: 'PENDING',       ...STATUS_META.PENDING,    label: 'Yêu cầu mới' },
-            { value: 'PROCESSING',    ...STATUS_META.PROCESSING, label: 'Tiếp nhận (Đang xử lý)' },
-            { value: 'QUOTE_NOW',     ...STATUS_META.QUOTED,     label: 'Báo giá luôn' },
-            ...cancelOptions,
-          ]}
-          onChange={(val) => {
-            if (val === 'PROCESSING') onAccept(r.id, r.version);
-            // Báo giá luôn: tiếp nhận + khóa đơn rồi mở modal nhập giá. Nếu người khác vừa tiếp
-            // nhận trước, bước tiếp nhận sẽ báo lỗi và modal không mở (xử lý ở onQuoteNow).
-            else if (val === 'QUOTE_NOW') onQuoteNow(r.id, r.version);
-            handleCancelRestore(r, val);
-          }}
-        />
-      );
-    }
-
-    if (r.status === 'PROCESSING') {
-      const isAssignedToCurrentPricing =
-        r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email;
-
-      // BE cho phép bất kỳ Order nào báo giá thẳng vào request đang do Order khác tiếp nhận
-      // (fix/quote-any-order-can-quote). Tuy nhiên REJECT/RETURN vẫn chỉ dành cho assignee hiện tại.
-      if (currentRole === 'ORDER' && !isAssignedToCurrentPricing) {
+      case 'QUOTED':
         return (
-          <StatusDropdown
-            current="PROCESSING"
-            options={[
-              { value: 'PROCESSING', ...STATUS_META.PROCESSING },
-              { value: 'QUOTED',     ...STATUS_META.QUOTED, label: 'Chốt giá (Đã báo giá)' },
-            ]}
-            onChange={(val) => {
-              if (val === 'QUOTED') onPricing(r.id);
-            }}
-          />
+          <span className={clsx(statusPillCls, statusPillDoneCls)}>
+            <CheckCircle size={13} color="#15803d" /> Đã báo giá
+          </span>
         );
-      }
-
-      return (
-        <StatusDropdown
-          current="PROCESSING"
-          options={[
-            { value: 'PROCESSING',    ...STATUS_META.PROCESSING },
-            { value: 'QUOTED',        ...STATUS_META.QUOTED,        label: 'Chốt giá (Đã báo giá)' },
-            { value: 'NEED_MORE_INFO',...STATUS_META.NEED_MORE_INFO, label: 'Trả lại Sale (Cần bổ sung)' },
-            { value: 'REJECTED',      ...STATUS_META.REJECTED,      label: 'Từ chối hẳn' },
-            ...cancelOptions,
-          ]}
-          onChange={(val) => {
-            if (val === 'QUOTED') onPricing(r.id);
-            else if (val === 'NEED_MORE_INFO' && onReturn) onReturn(r.id);
-            else if (val === 'REJECTED') onReject(r.id);
-            handleCancelRestore(r, val);
-          }}
-        />
-      );
-    }
-
-    if (r.status === 'NEED_MORE_INFO') {
-       if (canCancel) {                                   // ← chèn từ đây
+      case 'REJECTED':
         return (
-          <StatusDropdown
-          current="NEED_MORE_INFO"
-          options={[{ value: 'NEED_MORE_INFO', ...STATUS_META.NEED_MORE_INFO, label: 'Cần bổ sung' }, ...cancelOptions]}
-         onChange={(val) => handleCancelRestore(r, val)}
-        />
-      );
-      } 
-      return (
-        <span className={clsx(statusPillCls, 'bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]')}>
-          <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
-        </span>
-      );
-    }
-
-    // Sửa giá đã báo — ADMIN mọi đơn, ORDER bất kỳ (không cần là assignee, đồng bộ BE fix).
-    const canEditQuotedPrice = currentRole === 'ADMIN' || currentRole === 'ORDER';
-
-    if (r.status === 'QUOTED') {
-      if (canEditQuotedPrice) {
+          <span className={clsx(statusPillCls, statusPillRejectCls)} title="Trạng thái từ chối">
+            <XCircle size={13} color="#be123c" /> {currentRole === 'SALE' ? 'Từ chối' : 'Từ chối hẳn'}
+          </span>
+        );
+      case 'NEED_MORE_INFO':
         return (
-          <StatusDropdown
-            current="QUOTED"
-            options={[
-              { value: 'QUOTED', ...STATUS_META.QUOTED, label: 'Đã báo giá' },
-              { value: 'EDIT_PRICE', label: 'Sửa giá đã báo', icon: <Edit size={13} />, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
-              ...cancelOptions
-            ]}
-            onChange={(val) => {
-              if (val === 'EDIT_PRICE') onPricing(r.id);
-              handleCancelRestore(r, val);
-            }}
-          />
+          <span className={clsx(statusPillCls, 'bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]')}>
+            <RotateCcw size={13} color="#ea580c" /> Cần bổ sung
+          </span>
         );
-      }
-      return (
-        <span className={clsx(statusPillCls, statusPillDoneCls)} title="Trạng thái hoàn tất">
-          <CheckCircle size={13} color="#15803d" /> Đã báo giá
-        </span>
-      );
-    }
-
-    if (r.status === 'REJECTED') {
-      return (
-        <span className={clsx(statusPillCls, statusPillRejectCls)} title="Trạng thái từ chối">
-          <XCircle size={13} color="#be123c" /> Từ chối hẳn
-        </span>
-      );
-    }
-
-    // Chỉ ADMIN nhận được đơn ở trạng thái này (tab "Đã hủy"); khôi phục thao tác ở trang chi tiết.
-    if (r.status === 'CANCELLED') {
-      if (canRestore) {                                  // ← chèn từ đây
-       return (
-       <StatusDropdown
-        current="CANCELLED"
-        options={[{ value: 'CANCELLED', ...STATUS_META.CANCELLED, label: 'Đã hủy' }, restoreOption]}
-        onChange={(val) => handleCancelRestore(r, val)}
-      />
+      case 'CLOSED':
+        return (
+          <span className={clsx(statusPillCls, 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]')} title="Khách đã chốt mua">
+            <Award size={13} color="#6d28d9" /> Đã chốt
+          </span>
         );
-      } 
-      return (
-        <span className={clsx(statusPillCls, 'bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]')} title="Đã hủy — chỉ Admin thấy">
-          <Ban size={13} color="#475569" /> Đã hủy
-        </span>
-      );
+      // Chỉ ADMIN nhận được đơn ở trạng thái này (tab "Đã hủy").
+      case 'CANCELLED':
+        return (
+          <span className={clsx(statusPillCls, 'bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]')} title="Đã hủy — chỉ Admin thấy">
+            <Ban size={13} color="#475569" /> Đã hủy
+          </span>
+        );
+      default:
+        return <span className={clsx(statusPillCls, statusPillNewCls)}>{r.status}</span>;
     }
-
-    return <span className={clsx(statusPillCls, statusPillNewCls)}>{r.status}</span>;
   };
 
   return (
@@ -634,13 +365,6 @@ const handleCancelRestore = (r: QuoteRequest, val: string) => {
             const isSelected = r.id === selectedId || r.code === selectedId;
             const isRejected = r.status === 'REJECTED';
             const isCancelled = r.status === 'CANCELLED';
-            const isMyReq =
-              currentRole === 'ORDER'
-                ? r.assignee?.id === currentUser.id || r.assignee?.email === currentUser.email
-                : r.createdBy?.id === currentUser.id ||
-                  r.requester?.id === currentUser.id ||
-                  r.requester?.email === currentUser.email;
-
             const materialsList = r.materials && r.materials.length > 0
               ? r.materials.map((m) => m.name)
               : r.material ? [r.material.name] : ['---'];
@@ -708,7 +432,7 @@ const handleCancelRestore = (r: QuoteRequest, val: string) => {
                       })
                     : '---'}
                 </td>
-                <td>{renderStatusCell(r, isMyReq)}</td>
+                <td>{renderStatusCell(r)}</td>
                 <td>
                   <div className="relative inline-block">
                     <img
@@ -759,7 +483,7 @@ const handleCancelRestore = (r: QuoteRequest, val: string) => {
                     </div>
                   </td>
                 ) : priceVal > 0 ? (
-                  r.status === 'QUOTED' ? (
+                  (r.status === 'QUOTED' || r.status === 'CLOSED') ? (
                     <td className="text-[#0f766e] rounded-[6px] py-[6px] px-[8px] font-extrabold text-[16px]">
                       <div className="flex flex-col">
                         {formattedPrice}

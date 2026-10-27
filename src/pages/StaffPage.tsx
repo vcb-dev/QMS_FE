@@ -126,7 +126,7 @@ export const StaffPage: React.FC = () => {
   // Tìm kiếm/sắp xếp/phân trang cho 2 bảng hiệu suất (Sale / Order) — BE tự lọc/sort/cắt trang
   // theo các state này (xem effect nạp performance bên dưới), FE chỉ giữ state UI.
   const [saleSearch, setSaleSearch] = useState('');
-  const [saleSortField, setSaleSortField] = useState<'name' | 'total'>('name');
+  const [saleSortField, setSaleSortField] = useState<'name' | 'total' | 'closed' | 'closeRate'>('name');
   const [saleSortDir, setSaleSortDir] = useState<'asc' | 'desc'>('asc');
   const [salePage, setSalePage] = useState(1);
   const [salePageSize, setSalePageSize] = useState(10);
@@ -870,7 +870,7 @@ export const StaffPage: React.FC = () => {
               <h2 className={cardHeadingCls}>
                 <TrendingUp size={16} color="#2563eb" /> Hiệu suất Sale
               </h2>
-              <span className="text-[14px] text-muted">Số yêu cầu đã tạo của từng Sale</span>
+              <span className="text-[14px] text-muted">Số yêu cầu đã tạo & đã chốt của từng Sale</span>
 
               {pagedSaleStats.length > 0 ? (
                 <div className="overflow-x-auto mt-[10px]">
@@ -901,6 +901,30 @@ export const StaffPage: React.FC = () => {
                             Đã tạo <ArrowUpDown size={11} />
                           </button>
                         </th>
+                        <th className={clsx(staffThCls, 'text-right')}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSaleSort('closed')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                              saleSortField === 'closed' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Đã chốt <ArrowUpDown size={11} />
+                          </button>
+                        </th>
+                        <th className={clsx(staffThCls, 'text-right')}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSaleSort('closeRate')}
+                            className={clsx(
+                              'inline-flex items-center gap-[4px] bg-transparent border-0 p-0 cursor-pointer text-[13.5px] font-extrabold uppercase ml-auto',
+                              saleSortField === 'closeRate' ? 'text-primary' : 'text-muted'
+                            )}
+                          >
+                            Tỷ lệ chốt <ArrowUpDown size={11} />
+                          </button>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -908,6 +932,8 @@ export const StaffPage: React.FC = () => {
                         <tr key={s.id} className="border-b border-[#f8fafc]">
                           <td className="p-[10px] font-bold text-[#0f172a]">{s.name}</td>
                           <td className="p-[10px] text-right text-[#334155]">{s.total}</td>
+                          <td className="p-[10px] text-right text-[#334155]">{s.closed}</td>
+                          <td className="p-[10px] text-right text-[#16a34a] font-bold">{s.closeRate.toFixed(1)}%</td>
                         </tr>
                       ))}
                     </tbody>

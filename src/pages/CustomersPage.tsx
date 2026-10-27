@@ -7,7 +7,7 @@ import {
   dateInputIconCls,
   popoverLabelCls,
 } from '../styles/classNames';
-import { Search, Users, ChevronDown, ChevronUp, MapPin, Phone, Calendar, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { Search, Users, TrendingUp, ChevronDown, ChevronUp, MapPin, Phone, Calendar, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { fetchCustomerStats, fetchCustomerMonthComparison, fetchQuoteRequests, fetchProvinces, getAllUsersApi } from '../services/api';
 import type { CustomerStatRow, SortMode, QuoteRequest, StaffUser, CustomerMonthComparisonResponse } from '../types';
 import { formatCurrency } from '../utils/currency';
@@ -21,7 +21,7 @@ export const CustomersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('MOST_ORDERS');
+  const [sortMode, setSortMode] = useState<SortMode>('TOP_SPEND');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -179,6 +179,13 @@ export const CustomersPage: React.FC = () => {
           value={monthComparison?.current.customerCount ?? 0}
           deltaPct={monthComparison?.customerCountDeltaPct}
         />
+        <StatCard
+          icon={<TrendingUp size={14} />}
+          label="Giá trị đã chốt (tháng này)"
+          value={formatCurrency(monthComparison?.current.closedValue ?? 0)}
+          tone="success"
+          deltaPct={monthComparison?.closedValueDeltaPct}
+        />
       </div>
 
       <div className="bg-surface border border-border rounded-[14px] p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
@@ -308,6 +315,7 @@ export const CustomersPage: React.FC = () => {
 
           <div className="flex gap-[6px] flex-wrap">
             {([
+              { key: 'TOP_SPEND', label: 'Chi tiêu nhiều nhất' },
               { key: 'MOST_ORDERS', label: 'Nhiều đơn nhất' },
               { key: 'RECENT', label: 'Mới nhất' },
             ] as { key: SortMode; label: string }[]).map((opt) => (
@@ -341,7 +349,7 @@ export const CustomersPage: React.FC = () => {
                   <div
                     onClick={() => handleToggleExpand(s.customer.id)}
                     className={clsx(
-                      'grid grid-cols-[2fr_1fr_1fr_auto] gap-[10px] items-center py-[12px] px-[14px] cursor-pointer',
+                      'grid grid-cols-[2fr_1fr_1fr_1fr_1.3fr_auto] gap-[10px] items-center py-[12px] px-[14px] cursor-pointer',
                       isExpanded ? 'bg-page' : 'bg-surface',
                     )}
                   >
@@ -356,9 +364,17 @@ export const CustomersPage: React.FC = () => {
                       <div className="text-[13px] text-faint font-bold uppercase">Tổng đơn</div>
                       {s.totalOrders}
                     </div>
+                    <div className="text-[15.5px] text-[#334155]">
+                      <div className="text-[13px] text-faint font-bold uppercase">Đã chốt</div>
+                      {s.totalClosed}
+                    </div>
                     <div className="text-[15.5px] text-muted">
                       <div className="text-[13px] text-faint font-bold uppercase">Đơn gần nhất</div>
                       {s.lastOrder ? new Date(s.lastOrder).toLocaleDateString('vi-VN') : '---'}
+                    </div>
+                    <div className="text-[16px] font-black text-tone-green-text">
+                      <div className="text-[13px] text-faint font-bold uppercase">Giá trị đã chốt</div>
+                      {formatCurrency(s.closedValue)}
                     </div>
                     <div className="text-faint">
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -394,7 +410,7 @@ export const CustomersPage: React.FC = () => {
                                   >
                                     {meta.label}
                                   </span>
-                                  <span className="font-bold text-[#334155]">
+                                  <span className={clsx('font-bold', o.status === 'CLOSED' ? 'text-tone-green-text' : 'text-[#334155]')}>
                                     {o.quotedPrice ? formatCurrency(Number(o.quotedPrice)) : '---'}
                                   </span>
                                 </div>

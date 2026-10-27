@@ -383,6 +383,15 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                   <span className="absolute top-[8px] right-[8px] bg-[rgba(15,23,42,0.75)] backdrop-blur-[4px] text-surface text-[13px] font-bold py-[2px] px-[6px] rounded-[6px] tabular-nums">
                     {item.code}
                   </span>
+                  {/* Đơn chốt từ 2 phương án: mỗi phương án chốt là 1 sản phẩm (1 thẻ) trên cùng yêu cầu */}
+                  {item.closedProduct && (
+                    <span
+                      className="absolute bottom-[8px] left-[8px] bg-[#6d28d9] text-surface text-[13px] font-bold py-[2px] px-[8px] rounded-[10px]"
+                      title={`Sản phẩm ${item.closedProduct.index}/${item.closedProduct.count} của yêu cầu ${item.code}`}
+                    >
+                      Sản phẩm {item.closedProduct.index}/{item.closedProduct.count}
+                    </span>
+                  )}
                 </div>
 
                 {/* Body Details */}
