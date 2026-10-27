@@ -197,7 +197,8 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   }, [socket, id, selectedReq?.id]);
 
   // Chat nhóm theo yêu cầu: người tạo (Sale) + assignee luôn vào được, cộng bất kỳ ORDER/ADMIN
-  // nào khác (khớp quyền BE ở QuoteChatService.assertParticipant).
+  // nào khác (khớp quyền BE ở QuoteChatService.assertParticipant). Đơn mới tạo chưa có assignee
+  // vẫn nhắn được ngay.
   const isChatParticipant =
     !!selectedReq &&
     (currentUser.id === selectedReq.requesterId ||
@@ -207,7 +208,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
   // 2. Chat phòng: Join room và lắng nghe tin nhắn mới qua socket dùng chung
   useEffect(() => {
-    if (!socket || !selectedReq?.id || !selectedReq?.assigneeId || !isChatParticipant) return;
+    if (!socket || !selectedReq?.id || !isChatParticipant) return;
 
     const joinRoom = () => {
       socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: selectedReq.id });
@@ -232,7 +233,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
       socket.off('connect', joinRoom);
       socket.off(CHAT_EVENTS.NEW_MESSAGE, handleNewMessage);
     };
-  }, [socket, selectedReq?.id, selectedReq?.assigneeId, isChatParticipant]);
+  }, [socket, selectedReq?.id, isChatParticipant]);
 
   const handleCopyOptionPrice = (idx: number, opt: QuoteOption) => {
     const text = formatOptionCopyLine(opt);
@@ -1027,7 +1028,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
         />
       )}
 
-      {selectedReq.assigneeId && isChatParticipant && socket && (
+      {isChatParticipant && socket && (
         <ChatPopup
           key={selectedReq.id}
           quoteRequestId={selectedReq.id}

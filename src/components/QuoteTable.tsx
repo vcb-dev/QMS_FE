@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
-import { createPortal } from 'react-dom';
 import type { QuoteRequest, RequestsPageProps } from '../types';
-import { CheckCircle, XCircle, FilePlus, Clock, RotateCcw, Award, HelpCircle, X, MessageCircle, Ban } from 'lucide-react';
+import { CheckCircle, XCircle, FilePlus, Clock, RotateCcw, Award, HelpCircle, MessageCircle, Ban } from 'lucide-react';
+import { ImageLightbox } from './ImageLightbox';
 import { formatCurrency, formatDuration } from '../utils/currency';
 import { UI_CONSTANTS } from '../constants';
 import { getPriceBreakdown, renderPriceBreakdownLines } from '../utils/priceBreakdown';
@@ -115,47 +115,10 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
     try { localStorage.setItem('quoteTableRowHeight', rowHeight); } catch { /* private mode — bỏ qua */ }
   }, [rowHeight]);
 
-  // Ảnh sản phẩm đang bấm xem zoom — null = không mở lightbox
-  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-  // Mức zoom trong lightbox — lăn chuột để tăng/giảm, 1 = vừa khung
-  const [zoomScale, setZoomScale] = useState(1);
-  const ZOOM_MIN = 1;
-  const ZOOM_MAX = 4;
-  const ZOOM_STEP = 0.2;
-
-  // Kéo ảnh để xem chỗ khác khi đang zoom — kéo chuột trên ảnh, cuộn khung chứa theo
-  const lightboxScrollRef = useRef<HTMLDivElement>(null);
-  const dragStateRef = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      const el = lightboxScrollRef.current;
-      const drag = dragStateRef.current;
-      if (!el || !drag) return;
-      el.scrollLeft = drag.scrollLeft - (e.clientX - drag.startX);
-      el.scrollTop = drag.scrollTop - (e.clientY - drag.startY);
-    };
-    const handleMouseUp = () => setIsDragging(false);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-
-  const handleImageMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (zoomScale <= ZOOM_MIN) return;
-    const el = lightboxScrollRef.current;
-    if (!el) return;
-    dragStateRef.current = { startX: e.clientX, startY: e.clientY, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop };
-    setIsDragging(true);
-  };
-
+  // Ảnh sản phẩm của dòng đang bấm xem phóng to — null = không mở lightbox. Giữ CẢ danh sách ảnh của
+  // đơn (không chỉ ảnh bấm) để lightbox dùng chung chuyển qua lại được giữa các ảnh. Logic zoom/pan/
+  // phím tắt nằm hết ở <ImageLightbox>, ở đây chỉ giữ ảnh nào đang mở.
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
 
 
   const renderProcessingTimeCell = (r: QuoteRequest) => {
@@ -381,14 +344,14 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             const displaySaleName = r.requester?.name || '---';
             const displayNote = r.desiredLeadTime || '---';
 
-            // Chat chỉ giữa 2 người liên quan tới đơn (giống DetailPage) và chỉ có ý nghĩa khi đã
-            // có người xử lý (assignee) — PENDING chưa ai nhận thì chưa có ai để nhắn.
-            const isChatParticipant =
+            // Chat nhóm theo đơn (giống DetailPage): người tạo (Sale) + assignee + mọi ORDER/ADMIN.
+            // Không đòi phải có assignee — đơn mới tạo (PENDING) đã nhắn được ngay, khớp BE
+            // (QuoteChatService.assertParticipant chỉ chặn đơn đã hủy).
+            const canChat =
               (r.requester?.id ?? r.requesterId) === currentUser.id ||
               (r.assignee?.id ?? r.assigneeId) === currentUser.id ||
               currentRole === 'ORDER' ||
               currentRole === 'ADMIN';
-            const canChat = isChatParticipant && !!(r.assignee?.id ?? r.assigneeId);
             const unread = unreadCounts[r.id] || 0;
 
             return (
@@ -441,8 +404,12 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                       alt="SP"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setZoomScale(1);
-                        setZoomedImage(r.images && r.images.length > 0 ? r.images[0].imageUrl : UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE);
+                        setLightbox({
+                          images: r.images && r.images.length > 0
+                            ? r.images.map((img) => img.imageUrl)
+                            : [UI_CONSTANTS.FALLBACK_PRODUCT_IMAGE],
+                          index: 0,
+                        });
                       }}
                     />
                     {r.images && r.images.length > 1 && (
@@ -553,57 +520,13 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
       </table>
       </div>
 
-      {zoomedImage && createPortal(
-        <div
-          ref={lightboxScrollRef}
-          onClick={() => { setZoomedImage(null); setZoomScale(1); }}
-          onWheel={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setZoomScale((s) => {
-              const next = s + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP);
-              return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
-            });
-          }}
-          className={clsx(
-            'fixed inset-0 z-[9999] bg-[rgba(15,23,42,0.85)] flex items-center justify-center p-[40px] overflow-auto',
-            zoomScale > ZOOM_MIN ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-out',
-            isDragging ? 'select-none' : 'select-auto',
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => { setZoomedImage(null); setZoomScale(1); }}
-            className="fixed top-[20px] right-[24px] bg-[rgba(255,255,255,0.12)] border-0 rounded-full w-[40px] h-[40px] flex items-center justify-center text-white cursor-pointer z-[1]"
-            title="Đóng"
-          >
-            <X size={20} />
-          </button>
-          <span className="fixed bottom-[20px] left-1/2 -translate-x-1/2 text-[rgba(255,255,255,0.7)] text-[15px] font-semibold">
-            Lăn chuột để phóng to / thu nhỏ · Kéo ảnh để xem chỗ khác · {Math.round(zoomScale * 100)}%
-          </span>
-          <img
-            src={zoomedImage}
-            alt="Xem phóng to"
-            draggable={false}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={handleImageMouseDown}
-            className={clsx(
-              'max-w-none h-auto shrink-0 object-contain rounded-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.4)] m-auto',
-              zoomScale > ZOOM_MIN ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default',
-              isDragging ? 'transition-none' : 'transition-[width_0.05s_linear]',
-            )}
-            // động — giữ inline. Width ép cứng theo vw nhưng height chỉ h-auto (theo tỉ lệ ảnh gốc) —
-            // ảnh dọc (cao hơn rộng) ở width 70vw ra chiều cao thừa hẳn viewport, tràn xuống dưới. Thêm
-            // maxHeight để object-contain thu nhỏ lại theo tỉ lệ khi chiều cao vượt khung, giống cách
-            // ImageLightbox.tsx (component dùng chung) đã chặn bằng max-h-[80vh].
-            style={{
-              width: `${70 * zoomScale}vw`,
-              maxHeight: '85vh',
-            }}
-          />
-        </div>,
-        document.body,
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          activeIndex={lightbox.index}
+          onIndexChange={(index) => setLightbox((prev) => (prev ? { ...prev, index } : prev))}
+          onClose={() => setLightbox(null)}
+        />
       )}
     </div>
   );
