@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, LibraryProductsResponse, StaffUser, Team, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, MyPerformanceResponse, LibraryProductsResponse, StaffUser, Team, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
 import { STORAGE_KEYS } from '../constants';
 import { TEAM_FILTER_ALL } from '../constants/team';
 
@@ -299,6 +299,11 @@ export async function getStaffPerformanceApi(filter?: StaffPerformanceFilter): P
   // Cố ý KHÔNG dedupedGet: StaffPage nạp lại ngay sau khi đổi team/duyệt kèm team, nếu gộp vào request
   // cùng tham số còn đang bay thì nhận về số liệu trước khi đổi. Effect đã debounce nên không bắn thừa.
   return apiCall(api.get('/quote-requests/staff-performance', { params }), 'Không thể lấy hiệu suất nhân viên');
+}
+
+// Hiệu suất của chính Order đang đăng nhập (Dashboard ORDER) — BE lấy người dùng từ phiên, không nhận id.
+export async function getMyPerformanceApi(filter?: StaffTimeFilter): Promise<MyPerformanceResponse> {
+  return apiCall(dedupedGet('/quote-requests/my-performance', staffTimeParams(filter)), 'Không thể lấy hiệu suất của bạn');
 }
 
 export async function approveUserApi(userId: string, role?: string, teamId?: string | null): Promise<User> {

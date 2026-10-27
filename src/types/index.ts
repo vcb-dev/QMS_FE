@@ -624,6 +624,16 @@ export interface StaffPerformanceResponse {
   };
 }
 
+// Hiệu suất của CHÍNH Order đang đăng nhập (GET /quote-requests/my-performance), theo kỳ lọc (ngày tạo
+// đơn). quotedCount + medianQuoteMs cùng tập: đơn do chính Order này báo giá (dù giao cho người khác);
+// medianQuoteMs = trung vị từ lúc tạo đơn tới lúc báo giá, cùng cách tính với cột "Thời gian trung bình"
+// bên StaffPage.
+export interface MyPerformanceResponse {
+  assignedCount: number;
+  quotedCount: number;
+  medianQuoteMs: number | null;
+}
+
 export interface CreateModalProps {
   isOpen: boolean;
   onClose: () => void;

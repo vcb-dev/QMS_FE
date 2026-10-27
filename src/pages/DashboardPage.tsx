@@ -1,5 +1,5 @@
 import React from 'react';
-import type { QuoteRequest ,DashboardPageProps, DashboardChartsResponse} from '../types';
+import type { QuoteRequest ,DashboardPageProps, DashboardChartsResponse, MyPerformanceResponse} from '../types';
 import { ArrowRight, Calendar, LayoutDashboard } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -12,10 +12,11 @@ import { ChartTooltip } from '../components/ChartTooltip';
 import { DistributionPieCard } from '../components/DistributionPieCard';
 import { clsx } from 'clsx';
 import { cardCls, dateInputPy6Cls } from '../styles/classNames';
-import { fetchQuoteRequests, fetchQuoteRequestStats, fetchDashboardCharts } from '../services/api';
+import { fetchQuoteRequests, fetchQuoteRequestStats, fetchDashboardCharts, getMyPerformanceApi } from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { renderPriceBreakdownLines } from '../utils/priceBreakdown';
 import { SaleStatusStatsGrid } from '../components/SaleStatusStatsGrid';
+import { MyPerformanceCards } from '../components/MyPerformanceCards';
 
 // Bảng màu cho biểu đồ phân bố (danh mục/chất liệu) — hằng số tĩnh, đặt ở scope file để
 // không bị cấp phát lại mỗi lần component render (tránh cảnh báo thiếu dependency ở useMemo).
@@ -86,6 +87,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // cả danh sách đơn về client để cộng tay như trước.
   const [curStats, setCurStats] = React.useState<{ total: number; closeRate: number; closedRevenue: number; quotedRevenue: number } | null>(null);
   const [charts, setCharts] = React.useState<DashboardChartsResponse | null>(null);
+  // ORDER: hiệu suất của chính mình (theo kỳ đang chọn) — Admin đã có trang Hiệu suất riêng, Sale không dùng.
+  const [myPerformance, setMyPerformance] = React.useState<MyPerformanceResponse | null>(null);
   // Đếm request để bỏ qua response trả về trễ (race condition khi đổi mốc thời gian liên tục)
   const timeRangeRequestIdRef = React.useRef(0);
 
@@ -188,7 +191,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       }
 
       // ORDER: chỉ cần 5 dòng cho bảng "Yêu cầu gần đây" + counts cho Sidebar.
-      const [res, chartsRes] = await Promise.all([
+      const [res, chartsRes, myPerf] = await Promise.all([
         fetchQuoteRequests({
           ...periodQuery,
           ownerId: ownerIdParam,
@@ -197,8 +200,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           lite: true,
         }),
         fetchDashboardCharts({ ...periodQuery, ownerId: ownerIdParam }),
+        // Hiệu suất cá nhân luôn là của chính mình (không theo "Chỉ mình tôi"). Fetch phụ: lỗi chỉ
+        // ghi log + hiện '---', không kéo sập cả Dashboard.
+        getMyPerformanceApi(periodQuery).catch((err) => {
+          console.error('Error fetching my performance:', err);
+          return null;
+        }),
       ]);
       if (myRequestId !== timeRangeRequestIdRef.current) return;
+      setMyPerformance(myPerf);
       if (res.meta?.counts) {
         setCounts(res.meta.counts);
       }
@@ -510,6 +520,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
         </div>
       </div>
+
+      {/* 1b. Hiệu suất của tôi — chỉ ORDER (Admin có trang Hiệu suất đầy đủ ở "Quản Lý Nhân Viên") */}
+      {currentRole === 'ORDER' && <MyPerformanceCards data={myPerformance} />}
 
       {/* 2. KPI tổng hợp + Doanh thu — chỉ Admin xem */}
       {currentRole === 'ADMIN' && (
