@@ -394,21 +394,31 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   // liệu/khối lượng gõ kèm chỉ là ghi chú tự do, không đáng tin làm thông số sản phẩm hiển thị.
   const isQuickPriceOption = !!specOption && !specOption.costBreakdown;
 
-  // Đọc chất liệu từ phương án đang hiển thị (finalOption) — không lấy field cấp request
-  // (selectedReq.materials/material chỉ là bản tóm tắt của phương án đại diện, có thể trống nếu
-  // phương án đó chưa gắn chất liệu). "Vàng Trắng 18K" cũ là placeholder demo, hiện SAI cho mọi đơn
-  // khi thiếu data thật — đổi thành nhãn rõ ràng là chưa có dữ liệu. Báo giá nhanh thì bỏ qua chất
-  // liệu của option, chỉ giữ chất liệu Sale đã gửi lúc tạo đơn (selectedReq.materials/material).
-  const materialsList =
-    !isQuickPriceOption && specOption?.materials && specOption.materials.length > 0
+  // Hiện TẤT CẢ chất liệu của đơn (BE gộp chất liệu của mọi phương án, phương án đang hiển thị đứng
+  // đầu), không chỉ chất liệu của phương án đang xem: Sale chọn N chất liệu thì đơn được tách thành N
+  // phương án mỗi phương án 1 chất liệu, và báo giá nhanh giữ lại các chất liệu Sale đã chọn. Chỉ khi
+  // cấp đơn chưa có chất liệu nào (dữ liệu cũ) mới rơi về chất liệu của phương án đang xem — riêng
+  // báo giá nhanh thì bỏ qua chất liệu gõ kèm của option vì chỉ là ghi chú tự do. "Vàng Trắng 18K" cũ
+  // là placeholder demo, hiện SAI cho mọi đơn khi thiếu data thật — thay bằng nhãn rõ ràng là chưa có.
+  const requestMaterialNames =
+    selectedReq.materials && selectedReq.materials.length > 0
+      ? selectedReq.materials.map((m) => m.name)
+      : selectedReq.material
+        ? [selectedReq.material.name]
+        : [];
+  const optionMaterialNames = isQuickPriceOption
+    ? []
+    : specOption?.materials && specOption.materials.length > 0
       ? specOption.materials.map((m) => m.materialName || m.material?.name).filter((n): n is string => !!n)
-      : !isQuickPriceOption && specOption?.materialName
+      : specOption?.materialName
         ? [specOption.materialName]
-        : selectedReq.materials && selectedReq.materials.length > 0
-          ? selectedReq.materials.map((m) => m.name)
-          : selectedReq.material
-            ? [selectedReq.material.name]
-            : ['Chưa rõ chất liệu'];
+        : [];
+  const materialsList =
+    requestMaterialNames.length > 0
+      ? requestMaterialNames
+      : optionMaterialNames.length > 0
+        ? optionMaterialNames
+        : ['Chưa rõ chất liệu'];
 
   return (
     <div className="flex flex-col gap-[24px] pb-[40px]">
