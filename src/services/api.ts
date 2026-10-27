@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, MyPerformanceResponse, LibraryProductsResponse, StaffUser, Team, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, MyPerformanceResponse, PricerPerformanceResponse, LibraryProductsResponse, StaffUser, Team, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
 import { STORAGE_KEYS } from '../constants';
 import { TEAM_FILTER_ALL } from '../constants/team';
 
@@ -304,6 +304,12 @@ export async function getStaffPerformanceApi(filter?: StaffPerformanceFilter): P
 // Hiệu suất của chính Order đang đăng nhập (Dashboard ORDER) — BE lấy người dùng từ phiên, không nhận id.
 export async function getMyPerformanceApi(filter?: StaffTimeFilter): Promise<MyPerformanceResponse> {
   return apiCall(dedupedGet('/quote-requests/my-performance', staffTimeParams(filter)), 'Không thể lấy hiệu suất của bạn');
+}
+
+// Hiệu suất tất cả Order (Dashboard ORDER — Order xem được của nhau). Khác getStaffPerformanceApi (chỉ ADMIN)
+// ở chỗ không có số của Sale.
+export async function getPricerPerformanceApi(filter?: StaffTimeFilter): Promise<PricerPerformanceResponse> {
+  return apiCall(dedupedGet('/quote-requests/pricer-performance', staffTimeParams(filter)), 'Không thể lấy hiệu suất người báo giá');
 }
 
 export async function approveUserApi(userId: string, role?: string, teamId?: string | null): Promise<User> {

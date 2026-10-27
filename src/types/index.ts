@@ -634,6 +634,12 @@ export interface MyPerformanceResponse {
   medianQuoteMs: number | null;
 }
 
+// Hiệu suất TẤT CẢ Order (GET /quote-requests/pricer-performance) — Order xem được của nhau, không kèm
+// số của Sale. BE đã xếp theo số đơn đã báo giá giảm dần. Cùng cách tính với cột bảng bên StaffPage.
+export interface PricerPerformanceResponse {
+  items: { id: string; name: string; assignedCount: number; quotedCount: number; medianQuoteMs: number | null }[];
+}
+
 export interface CreateModalProps {
   isOpen: boolean;
   onClose: () => void;
