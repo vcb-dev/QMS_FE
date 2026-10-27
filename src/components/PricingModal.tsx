@@ -13,6 +13,7 @@ import { PRICING_DEFAULTS } from '../constants';
 import { formatCurrency, formatNumberVN } from '../utils/currency';
 import { getPriceBreakdown, renderPriceBreakdownLines, getCostBreakdown, renderCostBreakdownLines } from '../utils/priceBreakdown';
 import { getPrimaryOption, batchResultToOption, materialGroupKey } from '../utils/quoteOption';
+import { buildQuickOption } from '../utils/quickOption';
 import type { StoneCatalogItem } from '../types';
 import { useMaterialStoneRows } from '../hooks/useMaterialStoneRows';
 import { useCompareRows } from '../hooks/useCompareRows';
@@ -719,32 +720,37 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // vào "Các Phương Án Báo Giá" — vẫn đính kèm đúng chất liệu/đá Sale đã yêu cầu lúc tạo đơn (đang
   // nằm sẵn trong calcMaterialRows/calcStoneRows do effect mở modal nạp vào), chỉ bỏ qua bước tính
   // giá theo công thức, không bỏ luôn thông tin chất liệu/đá.
-        const handleAddQuickOption = () => {                                                     
-        const price = parseFloat(quickPrice) || 0;                                             
-        if (price <= 0) {                                                                      
-          setCalcError('Vui lòng nhập số tiền báo giá hợp lệ');                                
-          return;                                                                              
-        }             
-         if (price > 999_999_999_999) {
-          setCalcError('Số tiền báo giá không được vượt quá 999 tỷ đồng');
-          return;
-        }                                                                         
-        setCalcError(null);                                                                    
-                                                                                               
-        // Báo giá nhanh: thuần túy gồm tên + giá + VAT (không đá, không chất liệu)            
-        // Tự động bỏ các option nháp cũ của Sale và chọn option báo giá nhanh này làm chính   
-        setOptions((prev) => [                                                                 
-          ...prev.filter((o) => o.groupId !== 'sale').map((o) => ({ ...o, isSelected: false })),
-          {                                                                                    
-            optionName: quickOptionName.trim() || 'Báo giá nhanh',                             
-            quotedPrice: price,                                                                
-            vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,                              
-            isSelected: true,                                                                  
-            groupId: `g_${Date.now()}`,                                                        
-          },                                                                                   
-        ]);                                                                                    
-        setQuickPrice('');                                                                     
-      };  
+  const handleAddQuickOption = () => {
+    const price = parseFloat(quickPrice) || 0;
+    if (price <= 0) {
+      setCalcError('Vui lòng nhập số tiền báo giá hợp lệ');
+      return;
+    }
+    if (price > 999_999_999_999) {
+      setCalcError('Số tiền báo giá không được vượt quá 999 tỷ đồng');
+      return;
+    }
+    setCalcError(null);
+
+    // Option nhanh thay hẳn các option Sale đã gửi kèm (bỏ chúng + chỉ chọn option này làm chính, tránh
+    // 2 option cùng được chọn). BE xóa hết & tạo lại options theo payload, nên chất liệu/đá Sale yêu cầu
+    // phải đi theo chính option nhanh — không thì đơn mất chất liệu sau khi báo giá.
+    setOptions((prev) => [
+      ...prev.filter((o) => o.groupId !== 'sale').map((o) => ({ ...o, isSelected: false })),
+      buildQuickOption({
+        optionName: quickOptionName,
+        price,
+        vat: quickIncludeVat ? parseFloat(quickVat) || 0 : 0,
+        groupId: `g_${Date.now()}`,
+        materialRows: calcMaterialRows,
+        stoneRows: calcStoneRows,
+        stoneMode: calcStoneMode,
+        manualStoneName: calcManualStoneName,
+        manualStonePrice: calcManualStonePrice,
+      }),
+    ]);
+    setQuickPrice('');
+  };
 
   const handleSelectOption = (idx: number) => {
     setOptions((prev) => {
