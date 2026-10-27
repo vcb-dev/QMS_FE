@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
-import { X, History, Copy, Check, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, History, Copy, Check, Image as ImageIcon, ArrowUp, ArrowDown, Star } from 'lucide-react';
 import type { ProductSpecModalProps } from '../types';
 import { UI_CONSTANTS } from '../constants';
 import { formatCurrency } from '../utils/currency';
@@ -29,7 +29,7 @@ const STATUS_TAG: Record<string, { label: string; className: string }> = {
 const fmtDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString('vi-VN') : '—';
 
-export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose }) => {
+export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClose, onToggleStar, starBusy }) => {
   const [activeIdx, setActiveIdx] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   // Khi ImageLightbox (zoomOpen) đang mở thì để nó tự xử lý Esc — tắt hành vi Esc/khoá-cuộn của
@@ -77,9 +77,24 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
           <div className="min-w-0">
             <h2 className="text-[18px] overflow-hidden text-ellipsis whitespace-nowrap">{item.productName}</h2>
           </div>
-          <button onClick={onClose} aria-label="Đóng" className={modalCloseIconBtnCls}>
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-[6px] shrink-0">
+            {onToggleStar && (
+              <button
+                type="button"
+                onClick={() => onToggleStar(item)}
+                disabled={starBusy}
+                aria-pressed={item.isStarred}
+                aria-label={item.isStarred ? 'Bỏ sao sản phẩm' : 'Gắn sao sản phẩm'}
+                title={item.isStarred ? 'Bỏ sao' : 'Gắn sao — sản phẩm có sao luôn hiện đầu danh sách'}
+                className={clsx(modalCloseIconBtnCls, 'disabled:opacity-60 disabled:cursor-wait')}
+              >
+                <Star size={18} className={item.isStarred ? 'fill-[#f59e0b] text-[#f59e0b]' : ''} />
+              </button>
+            )}
+            <button onClick={onClose} aria-label="Đóng" className={modalCloseIconBtnCls}>
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div

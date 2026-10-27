@@ -985,10 +985,22 @@ export async function fetchLibraryProducts(params: {
   startDate?: string;
   endDate?: string;
   sortMode?: string;
+  // 'true' = chỉ lấy thẻ đã gắn sao; bỏ trống = không lọc (BE dùng chuỗi, không phải boolean).
+  starredOnly?: 'true';
   page?: number;
   limit?: number;
 }): Promise<LibraryProductsResponse> {
   return apiCall(dedupedGet('/quote-requests/library-products', params), 'Không thể lấy danh sách sản phẩm');
+}
+
+// Gắn/bỏ sao 1 thẻ Thư viện (sao dùng chung cho mọi role). Đặt trạng thái chứ không toggle:
+// `starred` là trạng thái muốn đạt tới, nên bấm lặp/2 người bấm cùng lúc không lật ngược nhau.
+export async function setLibraryProductStar(body: {
+  requestId: string;
+  optionId?: string;
+  starred: boolean;
+}): Promise<{ key: string; starred: boolean }> {
+  return apiCall(api.put('/quote-requests/library-products/star', body), 'Không thể gắn sao sản phẩm');
 }
 
 export async function exportQuoteRequestsExcelApi(filter?: FilterOptions & { categoryId?: string; materialId?: string; ownerId?: string; timeRange?: string; startDate?: string; endDate?: string; fields?: string[] }) {

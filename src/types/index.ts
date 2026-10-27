@@ -436,6 +436,11 @@ export type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 export interface LibraryProduct {
   key: string;
   requestId: string;
+  // Phương án chốt của thẻ — chỉ có với đơn chốt ≥ 2 phương án (mỗi phương án chốt 1 thẻ), còn lại null.
+  // Cùng requestId, đây là danh tính thẻ khi gắn/bỏ sao.
+  optionId: string | null;
+  // Sao DÙNG CHUNG: ai gắn thì mọi role đều thấy, thẻ có sao luôn nằm đầu danh sách.
+  isStarred: boolean;
   code: string;
   images?: QuoteRequestImage[];
   // Tên + mã sản phẩm Sale đã nhập lúc tạo yêu cầu.
@@ -476,7 +481,8 @@ export interface QuoteHistoryOption {
 
 export interface LibraryProductsResponse {
   data: LibraryProduct[];
-  meta: { total: number; page: number; limit: number; totalPages: number };
+  // starredTotal: tổng thẻ có sao khớp bộ lọc (mọi trang) — huy hiệu xếp hạng "#n" chỉ đúng khi = 0.
+  meta: { total: number; page: number; limit: number; totalPages: number; starredTotal: number };
 }
 
 // Kết quả "Sản phẩm" trong dropdown search tổng ở Header — rút gọn từ các option đã có giá
@@ -493,6 +499,9 @@ export interface HeaderSearchProduct {
 export interface ProductSpecModalProps {
   item: LibraryProduct;
   onClose: () => void;
+  // Gắn/bỏ sao ngay trong modal; không truyền thì không hiện nút sao.
+  onToggleStar?: (item: LibraryProduct) => void;
+  starBusy?: boolean;
 }
 
 export interface LoginPageProps {
