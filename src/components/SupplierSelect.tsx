@@ -6,6 +6,8 @@ import { matchSupplier, supplierLabel } from '../utils/supplier';
 
 const ALL_VALUE = 'ALL';
 const ALL_LABEL = 'Tất cả NCC';
+// Chiều cao cần có (ô tìm + ~6 dòng) để danh sách mở xuống mà không tràn màn hình.
+const DROPDOWN_MIN_SPACE = 320;
 
 interface SupplierSelectProps {
   suppliers: Supplier[];
@@ -35,6 +37,8 @@ export const SupplierSelect: React.FC<SupplierSelectProps> = ({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  // Mở lên phía trên khi phía dưới không đủ chỗ (vd ô nằm cuối panel bộ lọc) — không thì danh sách tràn khỏi màn hình.
+  const [dropUp, setDropUp] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -60,6 +64,9 @@ export const SupplierSelect: React.FC<SupplierSelectProps> = ({
         : suppliers
       ).findIndex((s) => s.id === value),
     );
+    const rect = buttonRef.current?.getBoundingClientRect();
+    const spaceBelow = rect ? window.innerHeight - rect.bottom : Infinity;
+    setDropUp(!!rect && spaceBelow < DROPDOWN_MIN_SPACE && rect.top > spaceBelow);
     setQuery('');
     setActive(startIndex);
     setOpen(true);
@@ -148,7 +155,12 @@ export const SupplierSelect: React.FC<SupplierSelectProps> = ({
       </button>
 
       {open && (
-        <div className="absolute z-50 left-0 right-0 mt-[4px] bg-surface border border-[#cbd5e1] rounded-[10px] shadow-[0_8px_24px_rgba(15,23,42,0.12)] overflow-hidden">
+        <div
+          className={clsx(
+            'absolute z-50 left-0 right-0 bg-surface border border-[#cbd5e1] rounded-[10px] shadow-[0_8px_24px_rgba(15,23,42,0.12)] overflow-hidden',
+            dropUp ? 'bottom-full mb-[4px]' : 'mt-[4px]',
+          )}
+        >
           <div className="relative border-b border-[#e5e7eb]">
             <Search size={14} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-faint pointer-events-none" />
             <input
