@@ -486,13 +486,10 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                 {currentRole !== 'SALE' && (
                   <td>
                     {r.supplier ? (
-                      <>
-                        <strong className="font-mono text-[14.5px] text-[#1e293b]">{r.supplier.code}</strong>
-                        <div className={clsx('text-[13.5px] font-semibold', r.supplier.deletedAt ? 'text-faint' : 'text-[#334155]')}>
-                          {r.supplier.name}
-                          {r.supplier.deletedAt ? ' (đã xóa)' : ''}
-                        </div>
-                      </>
+                      <div className={clsx('text-[14px] font-semibold', r.supplier.deletedAt ? 'text-faint' : 'text-[#334155]')}>
+                        {r.supplier.name}
+                        {r.supplier.deletedAt ? ' (đã xóa)' : ''}
+                      </div>
                     ) : (
                       <span className="text-faint">---</span>
                     )}

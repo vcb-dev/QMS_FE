@@ -22,7 +22,7 @@ interface SupplierSelectProps {
   ariaLabel?: string;
 }
 
-// Dropdown chọn nhà cung cấp có ô tìm kiếm (theo mã và tên, không phân biệt hoa thường và dấu tiếng Việt).
+// Dropdown chọn nhà cung cấp có ô tìm kiếm (theo tên, không phân biệt hoa thường và dấu tiếng Việt).
 // Lọc phía client trên danh sách đã nạp — số NCC ít nên không cần gọi API theo từng phím gõ.
 export const SupplierSelect: React.FC<SupplierSelectProps> = ({
   suppliers,
@@ -171,7 +171,7 @@ export const SupplierSelect: React.FC<SupplierSelectProps> = ({
                 setQuery(e.target.value);
                 setActive(0);
               }}
-              placeholder="Tìm theo mã hoặc tên..."
+              placeholder="Tìm theo tên..."
               aria-label="Tìm nhà cung cấp"
               aria-controls={listId}
               className="w-full py-[9px] pr-[12px] pl-[34px] text-[15px] font-semibold text-[#0f172a] outline-none bg-transparent"
