@@ -42,7 +42,7 @@ export const ClosedNoticeModal: React.FC<ClosedNoticeModalProps> = ({ isOpen, re
           </button>
         </div>
 
-        <div className={clsx(modalBodyCls, 'flex items-start gap-[12px]')}>
+        <div className={clsx(modalBodyCls, '!flex-row items-start !gap-[12px]')}>
           <Info size={22} color="#6d28d9" className="shrink-0 mt-[2px]" />
           <div>
             <p className="m-0 text-[17px] font-bold text-[#0f172a]">
