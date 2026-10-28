@@ -3,6 +3,7 @@ import { Save, Plus, Trash2, Pencil, Check, X, AlertTriangle, RotateCcw, Loader2
 import { clsx } from 'clsx';
 import { MetalPriceHistoryModal } from '../components/MetalPriceHistoryModal';
 import { StonePricingTab } from '../components/StonePricingTab';
+import { SupplierManagementTab } from '../components/SupplierManagementTab';
 import {
   updateStone,
   deleteStonesMany,
@@ -208,7 +209,7 @@ export const PricingConfigPage: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'SOURCE' | 'RULES' | 'STONES'>('SOURCE');
+  const [activeTab, setActiveTab] = useState<'SOURCE' | 'RULES' | 'STONES' | 'SUPPLIERS'>('SOURCE');
 
   const [baseMetals, setBaseMetals] = useState<BaseMetal[]>([]);
   const [initialBaseMetals, setInitialBaseMetals] = useState<BaseMetal[]>([]);
@@ -652,6 +653,9 @@ export const PricingConfigPage: React.FC = () => {
             <button type="button" className={clsx(pcpTabCls, activeTab === 'STONES' && pcpTabActiveCls)} onClick={() => setActiveTab('STONES')}>
               Giá đá
             </button>
+            <button type="button" className={clsx(pcpTabCls, activeTab === 'SUPPLIERS' && pcpTabActiveCls)} onClick={() => setActiveTab('SUPPLIERS')}>
+              Nhà cung cấp
+            </button>
           </div>
         </div>
 
@@ -824,6 +828,8 @@ export const PricingConfigPage: React.FC = () => {
               />
             </div>
           )}
+
+          {activeTab === 'SUPPLIERS' && <SupplierManagementTab />}
 
           {activeTab === 'RULES' && (
             <div className="grid [grid-template-columns:minmax(0,3fr)_minmax(280px,2fr)] max-[760px]:![grid-template-columns:1fr] gap-[20px] items-start py-[22px] px-0">
@@ -1033,7 +1039,8 @@ export const PricingConfigPage: React.FC = () => {
           )}
         </div>
 
-        {/* Footer sticky — Hủy bỏ + Lưu cấu hình, luôn nổi khi cuộn trang */}
+        {/* Footer sticky — Hủy bỏ + Lưu cấu hình, luôn nổi khi cuộn trang. Tab Nhà cung cấp lưu ngay từng thao tác nên không hiện footer này. */}
+        {activeTab !== 'SUPPLIERS' && (
         <div className="sticky -bottom-[20px] -mx-[20px] -mb-[20px] py-[14px] px-[22px] bg-surface border-t border-[#e5e7eb] rounded-b-[16px] flex justify-end gap-[10px]">
           <button type="button" onClick={handleCancelAll} className={btnSecondaryCls}>
             <RotateCcw size={13} /> Hủy bỏ
@@ -1059,6 +1066,7 @@ export const PricingConfigPage: React.FC = () => {
             );
           })()}
         </div>
+        )}
       </div>
 
       {/* Toast thông báo lưu thành công/lỗi */}
