@@ -546,6 +546,8 @@ export function useQuoteRequests(
       manualStonePrice?: number;
       stones?: { stoneId: string; quantity: number }[];
       inspectionFee?: number;
+      // NCC bắt buộc — PricingModal luôn gửi kèm; BE trả 400 nếu thiếu.
+      supplierId?: string;
     },
   ) => {
     if (!pricingReqId) return;
@@ -572,6 +574,7 @@ export function useQuoteRequests(
               fallbackOptions,
               version,
               extras?.inspectionFee,
+              extras?.supplierId,
             )
           : completeQuoteRequest(
               pricingReqId,
