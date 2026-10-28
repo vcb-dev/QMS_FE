@@ -42,6 +42,7 @@ import { getStatusDropdown, type StatusActionHandlers } from '../utils/statusAct
 import { NotFoundPage } from './NotFoundPage';
 import { SpecBadge } from '../components/SpecBadge';
 import { SpecRow } from '../components/SpecRow';
+import { supplierLabel } from '../utils/supplier';
 import { clsx } from 'clsx';
 import { cardCls } from '../styles/classNames';
 import { OptionCard } from '../components/OptionCard';
@@ -813,6 +814,18 @@ export const DetailPage: React.FC<DetailPageProps> = ({
               {displayedPriceVal > 0 && currentRole === 'SALE' && displayedOption && displayedOption.vat != null && (
                 <div className={clsx('mt-[8px] text-[14.5px] font-bold', displayedOption.vat > 0 ? 'text-[#0f172a]' : 'text-[#334155]')}>
                   {displayedOption.vat > 0 ? 'Có VAT' : 'Không VAT'}
+                </div>
+              )}
+
+              {/* Nhà cung cấp — chỉ ORDER/ADMIN (BE không trả cho Sale). Hiện khi đã có NCC, hoặc khi đã có giá mà
+                  chưa có NCC (đơn báo giá từ trước khi có tính năng này) để thấy còn thiếu. */}
+              {currentRole !== 'SALE' && (selectedReq?.supplier || displayedPriceVal > 0) && (
+                <div className="mt-[10px] text-[14.5px] text-[#475569]">
+                  <SpecRow
+                    label="Nhà cung cấp"
+                    value={selectedReq?.supplier ? supplierLabel(selectedReq.supplier) : '---'}
+                    valueStyle={{ textAlign: 'right' }}
+                  />
                 </div>
               )}
 

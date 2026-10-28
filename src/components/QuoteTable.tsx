@@ -300,6 +300,8 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
             <th className="text-[#3730a3]">VAT</th>
             <th className="text-[#0f766e]">Báo Giá Khách (Có VAT)</th>
             <th>Bộ Phận</th>
+            {/* NCC là thông tin nội bộ — Sale không có cột này (BE cũng không trả dữ liệu NCC cho Sale). */}
+            {currentRole !== 'SALE' && <th>NCC</th>}
             <th>Nhân Viên Sale</th>
             <th>Mã Hỏi Giá</th>
             <th>Người Báo Giá / Được Giao</th>
@@ -481,6 +483,21 @@ export const QuoteTable: React.FC<QuoteTableProps> = ({
                     {displayDeptName}
                   </span>
                 </td>
+                {currentRole !== 'SALE' && (
+                  <td>
+                    {r.supplier ? (
+                      <>
+                        <strong className="font-mono text-[14.5px] text-[#1e293b]">{r.supplier.code}</strong>
+                        <div className={clsx('text-[13.5px] font-semibold', r.supplier.deletedAt ? 'text-faint' : 'text-[#334155]')}>
+                          {r.supplier.name}
+                          {r.supplier.deletedAt ? ' (đã xóa)' : ''}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-faint">---</span>
+                    )}
+                  </td>
+                )}
                 <td>
                   <strong className="text-[#334155]">{displaySaleName}</strong>
                   {r.requester?.team?.name && (
