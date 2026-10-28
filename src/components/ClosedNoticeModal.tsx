@@ -18,7 +18,7 @@ interface ClosedNoticeModalProps {
   onClose: () => void;
 }
 
-// Nhắc Sale sau khi bấm "Đã chốt": ghi mã báo giá vào ghi chú khi lên đơn trên OMS, để bên đặt hàng lấy
+// Nhắc người vừa chốt (Sale / Admin) sau khi bấm "Đã chốt": ghi mã báo giá vào ghi chú khi lên đơn trên OMS, để bên đặt hàng lấy
 // mã đó quay lại QMS xem giá do xưởng nào báo mà đặt đúng xưởng (hoặc lấy giá).
 export const ClosedNoticeModal: React.FC<ClosedNoticeModalProps> = ({ isOpen, reqCode, onClose }) => {
   const dialogRef = useModalA11y(onClose, isOpen);
