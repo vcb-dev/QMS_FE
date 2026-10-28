@@ -567,6 +567,9 @@ export interface RequestsPageProps {
   setAssignedOrderFilter?: (v: string) => void;
   departmentFilter?: string;
   setDepartmentFilter?: (v: string) => void;
+  // Lọc theo NCC — chỉ ORDER/ADMIN (Sale không có bộ lọc này).
+  supplierFilter?: string;
+  setSupplierFilter?: (v: string) => void;
   departments?: { id: string; name: string }[];
   teamFilter?: string;
   setTeamFilter?: (v: string) => void;

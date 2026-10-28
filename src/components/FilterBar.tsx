@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
-import type { Material, ProductCategory, StatusCounts, Team, User } from '../types';
+import type { Material, ProductCategory, StatusCounts, Supplier, Team, User } from '../types';
+import { SupplierSelect } from './SupplierSelect';
 import { Calendar, ChevronDown, HelpCircle, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { CANCELLED_TAB, OWNER_FILTER_ASSIGNED_TO_ME, STATUS_CHART_META, STATUS_COUNT_KEYS } from '../constants';
 import { TEAM_ALL_LABEL, TEAM_FILTER_ALL, TEAM_FILTER_NONE, TEAM_NONE_LABEL } from '../constants/team';
@@ -53,6 +54,11 @@ interface FilterBarProps {
   onAssignedOrderFilterChange?: (userId: string) => void;
   departmentFilter?: string;
   onDepartmentFilterChange?: (deptId: string) => void;
+  // Bộ lọc NCC: chỉ ORDER/ADMIN (RequestsPage tắt với Sale).
+  showSupplierFilter?: boolean;
+  supplierFilter?: string;
+  onSupplierFilterChange?: (supplierId: string) => void;
+  suppliers?: Supplier[];
   departments?: { id: string; name: string }[];
   teamFilter?: string;
   onTeamFilterChange?: (teamId: string) => void;
@@ -98,6 +104,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onAssignedOrderFilterChange,
   departmentFilter = 'ALL',
   onDepartmentFilterChange,
+  showSupplierFilter = false,
+  supplierFilter = 'ALL',
+  onSupplierFilterChange,
+  suppliers = [],
   departments = [],
   teamFilter = TEAM_FILTER_ALL,
   onTeamFilterChange,
@@ -131,6 +141,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     (pricerFilter !== 'ALL' ? 1 : 0) +
     (assignedOrderFilter !== 'ALL' ? 1 : 0) +
     (departmentFilter !== 'ALL' ? 1 : 0) +
+    (showSupplierFilter && supplierFilter !== 'ALL' ? 1 : 0) +
     (teamFilter !== TEAM_FILTER_ALL ? 1 : 0) +
     (timeRangeFilter !== 'ALL' ? 1 : 0) +
     (startDateFilter ? 1 : 0) +
@@ -375,6 +386,20 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     <ChevronDown size={14} className={selectArrowCls} />
                   </div>
                 </div>
+
+                {/* Nhà cung cấp — chỉ ORDER/ADMIN */}
+                {showSupplierFilter && (
+                  <div>
+                    <label className={popoverLabelCls}>Nhà cung cấp</label>
+                    <SupplierSelect
+                      suppliers={suppliers}
+                      value={supplierFilter}
+                      onChange={(id) => onSupplierFilterChange?.(id)}
+                      allowAll
+                      ariaLabel="Lọc theo nhà cung cấp"
+                    />
+                  </div>
+                )}
 
                 {/* Team (theo team của Sale tạo đơn) */}
                 <div>

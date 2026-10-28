@@ -67,7 +67,7 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
     requests, categories, materials, departments, teams, saleUsers, pricerUsers, selectedId, setSelectedId,
     selectedReq, pricingReq, statusSubFilter, setStatusSubFilter, searchTerm, setSearchTerm,
     categoryFilter, setCategoryFilter, materialFilter, setMaterialFilter,
-    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, assignedOrderFilter, setAssignedOrderFilter, departmentFilter, setDepartmentFilter, teamFilter, setTeamFilter,
+    saleFilter, setSaleFilter, pricerFilter, setPricerFilter, assignedOrderFilter, setAssignedOrderFilter, departmentFilter, setDepartmentFilter, supplierFilter, setSupplierFilter, teamFilter, setTeamFilter,
     ownerFilter, setOwnerFilter, timeRangeFilter, setTimeRangeFilter,
     startDateFilter, setStartDateFilter, endDateFilter, setEndDateFilter, currentPage, setCurrentPage,
     includeLocked, setIncludeLocked,
@@ -213,6 +213,7 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
                 pricerFilter={pricerFilter} setPricerFilter={setPricerFilter}
                 assignedOrderFilter={assignedOrderFilter} setAssignedOrderFilter={setAssignedOrderFilter}
                 departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter}
+                supplierFilter={supplierFilter} setSupplierFilter={setSupplierFilter}
                 teamFilter={teamFilter} setTeamFilter={setTeamFilter} teams={teams}
                 ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter}
                 timeRangeFilter={timeRangeFilter} setTimeRangeFilter={setTimeRangeFilter}

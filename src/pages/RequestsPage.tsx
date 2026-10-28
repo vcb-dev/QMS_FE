@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchChatUnreadCounts } from '../services/api';
 import { CHAT_EVENTS } from '../constants/chatEvents';
 import { OWNER_FILTER_ASSIGNED_TO_ME } from '../constants';
+import { useSuppliers } from '../hooks/useSuppliers';
 
 export const RequestsPage: React.FC<RequestsPageProps> = ({
   requests,
@@ -34,6 +35,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   setAssignedOrderFilter,
   departmentFilter,
   setDepartmentFilter,
+  supplierFilter,
+  setSupplierFilter,
   departments,
   teamFilter,
   setTeamFilter,
@@ -76,6 +79,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
   selectedId,
 }) => {
   const navigate = useNavigate();
+  // Danh sách NCC cho bộ lọc — Sale không có bộ lọc NCC (và bị 403 nếu gọi) nên tắt hẳn.
+  const showSupplierFilter = currentRole !== 'SALE';
+  const { suppliers } = useSuppliers(showSupplierFilter);
   const [currentFilter] = useState('ALL');
 
   const handleScopeChange = (sc: string) => {
@@ -184,6 +190,10 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
         departmentFilter={departmentFilter}
         onDepartmentFilterChange={(v) => { setDepartmentFilter?.(v); setCurrentPage(1); }}
         departments={departments}
+        showSupplierFilter={showSupplierFilter}
+        supplierFilter={supplierFilter}
+        onSupplierFilterChange={(v) => { setSupplierFilter?.(v); setCurrentPage(1); }}
+        suppliers={suppliers}
         teamFilter={teamFilter}
         onTeamFilterChange={(v) => { setTeamFilter?.(v); setCurrentPage(1); }}
         teams={teams}
