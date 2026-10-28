@@ -24,6 +24,7 @@ const PricingModal = lazy(() => import('./components/PricingModal').then((m) => 
 const RejectModal = lazy(() => import('./components/RejectModal').then((m) => ({ default: m.RejectModal })));
 const ReturnModal = lazy(() => import('./components/ReturnModal').then((m) => ({ default: m.ReturnModal })));
 const MarkClosedModal = lazy(() => import('./components/MarkClosedModal').then((m) => ({ default: m.MarkClosedModal })));
+const ClosedNoticeModal = lazy(() => import('./components/ClosedNoticeModal').then((m) => ({ default: m.ClosedNoticeModal })));
 const ExportModal = lazy(() => import('./components/ExportModal').then((m) => ({ default: m.ExportModal })));
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -75,7 +76,7 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
     loading, loadingMessage,
     listLoading, toastMessage, setToastMessage, isCreateOpen, setIsCreateOpen, editingReq,
     calculatorData, pricingReqId, setPricingReqId, rejectReqId, setRejectReqId,
-    returnReqId, setReturnReqId, closeOptionReq, setCloseOptionReq, actionTick,
+    returnReqId, setReturnReqId, closeOptionReq, setCloseOptionReq, closedNoticeCode, setClosedNoticeCode, actionTick,
     handleTabChange, handleResetFilters,
     handleOpenCreate, handleOpenEdit, handleCreateOrUpdateSubmit, handleDeleteRequest, handleAccept,
     handleQuoteNow,
@@ -340,6 +341,10 @@ function AppShell({ currentUser, currentRole, handleLogout, onUserUpdate }: AppS
             onClose={() => setCloseOptionReq(null)}
             onSubmit={handleCloseOptionSubmit}
           />
+        )}
+
+        {closedNoticeCode !== null && (
+          <ClosedNoticeModal isOpen reqCode={closedNoticeCode} onClose={() => setClosedNoticeCode(null)} />
         )}
 
         {isExportOpen && currentRole !== 'SALE' && (

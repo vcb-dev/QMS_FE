@@ -113,6 +113,8 @@ export function useQuoteRequests(
   // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
   // (chỉ mở popup khi có >1 phương án đã báo giá — 1 phương án thì chốt thẳng, không cần hỏi).
   const [closeOptionReq, setCloseOptionReq] = useState<QuoteRequest | null>(null);
+  // Mã yêu cầu vừa được Sale đánh dấu Đã chốt: bật popup nhắc ghi mã báo giá vào ghi chú khi lên đơn trên OMS.
+  const [closedNoticeCode, setClosedNoticeCode] = useState<string | null>(null);
   // Tăng 1 sau mỗi action ghi dữ liệu thành công — DetailPage dựa vào đó để tải lại đơn đang xem.
   const [actionTick, setActionTick] = useState(0);
 
@@ -637,9 +639,13 @@ export function useQuoteRequests(
     await runAction('Đang gửi lại yêu cầu...', 'Lỗi gửi lại yêu cầu', () => resubmitQuoteRequest(id));
   };
 
-  const handleMarkClosed = async (id: string, optionIds?: string[]): Promise<boolean> =>
+  // `code`: mã yêu cầu để hiện trong popup nhắc. Chỉ Sale được nhắc (Admin chốt hộ thì không phải người lên đơn OMS).
+  const handleMarkClosed = async (id: string, optionIds?: string[], code?: string): Promise<boolean> =>
     runAction('Đang đánh dấu Đã chốt...', 'Lỗi đánh dấu Đã chốt', () => markQuoteClosed(id, optionIds), {
-      onSuccess: () => setToastMessage('Đã đánh dấu Đã chốt.'),
+      onSuccess: () => {
+        setToastMessage('Đã đánh dấu Đã chốt.');
+        if (currentRole === 'SALE') setClosedNoticeCode(code || id);
+      },
     });
 
   const handleUnmarkClosed = async (id: string) => {
@@ -660,13 +666,13 @@ export function useQuoteRequests(
       setCloseOptionReq(target);
       return;
     }
-    await handleMarkClosed(id);
+    await handleMarkClosed(id, undefined, target?.code);
   };
 
   const handleCloseOptionSubmit = async (optionIds: string[]) => {
     if (!closeOptionReq) return;
     // Chỉ đóng modal khi chốt thành công — BE từ chối thì giữ modal để người dùng thấy lỗi và thử lại.
-    if (await handleMarkClosed(closeOptionReq.id, optionIds)) setCloseOptionReq(null);
+    if (await handleMarkClosed(closeOptionReq.id, optionIds, closeOptionReq.code)) setCloseOptionReq(null);
   };
 
   const selectedReq =
@@ -768,6 +774,8 @@ export function useQuoteRequests(
     setReturnReqId,
     closeOptionReq,
     setCloseOptionReq,
+    closedNoticeCode,
+    setClosedNoticeCode,
     actionTick,
     handleTabChange,
     handleResetFilters,
