@@ -105,9 +105,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
 
   // Join room CHO MỌI dòng đang hiển thị (không chỉ dòng bấm vào) — để nghe được newMessage real-
   // time ngay cả khi chưa bấm mở chat đơn nào. Join đơn mình thực sự tham gia (requester/assignee)
-  // HOẶC bất kỳ ORDER/ADMIN nào (chat nhóm) — khớp đúng điều kiện hiện icon ở QuoteTable, đã có
-  // người xử lý mới join. Join lại mỗi khi socket reconnect vì server không nhớ room cũ qua lần
-  // kết nối mới.
+  // HOẶC bất kỳ ORDER/ADMIN nào (chat nhóm) — khớp đúng điều kiện hiện icon ở QuoteTable, kể cả
+  // đơn mới tạo chưa có người xử lý. Join lại mỗi khi socket reconnect vì server không nhớ room cũ
+  // qua lần kết nối mới.
   useEffect(() => {
     if (!socket) return;
     const joinVisibleRooms = () => {
@@ -117,8 +117,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({
           (r.assignee?.id ?? r.assigneeId) === currentUser.id ||
           currentRole === 'ORDER' ||
           currentRole === 'ADMIN';
-        const hasAssignee = !!(r.assignee?.id ?? r.assigneeId);
-        if (isParticipant && hasAssignee) {
+        if (isParticipant) {
           // passive: true — chỉ đăng ký nhận badge, KHÔNG tính là "đang xem" (BE dựa vào cờ này để
           // quyết định có bắc cầu Lark DM hay không, và để không bị coi là chiếm "phòng đang mở").
           socket.emit(CHAT_EVENTS.JOIN_REQUEST, { quoteRequestId: r.id, passive: true });
