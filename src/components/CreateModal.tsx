@@ -1,8 +1,8 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
-import type { Customer, CreateModalProps } from '../types';
-import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones, fetchDepartments } from '../services/api';
+import type { Customer, CreateModalProps, QuoteRequest } from '../types';
+import { createCustomer, searchCustomers, fetchProvinces, fetchWards, fetchStones, fetchDepartments, fetchQuoteRequestById } from '../services/api';
 import { useAuth } from '../auth/AuthGate';
 import { formatStoneDisplay } from '../utils/stoneFormatter';
 import { useModalA11y } from '../hooks/useModalA11y';
@@ -364,6 +364,31 @@ export const CreateModal: React.FC<CreateModalProps> = ({
       setUnderstandProcess(false);
     }
   }, [editingReq, categories, isOpen, calculatorData, materials, stoneOptionsAll]);
+
+  // Sửa yêu cầu: nạp sẵn đá đang có — đá Sale chọn nằm ở các phương án nháp, lấy hợp đá của mọi phương
+  // án. Bản lấy từ bảng danh sách không kèm `stones` của phương án nên tải bản chi tiết.
+  useEffect(() => {
+    if (!isOpen || !editingReq) return;
+    const apply = (req: QuoteRequest) => {
+      const ids = [...new Set((req.options ?? []).flatMap((o) => (o.stones ?? []).map((s) => s.stoneId)))];
+      setSelectedStoneIds(ids);
+      setSelectedStoneTypes(
+        [...new Set(ids.map((id) => stoneOptionsAll.find((s) => s.id === id)?.stoneType))].filter(
+          (t): t is 'MAIN' | 'SIDE' => !!t,
+        ),
+      );
+    };
+    if ((editingReq.options ?? []).every((o) => Array.isArray(o.stones))) {
+      apply(editingReq);
+      return;
+    }
+    setSelectedStoneIds([]);
+    let alive = true;
+    fetchQuoteRequestById(editingReq.id)
+      .then((full) => { if (alive && full) apply(full); })
+      .catch((err) => console.error('Không tải được đá của yêu cầu:', err));
+    return () => { alive = false; };
+  }, [isOpen, editingReq, stoneOptionsAll]);
 
   // Load Provinces & Departments on Modal Open
   useEffect(() => {
