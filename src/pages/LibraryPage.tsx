@@ -9,12 +9,12 @@ import {
 } from '../styles/classNames';
 import { useSearchParams } from 'react-router-dom';
 import type { SortModeLibrary, LibraryPageProps, TimeRange, LibraryProduct, StaffUser } from '../types';
-import { Search, SlidersHorizontal, RotateCcw, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, RotateCcw, ChevronDown, Star } from 'lucide-react';
 import { UI_CONSTANTS } from '../constants';
 import { Pagination } from '../components/Pagination';
 import { ProductSpecModal } from '../components/ProductSpecModal';
 import { formatPriceRange } from '../utils/quoteOption';
-import { fetchLibraryProducts, getAllUsersApi } from '../services/api';
+import { fetchLibraryProducts, getAllUsersApi, setLibraryProductStar } from '../services/api';
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   categories,
@@ -38,6 +38,11 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(UI_CONSTANTS.PRODUCT_LIBRARY.DEFAULT_PAGE_SIZE);
   const [detailItem, setDetailItem] = useState<LibraryProduct | null>(null);
+  // Sao DÙNG CHUNG: thẻ có sao luôn nằm đầu danh sách (BE sort); starredOnly chỉ giữ lại các thẻ có sao.
+  const [starredOnly, setStarredOnly] = useState(false);
+  const [starredTotal, setStarredTotal] = useState(0);
+  // Key các thẻ đang chờ BE trả lời gắn/bỏ sao — khóa nút để bấm dồn không bắn nhiều request.
+  const [starBusyKeys, setStarBusyKeys] = useState<Set<string>>(() => new Set());
 
   const [saleStaff, setSaleStaff] = useState<StaffUser[]>([]);
   const [orderStaff, setOrderStaff] = useState<StaffUser[]>([]);
@@ -107,13 +112,14 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedCat, selectedMat, selectedSale, selectedOrder, sortMode, timeRange, startDate, endDate]);
+  }, [debouncedSearch, selectedCat, selectedMat, selectedSale, selectedOrder, sortMode, timeRange, startDate, endDate, starredOnly]);
 
   // Luôn lấy giá SỐNG (tính theo giá kim loại/đá hiện tại) — BE tự tính lại mỗi lần gọi, không
   // còn phụ thuộc nút bấm tay.
-  const loadData = useCallback(async () => {
+  // silent: tải lại không bật chữ "Đang tải…" (đổi sao chỉ đổi thứ tự thẻ, không để lưới nháy trống).
+  const loadData = useCallback(async (silent = false) => {
     const myRequestId = ++requestIdRef.current;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await fetchLibraryProducts({
         search: debouncedSearch || undefined,
@@ -125,6 +131,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         sortMode,
+        starredOnly: starredOnly ? 'true' : undefined,
         page: currentPage,
         limit: pageSize,
       });
@@ -132,7 +139,12 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       setProducts(res.data || []);
       setTotalItems(res.meta?.total || 0);
       setTotalPages(res.meta?.totalPages || 1);
+      setStarredTotal(res.meta?.starredTotal || 0);
       setError(null);
+      // Bỏ sao thẻ cuối của trang cuối (đang lọc "đã gắn sao") làm trang hiện tại vượt quá số trang → lùi về trang cuối.
+      if ((res.data?.length ?? 0) === 0 && currentPage > 1) {
+        setCurrentPage(Math.max(1, res.meta?.totalPages || 1));
+      }
     } catch (err: any) {
       if (myRequestId === requestIdRef.current) {
         setError(err.message || 'Không thể tải danh sách sản phẩm');
@@ -142,11 +154,37 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
         setLoading(false);
       }
     }
-  }, [debouncedSearch, selectedCat, selectedMat, selectedSale, selectedOrder, sortMode, timeRange, startDate, endDate, currentPage, pageSize]);
+  }, [debouncedSearch, selectedCat, selectedMat, selectedSale, selectedOrder, sortMode, timeRange, startDate, endDate, starredOnly, currentPage, pageSize]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Đặt trạng thái sao theo đích muốn đạt (không toggle phía BE) rồi tải lại trang hiện tại, vì thẻ
+  // vừa gắn/bỏ sao sẽ nhảy lên/xuống vị trí khác trong danh sách.
+  const handleToggleStar = async (item: LibraryProduct) => {
+    if (starBusyKeys.has(item.key)) return;
+    const next = !item.isStarred;
+    setStarBusyKeys((prev) => new Set(prev).add(item.key));
+    try {
+      await setLibraryProductStar({
+        requestId: item.requestId,
+        optionId: item.optionId ?? undefined,
+        starred: next,
+      });
+      // Modal đang mở đúng thẻ này thì cập nhật cờ sao ngay, khỏi chờ lần tải lại.
+      setDetailItem((cur) => (cur && cur.key === item.key ? { ...cur, isStarred: next } : cur));
+      await loadData(true);
+    } catch (err: any) {
+      setError(err.message || 'Không thể gắn sao sản phẩm');
+    } finally {
+      setStarBusyKeys((prev) => {
+        const rest = new Set(prev);
+        rest.delete(item.key);
+        return rest;
+      });
+    }
+  };
 
   return (
     <div className="flex flex-col gap-[20px] pb-[30px]">
@@ -332,16 +370,40 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           </button>
         </div>
 
-        {/* Sort Dropdown — phải */}
-        <select
-          value={sortMode}
-          onChange={(e) => setSortMode(e.target.value as SortModeLibrary)}
-          className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[15.5px] font-bold text-[#0f172a] outline-none cursor-pointer min-w-[150px]"
-        >
-          <option value="PRICE_DESC">Giá cao nhất</option>
-          <option value="PRICE_ASC">Giá thấp nhất</option>
-          <option value="RECENT">Mới nhất</option>
-        </select>
+        <div className="flex items-center gap-[10px]">
+          {/* Chỉ xem sản phẩm đã gắn sao — nằm ngoài popover Bộ lọc vì là lối tắt dùng thường xuyên */}
+          <button
+            type="button"
+            onClick={() => setStarredOnly((v) => !v)}
+            aria-pressed={starredOnly}
+            title={starredOnly ? 'Đang chỉ hiện sản phẩm đã gắn sao — bấm để hiện tất cả' : 'Chỉ hiện sản phẩm đã gắn sao'}
+            className={clsx(
+              'inline-flex items-center gap-[6px] rounded-[8px] border py-[7px] px-[12px] text-[15.5px] font-bold cursor-pointer',
+              starredOnly
+                ? 'bg-[#fffbeb] text-[#b45309] border-[#fcd34d]'
+                : 'bg-[#f8fafc] text-[#0f172a] border-[#cbd5e1] hover:bg-[#f1f5f9]',
+            )}
+          >
+            <Star size={15} className={starredOnly ? 'fill-[#f59e0b] text-[#f59e0b]' : 'text-[#64748b]'} />
+            Đã gắn sao
+            {starredTotal > 0 && (
+              <span className="bg-[#fde68a] text-[#92400e] rounded-full text-[13.5px] font-black py-[1px] px-[6px] min-w-[16px] text-center">
+                {starredTotal}
+              </span>
+            )}
+          </button>
+
+          {/* Sort Dropdown — phải */}
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortModeLibrary)}
+            className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[8px] py-[7px] px-[12px] text-[15.5px] font-bold text-[#0f172a] outline-none cursor-pointer min-w-[150px]"
+          >
+            <option value="PRICE_DESC">Giá cao nhất</option>
+            <option value="PRICE_ASC">Giá thấp nhất</option>
+            <option value="RECENT">Mới nhất</option>
+          </select>
+        </div>
       </div>
 
       {error && <div className="text-[#dc2626] text-[16px] text-center">{error}</div>}
@@ -361,7 +423,10 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
               <div
                 key={item.key}
                 onClick={() => setDetailItem(item)}
-                className="bg-surface border border-border rounded-[14px] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-[transform_0.15s_ease,box-shadow_0.15s_ease] flex flex-col hover:-translate-y-[2px] hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)]"
+                className={clsx(
+                  'bg-surface border rounded-[14px] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)] cursor-pointer transition-[transform_0.15s_ease,box-shadow_0.15s_ease] flex flex-col hover:-translate-y-[2px] hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)]',
+                  item.isStarred ? 'border-[#fbbf24]' : 'border-border',
+                )}
               >
                 {/* Image Container — img absolute inset-0 để khung aspect-square giữ tỉ lệ vuông
                     bất kể ảnh gốc dọc hay ngang. */}
@@ -375,7 +440,9 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                     }}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
-                  {sortMode === 'PRICE_DESC' && (
+                  {/* "#n" là hạng theo giá: sao đẩy thẻ rẻ lên đầu thì vị trí không còn là hạng giá nữa,
+                      nên chỉ hiện khi chưa có sao nào (hoặc đang lọc riêng nhóm có sao, trong nhóm đó vẫn xếp theo giá). */}
+                  {sortMode === 'PRICE_DESC' && (starredOnly || starredTotal === 0) && (
                     <span className="absolute top-[8px] left-[8px] bg-text text-surface text-[13px] font-extrabold py-[2px] px-[8px] rounded-[10px]">
                       #{(currentPage - 1) * pageSize + idx + 1}
                     </span>
@@ -392,6 +459,20 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
                       Sản phẩm {item.closedProduct.index}/{item.closedProduct.count}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation(); // không mở modal chi tiết của thẻ
+                      handleToggleStar(item);
+                    }}
+                    disabled={starBusyKeys.has(item.key)}
+                    aria-pressed={item.isStarred}
+                    aria-label={item.isStarred ? 'Bỏ sao sản phẩm' : 'Gắn sao sản phẩm'}
+                    title={item.isStarred ? 'Bỏ sao' : 'Gắn sao — sản phẩm có sao luôn hiện đầu danh sách'}
+                    className="absolute bottom-[8px] right-[8px] w-[32px] h-[32px] rounded-full bg-[rgba(255,255,255,0.92)] border border-[#e2e8f0] shadow-[0_1px_4px_rgba(0,0,0,0.15)] inline-flex items-center justify-center cursor-pointer disabled:opacity-60 disabled:cursor-wait hover:bg-white"
+                  >
+                    <Star size={18} className={item.isStarred ? 'fill-[#f59e0b] text-[#f59e0b]' : 'text-[#64748b]'} />
+                  </button>
                 </div>
 
                 {/* Body Details */}
@@ -435,7 +516,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           })
         ) : (
           <div className="col-span-full text-center text-[#334155] p-[40px]">
-            Chưa có sản phẩm nào trong thư viện
+            {starredOnly ? 'Chưa có sản phẩm nào được gắn sao' : 'Chưa có sản phẩm nào trong thư viện'}
           </div>
         )}
       </div>
@@ -460,6 +541,8 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
           key={detailItem.key}
           item={detailItem}
           onClose={() => setDetailItem(null)}
+          onToggleStar={handleToggleStar}
+          starBusy={starBusyKeys.has(detailItem.key)}
         />
       )}
     </div>
