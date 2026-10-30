@@ -46,6 +46,8 @@ export function useQuoteRequests(
   const [pricerFilter, setPricerFilter] = useState<string>('ALL');
   const [assignedOrderFilter, setAssignedOrderFilter] = useState<string>('ALL');
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
+  // Lọc theo NCC — chỉ ORDER/ADMIN (BE bỏ qua với Sale).
+  const [supplierFilter, setSupplierFilter] = useState<string>('ALL');
   const [teamFilter, setTeamFilter] = useState<string>(TEAM_FILTER_ALL);
   // SALE mặc định chỉ xem yêu cầu của mình, ORDER mặc định xem đơn được giao cho mình, ADMIN xem tất
   // cả. Dùng lại giá trị này mỗi khi reset bộ lọc (đổi tab / "Xóa bộ lọc") — reset về 'ALL' cứng sẽ
@@ -111,6 +113,8 @@ export function useQuoteRequests(
   // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
   // (chỉ mở popup khi có >1 phương án đã báo giá — 1 phương án thì chốt thẳng, không cần hỏi).
   const [closeOptionReq, setCloseOptionReq] = useState<QuoteRequest | null>(null);
+  // Mã yêu cầu vừa được đánh dấu Đã chốt (Sale hoặc Admin): bật popup nhắc ghi mã báo giá vào ghi chú khi lên đơn trên OMS.
+  const [closedNoticeCode, setClosedNoticeCode] = useState<string | null>(null);
   // Tăng 1 sau mỗi action ghi dữ liệu thành công — DetailPage dựa vào đó để tải lại đơn đang xem.
   const [actionTick, setActionTick] = useState(0);
 
@@ -140,8 +144,8 @@ export function useQuoteRequests(
   }, [currentRole, statusSubFilter]);
 
   // Dùng useRef để giữ state mới nhất tránh stale closure trong useEffect
-  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
-  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
+  const filterRef = useRef({ currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, supplierFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled });
+  filterRef.current = { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, supplierFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled };
   const needCountsRef = useRef(true); // true = fetch counts, false = chỉ fetch data
   // Chữ ký bộ lọc ảnh hưởng tới counts sidebar (nằm trong countsWhere của BE — đã strip status).
   // Khác lần trước mới xin BE tính lại counts; phân trang / đổi tab trạng thái giữ nguyên chữ ký.
@@ -182,7 +186,7 @@ export function useQuoteRequests(
 
   // 2. Load Quote Requests dùng ref để đọc state mới nhất
   const loadData = async (showLoading = true, forceCounts = false) => {
-    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
+    const { currentFilter, statusSubFilter, searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderFilter, departmentFilter, supplierFilter, teamFilter, ownerFilter, timeRangeFilter, startDateFilter, endDateFilter, currentPage, pageSize, currentUser, includeLocked, listDataEnabled } = filterRef.current;
     if (!currentUser) return;
 
     // `counts` chỉ trang Danh sách + Tổng quan SALE dùng (đều listDataEnabled=true). Trang khác
@@ -227,7 +231,7 @@ export function useQuoteRequests(
       // đổi khi phân trang hay đổi tab trạng thái. Xin BE tính lại khi chữ ký lọc đổi, lần đầu,
       // hoặc socket refresh (forceCounts — trạng thái đơn vừa đổi). Đỡ 2 query mỗi lần phân trang.
       const countsSig = JSON.stringify([
-        searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderId, departmentFilter, teamFilter, ownerId,
+        searchTerm, categoryFilter, materialFilter, saleFilter, pricerFilter, assignedOrderId, departmentFilter, supplierFilter, teamFilter, ownerId,
         timeRangeFilter, startDateFilter, endDateFilter, includeLocked,
       ]);
       const includeCounts =
@@ -249,6 +253,7 @@ export function useQuoteRequests(
         assigneeId: pricerFilter !== 'ALL' ? pricerFilter : undefined,
         assignedOrderId,
         departmentId: departmentFilter !== 'ALL' ? departmentFilter : undefined,
+        supplierId: supplierFilter !== 'ALL' ? supplierFilter : undefined,
         teamId: teamFilter !== TEAM_FILTER_ALL ? teamFilter : undefined,
         ownerId: ownerId,
         timeRange: timeRangeFilter !== 'ALL' ? timeRangeFilter : undefined,
@@ -350,6 +355,7 @@ export function useQuoteRequests(
     pricerFilter,
     assignedOrderFilter,
     departmentFilter,
+    supplierFilter,
     teamFilter,
     ownerFilter,
     timeRangeFilter,
@@ -388,6 +394,7 @@ export function useQuoteRequests(
     pricerFilter,
     assignedOrderFilter,
     departmentFilter,
+    supplierFilter,
     teamFilter,
     ownerFilter,
   ]);
@@ -403,6 +410,7 @@ export function useQuoteRequests(
     setPricerFilter('ALL');
     setAssignedOrderFilter('ALL');
     setDepartmentFilter('ALL');
+    setSupplierFilter('ALL');
     setTeamFilter(TEAM_FILTER_ALL);
     setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
@@ -421,6 +429,7 @@ export function useQuoteRequests(
     setPricerFilter('ALL');
     setAssignedOrderFilter('ALL');
     setDepartmentFilter('ALL');
+    setSupplierFilter('ALL');
     setTeamFilter(TEAM_FILTER_ALL);
     setOwnerFilter(roleDefaultOwnerFilter);
     setTimeRangeFilter('ALL');
@@ -546,6 +555,8 @@ export function useQuoteRequests(
       manualStonePrice?: number;
       stones?: { stoneId: string; quantity: number }[];
       inspectionFee?: number;
+      // NCC bắt buộc — PricingModal luôn gửi kèm; BE trả 400 nếu thiếu.
+      supplierId?: string;
     },
   ) => {
     if (!pricingReqId) return;
@@ -572,6 +583,7 @@ export function useQuoteRequests(
               fallbackOptions,
               version,
               extras?.inspectionFee,
+              extras?.supplierId,
             )
           : completeQuoteRequest(
               pricingReqId,
@@ -627,9 +639,13 @@ export function useQuoteRequests(
     await runAction('Đang gửi lại yêu cầu...', 'Lỗi gửi lại yêu cầu', () => resubmitQuoteRequest(id));
   };
 
-  const handleMarkClosed = async (id: string, optionIds?: string[]): Promise<boolean> =>
+  // `code`: mã yêu cầu để hiện trong popup nhắc. Ai chốt thành công (Sale hoặc Admin — Order không có nút chốt) cũng được nhắc.
+  const handleMarkClosed = async (id: string, optionIds?: string[], code?: string): Promise<boolean> =>
     runAction('Đang đánh dấu Đã chốt...', 'Lỗi đánh dấu Đã chốt', () => markQuoteClosed(id, optionIds), {
-      onSuccess: () => setToastMessage('Đã đánh dấu Đã chốt.'),
+      onSuccess: () => {
+        setToastMessage('Đã đánh dấu Đã chốt.');
+        setClosedNoticeCode(code || id);
+      },
     });
 
   const handleUnmarkClosed = async (id: string) => {
@@ -650,13 +666,13 @@ export function useQuoteRequests(
       setCloseOptionReq(target);
       return;
     }
-    await handleMarkClosed(id);
+    await handleMarkClosed(id, undefined, target?.code);
   };
 
   const handleCloseOptionSubmit = async (optionIds: string[]) => {
     if (!closeOptionReq) return;
     // Chỉ đóng modal khi chốt thành công — BE từ chối thì giữ modal để người dùng thấy lỗi và thử lại.
-    if (await handleMarkClosed(closeOptionReq.id, optionIds)) setCloseOptionReq(null);
+    if (await handleMarkClosed(closeOptionReq.id, optionIds, closeOptionReq.code)) setCloseOptionReq(null);
   };
 
   const selectedReq =
@@ -720,6 +736,8 @@ export function useQuoteRequests(
     setAssignedOrderFilter,
     departmentFilter,
     setDepartmentFilter,
+    supplierFilter,
+    setSupplierFilter,
     teamFilter,
     setTeamFilter,
     ownerFilter,
@@ -756,6 +774,8 @@ export function useQuoteRequests(
     setReturnReqId,
     closeOptionReq,
     setCloseOptionReq,
+    closedNoticeCode,
+    setClosedNoticeCode,
     actionTick,
     handleTabChange,
     handleResetFilters,

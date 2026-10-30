@@ -239,6 +239,26 @@ export interface QuoteOptionDraft {
   stones?: QuoteOptionDraftStone[];
 }
 
+// Nhà cung cấp (NCC) — chỉ ORDER/ADMIN thấy. Mã `code` (NCC-0001) do DB tự sinh.
+export interface Supplier {
+  id: string;
+  code: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: { id: string; name: string } | null;
+  // null = chưa từng sửa
+  updatedBy?: { id: string; name: string } | null;
+}
+
+// NCC gắn trên 1 yêu cầu. deletedAt có giá trị = NCC đã bị xóa mềm sau khi gắn (vẫn hiện tên, kèm "(đã xóa)").
+export interface QuoteRequestSupplier {
+  id: string;
+  code: string;
+  name: string;
+  deletedAt?: string | null;
+}
+
 export interface QuoteRequest {
   id: string;
   code: string;
@@ -283,6 +303,10 @@ export interface QuoteRequest {
   // thực sự tiếp nhận/báo giá. null với đơn cũ.
   assignedOrderId?: string | null;
   assignedOrder?: Pick<User, 'id' | 'name' | 'email'> | null;
+  // NCC do ORDER/ADMIN chọn lúc báo giá. BE KHÔNG trả hai trường này cho Sale; null/undefined với đơn
+  // chưa báo giá hoặc đơn cũ.
+  supplierId?: string | null;
+  supplier?: QuoteRequestSupplier | null;
   customer?: Customer;
   material?: Material;
   materials?: Material[];
@@ -552,6 +576,9 @@ export interface RequestsPageProps {
   setAssignedOrderFilter?: (v: string) => void;
   departmentFilter?: string;
   setDepartmentFilter?: (v: string) => void;
+  // Lọc theo NCC — chỉ ORDER/ADMIN (Sale không có bộ lọc này).
+  supplierFilter?: string;
+  setSupplierFilter?: (v: string) => void;
   departments?: { id: string; name: string }[];
   teamFilter?: string;
   setTeamFilter?: (v: string) => void;

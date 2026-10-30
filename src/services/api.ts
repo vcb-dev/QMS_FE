@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, MyPerformanceResponse, PricerPerformanceResponse, LibraryProductsResponse, StaffUser, Team, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus } from '../types';
+import type { ChatMessage, FilterOptions, User, QuoteRequest, QuoteOptionDraft, QuoteOptionDraftMaterial, QuoteOptionDraftStone, DashboardChartsResponse, CustomerStatsResponse, CustomerMonthComparisonResponse, UserStatsResponse, StaffPerformanceResponse, MyPerformanceResponse, PricerPerformanceResponse, LibraryProductsResponse, StaffUser, Team, MarginTier, LarkWebhook, LarkActionInfo, LarkWebhookListResponse, LarkUpdater, LarkDmBridgeStatus, Supplier } from '../types';
 import { STORAGE_KEYS } from '../constants';
 import { TEAM_FILTER_ALL } from '../constants/team';
 
@@ -336,7 +336,7 @@ export async function resetPasswordApi(payload: { email: string; otp: string; ne
   return apiCall(api.post('/auth/reset-password', payload), 'Đặt lại mật khẩu thất bại. Vui lòng kiểm tra lại OTP');
 }
 
-export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; requesterId?: string; assigneeId?: string; assignedOrderId?: string; departmentId?: string; teamId?: string }) {
+export async function fetchQuoteRequests(filter?: FilterOptions & { page?: number; limit?: number; categoryId?: string; materialId?: string; ownerId?: string; customerId?: string; includeCounts?: boolean; timeRange?: string; startDate?: string; endDate?: string; lite?: boolean; includeLocked?: boolean; requesterId?: string; assigneeId?: string; assignedOrderId?: string; departmentId?: string; teamId?: string; supplierId?: string }) {
   const params: Record<string, any> = {};
   if (filter?.status) params.status = filter.status;
   if (filter?.search) params.search = filter.search;
@@ -347,6 +347,7 @@ export async function fetchQuoteRequests(filter?: FilterOptions & { page?: numbe
   if (filter?.requesterId) params.requesterId = filter.requesterId;
   if (filter?.assigneeId) params.assigneeId = filter.assigneeId;
   if (filter?.assignedOrderId) params.assignedOrderId = filter.assignedOrderId;
+  if (filter?.supplierId && filter.supplierId !== 'ALL') params.supplierId = filter.supplierId;
   if (filter?.departmentId && filter.departmentId !== 'ALL') params.departmentId = filter.departmentId;
   if (filter?.teamId && filter.teamId !== TEAM_FILTER_ALL) params.teamId = filter.teamId;
   if (filter?.page) params.page = filter.page;
@@ -549,6 +550,8 @@ export async function changeQuoteStatus(id: string, payload: {
   manualStonePrice?: number;
   stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
   inspectionFee?: number;
+  // NCC — bắt buộc với QUOTE / EDIT_PRICE / QUICK_APPROVE (BE trả 400 nếu thiếu).
+  supplierId?: string;
 }) {
   return apiCall(api.patch(`/quote-requests/${id}/status`, payload), 'Lỗi khi cập nhật trạng thái yêu cầu');
 }
@@ -692,13 +695,14 @@ export async function completeQuoteRequest(
     manualStonePrice?: number;
     stones?: { stoneId: string; quantity: number; parentIndex?: number }[];
     inspectionFee?: number;
+    supplierId?: string;
   },
   version?: number,
 ) {
   const cleanOptions = options
     ?.map((opt) => sanitizeQuoteOption(opt, extras?.materialWeights, extras?.stones))
     .filter((opt): opt is SanitizedQuoteOptionPayload => !!opt);
-  return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version, inspectionFee: extras?.inspectionFee });
+  return changeQuoteStatus(id, { action: 'QUOTE', options: cleanOptions, version, inspectionFee: extras?.inspectionFee, supplierId: extras?.supplierId });
 }
 
 // Sửa giá đã báo cho đơn ĐANG QUOTED/CLOSED — GIỐNG HỆT completeQuoteRequest (gửi cả mảng, BE xóa
@@ -709,6 +713,7 @@ export async function editQuotedPrice(
   options: QuoteOptionDraft[],
   version?: number,
   inspectionFee?: number,
+  supplierId?: string,
 ) {
   const cleanOptions = options
     ?.map((opt) => sanitizeQuoteOption(opt))
@@ -718,6 +723,7 @@ export async function editQuotedPrice(
     options: cleanOptions,
     version,
     inspectionFee,
+    supplierId,
   });
 }
 
@@ -904,6 +910,24 @@ export async function calculatePriceMultiApi(payload: {
 
 export async function fetchStones(stoneType?: 'MAIN' | 'SIDE') {
   return apiCall(dedupedGet('/stones', stoneType ? { stoneType } : undefined), 'Không thể tải danh mục đá');
+}
+
+// ---- Nhà cung cấp (chỉ ORDER/ADMIN; Sale nhận 403) ----
+export async function fetchSuppliers(): Promise<Supplier[]> {
+  return apiCall(api.get('/suppliers'), 'Không thể tải danh sách nhà cung cấp');
+}
+
+export async function createSupplier(name: string): Promise<Supplier> {
+  return apiCall(api.post('/suppliers', { name }), 'Không thể thêm nhà cung cấp');
+}
+
+export async function updateSupplier(id: string, name: string): Promise<Supplier> {
+  return apiCall(api.put(`/suppliers/${id}`, { name }), 'Không thể sửa nhà cung cấp');
+}
+
+// Xóa MỀM ở BE — yêu cầu cũ vẫn giữ NCC để hiển thị tên.
+export async function deleteSupplier(id: string) {
+  return apiCall(api.delete(`/suppliers/${id}`), 'Không thể xóa nhà cung cấp');
 }
 
 export async function fetchStonesPaginated(params: {

@@ -20,6 +20,8 @@ import { useCompareRows } from '../hooks/useCompareRows';
 import { clsx } from 'clsx';
 import { modalCloseIconBtnCls, modalBackdropCls, modalCardCls, modalHeaderCls, labelUppercaseCls } from '../styles/classNames';
 import { useModalA11y } from '../hooks/useModalA11y';
+import { useSuppliers } from '../hooks/useSuppliers';
+import { SupplierSelect } from './SupplierSelect';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -28,7 +30,7 @@ interface PricingModalProps {
     price: number,
     vat: number,
     options?: QuoteOption[],
-    extras?: { inspectionFee?: number },
+    extras?: { inspectionFee?: number; supplierId?: string },
   ) => Promise<void>;
   onOpenCalculator?: () => void;
   selectedReq?: QuoteRequest | null;
@@ -64,6 +66,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // 1. Danh sách các phương án báo giá hiện tại
   const [options, setOptions] = useState<QuoteOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Nhà cung cấp (NCC) — BẮT BUỘC. 1 yêu cầu = 1 NCC, dùng chung cho Máy Tính lẫn Báo Giá Nhanh nên chỉ
+  // có MỘT trường ở đầu modal, không gắn theo từng phương án. supplierValid cần cả danh sách đã nạp và
+  // chứa NCC đang chọn: NCC đã bị xóa mềm không còn trong danh sách nên không bao giờ hợp lệ.
+  const { suppliers, loading: suppliersLoading } = useSuppliers(isOpen);
+  const [supplierId, setSupplierId] = useState('');
+  const [supplierTried, setSupplierTried] = useState(false);
+  const supplierValid = suppliers.some((s) => s.id === supplierId);
+  // Sửa giá đã báo: điền sẵn NCC hiện tại nếu còn dùng; đã xóa mềm hoặc đơn cũ chưa có NCC thì để trống,
+  // bắt chọn lại.
+  const requestSupplierId =
+    selectedReq?.supplier && !selectedReq.supplier.deletedAt ? selectedReq.supplier.id : '';
+  useEffect(() => {
+    if (!isOpen) return;
+    setSupplierId(requestSupplierId);
+    setSupplierTried(false);
+  }, [isOpen, selectedReq?.id, requestSupplierId]);
 
   // 2. Khối máy tính để tạo phương án mới
   const [showCalculator, setShowCalculator] = useState(true);
@@ -772,6 +791,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!supplierValid) {
+      setSupplierTried(true);
+      return;
+    }
+
     const selectedOpts = options.filter(
       (o) => o.isSelected && typeof o.quotedPrice === 'number' && Number(o.quotedPrice) > 0,
     );
@@ -789,7 +813,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                                                                                                                                                                                                         
     setSubmitting(true);                                                                                                                                                                            
     try {                                                                                                                                                                                           
-      await onSubmit(primaryPrice, primaryVat, payloadOpts, { inspectionFee: parseFloat(calcInspectionFee) || 0 });                                                                                 
+      await onSubmit(primaryPrice, primaryVat, payloadOpts, { inspectionFee: parseFloat(calcInspectionFee) || 0, supplierId });                                                                                 
       onClose();                                                                                                                                                                                    
     } catch (err: any) {  
       alert(err.message || 'Lỗi khi lưu báo giá');
@@ -802,6 +826,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     (o) => o.isSelected && typeof o.quotedPrice === 'number' && Number(o.quotedPrice) > 0,
   );
   const hasValidPrice = selectedOpts.length > 0;
+  const canSubmit = hasValidPrice && supplierValid;
 
   const isSilverPresent = calcMaterialRows.some((m) => isSilverMaterialId(m.materialId || m.id));
 
@@ -848,6 +873,35 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-[16px] p-[20px]">
+          {/* NHÀ CUNG CẤP — bắt buộc; dùng chung Máy Tính và Báo Giá Nhanh */}
+          <div className="bg-surface border border-border rounded-[14px] p-[16px]">
+            <label className={clsx(labelUppercaseCls, 'block mb-[6px]')}>
+              Nhà Cung Cấp <span className="text-[#dc2626]">*</span>
+            </label>
+            <SupplierSelect
+              suppliers={suppliers}
+              value={supplierId}
+              onChange={(id) => {
+                setSupplierId(id);
+                setSupplierTried(false);
+              }}
+              invalid={supplierTried && !supplierValid}
+              disabled={suppliersLoading && suppliers.length === 0}
+              placeholder={suppliersLoading && suppliers.length === 0 ? 'Đang tải...' : 'Chọn nhà cung cấp (bắt buộc)'}
+              ariaLabel="Nhà cung cấp"
+            />
+            {!suppliersLoading && suppliers.length === 0 ? (
+              <div className="mt-[6px] text-[14px] font-bold text-[#b45309]">
+                Chưa có nhà cung cấp, thêm tại Cấu hình giá › Nhà cung cấp.
+              </div>
+            ) : supplierTried && !supplierValid ? (
+              <div className="mt-[6px] text-[14px] font-bold text-[#dc2626]">Vui lòng chọn nhà cung cấp</div>
+            ) : (
+              <div className="mt-[6px] text-[14px] text-muted">
+                Dùng chung cho mọi phương án của yêu cầu này (Máy Tính và Báo Giá Nhanh).
+              </div>
+            )}
+          </div>
           
           <div className="bg-surface border border-border rounded-[14px] p-[16px]">
             <div className="flex items-center justify-between mb-[12px]">
@@ -1558,17 +1612,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting || !hasValidPrice}
+              disabled={submitting || !canSubmit}
               title={
                 !hasValidPrice
                   ? 'Cần có ít nhất 1 phương án báo giá hợp lệ (> 0đ) để gửi báo giá'
+                  : !supplierValid
+                  ? 'Cần chọn nhà cung cấp để gửi báo giá'
                   : isEditMode
                   ? 'Cập nhật lại giá đã báo cho yêu cầu này'
                   : 'Xác nhận và gửi báo giá này'
               }
               className={clsx(
                 'text-surface border-0 rounded-[8px] py-[10px] px-[24px] text-[16.5px] font-extrabold transition-[all_0.2s_ease]',
-                !hasValidPrice
+                !canSubmit
                   ? 'bg-[#94a3b8] cursor-not-allowed shadow-none'
                   : 'bg-[#0f172a] cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.25)]',
                 submitting ? 'opacity-70' : 'opacity-100'
