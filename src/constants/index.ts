@@ -51,6 +51,7 @@ export const STATUS_COUNT_KEYS: Record<string, string> = {
   NEED_MORE_INFO: 'needMoreInfo',
   QUOTED: 'quoted',
   REJECTED: 'rejected',
+  CLOSED: 'closed',
 };
 
 // Màu/label dùng cho biểu đồ, ô lọc trạng thái (FilterBar, SaleStatusStatsGrid, DashboardPage).
@@ -59,6 +60,7 @@ export const STATUS_CHART_META: { value: string; label: string; color: string }[
   { value: 'PROCESSING', label: 'Đang xử lý', color: '#f59e0b' },
   { value: 'NEED_MORE_INFO', label: 'Cần bổ sung', color: '#f97316' },
   { value: 'QUOTED', label: 'Hoàn thành', color: '#22c55e' },
+  { value: 'CLOSED', label: 'Đã chốt', color: '#8b5cf6' },
   { value: 'REJECTED', label: 'Từ chối', color: '#ef4444' },
 ];
 
@@ -69,13 +71,14 @@ export const STATUS_BADGE_META: Record<string, { label: string; color: string; b
   NEED_MORE_INFO: { label: 'Cần bổ sung', color: '#c2410c', bg: '#fff7ed', border: '#ffedd5' },
   QUOTED: { label: 'Đã báo giá', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
   REJECTED: { label: 'Từ chối', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+  CLOSED: { label: 'Đã chốt', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
   // Chỉ ADMIN thấy đơn đã hủy. CỐ Ý không có trong STATUS_CHART_META / STATUS_COUNT_KEYS: biểu đồ,
   // Dashboard và ô lọc xuất Excel không được hiển thị đơn hủy.
   CANCELLED: { label: 'Đã hủy', color: '#475569', bg: '#f1f5f9', border: '#cbd5e1' },
 };
 
-// Trạng thái ADMIN được phép hủy (khớp CANCELLABLE_QUOTE_STATUSES ở BE). REJECTED/CANCELLED là trạng thái cuối.
-export const CANCELLABLE_STATUSES: readonly string[] = ['PENDING', 'PROCESSING', 'NEED_MORE_INFO', 'QUOTED'];
+// Trạng thái ADMIN được phép hủy (khớp CANCELLABLE_QUOTE_STATUSES ở BE), kể cả đơn khách đã chốt. REJECTED/CANCELLED là trạng thái cuối.
+export const CANCELLABLE_STATUSES: readonly string[] = ['PENDING', 'PROCESSING', 'NEED_MORE_INFO', 'QUOTED', 'CLOSED'];
 
 // Ô lọc "Đã hủy" của ADMIN trong FilterBar (đếm riêng bằng counts.cancelled, không nằm trong tổng).
 export const CANCELLED_TAB = { value: 'CANCELLED', label: 'Đã hủy', color: '#64748b' } as const;

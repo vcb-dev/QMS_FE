@@ -19,6 +19,8 @@ import {
   resubmitQuoteRequest,
   cancelQuoteRequest,
   restoreQuoteRequest,
+  markQuoteClosed,
+  unmarkQuoteClosed,
 } from '../services/api';
 import { TEAM_FILTER_ALL } from '../constants/team';
 import { OWNER_FILTER_ASSIGNED_TO_ME } from '../constants';
@@ -75,6 +77,7 @@ export function useQuoteRequests(
     needMoreInfo: 0,
     quoted: 0,
     rejected: 0,
+    closed: 0,
     cancelled: 0,
   });
 
@@ -105,6 +108,12 @@ export function useQuoteRequests(
   const [pricingReqDetail, setPricingReqDetail] = useState<QuoteRequest | null>(null);
   const [rejectReqId, setRejectReqId] = useState<string | null>(null);
   const [returnReqId, setReturnReqId] = useState<string | null>(null);
+  // Yêu cầu đang chờ Sale chọn 1 trong nhiều phương án giá để "Đánh Dấu Đã Chốt"
+  // (chỉ mở popup khi có >1 phương án đã báo giá — 1 phương án thì chốt thẳng, không cần hỏi).
+  const [closeOptionReq, setCloseOptionReq] = useState<QuoteRequest | null>(null);
+  // Tăng 1 sau mỗi action ghi dữ liệu thành công — DetailPage dựa vào đó để tải lại đơn đang xem.
+  const [actionTick, setActionTick] = useState(0);
+
   // `loading`: chỉ dùng cho các thao tác ghi dữ liệu (blocking overlay che toàn màn hình)
   // `listLoading`: dùng cho việc load/refresh danh sách khi chuyển tab, đổi bộ lọc (thanh tiến trình mỏng, không chặn UI)
   const [loading, setLoading] = useState<boolean>(false);
@@ -199,6 +208,7 @@ export function useQuoteRequests(
       else if (currentFilter === 'NEED_MORE_INFO') targetStatus = 'NEED_MORE_INFO';
       else if (currentFilter === 'QUOTED') targetStatus = 'QUOTED';
       else if (currentFilter === 'REJECTED') targetStatus = 'REJECTED';
+      else if (currentFilter === 'CLOSED') targetStatus = 'CLOSED';
       else if (statusSubFilter !== 'ALL') targetStatus = statusSubFilter as import('../types').QuoteStatus;
 
       const ownerId = (currentFilter === 'MY_REQ' || ownerFilter === 'MY_REQ') ? currentUser.id : undefined;
@@ -272,6 +282,7 @@ export function useQuoteRequests(
         const needMoreInfo = items.filter((r) => r.status === 'NEED_MORE_INFO').length;
         const quoted = items.filter((r) => r.status === 'QUOTED').length;
         const rejected = items.filter((r) => r.status === 'REJECTED').length;
+        const closed = items.filter((r) => r.status === 'CLOSED').length;
         setCounts({
           total: meta.total || items.length,
           myReq: items.filter((r) => r.requester?.id === currentUser.id || r.assignee?.id === currentUser.id).length,
@@ -280,6 +291,7 @@ export function useQuoteRequests(
           needMoreInfo,
           quoted,
           rejected,
+          closed,
           cancelled: 0,
         });
       }
@@ -433,12 +445,13 @@ export function useQuoteRequests(
   // Khuôn dùng chung cho các action ghi dữ liệu bên dưới — "gọi API, setSelectedId theo kết quả,
   // đánh dấu cần refresh counts, reload danh sách, báo lỗi nếu fail". bumpCounts=false cho action
   // không đổi số lượng/trạng thái đếm được (VD chọn phương án hiển thị, không đổi status).
+  // Trả về true nếu action thành công (chỗ gọi cần biết để KHÔNG đóng modal khi BE từ chối).
   const runAction = async (
     loadingMsg: string,
     errorPrefix: string,
     action: () => Promise<QuoteRequest>,
     opts?: { bumpCounts?: boolean; onSuccess?: (updated: QuoteRequest) => void },
-  ) => {
+  ): Promise<boolean> => {
     setLoadingMessage(loadingMsg);
     setLoading(true);
     try {
@@ -447,20 +460,29 @@ export function useQuoteRequests(
       if (opts?.bumpCounts !== false) needCountsRef.current = true;
       opts?.onSuccess?.(updated);
       await loadData(false);
+      // Báo cho trang chi tiết tải lại đơn đang xem: đơn vừa đổi trạng thái có thể không còn trong danh
+      // sách đã tải (bộ lọc/phân trang) nên không thể chỉ trông vào `requests`.
+      setActionTick((t) => t + 1);
+      return true;
     } catch (err: any) {
       // Optimistic-lock conflict (BE ném 409 khi version FE gửi lệch version DB): người khác vừa
       // sửa đơn này — không phải lỗi thao tác của user. Báo nhẹ + tải lại danh sách cho đồng bộ.
+      // CHỈ các 409 kiểu "người khác vừa làm" mới báo nhẹ; 409 do quy tắc nghiệp vụ (VD "Chỉ đánh dấu Đã
+      // chốt được khi ... QUOTED") phải hiện đúng lý do BE trả về, không được che bằng câu chung chung.
+      const message: string = err?.message || '';
       const isConflict =
-        err?.status === 409 ||
-        /cập nhật bởi người khác/i.test(err?.message || '');
+        /cập nhật bởi người khác|tiếp nhận bởi nhân sự khác|vừa bị hủy/i.test(message);
       if (isConflict) {
         setToastMessage(
           'Yêu cầu vừa được người khác cập nhật. Đã tải lại dữ liệu mới nhất, vui lòng thao tác lại.',
         );
         await loadData(false);
       } else {
-        alert(`${errorPrefix}: ${err.message || 'Lỗi hệ thống'}`);
+        alert(`${errorPrefix}: ${message || 'Lỗi hệ thống'}`);
+        // Lỗi nghiệp vụ thường do dữ liệu trên màn hình đã cũ (VD đơn đã đổi trạng thái) — tải lại cho đồng bộ.
+        if (err?.status === 409) await loadData(false);
       }
+      return false;
     } finally {
       setLoading(false);
     }
@@ -533,10 +555,10 @@ export function useQuoteRequests(
     // QUOTE (BE đòi PROCESSING -> 409) và mất luôn version (bỏ qua optimistic lock).
     const targetReq = pricingReq;
     const version = targetReq?.version;
-    // Đơn đã có giá (QUOTED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
+    // Đơn đã có giá (QUOTED/CLOSED) mở lại PricingModal để SỬA giá — hành vi GIỐNG HỆT
     // completeQuoteRequest (xóa hết & tạo lại toàn bộ options, thêm/bớt/sửa tự do), chỉ khác action
     // gửi lên (BE tự giữ nguyên status/assigneeId, không đẩy PROCESSING->QUOTED lần 2).
-    const isEditingQuotedPrice = targetReq?.status === 'QUOTED';
+    const isEditingQuotedPrice = targetReq?.status === 'QUOTED' || targetReq?.status === 'CLOSED';
     const fallbackOptions = options?.length
       ? options
       : [{ optionName: 'Phương án', quotedPrice, vat }];
@@ -597,10 +619,44 @@ export function useQuoteRequests(
     });
   };
 
-  const handleResubmitDirect = async (id: string) => {
-    const target = requests.find((r) => r.id === id);
+  // `req`: trang chi tiết truyền đơn đang xem — đơn đó có thể không nằm trong trang danh sách đã tải
+  // (mở bằng link trực tiếp/F5), khi ấy tra `requests` sẽ không ra và thao tác bị bỏ qua âm thầm.
+  const handleResubmitDirect = async (id: string, req?: QuoteRequest) => {
+    const target = req ?? requests.find((r) => r.id === id);
     if (!target) return;
     await runAction('Đang gửi lại yêu cầu...', 'Lỗi gửi lại yêu cầu', () => resubmitQuoteRequest(id));
+  };
+
+  const handleMarkClosed = async (id: string, optionIds?: string[]): Promise<boolean> =>
+    runAction('Đang đánh dấu Đã chốt...', 'Lỗi đánh dấu Đã chốt', () => markQuoteClosed(id, optionIds), {
+      onSuccess: () => setToastMessage('Đã đánh dấu Đã chốt.'),
+    });
+
+  const handleUnmarkClosed = async (id: string) => {
+    await runAction('Đang bỏ đánh dấu Đã chốt...', 'Lỗi bỏ đánh dấu Đã chốt', () => unmarkQuoteClosed(id), {
+      onSuccess: () => setToastMessage('Đã bỏ đánh dấu Đã chốt. Đơn quay về "Đã báo giá".'),
+    });
+  };
+
+  // Bấm "Đánh Dấu Đã Chốt" từ danh sách — nếu yêu cầu có nhiều hơn 1 phương án đã báo giá,
+  // mở popup cho Sale chọn các phương án khách chốt (được chọn nhiều) thay vì để BE tự suy ra; chỉ 1 phương án
+  // thì chốt thẳng luôn, không cần hỏi lại.
+  // `req`: như handleResubmitDirect — không tra lại trong `requests` khi đã có sẵn đơn (trang chi tiết),
+  // nếu không đơn ngoài trang danh sách sẽ bị coi là 0 phương án và bỏ qua bước chọn phương án.
+  const handleMarkClosedClick = async (id: string, req?: QuoteRequest): Promise<void> => {
+    const target = req ?? requests.find((r) => r.id === id);
+    const pricedOptionsCount = (target?.options || []).filter((o) => o.quotedPrice != null).length;
+    if (target && pricedOptionsCount > 1) {
+      setCloseOptionReq(target);
+      return;
+    }
+    await handleMarkClosed(id);
+  };
+
+  const handleCloseOptionSubmit = async (optionIds: string[]) => {
+    if (!closeOptionReq) return;
+    // Chỉ đóng modal khi chốt thành công — BE từ chối thì giữ modal để người dùng thấy lỗi và thử lại.
+    if (await handleMarkClosed(closeOptionReq.id, optionIds)) setCloseOptionReq(null);
   };
 
   const selectedReq =
@@ -698,6 +754,9 @@ export function useQuoteRequests(
     setRejectReqId,
     returnReqId,
     setReturnReqId,
+    closeOptionReq,
+    setCloseOptionReq,
+    actionTick,
     handleTabChange,
     handleResetFilters,
     handleOpenCreate,
@@ -711,6 +770,10 @@ export function useQuoteRequests(
     handleRejectSubmit,
     handleReturnSubmit,
     handleResubmitDirect,
+    handleMarkClosed,
+    handleMarkClosedClick,
+    handleUnmarkClosed,
+    handleCloseOptionSubmit,
     handleCancelRequest,
     handleRestoreRequest,
     // Socket STATUS_CHANGED: trạng thái 1 đơn vừa đổi -> counts sidebar cũng đổi, ép lấy lại counts.

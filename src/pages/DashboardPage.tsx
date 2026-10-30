@@ -81,10 +81,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [counts, setCounts] = React.useState(initialCounts);
   const [apiRequests, setApiRequests] = React.useState<QuoteRequest[]>(initialRequests);
   const [loadingStats, setLoadingStats] = React.useState<boolean>(false);
-  const [prevStats, setPrevStats] = React.useState<{ total: number; quotedRevenue: number } | null>(null);
+  const [prevStats, setPrevStats] = React.useState<{ total: number; closeRate: number; closedRevenue: number; quotedRevenue: number } | null>(null);
   // Admin: số liệu KPI kỳ hiện tại lấy thẳng từ endpoint /stats (BE cộng bằng SQL) — không kéo
   // cả danh sách đơn về client để cộng tay như trước.
-  const [curStats, setCurStats] = React.useState<{ total: number; quotedRevenue: number } | null>(null);
+  const [curStats, setCurStats] = React.useState<{ total: number; closeRate: number; closedRevenue: number; quotedRevenue: number } | null>(null);
   const [charts, setCharts] = React.useState<DashboardChartsResponse | null>(null);
   // Đếm request để bỏ qua response trả về trễ (race condition khi đổi mốc thời gian liên tục)
   const timeRangeRequestIdRef = React.useRef(0);
@@ -161,6 +161,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           curRes
             ? {
                 total: curRes.total,
+                closeRate: curRes.closeRate,
+                closedRevenue: curRes.closedRevenue,
                 quotedRevenue: curRes.quotedRevenue,
               }
             : null,
@@ -289,19 +291,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const featuredProducts = (charts?.featuredProducts || []).slice(0, UI_CONSTANTS.DASHBOARD.RECENT_PRODUCTS_LIMIT);
 
-  // Doanh thu (Admin Analytics) — tổng tiền đơn đã báo giá
+  // Doanh thu (Admin Analytics) — tổng tiền đơn đã chốt & tổng tiền đơn đã báo giá (chưa chốt)
   const sumRevenue = (list: QuoteRequest[]) => {
+    let closedRevenue = 0;
     let quotedRevenue = 0;
     list.forEach((r) => {
       const price = r.quotedPrice ? Number(r.quotedPrice) : 0;
-      if (r.status === 'QUOTED') quotedRevenue += price;
+      if (r.status === 'CLOSED' ) closedRevenue += price;
+      else if (r.status === 'QUOTED') quotedRevenue += price;
     });
-    return { quotedRevenue };
+    return { closedRevenue, quotedRevenue };
   };
 
   const revenueStats = React.useMemo(() => {
     if (currentRole === 'ADMIN') {
       return {
+        closedRevenue: curStats?.closedRevenue ?? 0,
         quotedRevenue: curStats?.quotedRevenue ?? 0,
       };
     }
@@ -309,26 +314,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }, [currentRole, curStats, apiRequests]);
   // Kỳ trước lấy thẳng từ API stats (chỉ số tổng hợp), không kéo full list rồi tính tay
   const prevRevenueStats = React.useMemo(
-    () => (prevStats ? { quotedRevenue: prevStats.quotedRevenue } : null),
+    () => (prevStats ? { closedRevenue: prevStats.closedRevenue, quotedRevenue: prevStats.quotedRevenue } : null),
     [prevStats]
   );
 
-  // 1.3 KPI tổng hợp — tổng số yêu cầu
-  const sumKpi = (list: QuoteRequest[]) => ({ total: list.length });
+  // 1.3 KPI tổng hợp — tổng số yêu cầu & tỷ lệ chốt trung bình (đã chốt / tổng tạo)
+  const sumKpi = (list: QuoteRequest[]) => {
+    const total = list.length;
+    const closed = list.filter((r) => r.status === 'CLOSED').length;
+    const closeRate = total > 0 ? (closed / total) * 100 : 0;
+    return { total, closeRate };
+  };
 
   const kpiStats = React.useMemo(() => {
     if (currentRole === 'ADMIN') {
-      return { total: curStats?.total ?? 0 };
+      return { total: curStats?.total ?? 0, closeRate: curStats?.closeRate ?? 0 };
     }
     return sumKpi(apiRequests);
   }, [currentRole, curStats, apiRequests]);
   const prevKpiStats = React.useMemo(
-    () => (prevStats ? { total: prevStats.total } : null),
+    () => (prevStats ? { total: prevStats.total, closeRate: prevStats.closeRate } : null),
     [prevStats]
   );
 
   // Biểu đồ cột Timeline — backend trả về từng bucket với đủ số liệu theo trạng thái
-  // (pending/processing/needMoreInfo/quoted/rejected/total) nhưng không có field
+  // (pending/processing/needMoreInfo/quoted/rejected/closed/total) nhưng không có field
   // "value" chung. Khi người dùng lọc theo 1 trạng thái cụ thể, Bar dataKey="value" cần
   // field này được tính từ chartStatusFilter — nếu không bar sẽ luôn rỗng/bằng 0.
   const timelineChartData = React.useMemo(() => {
@@ -339,6 +349,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       else if (chartStatusFilter === 'NEED_MORE_INFO') val = b.needMoreInfo;
       else if (chartStatusFilter === 'QUOTED') val = b.quoted;
       else if (chartStatusFilter === 'REJECTED') val = b.rejected;
+      else if (chartStatusFilter === 'CLOSED') val = b.closed;
       return { ...b, value: val };
     });
   }, [charts, chartStatusFilter]);
@@ -381,12 +392,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     );
   };
 
+  // Badge chênh lệch điểm % (dùng cho tỷ lệ chốt — so sánh tuyệt đối, không phải % tương đối)
+  const renderPointChangeBadge = (curr: number, prev: number | undefined) => {
+    if (prev === undefined) return null;
+    const diff = curr - prev;
+    if (Math.abs(diff) < 0.05) return <span className="text-[14px] font-extrabold text-[#334155]">Không đổi so với kỳ trước</span>;
+    const isUp = diff > 0;
+    return (
+      <span className={clsx('text-[14px] font-extrabold', isUp ? 'text-[#16a34a]' : 'text-[#dc2626]')}>
+        {isUp ? '▲' : '▼'} {Math.abs(diff).toFixed(1)} điểm % so với kỳ trước
+      </span>
+    );
+  };
+
   const STATUS_PILL_LABELS: Record<string, string> = {
     PENDING: 'MỚI TẠO',
     PROCESSING: 'ĐANG XỬ LÝ',
     QUOTED: 'ĐÃ BÁO GIÁ',
     REJECTED: 'TỪ CHỐI',
     NEED_MORE_INFO: 'CẦN BỔ SUNG',
+    CLOSED: 'ĐÃ CHỐT',
   };
 
   const getStatusPill = (status: string) => (
@@ -488,7 +513,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 2. KPI tổng hợp + Doanh thu — chỉ Admin xem */}
       {currentRole === 'ADMIN' && (
-        <div className="grid grid-cols-2 gap-[16px]">
+        <div className="grid grid-cols-4 gap-[16px]">
           <div className={cardCls}>
             <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
               Tổng số yêu cầu
@@ -502,7 +527,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
           <div className={cardCls}>
             <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
-              Giá trị đơn đã báo giá
+              Tỷ lệ chốt trung bình
+            </div>
+            <div className="text-[29px] font-black text-[#0f172a] mt-[6px]">
+              {kpiStats.closeRate.toFixed(1)}%
+            </div>
+            <div className="mt-[6px]">
+              {renderPointChangeBadge(kpiStats.closeRate, prevKpiStats?.closeRate)}
+            </div>
+          </div>
+          <div className={cardCls}>
+            <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
+              Doanh thu đã chốt
+            </div>
+            <div className="text-[29px] font-black text-[#0f172a] mt-[6px]">
+              {formatCurrency(revenueStats.closedRevenue)}
+            </div>
+            <div className="mt-[6px]">
+              {renderChangeBadge(revenueStats.closedRevenue, prevRevenueStats?.closedRevenue, false)}
+            </div>
+          </div>
+          <div className={cardCls}>
+            <div className="text-[14px] font-extrabold text-[#334155] uppercase tracking-[0.5px]">
+              Giá trị đơn đã báo giá (chưa chốt)
             </div>
             <div className="text-[29px] font-black text-[#0f172a] mt-[6px]">
               {formatCurrency(revenueStats.quotedRevenue)}
@@ -524,6 +571,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           { name: 'Cần bổ sung', value: counts.needMoreInfo,   fill: '#f97316' },
           { name: 'Hoàn thành',  value: counts.quoted,         fill: '#22c55e' },
           { name: 'Từ chối',     value: counts.rejected,       fill: '#ef4444' },
+          { name: 'Đã chốt',     value: counts.closed,         fill: '#8b5cf6' },
         ];
 
         const CustomDonutLabel = ({ cx, cy }: any) => (
@@ -588,6 +636,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <div className="text-[#fb923c]">● Cần bổ sung: {dataItem.needMoreInfo}</div>
                   <div className="text-[#4ade80]">● Hoàn thành: {dataItem.quoted}</div>
                   <div className="text-[#f87171]">● Từ chối: {dataItem.rejected}</div>
+                  <div className="text-[#a78bfa]">● Đã chốt: {dataItem.closed}</div>
                 </div>
               </ChartTooltip>
             );
@@ -696,6 +745,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <option value="NEED_MORE_INFO">Cần bổ sung</option>
                   <option value="QUOTED">Hoàn thành</option>
                   <option value="REJECTED">Từ chối</option>
+                  <option value="CLOSED">Đã chốt</option>
                 </select>
               </div>
 
@@ -723,7 +773,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       <Bar dataKey="processing" stackId="a" fill="#f59e0b" name="Đang xử lý" />
                       <Bar dataKey="needMoreInfo" stackId="a" fill="#f97316" name="Cần bổ sung" />
                       <Bar dataKey="quoted" stackId="a" fill="#22c55e" name="Hoàn thành" />
-                      <Bar dataKey="rejected" stackId="a" fill="#ef4444" name="Từ chối" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="rejected" stackId="a" fill="#ef4444" name="Từ chối" />
+                      <Bar dataKey="closed" stackId="a" fill="#8b5cf6" name="Đã chốt" radius={[4, 4, 0, 0]} />
                     </>
                   ) : (
                     <Bar dataKey="value" fill={getStatusColor(chartStatusFilter)} radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={600}>
@@ -739,13 +790,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         );
       })()}
 
-      {/* 1.1 Biểu đồ theo Sale — chỉ Admin xem, số yêu cầu tạo của từng Sale */}
+      {/* 1.1 Biểu đồ theo Sale — chỉ Admin xem, số yêu cầu tạo & đã chốt của từng Sale */}
       {currentRole === 'ADMIN' && (charts?.saleStats || []).length > 0 && (
         <div className={cardCls}>
           <h2 className="text-[17px] font-extrabold text-[#0f172a] mt-0 mr-0 mb-[4px] ml-0">
             Hiệu suất theo Sale
           </h2>
-          <span className="text-[14px] text-[#334155]">Số yêu cầu đã tạo của từng Sale (top 8)</span>
+          <span className="text-[14px] text-[#334155]">Số yêu cầu đã tạo và đã chốt của từng Sale (top 8)</span>
 
           <ResponsiveContainer width="100%" height={Math.max(180, (charts?.saleStats || []).length * 42)}>
             <BarChart
@@ -768,16 +819,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 content={({ active, payload, label }: any) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload;
+                  const closeRate = d.total > 0 ? ((d.closed / d.total) * 100).toFixed(1) : '0';
                   return (
                     <ChartTooltip>
                       <div className="text-[#334155] mb-[2px]">{label}</div>
                       <div className="text-[#38bdf8]">● Đã tạo: {d.total}</div>
+                      <div className="text-[#22c55e]">● Đã chốt: {d.closed}</div>
+                      <div className="text-[#334155] mt-[2px]">Tỷ lệ chốt: {closeRate}%</div>
                     </ChartTooltip>
                   );
                 }}
                 cursor={{ fill: '#f8fafc' }}
               />
               <Bar dataKey="total" fill="#38bdf8" name="Đã tạo" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="closed" fill="#22c55e" name="Đã chốt" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
-import { FilePlus, Clock, CheckCircle, XCircle, RotateCcw, Ban } from 'lucide-react';
+import { FilePlus, Clock, CheckCircle, XCircle, RotateCcw, Award, Ban } from 'lucide-react';
 import { STATUS_BADGE_META } from '../constants';
 import { statusPillCls, statusPillNewCls } from '../styles/classNames';
 
@@ -10,6 +10,7 @@ const STATUS_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   QUOTED: CheckCircle,
   REJECTED: XCircle,
   NEED_MORE_INFO: RotateCcw,
+  CLOSED: Award,
   CANCELLED: Ban,
 };
 

@@ -8,6 +8,7 @@ export const ACTION_LABEL: Record<string, string> = {
   RETURN_QUOTE: 'Trả lại yêu cầu',
   RESUBMIT_QUOTE: 'Gửi lại yêu cầu',
   MARK_CLOSED: 'Đánh dấu đã chốt',
+  UNMARK_CLOSED: 'Bỏ đánh dấu đã chốt',
   SELECT_OPTION: 'Chọn phương án báo giá',
   EDIT_QUOTED_PRICE: 'Sửa giá đã báo',
   DELETE_QUOTE_OPTION: 'Xóa phương án báo giá',

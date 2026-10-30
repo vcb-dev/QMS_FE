@@ -21,6 +21,11 @@ import {
   specHistCardLineCls,
 } from '../styles/classNames';
 
+// Chỉ phương án khách CHỐT THẬT (CLOSED) mới gắn tag. SELECTED ("Sale đang nghiêng về") không gắn.
+const STATUS_TAG: Record<string, { label: string; className: string }> = {
+  CLOSED: { label: 'Đã chốt', className: 'bg-[#dcfce7] text-[#15803d]' },
+};
+
 const fmtDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString('vi-VN') : '—';
 
@@ -152,6 +157,7 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
             {item.options.length > 0 ? (
               <div className="flex flex-col">
                 {item.options.map((o, idx) => {
+                  const oTag = o.selectionStatus ? STATUS_TAG[o.selectionStatus] : undefined;
                   const dp = o.livePriceDeltaPct ?? 0;
                   const deltaCls = dp > 0 ? 'text-[#15803d]' : dp < 0 ? 'text-[#b91c1c]' : 'text-muted';
                   const hasLive = o.livePrice != null;
@@ -168,6 +174,16 @@ export const ProductSpecModal: React.FC<ProductSpecModalProps> = ({ item, onClos
                     >
                       <div className="flex items-center gap-[6px]">
                         <span className="flex-1 min-w-0 text-[15px] text-muted truncate">{o.optionName}</span>
+                        {oTag && (
+                          <span
+                            className={clsx(
+                              'shrink-0 py-[2px] px-[7px] text-[12.5px] font-extrabold tracking-[0.3px] rounded-full',
+                              oTag.className,
+                            )}
+                          >
+                            {oTag.label}
+                          </span>
+                        )}
                         <button
                           type="button"
                           className="shrink-0 flex items-center justify-center w-[24px] h-[24px] text-muted bg-white border border-border rounded-[7px] cursor-pointer data-[copied]:text-[#15803d] data-[copied]:bg-[#dcfce7] data-[copied]:border-[#bbf7d0]"

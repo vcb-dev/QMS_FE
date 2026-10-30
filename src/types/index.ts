@@ -1,7 +1,7 @@
 export type Role = 'SALE' | 'ORDER' | 'ADMIN';
 
 // CANCELLED ("Đã hủy") chỉ ADMIN nhận được từ BE; Sale/Order không bao giờ thấy đơn ở trạng thái này.
-export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CANCELLED';
+export type QuoteStatus = 'PENDING' | 'PROCESSING' | 'QUOTED' | 'REJECTED' | 'NEED_MORE_INFO' | 'CLOSED' | 'CANCELLED';
 
 export interface StatusCounts {
   total: number;
@@ -11,6 +11,7 @@ export interface StatusCounts {
   needMoreInfo: number;
   quoted: number;
   rejected: number;
+  closed: number;
   // Chỉ ADMIN có số khác 0 (tab "Đã hủy"); không cộng vào `total`.
   cancelled?: number;
 }
@@ -94,19 +95,23 @@ export interface Customer {
 export interface CustomerStatRow {
   customer: Customer;
   totalOrders: number;
+  totalClosed: number;
+  closedValue: number;
   lastOrder: string | null;
 }
 
 export interface CustomerStatsResponse {
   data: CustomerStatRow[];
   meta: { total: number; page: number; limit: number; totalPages: number };
+  totalClosedValueAll: number;
 }
 
 export interface CustomerMonthComparisonResponse {
-  current: { customerCount: number };
-  previous: { customerCount: number };
+  current: { customerCount: number; closedValue: number };
+  previous: { customerCount: number; closedValue: number };
   // null = tháng trước bằng 0, không có mốc để tính % tăng/giảm
   customerCountDeltaPct: number | null;
+  closedValueDeltaPct: number | null;
 }
 
 export interface QuoteRequestImage {
@@ -181,8 +186,8 @@ export interface QuoteOption {
   quotedDate?: string;
   isSelected?: boolean;
   // Trạng thái được chọn lưu ở BE (QuoteOption.selectionStatus) — SELECTED = đang dùng báo giá chính,
-  // SELECTED = phương án chính đang dùng để báo giá, NONE = không có gì đặc biệt (mặc định).
-  selectionStatus?: 'NONE' | 'SELECTED';
+  // CLOSED = khách đã chốt đúng phương án này, NONE = không có gì đặc biệt (mặc định).
+  selectionStatus?: 'NONE' | 'SELECTED' | 'CLOSED';
   // true = Order không được chọn làm giá chính (PricingModal) — option Sale gửi kèm nhưng KHÁC
   // chất liệu Sale thực sự yêu cầu (vd phương án so sánh tuổi vàng tự sinh lúc Sale tạo đơn). Vẫn
   // hiển thị để tham khảo, chỉ khóa hành động chọn/thêm.
@@ -353,7 +358,7 @@ export type CalcResult = {
   breakdown?: { materialId: string; materialName: string; weightChi: number; cost: number }[];
 };
 
-export type SortMode = 'RECENT' | 'MOST_ORDERS';
+export type SortMode = 'RECENT' | 'TOP_SPEND' | 'MOST_ORDERS';
 
 export interface DashboardPageProps {
   requests: QuoteRequest[];
@@ -373,29 +378,39 @@ export interface DashboardPageProps {
 export interface DashboardTimelineBucket {
   key: string; label: string;
   pending: number; processing: number; needMoreInfo: number;
-  quoted: number; rejected: number; total: number;
+  quoted: number; rejected: number; closed: number; total: number;
 }
 
 export interface DashboardChartsResponse {
   timeline: DashboardTimelineBucket[];
-  saleStats: { id: string; name: string; total: number }[];
+  saleStats: { id: string; name: string; total: number; closed: number }[];
   categoryDistribution: { name: string; value: number }[];
   materialDistribution: { name: string; value: number }[];
   priceRangeDistribution: { label: string; value: number }[];
   featuredProducts: { key: string; productName: string; price: number; materialPrice?: number; stonePrice?: number; images?: QuoteRequestImage[] }[];
 }
 
-// Trang chi tiết chỉ để xem — mọi thao tác đổi trạng thái/dữ liệu (tiếp nhận, báo giá, từ chối,
-// trả lại, sửa, xóa, đánh dấu chốt...) thực hiện từ bảng danh sách (QuoteTable), không phải ở đây.
+// Trang chi tiết có dropdown trạng thái giống bảng danh sách (quy tắc theo role/trạng thái dùng chung ở
+// utils/statusActions.tsx), nên nhận đủ các handler đổi trạng thái. Modal (Từ chối/Trả lại/Chốt/Báo giá/
+// Sửa) render ở cấp AppShell nên mở được từ cả hai trang.
 export interface DetailPageProps {
   selectedReq: QuoteRequest | null;
   currentRole: Role;
   currentUser: User;
   socket?: import('socket.io-client').Socket | null;
-  // Nút "Báo giá" (ORDER/ADMIN) — cùng hành vi với trang Danh Sách: PENDING -> tiếp nhận + mở
-  // modal nhập giá ngay; PROCESSING (đã tiếp nhận) -> mở thẳng modal nhập giá.
-  onQuoteNow: (id: string, version: number) => void;
+  // Tăng mỗi khi có action ghi dữ liệu thành công (từ App) — trang chi tiết tải lại đơn đang xem.
+  refreshKey?: number;
+  onEdit: (req: QuoteRequest) => void;
+  // Tiếp nhận / Báo giá luôn (ORDER/ADMIN) — cùng hành vi với trang Danh Sách: PENDING -> tiếp nhận (+ mở
+  // modal nhập giá ngay với Báo giá luôn); PROCESSING -> "Chốt giá" mở thẳng modal nhập giá.
+  onAccept: (id: string, version: number) => void | Promise<void>;
+  onQuoteNow: (id: string, version: number) => void | Promise<void>;
   onPricing: (id: string) => void;
+  onReject: (id: string) => void;
+  onReturn: (id: string) => void;
+  onResubmit: (id: string, req?: QuoteRequest) => void | Promise<void>;
+  onMarkClosed: (id: string, req?: QuoteRequest) => void | Promise<void>;
+  onUnmarkClosed: (id: string) => void | Promise<void>;
   // Chỉ ADMIN: hủy yêu cầu / khôi phục yêu cầu đã hủy (DetailPage tự hỏi xác nhận trước khi gọi).
   onCancel: (id: string) => void | Promise<void>;
   onRestore: (id: string) => void | Promise<void>;
@@ -416,7 +431,7 @@ export interface LibraryPageProps {
 export type SortModeLibrary = 'PRICE_DESC' | 'PRICE_ASC' | 'RECENT';
 export type TimeRange = 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH';
 
-// 1 yêu cầu báo giá đã QUOTED = 1 sản phẩm trên trang Thư Viện / Quản Lý Sản Phẩm (không gộp
+// 1 yêu cầu báo giá đã QUOTED/CLOSED = 1 sản phẩm trên trang Thư Viện / Quản Lý Sản Phẩm (không gộp
 // các yêu cầu giống nhau). Chi tiết sản phẩm là "Lịch sử báo giá": các phương án đã báo của yêu cầu.
 export interface LibraryProduct {
   key: string;
@@ -441,6 +456,9 @@ export interface LibraryProduct {
   livePriceMax?: number | null;
   // Lịch sử báo giá: từng phương án đã báo, giá thấp → cao.
   options: QuoteHistoryOption[];
+  // Chỉ có khi đơn đã chốt từ 2 phương án: thẻ này là sản phẩm thứ `index` trong `count` sản phẩm của yêu cầu
+  // (khi đó `options` chỉ gồm đúng phương án chốt của sản phẩm này).
+  closedProduct?: { index: number; count: number };
 }
 
 export interface QuoteHistoryOption {
@@ -462,7 +480,7 @@ export interface LibraryProductsResponse {
 }
 
 // Kết quả "Sản phẩm" trong dropdown search tổng ở Header — rút gọn từ các option đã có giá
-// (QUOTED) của các đơn khớp search, KHÔNG phải toàn bộ LibraryProduct của Thư Viện.
+// (QUOTED/CLOSED) của các đơn khớp search, KHÔNG phải toàn bộ LibraryProduct của Thư Viện.
 export interface HeaderSearchProduct {
   key: string;
   requestId: string;
@@ -558,8 +576,12 @@ export interface RequestsPageProps {
   onPricing: (id: string) => void;
   onReject: (id: string) => void;
   onReturn: (id: string) => void;
-  onResubmit?: (id: string) => void;
+  // `req`: đơn đang thao tác — trang chi tiết truyền kèm vì đơn có thể không nằm trong trang danh sách đã tải.
+  onResubmit?: (id: string, req?: QuoteRequest) => void;
   onDelete?: (id: string) => void;
+  onMarkClosed?: (id: string, req?: QuoteRequest) => void | Promise<void>;
+  // Bỏ "Đã chốt" (chốt nhầm) — Sale tạo đơn hoặc Admin.
+  onUnmarkClosed?: (id: string) => void | Promise<void>;
   onOpenCreate: () => void;
   // Không truyền khi role không được export (SALE) — RequestsPage ẩn nút khi prop vắng.
   onOpenExport?: () => void;
@@ -593,7 +615,7 @@ export interface UserStatsResponse {
 
 export interface StaffPerformanceResponse {
   saleStats: {
-    items: { id: string; name: string; total: number }[];
+    items: { id: string; name: string; total: number; closed: number; closeRate: number }[];
     total: number;
   };
   pricerStats: {
