@@ -143,6 +143,9 @@ export interface QuoteOptionStone {
   // BE mapOptionDetail (dùng cho response chi tiết) trả stoneType PHẲNG ở đây, không lồng trong
   // `stone` nữa — `stone` bên dưới chỉ còn dùng ở vài chỗ khác đọc dữ liệu chưa qua mapOptionDetail.
   stoneType?: string;
+  // Giác cắt / size — cũng PHẲNG từ mapOptionDetail. 2 đá cùng tên khác size là 2 loại khác giá.
+  stoneCut?: string | null;
+  stoneSize?: string | null;
   quantity: number;
   // Trỏ tới id (ở trên) của dòng đá CHỦ (MAIN) mà đá tấm này gắn riêng — null/undefined = đá chủ,
   // hoặc đá tấm orphan (dùng chung, không gắn đá chủ cụ thể nào). Chỉ có khi load lại option đã lưu.

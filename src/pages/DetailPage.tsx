@@ -43,6 +43,7 @@ import { NotFoundPage } from './NotFoundPage';
 import { SpecBadge } from '../components/SpecBadge';
 import { SpecRow } from '../components/SpecRow';
 import { supplierLabel } from '../utils/supplier';
+import { formatOptionsStoneSpec } from '../utils/stoneFormatter';
 import { clsx } from 'clsx';
 import { cardCls } from '../styles/classNames';
 import { OptionCard } from '../components/OptionCard';
@@ -96,14 +97,15 @@ export const DetailPage: React.FC<DetailPageProps> = ({
 
   // Đảm bảo record được chọn luôn khớp chính xác với ID trên đường dẫn URL khi F5/reload. Cả bản từ danh
   // sách lẫn bản tự tải đều khớp thì lấy bản MỚI HƠN (updatedAt) — trước đây luôn ưu tiên bản danh sách nên
-  // sau khi đổi trạng thái mà danh sách chưa/không còn chứa đơn thì trang vẫn hiện trạng thái cũ.
+  // sau khi đổi trạng thái mà danh sách chưa/không còn chứa đơn thì trang vẫn hiện trạng thái cũ. Bằng nhau
+  // (cùng 1 bản ghi) thì lấy bản tự tải: bản danh sách là bản nhẹ, option không có `stones` nên mất thông số đá.
   const matchesUrl = (r: QuoteRequest | null | undefined): r is QuoteRequest => !!r && (r.id === id || r.code === id);
   const fromList = matchesUrl(initialSelectedReq) ? initialSelectedReq : null;
   const fromLoad = matchesUrl(loadedReq) ? loadedReq : null;
   const stamp = (r: QuoteRequest) => new Date(r.updatedAt || 0).getTime() || 0;
   const selectedReq =
     fromList && fromLoad
-      ? (stamp(fromLoad) > stamp(fromList) ? fromLoad : fromList)
+      ? (stamp(fromLoad) >= stamp(fromList) ? fromLoad : fromList)
       : (fromList || loadedReq || (id ? null : initialSelectedReq));
 
   useEffect(() => {
@@ -629,16 +631,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                   const weightVal = activeOpt?.weightChi ?? selectedReq.weightChi;
                   const weightDisplay = weightVal != null && Number(weightVal) > 0 ? `${weightVal} chỉ` : 'Theo yêu cầu';
 
-                  let stoneDisplay = 'Không đính đá';
-                  if (activeOpt?.stones && activeOpt.stones.length > 0) {
-                    const totalStones = activeOpt.stones.reduce((sum, s) => sum + (s.quantity || 1), 0);
-                    const names = activeOpt.stones.map((s) => `${s.quantity}v ${s.stoneName || s.stone?.name || 'đá'}`).join(', ');
-                    stoneDisplay = `${totalStones} viên (${names})`;
-                  } else if (activeOpt?.stoneDescription) {
-                    stoneDisplay = activeOpt.stoneDescription;
-                  } else if (activeOpt?.stoneCost && Number(activeOpt.stoneCost) > 0) {
-                    stoneDisplay = 'Có đính đá';
-                  }
+                  // Đá gộp mọi phương án như ô Chất liệu (đơn chốt nhiều sản phẩm: các sản phẩm chốt, hoặc
+                  // đúng sản phẩm đang xem); chưa phương án nào có giá thì lấy các phương án nháp.
+                  const stoneOpts = selectedProduct
+                    ? [selectedProduct]
+                    : listedOptions.length > 0
+                      ? listedOptions
+                      : (selectedReq.options ?? []);
+                  const stoneDisplay = formatOptionsStoneSpec(stoneOpts);
 
                   const hasCloseRate = selectedReq.closeRatePct !== undefined && selectedReq.closeRatePct !== null;
 
@@ -654,7 +654,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({
                         label="THÔNG SỐ ĐÁ QUÝ"
                         value={stoneDisplay}
                         // động — component ngoài
-                        valueStyle={{ color: stoneDisplay === 'Không đính đá' ? '#64748b' : '#0f172a' }}
+                        valueStyle={{ color: stoneDisplay === 'Không đính đá' ? '#64748b' : '#0f172a', whiteSpace: 'pre-line' }}
                       />
 
                       <SpecBadge icon={<Tag size={14} color="#2563eb" />} label="DANH MỤC" value={selectedReq.category?.name || 'Chưa phân loại'} />
